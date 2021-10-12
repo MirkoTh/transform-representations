@@ -80,3 +80,22 @@ d %>%
     x = "X1",
     y = "X2"
   )
+
+
+# dpmm
+library(tidyverse)
+
+n <- 100
+alpha <- 10
+
+z <- rbeta(n, 1, alpha)
+mult_samples <- function(z, k) {
+  z[k] * prod(1 - z[0:(k-1)])
+}
+
+w <- map_dbl(seq(1, length(z)), mult_samples, z = z)
+phi <- rnorm(n, 0, 1)
+sum(w * phi)
+
+hist(w)
+format(w, digits = 2, scientific = FALSE)
