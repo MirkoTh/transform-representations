@@ -82,12 +82,73 @@ extract_posterior <- function(posterior, m_nb) {
   #' 
   #' @param posterior posterior probabilities of all categories given data
   #' @param m_nb a trained naive bayes model
-  tbl_post <- cbind(posterior, category = tbl_new$category) %>% as_tibble()
+  tbl_post <- cbind(posterior, category = as.character(tbl_new$category)) %>% as_tibble()
+  tbl_post[, levels(tbl_new$category)] <- map(tbl_post[, levels(tbl_new$category)], as.numeric)
   tbl_post_long <- tbl_post %>%
-    pivot_longer(cols = 1:16) %>%
+    pivot_longer(cols = levels(tbl_new$category)) %>%
     filter(category == name)
   l_post <- tbl_post_long %>%
     summarize(sum(log(value)))
   l_out <- list(tbl_post_long, l_post)
   return(l_out)
 }
+
+c_before_after <- function(tbl_new, tbl) {
+  #' concatenate the values seen before categorization and afterwards
+  #' 
+  #' @param tbl_new a tibble with all the accepted samples
+  #' @param m_nb a tibble with the samples before categorization
+  tbl_new$timepoint <- "After Training"
+  tbl_results <- tbl[, c(features, label, "timepoint")] %>%
+    rbind(tbl_new[, c(features, label, "timepoint")])
+  tbl_centers <- map(m_nb$tables, function(x) x[1, ]) %>% 
+    as_tibble() %>%
+    mutate(
+      category = categories
+    )
+  tbl_results <- left_join(
+    tbl_results, 
+    tbl_centers[, c("x1", "x2", "category")], 
+    by = "category",
+    suffix = c("_data", "_center")
+  )
+  ncols <- length(names(tbl_results))
+  tbl_results$timepoint <- fct_relevel(
+    tbl_results$timepoint, "Before Training", "After Training"
+  )
+  return(tbl_results)
+}
+
+plot_moves <- function(tbl_results) {
+  ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
+    geom_point(aes(color = as.numeric(category))) +
+    geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
+    geom_segment(
+      aes(
+        x = x1_data, y = x2_data, xend = x1_center, yend = x2_center, 
+        color = as.numeric(category)
+      ),
+      arrow = arrow(length = unit(.1, "inches"))
+    ) +
+    facet_wrap(~ timepoint, scales = "free") +
+    theme_bw() +
+    coord_cartesian(xlim = c(thx[1] - 1, thx[2] + 1), ylim = c(thx[1] - 1, thx[2] + 1)) +
+    scale_color_viridis_c(name = "Category") +
+    labs(
+      x = "X1",
+      y = "X2"
+    )
+}
+
+plot_cat_probs <- function(tbl_posteriors) {
+  ggplot(tbl_posteriors, aes(value)) +
+    geom_histogram() +
+    geom_density() +
+    facet_wrap(~ timepoint) +
+    theme_bw() +
+    labs(
+      x = "Posterior Probability",
+      y = "Probability Density"
+    )
+}
+
