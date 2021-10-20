@@ -6,7 +6,6 @@ library(naivebayes)
 library(tidyverse)
 library(docstring)
 
-#rm(list = ls())
 files <- c("R/utils.R")
 walk(files, source)
 
@@ -16,27 +15,27 @@ walk(files, source)
 thx <- c(0, 15)
 x1 <- seq(thx[1], thx[2], by = 1)
 x2 <- seq(thx[1], thx[2], by = 1)
-tbl <- crossing(x1, x2)
+features <- crossing(x1, x2)
+tbl <- tibble(stim_id = seq(1, nrow(features)), features)
 tbl <- create_categories(tbl, 4) %>% select(-c(x1_cat, x2_cat))
-tbl$timepoint <- "Before Training"
+nstim <- nrow(tbl)
 
 # this has to be changed. the initial model is not trained on the prior means
 # but on random samples from the stimuli priors, reflecting some initial contact
 # with the stimuli by participants
 
-features <- c("x1", "x2")
+feature_names <- c("x1", "x2")
 label <- "category"
 tbl$category <- as.factor(tbl$category)
 categories <- levels(tbl$category)
-fml <- formula(str_c(label, " ~ ", str_c(features, collapse = " + ")))
-m_nb <- naive_bayes(fml, data = tbl)
+fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
+m_nb_initial <- naive_bayes(fml, data = tbl)
+m_nb_update <- m_nb_initial
 
 nruns <- 1000
 tbl_new <- tbl
-tbl_new$prop1 <- tbl_new$x1
-tbl_new$prop2 <- tbl_new$x2
-posterior_prior <- predict(m_nb, tbl[, c("x1", "x2")], "prob")
-l_prior_prep <- extract_posterior(posterior_prior, m_nb)
+posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+l_prior_prep <- extract_posterior(posterior_prior, m_nb_initial)
 tbl_prior_long <- l_prior_prep[[1]]
 l_prior <- l_prior_prep[[2]]
 posterior <- posterior_prior
@@ -46,41 +45,50 @@ posterior <- posterior_prior
 
 pb <- txtProgressBar(min = 1, max = nruns, initial = 1)
 for (i in 1:nruns) {
-  # sample random observation 
-  index <- sample(nrow(tbl_new), 1)
-  # randomly move that observation
-  tbl_new$prop1[index] <- tbl_new$x1[index] + rnorm(1, 0, 0.1)
-  tbl_new$prop2[index] <- tbl_new$x2[index] + rnorm(1, 0, 0.1)
+  # randomly move random observation 
+  idx <- sample(nstim, 1)
+  cat_cur <- tbl_new$category[idx]
+  stim_id_cur <- tbl_new$stim_id[idx]
+  X_new <-  tibble(
+    tbl_new[idx, "x1"] + rnorm(1, 0, 0.75), 
+    tbl_new[idx, "x2"] + rnorm(1, 0, 0.75)
+  )
+  X_old <- tbl_new[, c("x1", "x2")]
+  X <- rbind(X_old, X_new)
   # create new X matrix
-  X <- as.matrix(tbl_new[, c("prop1", "prop2")])
-  colnames(X) <- features
-  posterior_new <- predict(m_nb, X, "prob")
-  # l_post <- extract_posterior(posterior, m_nb)[[2]]
+  colnames(X) <- feature_names
+  posterior_new <- predict(m_nb_update, X, "prob")
+  post_x_new <- tail(posterior_new[, cat_cur], 1)
+  # compare to average prediction given previously perceived stimuli
+  idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
+  post_x_old <- mean(posterior[idxs_stim, cat_cur])
   if (
-    (posterior_new[index, tbl_new$category[index]] > posterior[index, tbl_new$category[index]]) & 
-    # could be likelihood ratio as well:
-    # posterior_new[index, tbl_new$category[index]]/m_nb$prior[tbl_new$category[index]] > posterior[index, tbl_new$category[index]/m_nb$prior[tbl_new$category[index]]]
-    between(tbl_new$prop1[index], thx[1], thx[2]) & 
-    between(tbl_new$prop2[index], thx[1], thx[2])
+    (post_x_new > post_x_old) & 
+    between(X_new$x1, thx[1], thx[2]) & 
+    between(X_new$x2, thx[1], thx[2])
   ) {
-    tbl_new$x1[index] <- tbl_new$prop1[index]
-    tbl_new$x2[index] <- tbl_new$prop2[index]
-    # tbl_new$x1 <- tbl_new$prop1
-    # tbl_new$x2 <- tbl_new$prop2
-    # l_prior <- l_post
+    tbl_new <- rbind(
+      tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
+      )
     posterior <- posterior_new
-    # cat("accepted\n")
+    # refit model
+    m_nb_update <- naive_bayes(fml, data = tbl_new)
   }
   
   setTxtProgressBar(pb,i)
 }
-rclose(pb)
+close(pb)
 
 
 # Post Processing ---------------------------------------------------------
 
-tbl_results <- c_before_after(tbl_new, tbl)
-tbl_posterior_long <- extract_posterior(posterior, m_nb)[[1]]
+
+l_results <- add_centers(tbl_new, nrow(tbl), m_nb_initial, m_nb_update, categories)
+tbl_results <- l_results[[1]]
+tbl_results_agg <- l_results[[2]]
+
+
+tbl_posterior_long <- extract_posterior(posterior, m_nb_update)[[1]]
 tbl_posteriors <- tbl_prior_long %>%
   mutate(timepoint = "Before Training") %>%
   rbind(
@@ -91,11 +99,8 @@ tbl_posteriors <- tbl_prior_long %>%
     timepoint = fct_relevel(timepoint, "Before Training", "After Training")
   )
 
-pl_centers <- plot_moves(tbl_results)
+pl_centers <- plot_moves(rbind(tbl_results, tbl_results_agg))
 pl_post <- plot_cat_probs(tbl_posteriors)
 plot_arrangement(list(pl_centers, pl_post), n_cols = 1)
-
-
-
 
 

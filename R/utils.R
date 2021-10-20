@@ -93,30 +93,74 @@ extract_posterior <- function(posterior, m_nb) {
   return(l_out)
 }
 
-c_before_after <- function(tbl_new, tbl) {
-  #' concatenate the values seen before categorization and afterwards
+
+agg_and_join <- function(tbl, timepoint_str, tbl_centers){
+  #' aggregate prior and/or sampled values
   #' 
-  #' @param tbl_new a tibble with all the accepted samples
-  #' @param m_nb a tibble with the samples before categorization
-  tbl_new$timepoint <- "After Training"
-  tbl_results <- tbl[, c(features, label, "timepoint")] %>%
-    rbind(tbl_new[, c(features, label, "timepoint")])
-  tbl_centers <- map(m_nb$tables, function(x) x[1, ]) %>% 
-    as_tibble() %>%
-    mutate(
-      category = categories
-    )
+  #' @param tbl tibble with prior and/or samples
+  #' @param timepoint_str a string stating the timepoint of learning
+  #' @param tbl_centers a tibble with the category centroids
+  #' 
+  tbl_tmp <- tbl %>% mutate(
+    timepoint == timepoint_str) %>% group_by(
+      stim_id, category, timepoint
+    ) %>% summarize(
+      x1 = mean(x1),
+      x2 = mean(x2)
+    ) %>% ungroup() %>%
+    relocate(x1, x2, .after = stim_id)
   tbl_results <- left_join(
-    tbl_results, 
-    tbl_centers[, c("x1", "x2", "category")], 
-    by = "category",
+    tbl_tmp, 
+    tbl_centers, 
+    by = c("category", "timepoint"),
     suffix = c("_data", "_center")
   )
-  ncols <- length(names(tbl_results))
-  tbl_results$timepoint <- fct_relevel(
-    tbl_results$timepoint, "Before Training", "After Training"
+  tbl_results$timepoint <- factor(
+    tbl_results$timepoint, 
+    levels = c("Before Training", "After Training")
   )
   return(tbl_results)
+}
+
+
+center_of_category <- function(m, timepoint_str){
+  #' model-based category centroids
+  #' 
+  #' @param m the fitted naive Bayes model
+  #' @param timepoint_str a string stating the timepoint of learning
+  #' 
+  map(m$tables, function(x) x[1, ]) %>% 
+    as_tibble() %>%
+    mutate(
+      category = categories,
+      timepoint = timepoint_str
+    ) 
+}
+
+
+add_centers <- function(tbl_new, nstart, m_nb_initial, m_nb_update, categories) {
+  #' add category centers
+  #' 
+  #' @param tbl_new a tibble with all the accepted samples
+  #' @param nstart nr of different stimuli
+  #' @param m_nb_initial the originally fitted naive Bayes model (i.e., prior model)
+  #' @param m_nb_update the most recently updated naive Bayes model
+  #' @param categories vector with unique categories
+  #' 
+  nnew <- nrow(tbl_new) - nstart
+  tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
+  tbl_centers <- rbind(
+    center_of_category(m_nb_initial, "Before Training"),
+    center_of_category(m_nb_update, "After Training")
+    )
+  tbl_before <- tbl_new %>% filter(timepoint == "Before Training")
+  l <- map2(
+    list(tbl_before = tbl_before, tbl_all = tbl_new),
+    list("Before Training", "After Training"),
+    agg_and_join,
+    tbl_centers = tbl_centers
+  )
+  return(l)
 }
 
 plot_moves <- function(tbl_results) {
@@ -142,8 +186,8 @@ plot_moves <- function(tbl_results) {
 
 plot_cat_probs <- function(tbl_posteriors) {
   ggplot(tbl_posteriors, aes(value)) +
-    geom_histogram() +
-    geom_density() +
+    geom_histogram(aes(y = ..density..), alpha = .5, color = "black") +
+    geom_density(aes(y = ..density..), color = "purple", size = 1) +
     facet_wrap(~ timepoint) +
     theme_bw() +
     labs(
