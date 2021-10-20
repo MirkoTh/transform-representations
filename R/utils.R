@@ -138,25 +138,23 @@ center_of_category <- function(m, timepoint_str){
 }
 
 
-add_centers <- function(tbl_new, nstart, m_nb_initial, m_nb_update, categories) {
+add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
   #' add category centers
   #' 
   #' @param tbl_new a tibble with all the accepted samples
-  #' @param nstart nr of different stimuli
   #' @param m_nb_initial the originally fitted naive Bayes model (i.e., prior model)
   #' @param m_nb_update the most recently updated naive Bayes model
   #' @param categories vector with unique categories
   #' 
-  nnew <- nrow(tbl_new) - nstart
-  tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
   tbl_centers <- rbind(
     center_of_category(m_nb_initial, "Before Training"),
     center_of_category(m_nb_update, "After Training")
     )
-  tbl_before <- tbl_new %>% filter(timepoint == "Before Training")
+  tbl_prior <- tbl_new %>% filter(timepoint == "Before Training")
+  tbl_samples <- tbl_new %>% filter(timepoint == "After Training")
   l <- map2(
-    list(tbl_before = tbl_before, tbl_all = tbl_new),
-    list("Before Training", "After Training"),
+    list(tbl_prior = tbl_prior, tbl_samples = tbl_samples, tbl_posterior = tbl_new),
+    list("Before Training", "Only Samples", "After Training"),
     agg_and_join,
     tbl_centers = tbl_centers
   )

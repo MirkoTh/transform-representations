@@ -82,11 +82,11 @@ close(pb)
 
 # Post Processing ---------------------------------------------------------
 
-
-l_results <- add_centers(tbl_new, nrow(tbl), m_nb_initial, m_nb_update, categories)
-tbl_results <- l_results[[1]]
-tbl_results_agg <- l_results[[2]]
-
+nstart <- nrow(tbl)
+nnew <- nrow(tbl_new) - nstart
+tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
+l_results <- add_centers(tbl_new, m_nb_initial, m_nb_update, categories)
+l_results$tbl_posterior <- l_results$tbl_posterior %>% select(-c(x1_center, x2_center))
 
 tbl_posterior_long <- extract_posterior(posterior, m_nb_update)[[1]]
 tbl_posteriors <- tbl_prior_long %>%
@@ -99,7 +99,7 @@ tbl_posteriors <- tbl_prior_long %>%
     timepoint = fct_relevel(timepoint, "Before Training", "After Training")
   )
 
-pl_centers <- plot_moves(rbind(tbl_results, tbl_results_agg))
+pl_centers <- plot_moves(l_results$tbl_posterior)
 pl_post <- plot_cat_probs(tbl_posteriors)
 plot_arrangement(list(pl_centers, pl_post), n_cols = 1)
 
