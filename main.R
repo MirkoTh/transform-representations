@@ -14,7 +14,7 @@ walk(files, source)
 
 # Create Categories -------------------------------------------------------
 n_categories <- 16
-prior_std <- .75
+prior_sd <- .75
 
 thx <- c(0, 15)
 x1 <- seq(thx[1], thx[2], by = 1)
@@ -125,7 +125,7 @@ tbl_tmp <- tbl_new %>% filter(stim_id == nice_showcase) %>%
     x2_sd = sd(x2)
   )
 
-tbl_samples <- normal_quantiles_given_pars(tbl_tmp)
+tbl_samples <- normal_quantiles_given_pars(tbl_tmp, prior_sd)
 
 tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
   mutate(rwn = row_number(Value)) %>%

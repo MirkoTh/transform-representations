@@ -195,7 +195,7 @@ plot_cat_probs <- function(tbl_posteriors) {
     )
 }
 
-normal_quantiles_given_pars <- function(tbl) {
+normal_quantiles_given_pars <- function(tbl, prior_sd) {
   #' calculate quantiles given prior mean and sd, 
   #' as well as empirical mean and sd from accepted samples
   #' 
@@ -213,7 +213,7 @@ normal_quantiles_given_pars <- function(tbl) {
   names(tmp_mean_prior) <- str_c(names(tmp_mean_prior), "_prior")
   tbl_parms <- tibble(
     mean = c(tmp_mean_prior, tmp_mean),
-    sd = append(rep(prior_std, length(tmp_mean)), tmp_sd)
+    sd = append(rep(prior_sd, length(tmp_mean)), tmp_sd)
   )
   tbl_out <- pmap(tbl_parms, qnorm, p = seq(.01, .99, by = .01)) %>% as_tibble()
   names(tbl_out) <- str_c(
