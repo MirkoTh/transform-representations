@@ -5,12 +5,16 @@ library(mclust)
 library(naivebayes)
 library(tidyverse)
 library(docstring)
+library(ggExtra)
+
 
 files <- c("R/utils.R")
 walk(files, source)
 
 
 # Create Categories -------------------------------------------------------
+n_categories <- 16
+prior_std <- .75
 
 thx <- c(0, 15)
 x1 <- seq(thx[1], thx[2], by = 1)
@@ -32,7 +36,7 @@ fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
 m_nb_initial <- naive_bayes(fml, data = tbl)
 m_nb_update <- m_nb_initial
 
-nruns <- 1000
+nruns <- 2000
 tbl_new <- tbl
 posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
 l_prior_prep <- extract_posterior(posterior_prior, m_nb_initial)
@@ -50,8 +54,8 @@ for (i in 1:nruns) {
   cat_cur <- tbl_new$category[idx]
   stim_id_cur <- tbl_new$stim_id[idx]
   X_new <-  tibble(
-    tbl_new[idx, "x1"] + rnorm(1, 0, 0.75), 
-    tbl_new[idx, "x2"] + rnorm(1, 0, 0.75)
+    tbl_new[idx, "x1"] + rnorm(1, 0, prior_std), 
+    tbl_new[idx, "x2"] + rnorm(1, 0, prior_std)
   )
   X_old <- tbl_new[, c("x1", "x2")]
   X <- rbind(X_old, X_new)
@@ -67,9 +71,10 @@ for (i in 1:nruns) {
     between(X_new$x1, thx[1], thx[2]) & 
     between(X_new$x2, thx[1], thx[2])
   ) {
+    cat("accepted\n")
     tbl_new <- rbind(
       tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
-      )
+    )
     posterior <- posterior_new
     # refit model
     m_nb_update <- naive_bayes(fml, data = tbl_new)
@@ -86,7 +91,7 @@ nstart <- nrow(tbl)
 nnew <- nrow(tbl_new) - nstart
 tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
 l_results <- add_centers(tbl_new, m_nb_initial, m_nb_update, categories)
-l_results$tbl_posterior <- l_results$tbl_posterior %>% select(-c(x1_center, x2_center))
+
 
 tbl_posterior_long <- extract_posterior(posterior, m_nb_update)[[1]]
 tbl_posteriors <- tbl_prior_long %>%
@@ -104,3 +109,38 @@ pl_post <- plot_cat_probs(tbl_posteriors)
 plot_arrangement(list(pl_centers, pl_post), n_cols = 1)
 
 
+# Inspect Prior and Samples ---------------------------------------------
+most_acceptances <- tbl_new %>% arrange(stim_id) %>%
+  group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% arrange(desc(rwn)) %>%
+  head(1) %>% select(stim_id) %>% as_vector()
+
+nice_showcase <- 64
+
+tbl_tmp <- tbl_new %>% filter(stim_id == nice_showcase) %>%
+  group_by(timepoint) %>%
+  summarize(
+    x1_mean = mean(x1),
+    x2_mean = mean(x2),
+    x1_sd = sd(x1),
+    x2_sd = sd(x2)
+  )
+
+tbl_samples <- normal_quantiles_given_pars(tbl_tmp)
+
+tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
+  mutate(rwn = row_number(Value)) %>%
+  pivot_wider(names_from = Variable, values_from = Value) %>%
+  select(-rwn) %>%
+  mutate(Timepoint = recode_factor(Timepoint, prior = "Prior", posterior = "Posterior"))
+
+p <- ggplot(tbl_plt, aes(x1, x2, group = Timepoint)) +
+  geom_point(aes(color = Timepoint), shape = 1) +
+  theme_bw() +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    x = bquote(x[1]),
+    y = bquote(x[2])
+  )
+
+dev.new()
+ggMarginal(p, groupColour = TRUE, type="density", size=10)

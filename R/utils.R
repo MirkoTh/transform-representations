@@ -74,7 +74,7 @@ plot_arrangement <- function(pl, n_cols = 2) {
   #' @param n_cols nr columns of the page layout
   n_plots <- length(pl)
   n_rows <- ceiling(n_plots / n_cols)
-  marrangeGrob(pl, nrow = n_rows, ncol = n_cols)
+  marrangeGrob(pl, nrow = n_rows, ncol = n_cols, top = quote(paste("")))
 }
 
 extract_posterior <- function(posterior, m_nb) {
@@ -95,10 +95,10 @@ extract_posterior <- function(posterior, m_nb) {
 
 
 agg_and_join <- function(tbl, timepoint_str, tbl_centers){
-  #' aggregate prior and/or sampled values
+  #' aggregate prior and/or sampled values and join with model centroids
   #' 
   #' @param tbl tibble with prior and/or samples
-  #' @param timepoint_str a string stating the timepoint of learning
+  #' @param timepoint_str a string stating the time point of learning
   #' @param tbl_centers a tibble with the category centroids
   #' 
   tbl_tmp <- tbl %>% mutate(
@@ -127,7 +127,7 @@ center_of_category <- function(m, timepoint_str){
   #' model-based category centroids
   #' 
   #' @param m the fitted naive Bayes model
-  #' @param timepoint_str a string stating the timepoint of learning
+  #' @param timepoint_str a string stating the time point of learning
   #' 
   map(m$tables, function(x) x[1, ]) %>% 
     as_tibble() %>%
@@ -177,14 +177,15 @@ plot_moves <- function(tbl_results) {
     coord_cartesian(xlim = c(thx[1] - 1, thx[2] + 1), ylim = c(thx[1] - 1, thx[2] + 1)) +
     scale_color_viridis_c(name = "Category") +
     labs(
-      x = "X1",
-      y = "X2"
+      x = bquote(x[1]),
+      y = bquote(x[2])
     )
 }
 
 plot_cat_probs <- function(tbl_posteriors) {
+  bw <- 10/nrow(tbl_posteriors)
   ggplot(tbl_posteriors, aes(value)) +
-    geom_histogram(aes(y = ..density..), alpha = .5, color = "black") +
+    geom_histogram(aes(y = ..density..), alpha = .5, color = "black", binwidth = bw) +
     geom_density(aes(y = ..density..), color = "purple", size = 1) +
     facet_wrap(~ timepoint) +
     theme_bw() +
@@ -194,3 +195,34 @@ plot_cat_probs <- function(tbl_posteriors) {
     )
 }
 
+normal_quantiles_given_pars <- function(tbl) {
+  #' calculate quantiles given prior mean and sd, 
+  #' as well as empirical mean and sd from accepted samples
+  #' 
+  #' @param tbl tibble with the aggregated values
+  #' 
+  tmp_mean <- tbl %>% filter(timepoint == "After Training") %>%
+    select(ends_with("_mean")) %>%
+    unlist()
+  tmp_sd <- tbl %>% filter(timepoint == "After Training") %>%
+    select(ends_with("_sd")) %>%
+    unlist()
+  tmp_mean_prior <- tbl %>% filter(timepoint == "Before Training") %>% 
+    select(ends_with("_mean")) %>%
+    unlist()
+  names(tmp_mean_prior) <- str_c(names(tmp_mean_prior), "_prior")
+  tbl_parms <- tibble(
+    mean = c(tmp_mean_prior, tmp_mean),
+    sd = append(rep(prior_std, length(tmp_mean)), tmp_sd)
+  )
+  tbl_out <- pmap(tbl_parms, qnorm, p = seq(.01, .99, by = .01)) %>% as_tibble()
+  names(tbl_out) <- str_c(
+    rep(str_match(names(tmp_mean), "(^.+)_")[, 2], 2),
+    rep(c("_prior", "_posterior"), each = 2)
+  )
+  tbl_out_long <- tbl_out %>% pivot_longer(
+    names(tbl_out), names_to = "Variable", values_to = "Value"
+  ) %>% separate(Variable, c("Variable", "Timepoint"), "_")
+  
+  return(tbl_out_long)
+}
