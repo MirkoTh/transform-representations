@@ -46,7 +46,6 @@ categorize_stimuli <- function(l_params) {
   # Categorization Simulation -----------------------------------------------
   
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
-  n_accepted <- 0
   for (i in 1:nruns) {
     # randomly move random observation 
     idx <- sample(n_stimuli, 1)
@@ -65,8 +64,10 @@ categorize_stimuli <- function(l_params) {
     # compare to average prediction given previously perceived stimuli
     idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
     post_x_old <- mean(posterior[idxs_stim, cat_cur])
+    p_thx <- runif(1)
     if (
-      (post_x_new > post_x_old) & 
+      # (post_x_new > post_x_old) & 
+      p_thx < min(1, post_x_new/post_x_old) &
       between(X_new$x1, thx[1], thx[2]) & 
       between(X_new$x2, thx[1], thx[2])
     ) {
@@ -77,14 +78,12 @@ categorize_stimuli <- function(l_params) {
       posterior <- posterior_new
       # refit model
       m_nb_update <- naive_bayes(fml, data = tbl_new)
-      n_accepted <- n_accepted + 1
     }
     
     setTxtProgressBar(pb,i)
   }
   close(pb)
-  print(n_accepted)
-  
+
   # Post Processing ---------------------------------------------------------
   
   nstart <- nrow(tbl)
