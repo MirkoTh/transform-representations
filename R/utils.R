@@ -6,11 +6,27 @@ library(docstring)
 library(ggExtra)
 
 
-categorize_stimuli <- function(tbl, l_params) {
-  list2env(l_params)
-  tbl <- create_categories(tbl, sqrt(n_categories)) %>% select(-c(x1_cat, x2_cat))
-  nstim <- nrow(tbl)
+categorize_stimuli <- function(l_params) {
+  #' main categorization function
+  #' 
+  #' @description categorize stimuli, store accepted samples, and visualize results
+  #' 
+  #' @param l_params parameter list with fields n_stimuli, n_categories, prior_sd, nruns
+  #' @return a list with prior, samples, and posterior in [[1]] and some
+  #' visualizations in [[2]]
+  #' 
+  # unpack parameters
+  env <- rlang::current_env()
+  list2env(l_params, env)
+
+  thx <- c(0, sqrt(n_stimuli) - 1)
+  x1 <- seq(thx[1], thx[2], by = 1)
+  x2 <- seq(thx[1], thx[2], by = 1)
+  features <- crossing(x1, x2)
+  tbl <- tibble(stim_id = seq(1, nrow(features)), features)
   
+  tbl <- create_categories(tbl, sqrt(n_categories)) %>% select(-c(x1_cat, x2_cat))
+
   feature_names <- c("x1", "x2")
   label <- "category"
   tbl$category <- as.factor(tbl$category)
@@ -32,7 +48,7 @@ categorize_stimuli <- function(tbl, l_params) {
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1)
   for (i in 1:nruns) {
     # randomly move random observation 
-    idx <- sample(nstim, 1)
+    idx <- sample(n_stimuli, 1)
     cat_cur <- tbl_new$category[idx]
     stim_id_cur <- tbl_new$stim_id[idx]
     X_new <-  tibble(
@@ -53,7 +69,7 @@ categorize_stimuli <- function(tbl, l_params) {
       between(X_new$x1, thx[1], thx[2]) & 
       between(X_new$x2, thx[1], thx[2])
     ) {
-      cat("accepted\n")
+      #cat("accepted\n")
       tbl_new <- rbind(
         tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
       )
@@ -86,7 +102,7 @@ categorize_stimuli <- function(tbl, l_params) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   
-  pl_centers <- plot_moves(l_results$tbl_posterior)
+  pl_centers <- plot_moves(l_results$tbl_posterior, thx)
   pl_post <- plot_cat_probs(tbl_posteriors)
   
   
@@ -304,7 +320,7 @@ add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
   return(l)
 }
 
-plot_moves <- function(tbl_results) {
+plot_moves <- function(tbl_results, thx) {
   ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
     geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
