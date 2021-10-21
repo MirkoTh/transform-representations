@@ -45,7 +45,8 @@ categorize_stimuli <- function(l_params) {
   
   # Categorization Simulation -----------------------------------------------
   
-  pb <- txtProgressBar(min = 1, max = nruns, initial = 1)
+  pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
+  n_accepted <- 0
   for (i in 1:nruns) {
     # randomly move random observation 
     idx <- sample(n_stimuli, 1)
@@ -76,12 +77,13 @@ categorize_stimuli <- function(l_params) {
       posterior <- posterior_new
       # refit model
       m_nb_update <- naive_bayes(fml, data = tbl_new)
+      n_accepted <- n_accepted + 1
     }
     
     setTxtProgressBar(pb,i)
   }
   close(pb)
-  
+  print(n_accepted)
   
   # Post Processing ---------------------------------------------------------
   
@@ -397,4 +399,17 @@ check_categories <- function(n_categories) {
   if (!(sqrt(n_categories) %% 1 == 0)) {
     stop("Make sure n_categories is 2^x")
   }
+}
+
+
+prior_posterior_for_stim_id <- function(l, l_id, s_id) {
+  #' extract prior and posterior means from nested results list
+  #' 
+  #' @param l the nested list
+  #' @param l_id the first level of the list's hierarchy to be selected
+  #' @param s_id the stimulus_id to be extracted
+  #' 
+  l[[l_id]][[1]]$tbl_posterior %>%
+    mutate(n_categories = factor(max(as.numeric(category)))) %>%
+    filter(stim_id == s_id)
 }
