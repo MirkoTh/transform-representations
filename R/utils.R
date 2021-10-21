@@ -1,5 +1,146 @@
 library(tidyverse)
 library(gridExtra)
+library(naivebayes)
+library(tidyverse)
+library(docstring)
+library(ggExtra)
+
+
+categorize_stimuli <- function(tbl, l_params) {
+  list2env(l_params)
+  tbl <- create_categories(tbl, sqrt(n_categories)) %>% select(-c(x1_cat, x2_cat))
+  nstim <- nrow(tbl)
+  
+  feature_names <- c("x1", "x2")
+  label <- "category"
+  tbl$category <- as.factor(tbl$category)
+  categories <- levels(tbl$category)
+  fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
+  m_nb_initial <- naive_bayes(fml, data = tbl)
+  m_nb_update <- m_nb_initial
+  
+  tbl_new <- tbl
+  posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+  l_prior_prep <- extract_posterior(posterior_prior, m_nb_initial, tbl_new)
+  tbl_prior_long <- l_prior_prep[[1]]
+  l_prior <- l_prior_prep[[2]]
+  posterior <- posterior_prior
+  
+  
+  # Categorization Simulation -----------------------------------------------
+  
+  pb <- txtProgressBar(min = 1, max = nruns, initial = 1)
+  for (i in 1:nruns) {
+    # randomly move random observation 
+    idx <- sample(nstim, 1)
+    cat_cur <- tbl_new$category[idx]
+    stim_id_cur <- tbl_new$stim_id[idx]
+    X_new <-  tibble(
+      tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
+      tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
+    )
+    X_old <- tbl_new[, c("x1", "x2")]
+    X <- rbind(X_old, X_new)
+    # create new X matrix
+    colnames(X) <- feature_names
+    posterior_new <- predict(m_nb_update, X, "prob")
+    post_x_new <- tail(posterior_new[, cat_cur], 1)
+    # compare to average prediction given previously perceived stimuli
+    idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
+    post_x_old <- mean(posterior[idxs_stim, cat_cur])
+    if (
+      (post_x_new > post_x_old) & 
+      between(X_new$x1, thx[1], thx[2]) & 
+      between(X_new$x2, thx[1], thx[2])
+    ) {
+      cat("accepted\n")
+      tbl_new <- rbind(
+        tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
+      )
+      posterior <- posterior_new
+      # refit model
+      m_nb_update <- naive_bayes(fml, data = tbl_new)
+    }
+    
+    setTxtProgressBar(pb,i)
+  }
+  close(pb)
+  
+  
+  # Post Processing ---------------------------------------------------------
+  
+  nstart <- nrow(tbl)
+  nnew <- nrow(tbl_new) - nstart
+  tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
+  l_results <- add_centers(tbl_new, m_nb_initial, m_nb_update, categories)
+  
+  
+  tbl_posterior_long <- extract_posterior(posterior, m_nb_update, tbl_new)[[1]]
+  tbl_posteriors <- tbl_prior_long %>%
+    mutate(timepoint = "Before Training") %>%
+    rbind(
+      tbl_posterior_long %>%
+        mutate(timepoint = "After Training")
+    ) %>%
+    mutate(
+      timepoint = fct_relevel(timepoint, "Before Training", "After Training")
+    )
+  
+  pl_centers <- plot_moves(l_results$tbl_posterior)
+  pl_post <- plot_cat_probs(tbl_posteriors)
+  
+  
+  # Inspect Prior and Samples ---------------------------------------------
+  # the following only works when nruns is large enough
+  nice_showcase <- max(tbl$x1) + 1
+  n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
+    group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
+    ungroup() %>% arrange(desc(rwn))
+  if(n_accept_stimuli %>% filter(stim_id == nice_showcase) %>% 
+     select(rwn) %>% as_vector() > 2) {
+    showcase <- nice_showcase
+  } else {
+    showcase <- n_accept_stimuli %>% head(1) %>% select(stim_id) %>% as_vector()
+  }
+  tbl_tmp <- tbl_new %>% filter(stim_id == showcase) %>%
+    group_by(timepoint) %>%
+    summarize(
+      x1_mean = mean(x1),
+      x2_mean = mean(x2),
+      x1_sd = sd(x1),
+      x2_sd = sd(x2)
+    )
+  
+  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, prior_sd)
+  
+  tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
+    mutate(rwn = row_number(Value)) %>%
+    pivot_wider(names_from = Variable, values_from = Value) %>%
+    select(-rwn) %>%
+    mutate(Timepoint = recode_factor(Timepoint, prior = "Prior", posterior = "Posterior"))
+  
+  pl <- ggplot(tbl_plt, aes(x1, x2, group = Timepoint)) +
+    geom_point(aes(color = Timepoint), shape = 1) +
+    theme_bw() +
+    scale_color_brewer(palette = "Set1") +
+    labs(
+      x = bquote(x[1]),
+      y = bquote(x[2])
+    )
+  
+  pl_marginals <- ggMarginal(pl, groupColour = TRUE, type="density", size=10)
+  
+  l_plots <- list(
+    pl_centers, pl_post, pl_marginals
+  )
+  
+  l_out <- list(
+    l_results, l_plots
+  )
+  
+  return(l_out)
+}
+
 
 create_categories <- function(tbl, n_cat_per_feat) {
   #' create categories from feature space
@@ -77,11 +218,12 @@ plot_arrangement <- function(pl, n_cols = 2) {
   marrangeGrob(pl, nrow = n_rows, ncol = n_cols, top = quote(paste("")))
 }
 
-extract_posterior <- function(posterior, m_nb) {
+extract_posterior <- function(posterior, m_nb, tbl_new) {
   #' extract posterior of the true values
   #' 
   #' @param posterior posterior probabilities of all categories given data
   #' @param m_nb a trained naive bayes model
+  #' @param tbl_new the original tbl with the accepted samples
   tbl_post <- cbind(posterior, category = as.character(tbl_new$category)) %>% as_tibble()
   tbl_post[, levels(tbl_new$category)] <- map(tbl_post[, levels(tbl_new$category)], as.numeric)
   tbl_post_long <- tbl_post %>%
@@ -123,11 +265,12 @@ agg_and_join <- function(tbl, timepoint_str, tbl_centers){
 }
 
 
-center_of_category <- function(m, timepoint_str){
+center_of_category <- function(m, timepoint_str, categories){
   #' model-based category centroids
   #' 
   #' @param m the fitted naive Bayes model
   #' @param timepoint_str a string stating the time point of learning
+  #' @param categories unique available categories
   #' 
   map(m$tables, function(x) x[1, ]) %>% 
     as_tibble() %>%
@@ -147,8 +290,8 @@ add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
   #' @param categories vector with unique categories
   #' 
   tbl_centers <- rbind(
-    center_of_category(m_nb_initial, "Before Training"),
-    center_of_category(m_nb_update, "After Training")
+    center_of_category(m_nb_initial, "Before Training", categories),
+    center_of_category(m_nb_update, "After Training", categories)
     )
   tbl_prior <- tbl_new %>% filter(timepoint == "Before Training")
   tbl_samples <- tbl_new %>% filter(timepoint == "After Training")
@@ -225,4 +368,17 @@ normal_quantiles_given_pars <- function(tbl, prior_sd) {
   ) %>% separate(Variable, c("Variable", "Timepoint"), "_")
   
   return(tbl_out_long)
+}
+
+
+check_categories <- function(n_categories) {
+  #' check that n_categories is a usable value
+  #' 
+  #' @param n_categories an integer 2^x with any integer as x
+  #' 
+  if (!is_integer(n_categories)) stop("Make sure n_categories is an integer")
+  
+  if (!(sqrt(n_categories) %% 1 == 0)) {
+    stop("Make sure n_categories is 2^x")
+  }
 }
