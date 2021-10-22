@@ -412,3 +412,79 @@ prior_posterior_for_stim_id <- function(l, l_id, s_id) {
     mutate(n_categories = factor(max(as.numeric(category)))) %>%
     filter(stim_id == s_id)
 }
+
+
+stimulus_before_after <- function(l_results, stim_id) {
+  #' prior and posterior 2D means of a stimulus
+  #' 
+  #' @param l_results the list with the simulation results
+  #' @param stim_id the stimulus_id to be extracted
+  #' 
+  tbl_stimulus <- reduce(
+    map(
+      seq(1, length(l_results), by = 1), prior_posterior_for_stim_id,
+      l = l_results, s_id = stim_id
+    ),
+    rbind
+  )
+  tbl_stimulus <- tbl_stimulus %>%
+    select(c(x1_data, x2_data, timepoint, n_categories)) %>%
+    pivot_wider(
+      id_cols = c(n_categories), names_from = timepoint, values_from = c(x1_data, x2_data)
+    )
+  names(tbl_stimulus) <- c("n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
+  return(tbl_stimulus)
+}
+
+
+plot_stimulus_movements <- function(tbl_stimulus) {
+  #' plot prior and posterior means of a stimulus and connect them using colored arrows
+  #' 
+  #' @param tbl_stimulus tibble with the pivoted x1 and x2 coordinates
+  #' 
+  ggplot(tbl_stimulus) +
+    geom_point(aes(x1_bef, x2_bef), size = 5, color = "white") +
+    geom_point(aes(x1_bef, x2_bef, color = n_categories), size = 3, position = position_dodge(.1)) +
+    geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
+    geom_segment(aes(
+      x = x1_bef - .005, y = x2_bef - .025, xend = x1_aft + .005, yend = x2_aft + .025,
+      color = n_categories
+    ), arrow = arrow(type = "closed")) +
+    theme_bw() +
+    scale_color_brewer(palette = "Set1", name = "Nr. Categories") +
+    labs(
+      x = bquote(x[1]),
+      y = bquote(x[2])
+    )
+}
+
+
+
+save_plots <- function(l_results, pl_stimulus_movement) {
+  #' save required figures in figures dir
+  #' 
+  #' @param l_results nested result list
+  #' @param pl_stimulus_movement plot visualizing movements for different nr cats
+  #' 
+  tbl_save_pl <- tibble(
+    pl = c(
+      expr(l_results[[1]][[2]][[1]]), expr(l_results[[2]][[2]][[1]]),
+      expr(pl_stimulus_movement)
+    ),
+    filename = c(
+      "16-Cats-All-Movements.png", "4-Cats-All-Movements.png",
+      "Diverging-Movement-One-Stimulus.png"
+    ),
+    width = c(10, 10, 4),
+    height = c(5, 5, 4)
+  )
+  save_figure_png <- function(pl, filename, width, height) {
+    png(
+      filename = str_c("figures/", filename), width = width, height = height,
+      units = "in", res = 200
+    )
+    print(eval(pl))
+    dev.off()
+  }
+  pwalk(tbl_save_pl, save_figure_png)
+}
