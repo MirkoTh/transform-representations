@@ -13,8 +13,8 @@ walk(files, source)
 
 # Create Categories -------------------------------------------------------
 
-n_categories <- 16L
-n_stimuli <- n_categories ^ 2
+n_categories <- 9L
+n_stimuli <- 144L
 prior_sd <- .75
 nruns <- 10000
 
@@ -47,7 +47,7 @@ suppressWarnings(
 
 # Visualize Stimulus Movement For Different Nr. Categories ----------------
 
-tbl_stimulus <- stimulus_before_after(l_results, 64)
+tbl_stimulus <- stimulus_before_after(l_results, 48)
 pl_stimulus_movement <- plot_stimulus_movements(tbl_stimulus)
 
 

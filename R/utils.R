@@ -472,7 +472,7 @@ save_plots <- function(l_results, pl_stimulus_movement) {
       expr(pl_stimulus_movement)
     ),
     filename = c(
-      "16-Cats-All-Movements.png", "4-Cats-All-Movements.png",
+      "9-Cats-All-Movements.png", "4-Cats-All-Movements.png",
       "Diverging-Movement-One-Stimulus.png"
     ),
     width = c(10, 10, 4),
