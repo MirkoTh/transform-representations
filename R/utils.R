@@ -4,6 +4,7 @@ library(naivebayes)
 library(tidyverse)
 library(docstring)
 library(ggExtra)
+library(assertthat)
 
 
 categorize_stimuli <- function(l_params) {
@@ -205,6 +206,7 @@ plot_clustered_grid <- function(tbl, stepsize_cat) {
   #' @param stepsize_cat \code{double} the stepsize to be shown on the axes and on the grid
   #' @return the ggplot2 object
   #' 
+  max_x <- max(tbl$x1, tbl$x2)
   ggplot(tbl, aes(x1, x2, group = category)) +
     geom_raster(aes(fill = category)) +
     theme_bw() + 
@@ -487,4 +489,33 @@ save_plots <- function(l_results, pl_stimulus_movement) {
     dev.off()
   }
   pwalk(tbl_save_pl, save_figure_png)
+}
+
+
+grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, prior_sd){
+  #' categorize using two-dimensional general recognition theory model
+  #' 
+  #' @description compute category probability given category thresholds (thx), 
+  #' 2d stimulus feature values, and prior variance of stimulus
+  #' 
+  #' @param x1_lower lower thx on x1 dimension
+  #' @param x2_lower lower thx on x2 dimension
+  #' @param x1_upper upper thx on x1 dimension
+  #' @param x2_upper upper thx on x2 dimension
+  #' @param tbl_stim 
+  #' @return a list with prior, samples, and posterior in [[1]] and some
+  #' visualizations in [[2]]
+  #' 
+  #' assuming uncorrelated feature dimensions
+  #' assuming prior variance is fixed across dimensions
+  assert_that(
+    are_equal(nrow(tbl_stim), 1), 
+    msg = "Make sure to provide only one sample at a time"
+  )
+  pmvnorm(
+    lower = c(x1_lower, x2_lower), 
+    upper = c(x1_upper, x2_upper), 
+    mean = as_vector(tbl_stim[, c("x1", "x2")]), 
+    sigma = matrix(c(prior_sd ^ 2, 0, 0, prior_sd ^ 2), nrow = 2, byrow = TRUE)
+  )
 }
