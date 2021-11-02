@@ -36,11 +36,14 @@ categorize_stimuli <- function(l_params) {
   posterior_prior <- priors(cat_type, tbl)
   
   # save prior for later and copy original tbl
-  l_prior_prep <- extract_posterior(posterior_prior, tbl_new)
+  l_prior_prep <- extract_posterior(posterior_prior, tbl)
   tbl_prior_long <- l_prior_prep[[1]]
   l_prior <- l_prior_prep[[2]]
   posterior <- posterior_prior
   tbl_new <- tbl
+  
+  unique_boundaries <- boundaries(tbl, n_categories)
+  thx_grt <- thxs(unique_boundaries)
   
   # Categorization Simulation -----------------------------------------------
   
@@ -59,10 +62,10 @@ categorize_stimuli <- function(l_params) {
       posterior_new <- predict(m_nb_update, l_x$X, "prob")
     }
     
-    post_x_new <- as_vector(tail(posterior_new[, cat_cur], 1))
+    post_x_new <- as_vector(tail(posterior_new[, l_x$cat_cur], 1))
     # compare to average prediction given previously perceived stimuli
-    idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
-    post_x_old <- mean(as_vector(posterior[idxs_stim, cat_cur]))
+    idxs_stim <- which(tbl_new$stim_id == l_x$stim_id_cur)
+    post_x_old <- mean(as_vector(posterior[idxs_stim, l_x$cat_cur]))
     p_thx <- runif(1)
     # decide on whether to accept or reject a proposition
     if (
@@ -73,7 +76,7 @@ categorize_stimuli <- function(l_params) {
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
-        tbl_new, tibble(stim_id = stim_id_cur, l_x$X_new, category = cat_cur)
+        tbl_new, tibble(stim_id = l_x$stim_id_cur, l_x$X_new, category = l_x$cat_cur)
       )
       posterior <- posterior_new
       if (cat_type == "prototype") {
@@ -94,7 +97,7 @@ categorize_stimuli <- function(l_params) {
   l_results <- add_centers(tbl_new, m_nb_initial, m_nb_update, categories)
   
   
-  tbl_posterior_long <- extract_posterior(posterior, m_nb_update, tbl_new)[[1]]
+  tbl_posterior_long <- extract_posterior(posterior, tbl_new)[[1]]
   tbl_posteriors <- tbl_prior_long %>%
     mutate(timepoint = "Before Training") %>%
     rbind(
@@ -207,10 +210,10 @@ priors <- function(cat_type, tbl) {
   #' @return the stimuli priors
   #' 
   if (cat_type == "rule"){
-    unique_cutoffs <- (max(tbl$x1) - min(tbl$x1)) / sqrt(n_categories)
+    unique_cutoffs <- cutoffs(tbl, n_categories)
     thx_grt <- thxs(unique_cutoffs)
     posterior_prior <- pmap(
-      thx_grt, grt_cat_probs, tbl_stim = tbl_new, prior_sd = prior_sd
+      thx_grt, grt_cat_probs, tbl_stim = tbl, prior_sd = prior_sd
     ) %>% unlist() %>%
       matrix(nrow = nrow(tbl)) %>%
       as_tibble(.name_repair = ~ categories)
@@ -246,10 +249,50 @@ perceive_stimulus <- function(tbl_new, n_stimuli) {
   # create new X matrix
   X <- rbind(X_old, X_new)
   colnames(X) <- feature_names
-  l_out <- list(X_old = X_old, X_new = X_new, X = X)
+  l_out <- list(
+    X_old = X_old, X_new = X_new, X = X,
+    cat_cur = cat_cur, stim_id_cur = stim_id_cur
+    )
   return(l_out)
 }
 
+
+boundaries <- function(tbl, n_categories) {
+  #' calculate decision boundaries
+  #' 
+  #' @param tbl \code{tibble} containing the stimulus id, two features,
+  #' and the category as columns
+  #' @param n_categories stating the number of categories
+  #' @return the unique boundaries in a vector
+  #' 
+  # randomly move random observation
+  x_vals <- sort(unique(tbl$x1))
+  stepsize <- length(x_vals) / sqrt(n_categories)
+  cutoffs_prep <- seq(0, length(x_vals), 4) - .5
+  unique_boundaries <- cutoffs_prep[between(cutoffs_prep, min(tbl$x1), max(tbl$x2))]
+  return(unique_boundaries)
+}
+
+
+thxs <- function(cutoff_vals) {
+  #' create required thresholds for rule-based categorization model
+  #' 
+  #' @param cutoff_vals unique cut-off values that have to be the same across
+  #' the two dimensions
+  #' @return a list with all the thresholds for the categories
+  #' 
+  #' assuming uncorrelated feature dimensions
+  #' assuming prior variance is fixed across dimensions
+  prep_lower <- c(-Inf, cutoff_vals)
+  prep_upper <- c(cutoff_vals, Inf)
+  n_thx <- length(prep_lower)
+  l <- list()
+  l[["x1_lower"]] <- rep(prep_lower, n_thx)
+  l[["x2_lower"]] <- rep(prep_lower, each = n_thx)
+  l[["x1_upper"]] <- rep(prep_upper, n_thx)
+  l[["x2_upper"]] <- rep(prep_upper, each = n_thx)
+  return(l)
+}
 
 
 extract_posterior <- function(posterior, tbl_new) {
