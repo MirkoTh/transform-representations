@@ -19,72 +19,71 @@ categorize_stimuli <- function(l_params) {
   # unpack parameters
   env <- rlang::current_env()
   list2env(l_params, env)
-
+  
   thx <- c(0, sqrt(n_stimuli) - 1)
   x1 <- seq(thx[1], thx[2], by = 1)
   x2 <- seq(thx[1], thx[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  
-  tbl <- create_categories(tbl, sqrt(n_categories)) %>% select(-c(x1_cat, x2_cat))
-
+  tbl <- create_categories(tbl, sqrt(n_categories)) %>% 
+    select(-c(x1_cat, x2_cat))
   feature_names <- c("x1", "x2")
   label <- "category"
   tbl$category <- as.factor(tbl$category)
   categories <- levels(tbl$category)
-  fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
-  m_nb_initial <- naive_bayes(fml, data = tbl)
-  m_nb_update <- m_nb_initial
   
-  tbl_new <- tbl
-  posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
-  l_prior_prep <- extract_posterior(posterior_prior, m_nb_initial, tbl_new)
+  # compute priors
+  posterior_prior <- priors(cat_type, tbl)
+  
+  # save prior for later and copy original tbl
+  l_prior_prep <- extract_posterior(posterior_prior, tbl_new)
   tbl_prior_long <- l_prior_prep[[1]]
   l_prior <- l_prior_prep[[2]]
   posterior <- posterior_prior
-  
+  tbl_new <- tbl
   
   # Categorization Simulation -----------------------------------------------
   
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
   for (i in 1:nruns) {
-    # randomly move random observation 
-    idx <- sample(n_stimuli, 1)
-    cat_cur <- tbl_new$category[idx]
-    stim_id_cur <- tbl_new$stim_id[idx]
-    X_new <-  tibble(
-      tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
-      tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
-    )
-    X_old <- tbl_new[, c("x1", "x2")]
-    X <- rbind(X_old, X_new)
-    # create new X matrix
-    colnames(X) <- feature_names
-    posterior_new <- predict(m_nb_update, X, "prob")
-    post_x_new <- tail(posterior_new[, cat_cur], 1)
+    l_x <- perceive_stimulus(tbl_new, n_stimuli)
+    
+    if (cat_type == "rule") {
+      posterior_new <- pmap(
+        thx_grt, grt_cat_probs, tbl_stim = l_x$X, prior_sd = prior_sd
+      ) %>% unlist() %>%
+        matrix(nrow = nrow(l_x$X)) %>%
+        as_tibble(.name_repair = ~ categories)
+    } else if (cat_type == "prototype") {
+      posterior_new <- predict(m_nb_update, l_x$X, "prob")
+    }
+    
+    post_x_new <- as_vector(tail(posterior_new[, cat_cur], 1))
     # compare to average prediction given previously perceived stimuli
     idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
-    post_x_old <- mean(posterior[idxs_stim, cat_cur])
+    post_x_old <- mean(as_vector(posterior[idxs_stim, cat_cur]))
     p_thx <- runif(1)
     if (
       # (post_x_new > post_x_old) & 
       p_thx < min(1, post_x_new/post_x_old) &
-      between(X_new$x1, thx[1], thx[2]) & 
-      between(X_new$x2, thx[1], thx[2])
+      between(l_x$X_new$x1, thx[1], thx[2]) & 
+      between(l_x$X_new$x2, thx[1], thx[2])
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
-        tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
+        tbl_new, tibble(stim_id = stim_id_cur, l_x$X_new, category = cat_cur)
       )
       posterior <- posterior_new
-      # refit model
-      m_nb_update <- naive_bayes(fml, data = tbl_new)
+      if (cat_type == "prototype") {
+        # refit model
+        m_nb_update <- naive_bayes(fml, data = tbl_new)
+      }
     }
     
     setTxtProgressBar(pb,i)
   }
   close(pb)
-
+  
   # Post Processing ---------------------------------------------------------
   
   nstart <- nrow(tbl)
@@ -198,6 +197,58 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
+priors <- function(cat_type, tbl) {
+  #' calculate category priors for one of the three different categorization types
+  #' 
+  #' @param cat_type string being one of prototype, rule, or exemplar
+  #' @param tbl \code{tibble} containing the two features and the category as columns
+  #' @return the stimuli priors
+  #' 
+  if (cat_type == "rule"){
+    unique_cutoffs <- (max(tbl$x1) - min(tbl$x1)) / sqrt(n_categories)
+    thx_grt <- thxs(unique_cutoffs)
+    posterior_prior <- pmap(
+      thx_grt, grt_cat_probs, tbl_stim = tbl_new, prior_sd = prior_sd
+    ) %>% unlist() %>%
+      matrix(nrow = nrow(tbl)) %>%
+      as_tibble(.name_repair = ~ categories)
+    
+  } else if (cat_type == "prototype") {
+    fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
+    m_nb_initial <- naive_bayes(fml, data = tbl)
+    m_nb_update <- m_nb_initial
+    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+  }
+  
+  return(posterior_prior)
+}
+
+
+perceive_stimulus <- function(tbl_new, n_stimuli) {
+  #' simulate noisy perception of a 2D stimulus
+  #' 
+  #' @param tbl_new \code{tibble} containing the stimulus id, two features,
+  #' and the category as columns
+  #' @param n_stimuli stating the number of different stimuli
+  #' @return three different X tbls (before, after, together)
+  #' 
+  # randomly move random observation
+  idx <- sample(n_stimuli, 1)
+  cat_cur <- tbl_new$category[idx]
+  stim_id_cur <- tbl_new$stim_id[idx]
+  X_new <-  tibble(
+    tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
+    tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
+  )
+  X_old <- tbl_new[, c("x1", "x2")]
+  # create new X matrix
+  X <- rbind(X_old, X_new)
+  colnames(X) <- feature_names
+  l_out <- list(X_old = X_old, X_new = X_new, X = X)
+  return(l_out)
+}
+
+
 plot_clustered_grid <- function(tbl, stepsize_cat) {
   #' plot clusters in grid
   #' 
@@ -237,11 +288,10 @@ plot_arrangement <- function(pl, n_cols = 2) {
   marrangeGrob(pl, nrow = n_rows, ncol = n_cols, top = quote(paste("")))
 }
 
-extract_posterior <- function(posterior, m_nb, tbl_new) {
+extract_posterior <- function(posterior, tbl_new) {
   #' extract posterior of the true values
   #' 
   #' @param posterior posterior probabilities of all categories given data
-  #' @param m_nb a trained naive bayes model
   #' @param tbl_new the original tbl with the accepted samples
   tbl_post <- cbind(posterior, category = as.character(tbl_new$category)) %>% as_tibble()
   tbl_post[, levels(tbl_new$category)] <- map(tbl_post[, levels(tbl_new$category)], as.numeric)
@@ -311,7 +361,7 @@ add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
   tbl_centers <- rbind(
     center_of_category(m_nb_initial, "Before Training", categories),
     center_of_category(m_nb_update, "After Training", categories)
-    )
+  )
   tbl_prior <- tbl_new %>% filter(timepoint == "Before Training")
   tbl_samples <- tbl_new %>% filter(timepoint == "After Training")
   l <- map2(
@@ -400,6 +450,16 @@ check_categories <- function(n_categories) {
   if (!(sqrt(n_categories) %% 1 == 0)) {
     stop("Make sure n_categories is 2^x")
   }
+}
+
+check_cat_types <- function(cat_type) {
+  #' check that cat_type is one of the available options
+  #' 
+  #' @param cat_type a character vector
+  #' 
+  assert_that(are_equal(
+    sum(str_detect(cat_type, c("^prototype$", "^rule$", "^instance$"))), 1
+  ), msg = "Make sure cat_type is one of prototype, rule, instance")
 }
 
 
@@ -508,14 +568,14 @@ grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, prio
   #' 
   #' assuming uncorrelated feature dimensions
   #' assuming prior variance is fixed across dimensions
-  assert_that(
-    are_equal(nrow(tbl_stim), 1), 
-    msg = "Make sure to provide only one sample at a time"
-  )
-  pmvnorm(
-    lower = c(x1_lower, x2_lower), 
-    upper = c(x1_upper, x2_upper), 
-    mean = as_vector(tbl_stim[, c("x1", "x2")]), 
-    sigma = matrix(c(prior_sd ^ 2, 0, 0, prior_sd ^ 2), nrow = 2, byrow = TRUE)
-  )
+  m_cov <- matrix(c(prior_sd ^ 2, 0, 0, prior_sd ^ 2), nrow = 2, byrow = TRUE)
+  f_pred <- function(x1, x2) { 
+    pmvnorm(
+      lower = c(x1_lower, x2_lower), 
+      upper = c(x1_upper, x2_upper), 
+      mean = c(x1, x2), 
+      sigma = m_cov
+    )
+  }
+  pmap_dbl(tbl_stim[, c("x1", "x2")], f_pred)
 }
