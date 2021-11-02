@@ -7,7 +7,7 @@ library(docstring)
 library(ggExtra)
 library(furrr)
 
-files <- c("R/utils.R")
+files <- c("R/utils.R", "R/plotting.R")
 walk(files, source)
 
 
@@ -16,9 +16,10 @@ walk(files, source)
 n_categories <- 9L
 n_stimuli <- 144L
 prior_sd <- .75
-nruns <- 10000
+nruns <- 100
 
 l_params <- list(
+  cat_type = "rule",
   n_stimuli = n_stimuli,
   n_categories = n_categories,
   prior_sd = prior_sd,
@@ -30,8 +31,9 @@ l2_params <- list(
 )
 l2_params[[2]]$n_categories <- 4L
 
-# sanity check of parameters
+# sanity checks of parameters
 walk(map(l2_params, .f = function(x) x$n_categories), check_categories)
+walk(map(l2_params, .f = function(x) x$cat_type), check_cat_types)
 
 # Run Categorization ------------------------------------------------------
 
@@ -41,16 +43,29 @@ suppressWarnings(
     l_results <- future_map(l2_params, categorize_stimuli, .progress = TRUE)
   )
 )
-# visualize movement from prior mean to two different posterior means
-# two arrows pointing into the respective directions in a 2d grid
 
 
-# Visualize Stimulus Movement For Different Nr. Categories ----------------
+# Post Processing & Plotting ----------------------------------------------
 
-tbl_stimulus <- stimulus_before_after(l_results, 48)
-pl_stimulus_movement <- plot_stimulus_movements(tbl_stimulus)
+if (l_params$cat_type == "prototype") {
+  # post processing
+  l_results <- map(l_results, postprocess_prototype)
+  
+  # visualize movement from prior mean to two different posterior means
+  # two arrows pointing into the respective directions in a 2d grid
+  tbl_stimulus <- stimulus_before_after(l_results, 48)
+  
+  # Visualize Stimulus Movement For Different Nr. Categories
+  pl_stimulus_movement <- plot_stimulus_movements(tbl_stimulus)
+  
+  # Save Required Plots
+  save_plots(l_results, pl_stimulus_movement)
+}
 
+if (l_params$cat_type == "rule") {
+  ## tb filled with post-processing for rule-based categorization
+}
 
-# Save Required Plots -----------------------------------------------------
-
-save_plots(l_results, pl_stimulus_movement)
+if (l_params$cat_type == "exemplar") {
+  ## tb filled with post-processing for exemplar-based categorization
+}
