@@ -5,7 +5,7 @@ library(tidyverse)
 library(docstring)
 library(ggExtra)
 library(assertthat)
-
+library(mvtnorm)
 
 categorize_stimuli <- function(l_params) {
   #' main categorization function
@@ -33,7 +33,7 @@ categorize_stimuli <- function(l_params) {
   categories <- levels(tbl$category)
   
   # compute priors
-  l_m <- priors(cat_type, tbl)
+  l_m <- priors(cat_type, tbl, categories)
   
   # save prior for later and copy original tbl
   l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
@@ -50,7 +50,7 @@ categorize_stimuli <- function(l_params) {
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
   for (i in 1:nruns) {
     # perceive a randomly sampled stimulus
-    l_x <- perceive_stimulus(tbl_new, n_stimuli)
+    l_x <- perceive_stimulus(tbl_new, n_stimuli, feature_names)
     # propose a new posterior
     if (cat_type == "rule") {
       posterior_new <- pmap(
@@ -93,6 +93,17 @@ categorize_stimuli <- function(l_params) {
   nstart <- nrow(tbl)
   nnew <- nrow(tbl_new) - nstart
   tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
+  
+  l_out <- list(
+    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m,
+    posterior = posterior
+    )
+  return(l_out)
+}
+
+postprocess_prototype <- function(l_categorization, categories) {
+  env <- rlang::current_env()
+  list2env(l_categorization, env)
   l_results <- add_centers(tbl_new, l_m$m_nb_initial, l_m$m_nb_update, categories)
   
   
@@ -201,7 +212,7 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
-priors <- function(cat_type, tbl) {
+priors <- function(cat_type, tbl, categories) {
   #' calculate category priors for one of the three different categorization types
   #' 
   #' @param cat_type string being one of prototype, rule, or exemplar
@@ -209,6 +220,7 @@ priors <- function(cat_type, tbl) {
   #' @return the stimuli priors
   #' 
   if (cat_type == "rule"){
+    n_categories <- length(categories)
     unique_boundaries <- boundaries(tbl, n_categories)
     thx_grt <- thxs(unique_boundaries)
     posterior_prior <- pmap(
@@ -233,7 +245,7 @@ priors <- function(cat_type, tbl) {
 }
 
 
-perceive_stimulus <- function(tbl_new, n_stimuli) {
+perceive_stimulus <- function(tbl_new, n_stimuli, feature_names) {
   #' simulate noisy perception of a 2D stimulus
   #' 
   #' @param tbl_new \code{tibble} containing the stimulus id, two features,
@@ -273,7 +285,7 @@ boundaries <- function(tbl, n_categories) {
   x_vals <- sort(unique(tbl$x1))
   stepsize <- length(x_vals) / sqrt(n_categories)
   cutoffs_prep <- seq(0, length(x_vals), stepsize) - .5
-  unique_boundaries <- cutoffs_prep[between(cutoffs_prep, min(tbl$x1), max(tbl$x2))]
+  unique_boundaries <- cutoffs_prep[between(cutoffs_prep, min(tbl$x1), max(tbl$x1))]
   return(unique_boundaries)
 }
 
