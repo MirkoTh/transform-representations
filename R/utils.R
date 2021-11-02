@@ -101,9 +101,10 @@ categorize_stimuli <- function(l_params) {
   return(l_out)
 }
 
-postprocess_prototype <- function(l_categorization, categories) {
+postprocess_prototype <- function(l_categorization) {
   env <- rlang::current_env()
   list2env(l_categorization, env)
+  categories <- names(posterior)
   l_results <- add_centers(tbl_new, l_m$m_nb_initial, l_m$m_nb_update, categories)
   
   
