@@ -5,7 +5,7 @@ library(tidyverse)
 library(docstring)
 library(ggExtra)
 library(assertthat)
-
+library(mvtnorm)
 
 categorize_stimuli <- function(l_params) {
   #' main categorization function
@@ -33,36 +33,41 @@ categorize_stimuli <- function(l_params) {
   categories <- levels(tbl$category)
   
   # compute priors
-  posterior_prior <- priors(cat_type, tbl)
+  l_m <- priors(cat_type, tbl, categories)
   
   # save prior for later and copy original tbl
-  l_prior_prep <- extract_posterior(posterior_prior, tbl_new)
+  l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
   tbl_prior_long <- l_prior_prep[[1]]
   l_prior <- l_prior_prep[[2]]
-  posterior <- posterior_prior
+  posterior <- l_m$posterior_prior
   tbl_new <- tbl
+  
+  unique_boundaries <- boundaries(tbl, n_categories)
+  thx_grt <- thxs(unique_boundaries)
   
   # Categorization Simulation -----------------------------------------------
   
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
   for (i in 1:nruns) {
-    l_x <- perceive_stimulus(tbl_new, n_stimuli)
-    
+    # perceive a randomly sampled stimulus
+    l_x <- perceive_stimulus(tbl_new, n_stimuli, feature_names)
+    # propose a new posterior
     if (cat_type == "rule") {
       posterior_new <- pmap(
-        thx_grt, grt_cat_probs, tbl_stim = l_x$X, prior_sd = prior_sd
+        thx_grt, grt_cat_probs, tbl_stim = tail(l_x$X, 1), prior_sd = prior_sd
       ) %>% unlist() %>%
-        matrix(nrow = nrow(l_x$X)) %>%
+        matrix(nrow = 1) %>%
         as_tibble(.name_repair = ~ categories)
     } else if (cat_type == "prototype") {
-      posterior_new <- predict(m_nb_update, l_x$X, "prob")
+      posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
     }
     
-    post_x_new <- as_vector(tail(posterior_new[, cat_cur], 1))
+    post_x_new <- as_vector(tail(posterior_new[, l_x$cat_cur], 1))
     # compare to average prediction given previously perceived stimuli
-    idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
-    post_x_old <- mean(as_vector(posterior[idxs_stim, cat_cur]))
+    idxs_stim <- which(tbl_new$stim_id == l_x$stim_id_cur)
+    post_x_old <- mean(as_vector(posterior[idxs_stim, l_x$cat_cur]))
     p_thx <- runif(1)
+    # decide on whether to accept or reject a proposition
     if (
       # (post_x_new > post_x_old) & 
       p_thx < min(1, post_x_new/post_x_old) &
@@ -71,15 +76,14 @@ categorize_stimuli <- function(l_params) {
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
-        tbl_new, tibble(stim_id = stim_id_cur, l_x$X_new, category = cat_cur)
+        tbl_new, tibble(stim_id = l_x$stim_id_cur, l_x$X_new, category = l_x$cat_cur)
       )
-      posterior <- posterior_new
+      posterior <- rbind(posterior, posterior_new)
       if (cat_type == "prototype") {
         # refit model
-        m_nb_update <- naive_bayes(fml, data = tbl_new)
+        l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
       }
     }
-    
     setTxtProgressBar(pb,i)
   }
   close(pb)
@@ -89,10 +93,21 @@ categorize_stimuli <- function(l_params) {
   nstart <- nrow(tbl)
   nnew <- nrow(tbl_new) - nstart
   tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
-  l_results <- add_centers(tbl_new, m_nb_initial, m_nb_update, categories)
+  
+  l_out <- list(
+    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m,
+    posterior = posterior
+    )
+  return(l_out)
+}
+
+postprocess_prototype <- function(l_categorization, categories) {
+  env <- rlang::current_env()
+  list2env(l_categorization, env)
+  l_results <- add_centers(tbl_new, l_m$m_nb_initial, l_m$m_nb_update, categories)
   
   
-  tbl_posterior_long <- extract_posterior(posterior, m_nb_update, tbl_new)[[1]]
+  tbl_posterior_long <- extract_posterior(posterior, tbl_new)[[1]]
   tbl_posteriors <- tbl_prior_long %>%
     mutate(timepoint = "Before Training") %>%
     rbind(
@@ -197,7 +212,7 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
-priors <- function(cat_type, tbl) {
+priors <- function(cat_type, tbl, categories) {
   #' calculate category priors for one of the three different categorization types
   #' 
   #' @param cat_type string being one of prototype, rule, or exemplar
@@ -205,26 +220,32 @@ priors <- function(cat_type, tbl) {
   #' @return the stimuli priors
   #' 
   if (cat_type == "rule"){
-    unique_cutoffs <- (max(tbl$x1) - min(tbl$x1)) / sqrt(n_categories)
-    thx_grt <- thxs(unique_cutoffs)
+    n_categories <- length(categories)
+    unique_boundaries <- boundaries(tbl, n_categories)
+    thx_grt <- thxs(unique_boundaries)
     posterior_prior <- pmap(
-      thx_grt, grt_cat_probs, tbl_stim = tbl_new, prior_sd = prior_sd
+      thx_grt, grt_cat_probs, tbl_stim = tbl, prior_sd = prior_sd
     ) %>% unlist() %>%
       matrix(nrow = nrow(tbl)) %>%
       as_tibble(.name_repair = ~ categories)
+    l_out <- list(posterior_prior = posterior_prior)
     
   } else if (cat_type == "prototype") {
     fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
     m_nb_initial <- naive_bayes(fml, data = tbl)
     m_nb_update <- m_nb_initial
     posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+    l_out <- list(
+      posterior_prior = posterior_prior, fml = fml,
+      m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
+      )
   }
   
-  return(posterior_prior)
+  return(l_out)
 }
 
 
-perceive_stimulus <- function(tbl_new, n_stimuli) {
+perceive_stimulus <- function(tbl_new, n_stimuli, feature_names) {
   #' simulate noisy perception of a 2D stimulus
   #' 
   #' @param tbl_new \code{tibble} containing the stimulus id, two features,
@@ -244,49 +265,51 @@ perceive_stimulus <- function(tbl_new, n_stimuli) {
   # create new X matrix
   X <- rbind(X_old, X_new)
   colnames(X) <- feature_names
-  l_out <- list(X_old = X_old, X_new = X_new, X = X)
+  l_out <- list(
+    X_old = X_old, X_new = X_new, X = X,
+    cat_cur = cat_cur, stim_id_cur = stim_id_cur
+    )
   return(l_out)
 }
 
 
-plot_clustered_grid <- function(tbl, stepsize_cat) {
-  #' plot clusters in grid
+boundaries <- function(tbl, n_categories) {
+  #' calculate decision boundaries
   #' 
-  #' @description plot categories in a 2d space with equidistanct spacing
-  #' @param tbl \code{tibble} containing the two features and the category as columns
-  #' @param stepsize_cat \code{double} the stepsize to be shown on the axes and on the grid
-  #' @return the ggplot2 object
+  #' @param tbl \code{tibble} containing the stimulus id, two features,
+  #' and the category as columns
+  #' @param n_categories stating the number of categories
+  #' @return the unique boundaries in a vector
   #' 
-  max_x <- max(tbl$x1, tbl$x2)
-  ggplot(tbl, aes(x1, x2, group = category)) +
-    geom_raster(aes(fill = category)) +
-    theme_bw() + 
-    theme(
-      panel.background = element_rect(fill = NA),
-      panel.ontop = TRUE,
-      panel.grid.minor = element_blank(),
-      panel.grid.major = element_line(size = .1),
-    ) +
-    scale_fill_gradient(name = "Category\n",
-                        low = "#FFFFFF",
-                        high = "#012345") +
-    scale_x_continuous(breaks = seq(0, max_x, stepsize_cat)) +
-    scale_y_continuous(breaks = seq(0, max_x, stepsize_cat)) +
-    labs(
-      x = expression(X["1"]),
-      y = expression(X["2"])
-    )
+  # randomly move random observation
+  x_vals <- sort(unique(tbl$x1))
+  stepsize <- length(x_vals) / sqrt(n_categories)
+  cutoffs_prep <- seq(0, length(x_vals), stepsize) - .5
+  unique_boundaries <- cutoffs_prep[between(cutoffs_prep, min(tbl$x1), max(tbl$x1))]
+  return(unique_boundaries)
 }
 
-plot_arrangement <- function(pl, n_cols = 2) {
-  #' plot a list of plots on one page
+
+thxs <- function(cutoff_vals) {
+  #' create required thresholds for rule-based categorization model
   #' 
-  #' @param pl all the ggplots
-  #' @param n_cols nr columns of the page layout
-  n_plots <- length(pl)
-  n_rows <- ceiling(n_plots / n_cols)
-  marrangeGrob(pl, nrow = n_rows, ncol = n_cols, top = quote(paste("")))
+  #' @param cutoff_vals unique cut-off values that have to be the same across
+  #' the two dimensions
+  #' @return a list with all the thresholds for the categories
+  #' 
+  #' assuming uncorrelated feature dimensions
+  #' assuming prior variance is fixed across dimensions
+  prep_lower <- c(-Inf, cutoff_vals)
+  prep_upper <- c(cutoff_vals, Inf)
+  n_thx <- length(prep_lower)
+  l <- list()
+  l[["x1_lower"]] <- rep(prep_lower, n_thx)
+  l[["x2_lower"]] <- rep(prep_lower, each = n_thx)
+  l[["x1_upper"]] <- rep(prep_upper, n_thx)
+  l[["x2_upper"]] <- rep(prep_upper, each = n_thx)
+  return(l)
 }
+
 
 extract_posterior <- function(posterior, tbl_new) {
   #' extract posterior of the true values
@@ -373,39 +396,7 @@ add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
   return(l)
 }
 
-plot_moves <- function(tbl_results, thx) {
-  ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
-    geom_point(aes(color = as.numeric(category))) +
-    geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
-    geom_segment(
-      aes(
-        x = x1_data, y = x2_data, xend = x1_center, yend = x2_center, 
-        color = as.numeric(category)
-      ),
-      arrow = arrow(length = unit(.1, "inches"))
-    ) +
-    facet_wrap(~ timepoint, scales = "free") +
-    theme_bw() +
-    coord_cartesian(xlim = c(thx[1] - 1, thx[2] + 1), ylim = c(thx[1] - 1, thx[2] + 1)) +
-    scale_color_viridis_c(name = "Category") +
-    labs(
-      x = bquote(x[1]),
-      y = bquote(x[2])
-    )
-}
 
-plot_cat_probs <- function(tbl_posteriors) {
-  bw <- 10/nrow(tbl_posteriors)
-  ggplot(tbl_posteriors, aes(value)) +
-    geom_histogram(aes(y = ..density..), alpha = .5, color = "black", binwidth = bw) +
-    geom_density(aes(y = ..density..), color = "purple", size = 1) +
-    facet_wrap(~ timepoint) +
-    theme_bw() +
-    labs(
-      x = "Posterior Probability",
-      y = "Probability Density"
-    )
-}
 
 normal_quantiles_given_pars <- function(tbl, prior_sd) {
   #' calculate quantiles given prior mean and sd, 
@@ -496,59 +487,6 @@ stimulus_before_after <- function(l_results, stim_id) {
     )
   names(tbl_stimulus) <- c("n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
   return(tbl_stimulus)
-}
-
-
-plot_stimulus_movements <- function(tbl_stimulus) {
-  #' plot prior and posterior means of a stimulus and connect them using colored arrows
-  #' 
-  #' @param tbl_stimulus tibble with the pivoted x1 and x2 coordinates
-  #' 
-  ggplot(tbl_stimulus) +
-    geom_point(aes(x1_bef, x2_bef), size = 5, color = "white") +
-    geom_point(aes(x1_bef, x2_bef, color = n_categories), size = 3, position = position_dodge(.1)) +
-    geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
-    geom_segment(aes(
-      x = x1_bef - .005, y = x2_bef - .025, xend = x1_aft + .005, yend = x2_aft + .025,
-      color = n_categories
-    ), arrow = arrow(type = "closed")) +
-    theme_bw() +
-    scale_color_brewer(palette = "Set1", name = "Nr. Categories") +
-    labs(
-      x = bquote(x[1]),
-      y = bquote(x[2])
-    )
-}
-
-
-
-save_plots <- function(l_results, pl_stimulus_movement) {
-  #' save required figures in figures dir
-  #' 
-  #' @param l_results nested result list
-  #' @param pl_stimulus_movement plot visualizing movements for different nr cats
-  #' 
-  tbl_save_pl <- tibble(
-    pl = c(
-      expr(l_results[[1]][[2]][[1]]), expr(l_results[[2]][[2]][[1]]),
-      expr(pl_stimulus_movement)
-    ),
-    filename = c(
-      "9-Cats-All-Movements.png", "4-Cats-All-Movements.png",
-      "Diverging-Movement-One-Stimulus.png"
-    ),
-    width = c(10, 10, 4),
-    height = c(5, 5, 4)
-  )
-  save_figure_png <- function(pl, filename, width, height) {
-    png(
-      filename = str_c("figures/", filename), width = width, height = height,
-      units = "in", res = 200
-    )
-    print(eval(pl))
-    dev.off()
-  }
-  pwalk(tbl_save_pl, save_figure_png)
 }
 
 
