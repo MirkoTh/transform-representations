@@ -33,13 +33,13 @@ categorize_stimuli <- function(l_params) {
   categories <- levels(tbl$category)
   
   # compute priors
-  posterior_prior <- priors(cat_type, tbl)
+  l_m <- priors(cat_type, tbl)
   
   # save prior for later and copy original tbl
-  l_prior_prep <- extract_posterior(posterior_prior, tbl)
+  l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
   tbl_prior_long <- l_prior_prep[[1]]
   l_prior <- l_prior_prep[[2]]
-  posterior <- posterior_prior
+  posterior <- l_m$posterior_prior
   tbl_new <- tbl
   
   unique_boundaries <- boundaries(tbl, n_categories)
@@ -54,12 +54,12 @@ categorize_stimuli <- function(l_params) {
     # propose a new posterior
     if (cat_type == "rule") {
       posterior_new <- pmap(
-        thx_grt, grt_cat_probs, tbl_stim = l_x$X, prior_sd = prior_sd
+        thx_grt, grt_cat_probs, tbl_stim = tail(l_x$X, 1), prior_sd = prior_sd
       ) %>% unlist() %>%
-        matrix(nrow = nrow(l_x$X)) %>%
+        matrix(nrow = 1) %>%
         as_tibble(.name_repair = ~ categories)
     } else if (cat_type == "prototype") {
-      posterior_new <- predict(m_nb_update, l_x$X, "prob")
+      posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
     }
     
     post_x_new <- as_vector(tail(posterior_new[, l_x$cat_cur], 1))
@@ -78,13 +78,12 @@ categorize_stimuli <- function(l_params) {
       tbl_new <- rbind(
         tbl_new, tibble(stim_id = l_x$stim_id_cur, l_x$X_new, category = l_x$cat_cur)
       )
-      posterior <- posterior_new
+      posterior <- rbind(posterior, posterior_new)
       if (cat_type == "prototype") {
         # refit model
-        m_nb_update <- naive_bayes(fml, data = tbl_new)
+        l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
       }
     }
-    
     setTxtProgressBar(pb,i)
   }
   close(pb)
@@ -94,7 +93,7 @@ categorize_stimuli <- function(l_params) {
   nstart <- nrow(tbl)
   nnew <- nrow(tbl_new) - nstart
   tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
-  l_results <- add_centers(tbl_new, m_nb_initial, m_nb_update, categories)
+  l_results <- add_centers(tbl_new, l_m$m_nb_initial, l_m$m_nb_update, categories)
   
   
   tbl_posterior_long <- extract_posterior(posterior, tbl_new)[[1]]
@@ -210,22 +209,27 @@ priors <- function(cat_type, tbl) {
   #' @return the stimuli priors
   #' 
   if (cat_type == "rule"){
-    unique_cutoffs <- cutoffs(tbl, n_categories)
-    thx_grt <- thxs(unique_cutoffs)
+    unique_boundaries <- boundaries(tbl, n_categories)
+    thx_grt <- thxs(unique_boundaries)
     posterior_prior <- pmap(
       thx_grt, grt_cat_probs, tbl_stim = tbl, prior_sd = prior_sd
     ) %>% unlist() %>%
       matrix(nrow = nrow(tbl)) %>%
       as_tibble(.name_repair = ~ categories)
+    l_out <- list(posterior_prior = posterior_prior)
     
   } else if (cat_type == "prototype") {
     fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
     m_nb_initial <- naive_bayes(fml, data = tbl)
     m_nb_update <- m_nb_initial
     posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+    l_out <- list(
+      posterior_prior = posterior_prior, fml = fml,
+      m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
+      )
   }
   
-  return(posterior_prior)
+  return(l_out)
 }
 
 
@@ -268,7 +272,7 @@ boundaries <- function(tbl, n_categories) {
   # randomly move random observation
   x_vals <- sort(unique(tbl$x1))
   stepsize <- length(x_vals) / sqrt(n_categories)
-  cutoffs_prep <- seq(0, length(x_vals), 4) - .5
+  cutoffs_prep <- seq(0, length(x_vals), stepsize) - .5
   unique_boundaries <- cutoffs_prep[between(cutoffs_prep, min(tbl$x1), max(tbl$x2))]
   return(unique_boundaries)
 }
