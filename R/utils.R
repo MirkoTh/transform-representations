@@ -19,7 +19,7 @@ categorize_stimuli <- function(l_params) {
   # unpack parameters
   env <- rlang::current_env()
   list2env(l_params, env)
-
+  
   thx <- c(0, sqrt(n_stimuli) - 1)
   x1 <- seq(thx[1], thx[2], by = 1)
   x2 <- seq(thx[1], thx[2], by = 1)
@@ -27,11 +27,13 @@ categorize_stimuli <- function(l_params) {
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
   
   tbl <- create_categories(tbl, sqrt(n_categories)) %>% select(-c(x1_cat, x2_cat))
-
+  
   feature_names <- c("x1", "x2")
   label <- "category"
   tbl$category <- as.factor(tbl$category)
   categories <- levels(tbl$category)
+  
+  
   fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
   m_nb_initial <- naive_bayes(fml, data = tbl)
   m_nb_update <- m_nb_initial
@@ -84,7 +86,7 @@ categorize_stimuli <- function(l_params) {
     setTxtProgressBar(pb,i)
   }
   close(pb)
-
+  
   # Post Processing ---------------------------------------------------------
   
   nstart <- nrow(tbl)
@@ -311,7 +313,7 @@ add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
   tbl_centers <- rbind(
     center_of_category(m_nb_initial, "Before Training", categories),
     center_of_category(m_nb_update, "After Training", categories)
-    )
+  )
   tbl_prior <- tbl_new %>% filter(timepoint == "Before Training")
   tbl_samples <- tbl_new %>% filter(timepoint == "After Training")
   l <- map2(
@@ -400,6 +402,16 @@ check_categories <- function(n_categories) {
   if (!(sqrt(n_categories) %% 1 == 0)) {
     stop("Make sure n_categories is 2^x")
   }
+}
+
+check_cat_types <- function(cat_type) {
+  #' check that cat_type is one of the available options
+  #' 
+  #' @param cat_type a character vector
+  #' 
+  assert_that(are_equal(
+    sum(str_detect(cat_type, c("^prototype$", "^rule$", "^instance$"))), 1
+  ), msg = "Make sure cat_type is one of prototype, rule, instance")
 }
 
 
