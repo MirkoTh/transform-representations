@@ -25,44 +25,28 @@ categorize_stimuli <- function(l_params) {
   x2 <- seq(thx[1], thx[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  
-  tbl <- create_categories(tbl, sqrt(n_categories)) %>% select(-c(x1_cat, x2_cat))
-  
+  tbl <- create_categories(tbl, sqrt(n_categories)) %>% 
+    select(-c(x1_cat, x2_cat))
   feature_names <- c("x1", "x2")
   label <- "category"
   tbl$category <- as.factor(tbl$category)
   categories <- levels(tbl$category)
   
-  if (cat_type == "rule"){
-    tbl_new <- tbl
-    unique_cutoffs <- (max(tbl$x1) - min(tbl$x1)) / sqrt(n_categories)
-    thx_grt <- thxs(unique_cutoffs)
-    posterior_prior <- pmap(
-      thx_grt, grt_cat_probs, tbl_stim = tbl_new, prior_sd = prior_sd
-      ) %>% unlist() %>%
-      matrix(nrow = nrow(tbl)) %>%
-      as_tibble(.name_repair = ~ categories)
-    
-  } else if (cat_type == "prototype") {
-    fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
-    m_nb_initial <- naive_bayes(fml, data = tbl)
-    m_nb_update <- m_nb_initial
-    tbl_new <- tbl
-    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
-  }
+  # compute priors
+  posterior_prior <- priors(cat_type, tbl)
   
-  l_prior_prep <- extract_posterior(posterior_prior, m_nb_initial, tbl_new)
+  # save prior for later and copy original tbl
+  l_prior_prep <- extract_posterior(posterior_prior, tbl_new)
   tbl_prior_long <- l_prior_prep[[1]]
   l_prior <- l_prior_prep[[2]]
-  
   posterior <- posterior_prior
-  
+  tbl_new <- tbl
   
   # Categorization Simulation -----------------------------------------------
   
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
   for (i in 1:nruns) {
-    # randomly move random observation 
+    # randomly move random observation
     idx <- sample(n_stimuli, 1)
     cat_cur <- tbl_new$category[idx]
     stim_id_cur <- tbl_new$stim_id[idx]
@@ -100,8 +84,10 @@ categorize_stimuli <- function(l_params) {
         tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
       )
       posterior <- posterior_new
-      # refit model
-      m_nb_update <- naive_bayes(fml, data = tbl_new)
+      if (cat_type == "prototype") {
+        # refit model
+        m_nb_update <- naive_bayes(fml, data = tbl_new)
+      }
     }
     
     setTxtProgressBar(pb,i)
@@ -221,6 +207,33 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
+priors <- function(cat_type, tbl) {
+  #' calculate category priors for one of the three different categorization types
+  #' 
+  #' @param cat_type string being one of prototype, rule, or exemplar
+  #' @param tbl \code{tibble} containing the two features and the category as columns
+  #' @return the stimuli priors
+  #' 
+  if (cat_type == "rule"){
+    unique_cutoffs <- (max(tbl$x1) - min(tbl$x1)) / sqrt(n_categories)
+    thx_grt <- thxs(unique_cutoffs)
+    posterior_prior <- pmap(
+      thx_grt, grt_cat_probs, tbl_stim = tbl_new, prior_sd = prior_sd
+    ) %>% unlist() %>%
+      matrix(nrow = nrow(tbl)) %>%
+      as_tibble(.name_repair = ~ categories)
+    
+  } else if (cat_type == "prototype") {
+    fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
+    m_nb_initial <- naive_bayes(fml, data = tbl)
+    m_nb_update <- m_nb_initial
+    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+  }
+  
+  return(posterior_prior)
+}
+
+
 plot_clustered_grid <- function(tbl, stepsize_cat) {
   #' plot clusters in grid
   #' 
@@ -260,11 +273,10 @@ plot_arrangement <- function(pl, n_cols = 2) {
   marrangeGrob(pl, nrow = n_rows, ncol = n_cols, top = quote(paste("")))
 }
 
-extract_posterior <- function(posterior, m_nb, tbl_new) {
+extract_posterior <- function(posterior, tbl_new) {
   #' extract posterior of the true values
   #' 
   #' @param posterior posterior probabilities of all categories given data
-  #' @param m_nb a trained naive bayes model
   #' @param tbl_new the original tbl with the accepted samples
   tbl_post <- cbind(posterior, category = as.character(tbl_new$category)) %>% as_tibble()
   tbl_post[, levels(tbl_new$category)] <- map(tbl_post[, levels(tbl_new$category)], as.numeric)
