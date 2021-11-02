@@ -46,26 +46,16 @@ categorize_stimuli <- function(l_params) {
   
   pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
   for (i in 1:nruns) {
-    # randomly move random observation
-    idx <- sample(n_stimuli, 1)
-    cat_cur <- tbl_new$category[idx]
-    stim_id_cur <- tbl_new$stim_id[idx]
-    X_new <-  tibble(
-      tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
-      tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
-    )
-    X_old <- tbl_new[, c("x1", "x2")]
-    X <- rbind(X_old, X_new)
-    # create new X matrix
-    colnames(X) <- feature_names
+    l_x <- perceive_stimulus(tbl_new, n_stimuli)
+    
     if (cat_type == "rule") {
       posterior_new <- pmap(
-        thx_grt, grt_cat_probs, tbl_stim = X, prior_sd = prior_sd
+        thx_grt, grt_cat_probs, tbl_stim = l_x$X, prior_sd = prior_sd
       ) %>% unlist() %>%
-        matrix(nrow = nrow(X)) %>%
+        matrix(nrow = nrow(l_x$X)) %>%
         as_tibble(.name_repair = ~ categories)
     } else if (cat_type == "prototype") {
-      posterior_new <- predict(m_nb_update, X, "prob")
+      posterior_new <- predict(m_nb_update, l_x$X, "prob")
     }
     
     post_x_new <- as_vector(tail(posterior_new[, cat_cur], 1))
@@ -76,12 +66,12 @@ categorize_stimuli <- function(l_params) {
     if (
       # (post_x_new > post_x_old) & 
       p_thx < min(1, post_x_new/post_x_old) &
-      between(X_new$x1, thx[1], thx[2]) & 
-      between(X_new$x2, thx[1], thx[2])
+      between(l_x$X_new$x1, thx[1], thx[2]) & 
+      between(l_x$X_new$x2, thx[1], thx[2])
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
-        tbl_new, tibble(stim_id = stim_id_cur, X_new, category = cat_cur)
+        tbl_new, tibble(stim_id = stim_id_cur, l_x$X_new, category = cat_cur)
       )
       posterior <- posterior_new
       if (cat_type == "prototype") {
@@ -231,6 +221,31 @@ priors <- function(cat_type, tbl) {
   }
   
   return(posterior_prior)
+}
+
+
+perceive_stimulus <- function(tbl_new, n_stimuli) {
+  #' simulate noisy perception of a 2D stimulus
+  #' 
+  #' @param tbl_new \code{tibble} containing the stimulus id, two features,
+  #' and the category as columns
+  #' @param n_stimuli stating the number of different stimuli
+  #' @return three different X tbls (before, after, together)
+  #' 
+  # randomly move random observation
+  idx <- sample(n_stimuli, 1)
+  cat_cur <- tbl_new$category[idx]
+  stim_id_cur <- tbl_new$stim_id[idx]
+  X_new <-  tibble(
+    tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
+    tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
+  )
+  X_old <- tbl_new[, c("x1", "x2")]
+  # create new X matrix
+  X <- rbind(X_old, X_new)
+  colnames(X) <- feature_names
+  l_out <- list(X_old = X_old, X_new = X_new, X = X)
+  return(l_out)
 }
 
 
