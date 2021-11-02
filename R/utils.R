@@ -508,14 +508,14 @@ grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, prio
   #' 
   #' assuming uncorrelated feature dimensions
   #' assuming prior variance is fixed across dimensions
-  assert_that(
-    are_equal(nrow(tbl_stim), 1), 
-    msg = "Make sure to provide only one sample at a time"
-  )
-  pmvnorm(
-    lower = c(x1_lower, x2_lower), 
-    upper = c(x1_upper, x2_upper), 
-    mean = as_vector(tbl_stim[, c("x1", "x2")]), 
-    sigma = matrix(c(prior_sd ^ 2, 0, 0, prior_sd ^ 2), nrow = 2, byrow = TRUE)
-  )
+  m_cov <- matrix(c(prior_sd ^ 2, 0, 0, prior_sd ^ 2), nrow = 2, byrow = TRUE)
+  f_pred <- function(x1, x2) { 
+    pmvnorm(
+      lower = c(x1_lower, x2_lower), 
+      upper = c(x1_upper, x2_upper), 
+      mean = c(x1, x2), 
+      sigma = m_cov
+    )
+  }
+  pmap_dbl(tbl_stim[, c("x1", "x2")], f_pred)
 }
