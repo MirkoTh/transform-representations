@@ -33,16 +33,28 @@ categorize_stimuli <- function(l_params) {
   tbl$category <- as.factor(tbl$category)
   categories <- levels(tbl$category)
   
+  if (cat_type == "rule"){
+    tbl_new <- tbl
+    unique_cutoffs <- (max(tbl$x1) - min(tbl$x1)) / sqrt(n_categories)
+    thx_grt <- thxs(unique_cutoffs)
+    posterior_prior <- pmap(
+      thx_grt, grt_cat_probs, tbl_stim = tbl_new, prior_sd = prior_sd
+      ) %>% unlist() %>%
+      matrix(nrow = nrow(tbl)) %>%
+      as_tibble(.name_repair = ~ categories)
+    
+  } else if (cat_type == "prototype") {
+    fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
+    m_nb_initial <- naive_bayes(fml, data = tbl)
+    m_nb_update <- m_nb_initial
+    tbl_new <- tbl
+    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+  }
   
-  fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
-  m_nb_initial <- naive_bayes(fml, data = tbl)
-  m_nb_update <- m_nb_initial
-  
-  tbl_new <- tbl
-  posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
   l_prior_prep <- extract_posterior(posterior_prior, m_nb_initial, tbl_new)
   tbl_prior_long <- l_prior_prep[[1]]
   l_prior <- l_prior_prep[[2]]
+  
   posterior <- posterior_prior
   
   
@@ -62,11 +74,20 @@ categorize_stimuli <- function(l_params) {
     X <- rbind(X_old, X_new)
     # create new X matrix
     colnames(X) <- feature_names
-    posterior_new <- predict(m_nb_update, X, "prob")
-    post_x_new <- tail(posterior_new[, cat_cur], 1)
+    if (cat_type == "rule") {
+      posterior_new <- pmap(
+        thx_grt, grt_cat_probs, tbl_stim = X, prior_sd = prior_sd
+      ) %>% unlist() %>%
+        matrix(nrow = nrow(X)) %>%
+        as_tibble(.name_repair = ~ categories)
+    } else if (cat_type == "prototype") {
+      posterior_new <- predict(m_nb_update, X, "prob")
+    }
+    
+    post_x_new <- as_vector(tail(posterior_new[, cat_cur], 1))
     # compare to average prediction given previously perceived stimuli
     idxs_stim <- which(tbl_new$stim_id == stim_id_cur)
-    post_x_old <- mean(posterior[idxs_stim, cat_cur])
+    post_x_old <- mean(as_vector(posterior[idxs_stim, cat_cur]))
     p_thx <- runif(1)
     if (
       # (post_x_new > post_x_old) & 
