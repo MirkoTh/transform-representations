@@ -60,12 +60,15 @@ categorize_stimuli <- function(l_info) {
     if (
       # (post_x_new > post_x_old) & 
       p_thx < min(1, post_x_new/post_x_old) &
-      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
-      between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+      between(l_x$X_new$x1, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1) & 
+      between(l_x$X_new$x2, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1)
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
-        tbl_new, tibble(stim_id = l_x$stim_id_cur, l_x$X_new, category = l_x$cat_cur)
+        tbl_new, tibble(
+          stim_id = l_x$stim_id_cur, l_x$X_new, 
+          category = l_x$cat_cur, cat_type = l_info$cat_type
+          )
       )
       posterior <- rbind(posterior, posterior_new)
       if (l_info$cat_type == "prototype") {
@@ -109,6 +112,7 @@ make_stimuli <- function(l_info) {
   l_info$label <- "category"
   tbl$category <- as.factor(tbl$category)
   l_info$categories <- levels(tbl$category)
+  tbl$cat_type <- l_info$cat_type
   return(list(tbl, l_info))
 }
 
@@ -308,13 +312,12 @@ center_of_category <- function(l_info, l_m, timepoint_str, tbl_new){
   #' @param tbl_new tbl with the prior the accepted samples
   #' 
   if (l_info$cat_type == "prototype") {
-    m <- ifelse(
-      timepoint_str == "Before Training", l_m$m_nb_initial, l_m$m_nb_update
-    )
+    if(timepoint_str == "Before Training") m <- l_m$m_nb_initial
+    if(timepoint_str == "After Training") m <- l_m$m_nb_update
     map(m$tables, function(x) x[1, ]) %>% 
       as_tibble() %>%
       mutate(
-        category = categories,
+        category = l_info$categories,
         timepoint = timepoint_str
       ) 
   } else if (l_info$cat_type == "rule"){
@@ -417,7 +420,7 @@ prior_posterior_for_stim_id <- function(l, l_id, s_id) {
   #' @param l_id the first level of the list's hierarchy to be selected
   #' @param s_id the stimulus_id to be extracted
   #' 
-  l[[l_id]][[1]]$tbl_posterior %>%
+  l$tbl_new %>%
     mutate(n_categories = factor(max(as.numeric(category)))) %>%
     filter(stim_id == s_id)
 }
@@ -429,19 +432,23 @@ stimulus_before_after <- function(l_results, stim_id) {
   #' @param l_results the list with the simulation results
   #' @param stim_id the stimulus_id to be extracted
   #' 
+  prior_posterior_for_stim_id <- function(l, s_id) {
+    l$tbl_new %>%
+      mutate(n_categories = factor(max(as.numeric(category)))) %>%
+      filter(stim_id == s_id)
+  }
   tbl_stimulus <- reduce(
-    map(
-      seq(1, length(l_results), by = 1), prior_posterior_for_stim_id,
-      l = l_results, s_id = stim_id
-    ),
+    map(l_results, prior_posterior_for_stim_id, s_id = stim_id), 
     rbind
-  )
+    ) %>% group_by(stim_id, cat_type, timepoint, n_categories) %>%
+  summarize(x1 = mean(x1), x2 = mean(x2)) %>% ungroup()
   tbl_stimulus <- tbl_stimulus %>%
-    select(c(x1_data, x2_data, timepoint, l_info$n_categories)) %>%
+    select(c(x1, x2, cat_type, timepoint, n_categories)) %>%
     pivot_wider(
-      id_cols = c(l_info$n_categories), names_from = timepoint, values_from = c(x1_data, x2_data)
+      id_cols = c(timepoint, cat_type, n_categories), 
+      names_from = timepoint, values_from = c(x1, x2)
     )
-  names(tbl_stimulus) <- c("l_info$n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
+  names(tbl_stimulus) <- c("cat_type", "n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
   return(tbl_stimulus)
 }
 
