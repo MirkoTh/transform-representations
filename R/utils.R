@@ -16,7 +16,7 @@ categorize_stimuli <- function(l_info) {
   #' @return a list with prior, samples, and posterior in [[1]] and some
   #' visualizations in [[2]]
   #' 
-
+  
   l_tmp <- make_stimuli(l_info)
   tbl <- l_tmp[[1]]
   l_info <- l_tmp[[2]]
@@ -85,16 +85,15 @@ categorize_stimuli <- function(l_info) {
   
   l_out <- list(
     tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m,
-    posterior = posterior
-    )
+    posterior = posterior, l_info = l_info
+  )
   return(l_out)
 }
 
 postprocess_prototype <- function(l_categorization) {
   env <- rlang::current_env()
   list2env(l_categorization, env)
-  categories <- names(posterior)
-  l_results <- add_centers(tbl_new, l_m$m_nb_initial, l_m$m_nb_update, categories)
+  l_results <- add_centers(tbl_new, l_m, l_info)
   
   
   tbl_posterior_long <- extract_posterior(posterior, tbl_new)[[1]]
@@ -114,12 +113,12 @@ postprocess_prototype <- function(l_categorization) {
   
   # Inspect Prior and Samples ---------------------------------------------
   # the following only works when l_info$nruns is large enough
-  nice_showcase <- max(tbl$x1) + 1
+  nice_showcase <- max(tbl_new$x1[1:l_info$n_stimuli]) + 1
   n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
     group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
     ungroup() %>% arrange(desc(rwn))
   if(n_accept_stimuli %>% filter(stim_id == nice_showcase) %>% 
-     select(rwn) %>% as_vector() > 2) {
+     select(rwn) %>% as_vector() %>% max() > 2) {
     showcase <- nice_showcase
   } else {
     showcase <- n_accept_stimuli %>% head(1) %>% select(stim_id) %>% as_vector()
@@ -133,7 +132,7 @@ postprocess_prototype <- function(l_categorization) {
       x2_sd = sd(x2)
     )
   
-  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, l_info$prior_sd)
+  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, l_info)
   
   tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
     mutate(rwn = row_number(Value)) %>%
@@ -250,7 +249,7 @@ priors <- function(l_info, tbl) {
     l_out <- list(
       posterior_prior = posterior_prior, fml = fml,
       m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
-      )
+    )
   }
   
   return(l_out)
@@ -280,7 +279,7 @@ perceive_stimulus <- function(tbl_new, l_info) {
   l_out <- list(
     X_old = X_old, X_new = X_new, X = X,
     cat_cur = cat_cur, stim_id_cur = stim_id_cur
-    )
+  )
   return(l_out)
 }
 
@@ -369,33 +368,48 @@ agg_and_join <- function(tbl, timepoint_str, tbl_centers){
 }
 
 
-center_of_category <- function(m, timepoint_str, categories){
-  #' model-based category centroids
+center_of_category <- function(l_info, l_m, timepoint_str, tbl_new){
+  #' calculate category centroids
+  #' model-based centroids for prototype model
+  #' trial averages for rule-based model
   #' 
-  #' @param m the fitted naive Bayes model
+  #' @param l_info the parameter list
+  #' @param l_m a list with model-based info (i.e., posterior, model object)
   #' @param timepoint_str a string stating the time point of learning
-  #' @param categories unique available categories
+  #' @param tbl_new tbl with the prior the accepted samples
   #' 
-  map(m$tables, function(x) x[1, ]) %>% 
-    as_tibble() %>%
-    mutate(
-      category = categories,
-      timepoint = timepoint_str
-    ) 
+  if (l_info$cat_type == "prototype") {
+    m <- ifelse(
+      timepoint_str == "Before Training", l_m$m_nb_initial, l_m$m_nb_update
+    )
+    map(m$tables, function(x) x[1, ]) %>% 
+      as_tibble() %>%
+      mutate(
+        category = categories,
+        timepoint = timepoint_str
+      ) 
+  } else if (l_info$cat_type == "rule"){
+    tbl_new %>% 
+      group_by(category, timepoint) %>%
+      summarize(
+        x1 = mean(x1),
+        x2 = mean(x2)
+      ) %>% ungroup()
+  }
 }
 
 
-add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
+add_centers <- function(tbl_new, l_m, l_info) {
   #' add category centers
   #' 
   #' @param tbl_new a tibble with all the accepted samples
-  #' @param m_nb_initial the originally fitted naive Bayes model (i.e., prior model)
-  #' @param m_nb_update the most recently updated naive Bayes model
-  #' @param categories vector with unique categories
+  #' @param l_m predictions and model info if available
+  #' @param l_info parameter and experimental infos
   #' 
+  # model-based prototypes
   tbl_centers <- rbind(
-    center_of_category(m_nb_initial, "Before Training", categories),
-    center_of_category(m_nb_update, "After Training", categories)
+    center_of_category(l_info, l_m, "Before Training", tbl_new),
+    center_of_category(l_info, l_m, "After Training", tbl_new)
   )
   tbl_prior <- tbl_new %>% filter(timepoint == "Before Training")
   tbl_samples <- tbl_new %>% filter(timepoint == "After Training")
