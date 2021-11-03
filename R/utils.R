@@ -7,33 +7,30 @@ library(ggExtra)
 library(assertthat)
 library(mvtnorm)
 
-categorize_stimuli <- function(l_params) {
+categorize_stimuli <- function(l_info) {
   #' main categorization function
   #' 
   #' @description categorize stimuli, store accepted samples, and visualize results
   #' 
-  #' @param l_params parameter list with fields n_stimuli, n_categories, prior_sd, nruns
+  #' @param l_info parameter list with fields n_stimuli, n_categories, prior_sd, nruns
   #' @return a list with prior, samples, and posterior in [[1]] and some
   #' visualizations in [[2]]
   #' 
-  # unpack parameters
-  env <- rlang::current_env()
-  list2env(l_params, env)
-  
-  thx <- c(0, sqrt(n_stimuli) - 1)
-  x1 <- seq(thx[1], thx[2], by = 1)
-  x2 <- seq(thx[1], thx[2], by = 1)
+
+  space_edges <- c(0, sqrt(l_info$n_stimuli) - 1)
+  x1 <- seq(space_edges[1], space_edges[2], by = 1)
+  x2 <- seq(space_edges[1], space_edges[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  tbl <- create_categories(tbl, sqrt(n_categories)) %>% 
+  tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
     select(-c(x1_cat, x2_cat))
-  feature_names <- c("x1", "x2")
-  label <- "category"
+  l_info$feature_names <- c("x1", "x2")
+  l_info$label <- "category"
   tbl$category <- as.factor(tbl$category)
-  categories <- levels(tbl$category)
+  l_info$categories <- levels(tbl$category)
   
   # compute priors
-  l_m <- priors(cat_type, tbl, categories)
+  l_m <- priors(l_info, tbl)
   
   # save prior for later and copy original tbl
   l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
@@ -42,23 +39,23 @@ categorize_stimuli <- function(l_params) {
   posterior <- l_m$posterior_prior
   tbl_new <- tbl
   
-  unique_boundaries <- boundaries(tbl, n_categories)
+  unique_boundaries <- boundaries(tbl, l_info)
   thx_grt <- thxs(unique_boundaries)
   
   # Categorization Simulation -----------------------------------------------
   
-  pb <- txtProgressBar(min = 1, max = nruns, initial = 1, char = "*", style = 2)
-  for (i in 1:nruns) {
+  pb <- txtProgressBar(min = 1, max = l_info$nruns, initial = 1, char = "*", style = 2)
+  for (i in 1:l_info$nruns) {
     # perceive a randomly sampled stimulus
-    l_x <- perceive_stimulus(tbl_new, n_stimuli, feature_names)
+    l_x <- perceive_stimulus(tbl_new, l_info)
     # propose a new posterior
-    if (cat_type == "rule") {
+    if (l_info$cat_type == "rule") {
       posterior_new <- pmap(
-        thx_grt, grt_cat_probs, tbl_stim = tail(l_x$X, 1), prior_sd = prior_sd
+        thx_grt, grt_cat_probs, tbl_stim = tail(l_x$X, 1), l_info = l_info
       ) %>% unlist() %>%
         matrix(nrow = 1) %>%
-        as_tibble(.name_repair = ~ categories)
-    } else if (cat_type == "prototype") {
+        as_tibble(.name_repair = ~ l_info$categories)
+    } else if (l_info$cat_type == "prototype") {
       posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
     }
     
@@ -71,15 +68,15 @@ categorize_stimuli <- function(l_params) {
     if (
       # (post_x_new > post_x_old) & 
       p_thx < min(1, post_x_new/post_x_old) &
-      between(l_x$X_new$x1, thx[1], thx[2]) & 
-      between(l_x$X_new$x2, thx[1], thx[2])
+      between(l_x$X_new$x1, space_edges[1], space_edges[2]) & 
+      between(l_x$X_new$x2, space_edges[1], space_edges[2])
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
         tbl_new, tibble(stim_id = l_x$stim_id_cur, l_x$X_new, category = l_x$cat_cur)
       )
       posterior <- rbind(posterior, posterior_new)
-      if (cat_type == "prototype") {
+      if (l_info$cat_type == "prototype") {
         # refit model
         l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
       }
@@ -119,12 +116,12 @@ postprocess_prototype <- function(l_categorization) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   
-  pl_centers <- plot_moves(l_results$tbl_posterior, thx)
+  pl_centers <- plot_moves(l_results$tbl_posterior, space_edges)
   pl_post <- plot_cat_probs(tbl_posteriors)
   
   
   # Inspect Prior and Samples ---------------------------------------------
-  # the following only works when nruns is large enough
+  # the following only works when l_info$nruns is large enough
   nice_showcase <- max(tbl$x1) + 1
   n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
     group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
@@ -144,7 +141,7 @@ postprocess_prototype <- function(l_categorization) {
       x2_sd = sd(x2)
     )
   
-  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, prior_sd)
+  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, l_info$prior_sd)
   
   tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
     mutate(rwn = row_number(Value)) %>%
@@ -213,26 +210,26 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
-priors <- function(cat_type, tbl, categories) {
+priors <- function(l_info, tbl) {
   #' calculate category priors for one of the three different categorization types
   #' 
-  #' @param cat_type string being one of prototype, rule, or exemplar
+  #' @param l_info parameter list
   #' @param tbl \code{tibble} containing the two features and the category as columns
   #' @return the stimuli priors
   #' 
-  if (cat_type == "rule"){
-    n_categories <- length(categories)
-    unique_boundaries <- boundaries(tbl, n_categories)
+  if (l_info$cat_type == "rule"){
+    l_info$n_categories <- length(l_info$categories)
+    unique_boundaries <- boundaries(tbl, l_info)
     thx_grt <- thxs(unique_boundaries)
     posterior_prior <- pmap(
-      thx_grt, grt_cat_probs, tbl_stim = tbl, prior_sd = prior_sd
+      thx_grt, grt_cat_probs, tbl_stim = tbl, l_info = l_info
     ) %>% unlist() %>%
       matrix(nrow = nrow(tbl)) %>%
-      as_tibble(.name_repair = ~ categories)
+      as_tibble(.name_repair = ~ l_info$categories)
     l_out <- list(posterior_prior = posterior_prior)
     
-  } else if (cat_type == "prototype") {
-    fml <- formula(str_c(label, " ~ ", str_c(feature_names, collapse = " + ")))
+  } else if (l_info$cat_type == "prototype") {
+    fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
     m_nb_initial <- naive_bayes(fml, data = tbl)
     m_nb_update <- m_nb_initial
     posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
@@ -246,26 +243,26 @@ priors <- function(cat_type, tbl, categories) {
 }
 
 
-perceive_stimulus <- function(tbl_new, n_stimuli, feature_names) {
+perceive_stimulus <- function(tbl_new, l_info) {
   #' simulate noisy perception of a 2D stimulus
   #' 
   #' @param tbl_new \code{tibble} containing the stimulus id, two features,
   #' and the category as columns
-  #' @param n_stimuli stating the number of different stimuli
+  #' @param l_info parameter list
   #' @return three different X tbls (before, after, together)
   #' 
   # randomly move random observation
-  idx <- sample(n_stimuli, 1)
+  idx <- sample(l_info$n_stimuli, 1)
   cat_cur <- tbl_new$category[idx]
   stim_id_cur <- tbl_new$stim_id[idx]
   X_new <-  tibble(
-    tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
-    tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
+    tbl_new[idx, "x1"] + rnorm(1, 0, l_info$prior_sd), 
+    tbl_new[idx, "x2"] + rnorm(1, 0, l_info$prior_sd)
   )
   X_old <- tbl_new[, c("x1", "x2")]
   # create new X matrix
   X <- rbind(X_old, X_new)
-  colnames(X) <- feature_names
+  colnames(X) <- l_info$feature_names
   l_out <- list(
     X_old = X_old, X_new = X_new, X = X,
     cat_cur = cat_cur, stim_id_cur = stim_id_cur
@@ -274,17 +271,17 @@ perceive_stimulus <- function(tbl_new, n_stimuli, feature_names) {
 }
 
 
-boundaries <- function(tbl, n_categories) {
+boundaries <- function(tbl, l_info) {
   #' calculate decision boundaries
   #' 
   #' @param tbl \code{tibble} containing the stimulus id, two features,
   #' and the category as columns
-  #' @param n_categories stating the number of categories
+  #' @param l_info parameter list
   #' @return the unique boundaries in a vector
   #' 
   # randomly move random observation
   x_vals <- sort(unique(tbl$x1))
-  stepsize <- length(x_vals) / sqrt(n_categories)
+  stepsize <- length(x_vals) / sqrt(l_info$n_categories)
   cutoffs_prep <- seq(0, length(x_vals), stepsize) - .5
   unique_boundaries <- cutoffs_prep[between(cutoffs_prep, min(tbl$x1), max(tbl$x1))]
   return(unique_boundaries)
@@ -399,11 +396,12 @@ add_centers <- function(tbl_new, m_nb_initial, m_nb_update, categories) {
 
 
 
-normal_quantiles_given_pars <- function(tbl, prior_sd) {
+normal_quantiles_given_pars <- function(tbl, l_info) {
   #' calculate quantiles given prior mean and sd, 
   #' as well as empirical mean and sd from accepted samples
   #' 
   #' @param tbl tibble with the aggregated values
+  #' @param l_info parameter list
   #' 
   tmp_mean <- tbl %>% filter(timepoint == "After Training") %>%
     select(ends_with("_mean")) %>%
@@ -417,7 +415,7 @@ normal_quantiles_given_pars <- function(tbl, prior_sd) {
   names(tmp_mean_prior) <- str_c(names(tmp_mean_prior), "_prior")
   tbl_parms <- tibble(
     mean = c(tmp_mean_prior, tmp_mean),
-    sd = append(rep(prior_sd, length(tmp_mean)), tmp_sd)
+    sd = append(rep(l_info$prior_sd, length(tmp_mean)), tmp_sd)
   )
   tbl_out <- pmap(tbl_parms, qnorm, p = seq(.01, .99, by = .01)) %>% as_tibble()
   names(tbl_out) <- str_c(
@@ -482,16 +480,16 @@ stimulus_before_after <- function(l_results, stim_id) {
     rbind
   )
   tbl_stimulus <- tbl_stimulus %>%
-    select(c(x1_data, x2_data, timepoint, n_categories)) %>%
+    select(c(x1_data, x2_data, timepoint, l_info$n_categories)) %>%
     pivot_wider(
-      id_cols = c(n_categories), names_from = timepoint, values_from = c(x1_data, x2_data)
+      id_cols = c(l_info$n_categories), names_from = timepoint, values_from = c(x1_data, x2_data)
     )
-  names(tbl_stimulus) <- c("n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
+  names(tbl_stimulus) <- c("l_info$n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
   return(tbl_stimulus)
 }
 
 
-grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, prior_sd){
+grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, l_info){
   #' categorize using two-dimensional general recognition theory model
   #' 
   #' @description compute category probability given category thresholds (thx), 
@@ -502,12 +500,13 @@ grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, prio
   #' @param x1_upper upper thx on x1 dimension
   #' @param x2_upper upper thx on x2 dimension
   #' @param tbl_stim 
+  #' @param l_info parameter list
   #' @return a list with prior, samples, and posterior in [[1]] and some
   #' visualizations in [[2]]
   #' 
   #' assuming uncorrelated feature dimensions
   #' assuming prior variance is fixed across dimensions
-  m_cov <- matrix(c(prior_sd ^ 2, 0, 0, prior_sd ^ 2), nrow = 2, byrow = TRUE)
+  m_cov <- matrix(c(l_info$prior_sd ^ 2, 0, 0, l_info$prior_sd ^ 2), nrow = 2, byrow = TRUE)
   f_pred <- function(x1, x2) { 
     pmvnorm(
       lower = c(x1_lower, x2_lower), 
