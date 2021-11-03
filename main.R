@@ -13,34 +13,32 @@ walk(files, source)
 
 # Create Categories -------------------------------------------------------
 
-n_categories <- 9L
 n_stimuli <- 144L
 prior_sd <- .75
 nruns <- 100
 
-l_params <- list(
-  cat_type = "rule",
+# constant
+l_params_prep <- list(
   n_stimuli = n_stimuli,
-  n_categories = n_categories,
   prior_sd = prior_sd,
   nruns = nruns
 )
-l2_params <- list(
-  l_params,
-  l_params
-)
-l2_params[[2]]$n_categories <- 4L
+
+# variable
+tbl_vary <- crossing(n_categories = c(4L, 9L), cat_type = c("rule", "prototype"))
+l_params <- pmap(tbl_vary, ~ append(l_params_prep, list(n_categories = .x, cat_type = .y)))
+
 
 # sanity checks of parameters
-walk(map(l2_params, .f = function(x) x$n_categories), check_categories)
-walk(map(l2_params, .f = function(x) x$cat_type), check_cat_types)
+walk(map(l_params, .f = function(x) x$n_categories), check_categories)
+walk(map(l_params, .f = function(x) x$cat_type), check_cat_types)
 
 # Run Categorization ------------------------------------------------------
 
-plan(multisession, workers = min(future::availableCores() - 2, length(l2_params)))
+plan(multisession, workers = min(future::availableCores() - 2, length(l_params)))
 suppressWarnings(
   suppressMessages(
-    l_results <- future_map(l2_params, categorize_stimuli, .progress = TRUE)
+    l_results <- future_map(l_params, categorize_stimuli, .progress = TRUE)
   )
 )
 
