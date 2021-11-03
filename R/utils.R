@@ -17,18 +17,9 @@ categorize_stimuli <- function(l_info) {
   #' visualizations in [[2]]
   #' 
 
-  space_edges <- c(0, sqrt(l_info$n_stimuli) - 1)
-  x1 <- seq(space_edges[1], space_edges[2], by = 1)
-  x2 <- seq(space_edges[1], space_edges[2], by = 1)
-  features <- crossing(x1, x2)
-  tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
-    select(-c(x1_cat, x2_cat))
-  l_info$feature_names <- c("x1", "x2")
-  l_info$label <- "category"
-  tbl$category <- as.factor(tbl$category)
-  l_info$categories <- levels(tbl$category)
-  
+  l_tmp <- make_stimuli(l_info)
+  tbl <- l_tmp[[1]]
+  l_info <- l_tmp[[2]]
   # compute priors
   l_m <- priors(l_info, tbl)
   
@@ -41,6 +32,7 @@ categorize_stimuli <- function(l_info) {
   
   unique_boundaries <- boundaries(tbl, l_info)
   thx_grt <- thxs(unique_boundaries)
+  
   
   # Categorization Simulation -----------------------------------------------
   
@@ -68,8 +60,8 @@ categorize_stimuli <- function(l_info) {
     if (
       # (post_x_new > post_x_old) & 
       p_thx < min(1, post_x_new/post_x_old) &
-      between(l_x$X_new$x1, space_edges[1], space_edges[2]) & 
-      between(l_x$X_new$x2, space_edges[1], space_edges[2])
+      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
+      between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
     ) {
       #cat("accepted\n")
       tbl_new <- rbind(
@@ -116,7 +108,7 @@ postprocess_prototype <- function(l_categorization) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   
-  pl_centers <- plot_moves(l_results$tbl_posterior, space_edges)
+  pl_centers <- plot_moves(l_results$tbl_posterior, l_info$space_edges)
   pl_post <- plot_cat_probs(tbl_posteriors)
   
   
@@ -169,6 +161,28 @@ postprocess_prototype <- function(l_categorization) {
   )
   
   return(l_out)
+}
+
+
+make_stimuli <- function(l_info) {
+  #' create stimuli from 2D feature space
+  #' 
+  #' @param l_info list with parameters
+  #' @return a list with a tbl containing the stimulus set and 
+  #' the parameter list with the added infos
+  #' 
+  l_info$space_edges <- c(0, sqrt(l_info$n_stimuli) - 1)
+  x1 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
+  x2 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
+  features <- crossing(x1, x2)
+  tbl <- tibble(stim_id = seq(1, nrow(features)), features)
+  tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
+    select(-c(x1_cat, x2_cat))
+  l_info$feature_names <- c("x1", "x2")
+  l_info$label <- "category"
+  tbl$category <- as.factor(tbl$category)
+  l_info$categories <- levels(tbl$category)
+  return(list(tbl, l_info))
 }
 
 
