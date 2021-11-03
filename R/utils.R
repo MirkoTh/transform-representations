@@ -90,78 +90,6 @@ categorize_stimuli <- function(l_info) {
   return(l_out)
 }
 
-postprocess_prototype <- function(l_categorization) {
-  env <- rlang::current_env()
-  list2env(l_categorization, env)
-  l_results <- add_centers(tbl_new, l_m, l_info)
-  
-  
-  tbl_posterior_long <- extract_posterior(posterior, tbl_new)[[1]]
-  tbl_posteriors <- tbl_prior_long %>%
-    mutate(timepoint = "Before Training") %>%
-    rbind(
-      tbl_posterior_long %>%
-        mutate(timepoint = "After Training")
-    ) %>%
-    mutate(
-      timepoint = fct_relevel(timepoint, "Before Training", "After Training")
-    )
-  
-  pl_centers <- plot_moves(l_results$tbl_posterior, l_info$space_edges)
-  pl_post <- plot_cat_probs(tbl_posteriors)
-  
-  
-  # Inspect Prior and Samples ---------------------------------------------
-  # the following only works when l_info$nruns is large enough
-  nice_showcase <- max(tbl_new$x1[1:l_info$n_stimuli]) + 1
-  n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
-    group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
-    ungroup() %>% arrange(desc(rwn))
-  if(n_accept_stimuli %>% filter(stim_id == nice_showcase) %>% 
-     select(rwn) %>% as_vector() %>% max() > 2) {
-    showcase <- nice_showcase
-  } else {
-    showcase <- n_accept_stimuli %>% head(1) %>% select(stim_id) %>% as_vector()
-  }
-  tbl_tmp <- tbl_new %>% filter(stim_id == showcase) %>%
-    group_by(timepoint) %>%
-    summarize(
-      x1_mean = mean(x1),
-      x2_mean = mean(x2),
-      x1_sd = sd(x1),
-      x2_sd = sd(x2)
-    )
-  
-  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, l_info)
-  
-  tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
-    mutate(rwn = row_number(Value)) %>%
-    pivot_wider(names_from = Variable, values_from = Value) %>%
-    select(-rwn) %>%
-    mutate(Timepoint = recode_factor(Timepoint, prior = "Prior", posterior = "Posterior"))
-  
-  pl <- ggplot(tbl_plt, aes(x1, x2, group = Timepoint)) +
-    geom_point(aes(color = Timepoint), shape = 1) +
-    theme_bw() +
-    scale_color_brewer(palette = "Set1") +
-    labs(
-      x = bquote(x[1]),
-      y = bquote(x[2])
-    )
-  
-  pl_marginals <- ggMarginal(pl, groupColour = TRUE, type="density", size=10)
-  
-  l_plots <- list(
-    pl_centers, pl_post, pl_marginals
-  )
-  
-  l_out <- list(
-    l_results, l_plots
-  )
-  
-  return(l_out)
-}
-
 
 make_stimuli <- function(l_info) {
   #' create stimuli from 2D feature space
@@ -327,6 +255,7 @@ extract_posterior <- function(posterior, tbl_new) {
   #' 
   #' @param posterior posterior probabilities of all categories given data
   #' @param tbl_new the original tbl with the accepted samples
+  #' 
   tbl_post <- cbind(posterior, category = as.character(tbl_new$category)) %>% as_tibble()
   tbl_post[, levels(tbl_new$category)] <- map(tbl_post[, levels(tbl_new$category)], as.numeric)
   tbl_post_long <- tbl_post %>%

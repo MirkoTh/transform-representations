@@ -101,7 +101,6 @@ plot_stimulus_movements <- function(tbl_stimulus) {
 }
 
 
-
 save_plots <- function(l_results, pl_stimulus_movement) {
   #' save required figures in figures dir
   #' 
@@ -129,4 +128,90 @@ save_plots <- function(l_results, pl_stimulus_movement) {
     dev.off()
   }
   pwalk(tbl_save_pl, save_figure_png)
+}
+
+
+plot_marginals <- function(tbl_new, l_info) {
+  #' plots marginal distributions of x1 and x2 for prior and posterior
+  #' 
+  #' @param tbl_new tbl with prior and samples values during category learning
+  #' @param l_info parameter list
+  #' @return the plot
+  #' 
+  nice_showcase <- round(max(tbl_new$x1[1:l_info$n_stimuli]) / 2 + 1)
+  n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
+    group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
+    ungroup() %>% arrange(desc(rwn))
+  if(n_accept_stimuli %>% filter(stim_id == nice_showcase) %>% 
+     select(rwn) %>% as_vector() %>% max() > 2) {
+    showcase <- nice_showcase
+  } else {
+    showcase <- n_accept_stimuli %>% head(1) %>% select(stim_id) %>% as_vector()
+  }
+  tbl_tmp <- tbl_new %>% filter(stim_id == showcase) %>%
+    group_by(timepoint) %>%
+    summarize(
+      x1_mean = mean(x1),
+      x2_mean = mean(x2),
+      x1_sd = sd(x1),
+      x2_sd = sd(x2)
+    )
+  
+  tbl_samples <- normal_quantiles_given_pars(tbl_tmp, l_info)
+  
+  tbl_plt <- tbl_samples %>% group_by(Variable, Timepoint) %>% 
+    mutate(rwn = row_number(Value)) %>%
+    pivot_wider(names_from = Variable, values_from = Value) %>%
+    select(-rwn) %>%
+    mutate(Timepoint = recode_factor(Timepoint, prior = "Prior", posterior = "Posterior"))
+  
+  pl <- ggplot(tbl_plt, aes(x1, x2, group = Timepoint)) +
+    geom_point(aes(color = Timepoint), shape = 1) +
+    theme_bw() +
+    scale_color_brewer(palette = "Set1") +
+    labs(
+      x = bquote(x[1]),
+      y = bquote(x[2])
+    )
+  
+  pl_marginals <- ggMarginal(pl, groupColour = TRUE, type="density", size=10)
+  return(pl_marginals)
+}
+
+
+diagnostic_plots <- function(l_categorization) {
+  #' plots showing qualitative predictions from different models
+  #' 
+  #' @param l_categorization list with category learning results
+  #' @return a list with samples (a) from the prior, 
+  #' (b) from the category learning period, and (c) with (a) and (b) together
+  #' 
+  env <- rlang::current_env()
+  list2env(l_categorization, env)
+  l_results <- add_centers(tbl_new, l_m, l_info)
+  tbl_posterior_long <- extract_posterior(posterior, tbl_new)[[1]]
+  tbl_posteriors <- tbl_prior_long %>%
+    mutate(timepoint = "Before Training") %>%
+    rbind(
+      tbl_posterior_long %>%
+        mutate(timepoint = "After Training")
+    ) %>%
+    mutate(
+      timepoint = fct_relevel(timepoint, "Before Training", "After Training")
+    )
+  # movement of stimulus representations before vs. after
+  pl_centers <- plot_moves(l_results$tbl_posterior, l_info$space_edges)
+  # histograms of posterior category probabilities before vs. after
+  pl_post <- plot_cat_probs(tbl_posteriors)
+  # x1 and x2 marginals for one stimulus before vs. after
+  pl_marginals <- plot_marginals(tbl_new, l_info)
+  # plotting list
+  l_plots <- list(
+    pl_centers, pl_post, pl_marginals
+  )
+  # list with results and plots
+  l_out <- list(
+    l_results, l_plots
+  )
+  return(l_out)
 }

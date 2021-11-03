@@ -15,7 +15,7 @@ walk(files, source)
 
 n_stimuli <- 144L
 prior_sd <- .75
-nruns <- 100
+nruns <- 1000
 
 # constant
 l_info_prep <- list(
@@ -33,6 +33,7 @@ l_info <- pmap(tbl_vary, ~ append(l_info_prep, list(n_categories = .x, cat_type 
 walk(map(l_info, .f = function(x) x$n_categories), check_categories)
 walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 
+
 # Run Categorization ------------------------------------------------------
 
 plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
@@ -42,27 +43,8 @@ suppressWarnings(
   )
 )
 
+
 # Post Processing & Plotting ----------------------------------------------
 
-if (l_info$cat_type == "prototype") {
-  # post processing
-  l_results <- map(l_results, postprocess_prototype)
-  
-  # visualize movement from prior mean to two different posterior means
-  # two arrows pointing into the respective directions in a 2d grid
-  tbl_stimulus <- stimulus_before_after(l_results, 48)
-  
-  # Visualize Stimulus Movement For Different Nr. Categories
-  pl_stimulus_movement <- plot_stimulus_movements(tbl_stimulus)
-  
-  # Save Required Plots
-  save_plots(l_results, pl_stimulus_movement)
-}
+l_results <- map(l_results[c(1, 3)], diagnostic_plots)
 
-if (l_info$cat_type == "rule") {
-  ## tb filled with post-processing for rule-based categorization
-}
-
-if (l_info$cat_type == "exemplar") {
-  ## tb filled with post-processing for exemplar-based categorization
-}
