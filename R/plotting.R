@@ -40,7 +40,7 @@ plot_arrangement <- function(pl, n_cols = 2) {
 }
 
 
-plot_moves <- function(tbl_results, thx) {
+plot_moves <- function(tbl_results, space_edges) {
   ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
     geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
@@ -53,7 +53,10 @@ plot_moves <- function(tbl_results, thx) {
     ) +
     facet_wrap(~ timepoint, scales = "free") +
     theme_bw() +
-    coord_cartesian(xlim = c(thx[1] - 1, thx[2] + 1), ylim = c(thx[1] - 1, thx[2] + 1)) +
+    coord_cartesian(
+      xlim = c(space_edges[1] - 1, space_edges[2] + 1), 
+      ylim = c(space_edges[1] - 1, space_edges[2] + 1)
+      ) +
     scale_color_viridis_c(name = "Category") +
     labs(
       x = bquote(x[1]),
