@@ -93,6 +93,7 @@ plot_stimulus_movements <- function(tbl_stimulus) {
       color = n_categories
     ), arrow = arrow(type = "closed")) +
     theme_bw() +
+    facet_wrap(~ cat_type) +
     scale_color_brewer(palette = "Set1", name = "Nr. Categories") +
     labs(
       x = bquote(x[1]),
@@ -110,14 +111,16 @@ save_plots <- function(l_results, pl_stimulus_movement) {
   tbl_save_pl <- tibble(
     pl = c(
       expr(l_results[[1]][[2]][[1]]), expr(l_results[[2]][[2]][[1]]),
+      expr(l_results[[3]][[2]][[1]]), expr(l_results[[4]][[2]][[1]]),
       expr(pl_stimulus_movement)
     ),
     filename = c(
-      "9-Cats-All-Movements.png", "4-Cats-All-Movements.png",
+      "4-Cats-Prototype-All-Movements.png", "4-Cats-Rule-All-Movements.png",
+      "9-Cats-Prototype-All-Movements.png", "9-Cats-Rule-All-Movements.png",
       "Diverging-Movement-One-Stimulus.png"
     ),
-    width = c(10, 10, 4),
-    height = c(5, 5, 4)
+    width = c(10, 10, 10, 10, 4),
+    height = c(5, 5, 5, 5, 4)
   )
   save_figure_png <- function(pl, filename, width, height) {
     png(
