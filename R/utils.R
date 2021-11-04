@@ -63,8 +63,8 @@ categorize_stimuli <- function(l_info) {
     p_thx <- runif(1)
     # decide on whether to accept or reject a proposition
     if (
-      # (post_x_new > post_x_old) & 
-      p_thx < min(1, post_x_new/post_x_old) &
+      (post_x_new > post_x_old) & 
+      # p_thx < min(1, post_x_new/post_x_old) &
       between(l_x$X_new$x1, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1) & 
       between(l_x$X_new$x2, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1)
     ) {
@@ -76,7 +76,7 @@ categorize_stimuli <- function(l_info) {
           stim_id = l_x$stim_id_cur, l_x$X_new, 
           m_onehots,
           category = l_x$cat_cur, cat_type = l_info$cat_type
-          )
+        )
       )
       posterior <- rbind(posterior, posterior_new)
       # refit prototype and exemplar models when sample was accepted
@@ -477,8 +477,8 @@ stimulus_before_after <- function(l_results, stim_id) {
   tbl_stimulus <- reduce(
     map(l_results, prior_posterior_for_stim_id, s_id = stim_id), 
     rbind
-    ) %>% group_by(stim_id, cat_type, timepoint, n_categories) %>%
-  summarize(x1 = mean(x1), x2 = mean(x2)) %>% ungroup()
+  ) %>% group_by(stim_id, cat_type, timepoint, n_categories) %>%
+    summarize(x1 = mean(x1), x2 = mean(x2)) %>% ungroup()
   tbl_stimulus <- tbl_stimulus %>%
     select(c(x1, x2, cat_type, timepoint, n_categories)) %>%
     pivot_wider(
@@ -486,6 +486,13 @@ stimulus_before_after <- function(l_results, stim_id) {
       names_from = timepoint, values_from = c(x1, x2)
     )
   names(tbl_stimulus) <- c("cat_type", "n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
+  tbl_stimulus$cat_type <- as.factor(tbl_stimulus$cat_type)
+  upper_first <- function(s) {
+    s <- str_c(str_to_upper(substr(s, 1, 1)), substr(s, 2, str_length(s)))
+    s
+  }
+  levels(tbl_stimulus$cat_type) <- map_chr(levels(tbl_stimulus$cat_type), upper_first)
+  
   return(tbl_stimulus)
 }
 
