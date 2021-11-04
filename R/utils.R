@@ -43,12 +43,17 @@ categorize_stimuli <- function(l_info) {
     # propose a new posterior
     if (l_info$cat_type == "rule") {
       posterior_new <- pmap(
-        thx_grt, grt_cat_probs, tbl_stim = tail(l_x$X, 1), l_info = l_info
+        thx_grt, grt_cat_probs, tbl_stim = l_x$X_new, l_info = l_info
       ) %>% unlist() %>%
         matrix(nrow = 1) %>%
         as_tibble(.name_repair = ~ l_info$categories)
     } else if (l_info$cat_type == "prototype") {
       posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
+    } else if (l_info$cat_type == "exemplar") {
+      l_info$sens <- l_m$gcm_params[1]
+      l_info$wgh <- l_m$gcm_params[2]
+      posterior_new <- predict_gcm(tbl_new, l_x$X_new, l_info)
+      colnames(posterior_new) <- l_info$categories
     }
     
     post_x_new <- as_vector(tail(posterior_new[, l_x$cat_cur], 1))
@@ -64,17 +69,27 @@ categorize_stimuli <- function(l_info) {
       between(l_x$X_new$x2, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1)
     ) {
       #cat("accepted\n")
+      onehots <- one_hot(l_info, l_x$cat_cur)
+      m_onehots <- as_tibble(t(as.matrix(onehots)))
       tbl_new <- rbind(
         tbl_new, tibble(
           stim_id = l_x$stim_id_cur, l_x$X_new, 
+          m_onehots,
           category = l_x$cat_cur, cat_type = l_info$cat_type
           )
       )
       posterior <- rbind(posterior, posterior_new)
+      # refit prototype and exemplar models when sample was accepted
       if (l_info$cat_type == "prototype") {
-        # refit model
         l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
       }
+      # if (l_info$cat_type == "exemplar") {
+      #   fit_gcm <- optim(
+      #     f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
+      #     l_info = l_info, tbl_stim = tbl_new, method = "L-BFGS-B"
+      #   )
+      #   l_m$gcm_params <- fit_gcm$par
+      # }
     }
     setTxtProgressBar(pb,i)
   }
@@ -113,6 +128,14 @@ make_stimuli <- function(l_info) {
   tbl$category <- as.factor(tbl$category)
   l_info$categories <- levels(tbl$category)
   tbl$cat_type <- l_info$cat_type
+  tbl <- tbl %>% mutate(observed = 1) %>%
+    pivot_wider(
+      names_from = category, values_from = observed,
+      names_sort = TRUE, names_prefix = "cat"
+    ) %>%
+    mutate(category = tbl$category)
+  tbl[is.na(tbl)] <- 0
+  
   return(list(tbl, l_info))
 }
 
@@ -182,8 +205,20 @@ priors <- function(l_info, tbl) {
       posterior_prior = posterior_prior, fml = fml,
       m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
     )
+    
+  } else if (l_info$cat_type == "exemplar"){
+    fit_gcm <- optim(
+      f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
+      l_info = l_info, tbl_stim = tbl, method = "L-BFGS-B"
+    )
+    l_info$sens <- fit_gcm$par[1]
+    l_info$wgh <- fit_gcm$par[2]
+    posterior_prior <- predict_gcm(tbl, tbl, l_info) %>%
+      as_tibble(.name_repair = ~ l_info$categories)
+    l_out <- list(
+      posterior_prior = posterior_prior,
+      gcm_params = c(l_info$sens, l_info$wgh))
   }
-  
   return(l_out)
 }
 
@@ -320,7 +355,7 @@ center_of_category <- function(l_info, l_m, timepoint_str, tbl_new){
         category = l_info$categories,
         timepoint = timepoint_str
       ) 
-  } else if (l_info$cat_type == "rule"){
+  } else {
     tbl_new %>% 
       group_by(category, timepoint) %>%
       summarize(
@@ -408,8 +443,8 @@ check_cat_types <- function(cat_type) {
   #' @param cat_type a character vector
   #' 
   assert_that(are_equal(
-    sum(str_detect(cat_type, c("^prototype$", "^rule$", "^instance$"))), 1
-  ), msg = "Make sure cat_type is one of prototype, rule, instance")
+    sum(str_detect(cat_type, c("^prototype$", "^rule$", "^exemplar$"))), 1
+  ), msg = "Make sure cat_type is one of prototype, rule, exemplar")
 }
 
 
@@ -433,9 +468,11 @@ stimulus_before_after <- function(l_results, stim_id) {
   #' @param stim_id the stimulus_id to be extracted
   #' 
   prior_posterior_for_stim_id <- function(l, s_id) {
-    l$tbl_new %>%
+    tmp <- l$tbl_new %>%
       mutate(n_categories = factor(max(as.numeric(category)))) %>%
       filter(stim_id == s_id)
+    cols_keep <- !str_detect(colnames(tmp), pattern = "^cat[0-9]+$")
+    tmp[, cols_keep]
   }
   tbl_stimulus <- reduce(
     map(l_results, prior_posterior_for_stim_id, s_id = stim_id), 
@@ -480,4 +517,51 @@ grt_cat_probs <- function(x1_lower, x2_lower, x1_upper, x2_upper, tbl_stim, l_in
     )
   }
   pmap_dbl(tbl_stim[, c("x1", "x2")], f_pred)
+}
+
+
+predict_gcm <- function(tbl_train, tbl_test, l_info) {
+  #' categorize using nosofsky's gcm (2011) implemented in catlearn (Wilks)
+  #' 
+  #' @param tbl_train train data as tbl
+  #' @param tbl_test test data as tbl
+  #' @param l_info parameter list
+  #' @return a matrix with category probabilities for tbl_test given tbl_train
+  #' 
+  l_st <- list(
+    training_items = tbl_train[, c(
+      l_info$feature_names, str_c("cat", l_info$categories)
+    )], 
+    tr = tbl_test[, c(l_info$feature_names)], 
+    nCats = l_info$n_categories, 
+    nFeat = length(l_info$feature_names), 
+    sensitivity = l_info$sens, 
+    weights = l_info$wgh, 
+    choice_bias = 1 / l_info$n_categories, 
+    p = 1, # 1 exponential, 2 gaussian
+    r_metric = 2, # 1 city block, 2 euclidian
+    # mp, optional memory strength parameter; i.e., should certain items recieve higher memory strength?
+    gamma = 1
+  )
+  stsimGCM(l_st)
+}
+
+ll_gcm <- function(params, l_info, tbl_stim) {
+  #' gcm fitting wrapper
+  #' 
+  l_info$sens <- params[1]
+  l_info$wgh <- params[2]
+  m_preds <- predict_gcm(tbl_stim, tbl_stim, l_info)
+  ll <- sum(log(m_preds[cbind(seq(1, nrow(m_preds), by = 1), tbl_stim$category)]))
+  -2*ll
+}
+
+
+one_hot <- function(l_info, idx) {
+  #' make one-hot encoded vector with 1 at idx
+  #' 
+  v_zeros <- rep(0, l_info$n_categories)
+  names(v_zeros) <- str_c("cat", l_info$categories)
+  v_zeros[idx] <- 1
+  return(v_zeros)
 }
