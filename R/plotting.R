@@ -86,7 +86,7 @@ plot_stimulus_movements <- function(tbl_stimulus) {
   #' 
   ggplot(tbl_stimulus) +
     geom_point(aes(x1_bef, x2_bef), size = 5, color = "white") +
-    geom_point(aes(x1_bef, x2_bef, color = n_categories), size = 3, position = position_dodge(.1)) +
+    geom_point(aes(x1_bef, x2_bef), color = "black", size = 3) +
     geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
     geom_segment(aes(
       x = x1_bef - .005, y = x2_bef - .025, xend = x1_aft + .005, yend = x2_aft + .025,
