@@ -39,7 +39,9 @@ categorize_stimuli <- function(l_info) {
   pb <- txtProgressBar(min = 1, max = l_info$nruns, initial = 1, char = "*", style = 2)
   for (i in 1:l_info$nruns) {
     # perceive a randomly sampled stimulus
+    # while(l_x$stim_id_cur != 1){}
     l_x <- perceive_stimulus(tbl_new, l_info)
+    
     # propose a new posterior
     if (l_info$cat_type == "rule") {
       posterior_new <- pmap(
@@ -56,17 +58,17 @@ categorize_stimuli <- function(l_info) {
       colnames(posterior_new) <- l_info$categories
     }
     
-    post_x_new <- as_vector(tail(posterior_new[, l_x$cat_cur], 1))
+    post_x_new <- round(as_vector(tail(posterior_new[, l_x$cat_cur], 1)), 3)
     # compare to average prediction given previously perceived stimuli
     idxs_stim <- which(tbl_new$stim_id == l_x$stim_id_cur)
-    post_x_old <- mean(as_vector(posterior[idxs_stim, l_x$cat_cur]))
+    post_x_old <- round(mean(as_vector(posterior[idxs_stim, l_x$cat_cur])), 3)
     p_thx <- runif(1)
     # decide on whether to accept or reject a proposition
     if (
       (post_x_new > post_x_old) & 
       # p_thx < min(1, post_x_new/post_x_old) &
-      between(l_x$X_new$x1, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1) & 
-      between(l_x$X_new$x2, l_info$space_edges[1] - 1, l_info$space_edges[2] + 1)
+      between(l_x$X_new$x1, l_info$space_edges[1] - 2, l_info$space_edges[2] + 2) & 
+      between(l_x$X_new$x2, l_info$space_edges[1] - 2, l_info$space_edges[2] + 2)
     ) {
       #cat("accepted\n")
       onehots <- one_hot(l_info, l_x$cat_cur)
@@ -80,9 +82,9 @@ categorize_stimuli <- function(l_info) {
       )
       posterior <- rbind(posterior, posterior_new)
       # refit prototype and exemplar models when sample was accepted
-      if (l_info$cat_type == "prototype") {
-        l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
-      }
+      # if (l_info$cat_type == "prototype") {
+      #   l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
+      # }
       # if (l_info$cat_type == "exemplar") {
       #   fit_gcm <- optim(
       #     f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
@@ -259,7 +261,6 @@ boundaries <- function(tbl, l_info) {
   #' @param l_info parameter list
   #' @return the unique boundaries in a vector
   #' 
-  # randomly move random observation
   x_vals <- sort(unique(tbl$x1))
   stepsize <- length(x_vals) / sqrt(l_info$n_categories)
   cutoffs_prep <- seq(0, length(x_vals), stepsize) - .5
@@ -469,7 +470,10 @@ stimulus_before_after <- function(l_results, stim_id) {
   #' 
   prior_posterior_for_stim_id <- function(l, s_id) {
     tmp <- l$tbl_new %>%
-      mutate(n_categories = factor(max(as.numeric(category)))) %>%
+      mutate(
+        n_categories = factor(max(as.numeric(category))),
+        prior_sd = str_c("Prior SD = ", l$l_info$prior_sd)
+      ) %>%
       filter(stim_id == s_id)
     cols_keep <- !str_detect(colnames(tmp), pattern = "^cat[0-9]+$")
     tmp[, cols_keep]
@@ -477,22 +481,35 @@ stimulus_before_after <- function(l_results, stim_id) {
   tbl_stimulus <- reduce(
     map(l_results, prior_posterior_for_stim_id, s_id = stim_id), 
     rbind
-  ) %>% group_by(stim_id, cat_type, timepoint, n_categories) %>%
+  ) %>% group_by(stim_id, cat_type, timepoint, n_categories, prior_sd) %>%
     summarize(x1 = mean(x1), x2 = mean(x2)) %>% ungroup()
   tbl_stimulus <- tbl_stimulus %>%
-    select(c(x1, x2, cat_type, timepoint, n_categories)) %>%
+    select(c(x1, x2, cat_type, prior_sd, timepoint, n_categories)) %>%
     pivot_wider(
-      id_cols = c(timepoint, cat_type, n_categories), 
-      names_from = timepoint, values_from = c(x1, x2)
+      id_cols = c(cat_type, prior_sd, n_categories), # 3 + 4 = 7
+      names_from = timepoint, values_from = c(x1, x2),
+      names_sort = TRUE
     )
-  names(tbl_stimulus) <- c("cat_type", "n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef")
+  # in case no samples were stored at all:
+  if(ncol(tbl_stimulus) < 7) { # 7 see above
+    tbl_stimulus <- cbind(
+      tbl_stimulus, 
+      x1_aft = rep(tbl_stimulus$x1_bef[1], nrow(tbl_stimulus)), 
+      x2_aft = rep(tbl_stimulus$x2_bef[1], nrow(tbl_stimulus))
+    ) %>% relocate(x1_aft, .after = n_categories) %>%
+      relocate(x2_aft, .after = `x1_Before Training`)
+  }
+  names(tbl_stimulus) <- c(
+    "cat_type", "prior_sd", "n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef"
+  )
+  tbl_stimulus$x1_aft[is.na(tbl_stimulus$x1_aft)] <- tbl_stimulus$x1_bef[1]
+  tbl_stimulus$x2_aft[is.na(tbl_stimulus$x2_aft)] <- tbl_stimulus$x2_bef[1]
   tbl_stimulus$cat_type <- as.factor(tbl_stimulus$cat_type)
   upper_first <- function(s) {
     s <- str_c(str_to_upper(substr(s, 1, 1)), substr(s, 2, str_length(s)))
     s
   }
   levels(tbl_stimulus$cat_type) <- map_chr(levels(tbl_stimulus$cat_type), upper_first)
-  
   return(tbl_stimulus)
 }
 
@@ -544,7 +561,7 @@ predict_gcm <- function(tbl_train, tbl_test, l_info) {
     nFeat = length(l_info$feature_names), 
     sensitivity = l_info$sens, 
     weights = l_info$wgh, 
-    choice_bias = 1 / l_info$n_categories, 
+    choice_bias = rep(1 / l_info$n_categories, l_info$n_categories - 1), 
     p = 1, # 1 exponential, 2 gaussian
     r_metric = 2, # 1 city block, 2 euclidian
     # mp, optional memory strength parameter; i.e., should certain items recieve higher memory strength?

@@ -85,15 +85,15 @@ plot_stimulus_movements <- function(tbl_stimulus) {
   #' @param tbl_stimulus tibble with the pivoted x1 and x2 coordinates
   #' 
   ggplot(tbl_stimulus) +
-    geom_point(aes(x1_bef, x2_bef), size = 5, color = "white") +
-    geom_point(aes(x1_bef, x2_bef), color = "black", size = 3) +
-    geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
     geom_segment(aes(
-      x = x1_bef - .005, y = x2_bef - .025, xend = x1_aft + .005, yend = x2_aft + .025,
+      x = x1_bef, y = x2_bef, xend = x1_aft, yend = x2_aft,
       color = n_categories
-    ), arrow = arrow(type = "closed")) +
+    ), arrow = arrow(type = "closed", length = unit(.1, "inches"))) +
+    geom_point(aes(x1_bef, x2_bef), size = 8, color = "white") +
+    geom_point(aes(x1_bef, x2_bef), color = "black", size = 3) +
+    #geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
     theme_bw() +
-    facet_wrap(~ cat_type) +
+    facet_grid(prior_sd ~ cat_type) +
     scale_color_brewer(palette = "Set1", name = "Nr. Categories") +
     labs(
       x = bquote(x[1]),
@@ -159,6 +159,9 @@ plot_marginals <- function(tbl_new, l_info) {
       x1_sd = sd(x1),
       x2_sd = sd(x2)
     )
+  if (nrow(tbl_tmp) == 1) {
+    tbl_tmp[2, ] <- list("After Training", 0, 0, l_info$prior_sd, l_info$prior_sd)
+  }
   
   tbl_samples <- normal_quantiles_given_pars(tbl_tmp, l_info)
   
