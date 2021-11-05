@@ -15,7 +15,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 144L
-nruns <- 10000
+nruns <- 20000
 
 # constant
 l_info_prep <- list(
@@ -26,14 +26,19 @@ l_info_prep <- list(
 # variable
 tbl_vary <- crossing(
   n_categories = c(4L, 9L), cat_type = c("rule", "prototype", "exemplar"),
-  prior_sd = c(.1, .75)
+  prior_sd = c(.1, .75), sampling = c("improvement", "metropolis-hastings"),
+  constrain_space = c(TRUE, FALSE)
 )
 l_info <- pmap(
   tbl_vary, ~ append(
     l_info_prep, 
-    list(n_categories = ..1, cat_type = ..2, prior_sd = ..3)
+    list(
+      n_categories = ..1, cat_type = ..2, prior_sd = ..3,
+      sampling = ..4, constrain_space = ..5
+      )
     )
 )
+tbl_info <- tibble(do.call(rbind.data.frame, l_info))
 
 # sanity checks of parameters
 walk(map(l_info, .f = function(x) x$n_categories), check_categories)
@@ -51,17 +56,15 @@ l_category_results <- future_map(
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
 # Post Processing & Plotting ----------------------------------------------
 
-# 1 & 2: exemplar -> 1 empty
-# 5 & 6: rule -> 5 empty
-
 l_results_plots <- map(l_category_results, diagnostic_plots)
+l_results_plots[[20]][[2]][[1]]
+
 stim_ids <- c(72, 1)
 l_tbl_stimuli <- map(stim_ids, stimulus_before_after, l_results = l_category_results)
-l_plt_stimulus_movements <- map(l_tbl_stimuli, plot_stimulus_movements)
+split_my_vars <- function(tbl){
+  tbl %>% split(list(.$sampling, .$space))
+}
+l_tbl_stimuli_split <- map(l_tbl_stimuli, split_my_vars)
+l_plt_stimulus_movements <- map(l_tbl_stimuli_split, plot_stimulus_movements)
 
-l_plt_stimulus_movements[[2]]
-
-save_plots(l_results_plots, pl_stimulus_movement)
-
-
-
+l_plt_stimulus_movements[[1]][[1]]

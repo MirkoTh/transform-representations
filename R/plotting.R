@@ -40,7 +40,8 @@ plot_arrangement <- function(pl, n_cols = 2) {
 }
 
 
-plot_moves <- function(tbl_results, space_edges) {
+plot_moves <- function(tbl_results, l_info) {
+  space_edges <- l_info$space_edges
   ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
     geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
@@ -53,52 +54,70 @@ plot_moves <- function(tbl_results, space_edges) {
     ) +
     facet_wrap(~ timepoint, scales = "free") +
     theme_bw() +
+    theme(plot.title = element_text(size=10)) +
     coord_cartesian(
       xlim = c(space_edges[1] - 1, space_edges[2] + 1), 
       ylim = c(space_edges[1] - 1, space_edges[2] + 1)
-      ) +
+    ) +
     scale_color_viridis_c(name = "Category") +
     labs(
       x = bquote(x[1]),
-      y = bquote(x[2])
+      y = bquote(x[2]),
+      title = str_c(
+        "Prior SD = ", l_info$prior_sd, "\n",
+        "Sampling = ", l_info$sampling, "\n",
+        "Constrain Space = ", l_info$constrain_space
+      )
     )
 }
 
 
-plot_cat_probs <- function(tbl_posteriors) {
+plot_cat_probs <- function(tbl_posteriors, l_info) {
   bw <- 10/nrow(tbl_posteriors)
   ggplot(tbl_posteriors, aes(value)) +
     geom_histogram(aes(y = ..density..), alpha = .5, color = "black", binwidth = bw) +
     geom_density(aes(y = ..density..), color = "purple", size = 1) +
     facet_wrap(~ timepoint) +
     theme_bw() +
+    theme(plot.title = element_text(size=10)) +
     labs(
       x = "Posterior Probability",
-      y = "Probability Density"
+      y = "Probability Density",
+      title = str_c(
+        "Prior SD = ", l_info$prior_sd, "\n",
+        "Sampling = ", l_info$sampling, "\n",
+        "Constrain Space = ", l_info$constrain_space
+      )
     )
 }
 
 
-plot_stimulus_movements <- function(tbl_stimulus) {
+plot_stimulus_movements <- function(l_tbl_stimulus) {
   #' plot prior and posterior means of a stimulus and connect them using colored arrows
   #' 
   #' @param tbl_stimulus tibble with the pivoted x1 and x2 coordinates
   #' 
-  ggplot(tbl_stimulus) +
-    geom_segment(aes(
-      x = x1_bef, y = x2_bef, xend = x1_aft, yend = x2_aft,
-      color = n_categories
-    ), arrow = arrow(type = "closed", length = unit(.1, "inches"))) +
-    geom_point(aes(x1_bef, x2_bef), size = 8, color = "white") +
-    geom_point(aes(x1_bef, x2_bef), color = "black", size = 3) +
-    #geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
-    theme_bw() +
-    facet_grid(prior_sd ~ cat_type) +
-    scale_color_brewer(palette = "Set1", name = "Nr. Categories") +
-    labs(
-      x = bquote(x[1]),
-      y = bquote(x[2])
-    )
+  
+  plot_tmp <- function(tbl_stimulus, title) {
+    ggplot(tbl_stimulus) +
+      geom_segment(aes(
+        x = x1_bef, y = x2_bef, xend = x1_aft, yend = x2_aft,
+        color = n_categories
+      ), arrow = arrow(type = "closed", length = unit(.1, "inches"))) +
+      geom_point(aes(x1_bef, x2_bef), size = 8, color = "white") +
+      geom_point(aes(x1_bef, x2_bef), color = "black", size = 3) +
+      #geom_point(aes(x1_aft, x2_aft, color = n_categories), position = position_dodge(.1)) +
+      theme_bw() + 
+      theme(plot.title = element_text(size=10)) +
+      facet_grid(prior_sd ~ cat_type) +
+      scale_color_brewer(palette = "Set1", name = "Nr. Categories") +
+      labs(
+        x = bquote(x[1]),
+        y = bquote(x[2]),
+        title = title
+      )
+  }
+  map2(l_tbl_stimulus, names(l_tbl_stimulus), plot_tmp)
 }
 
 
@@ -158,7 +177,7 @@ plot_marginals <- function(tbl_new, l_info) {
       x2_mean = mean(x2),
       x1_sd = sd(x1),
       x2_sd = sd(x2)
-    )
+    ) %>% replace_na(list(x1_sd = 0, x2_sd = 0))
   if (nrow(tbl_tmp) == 1) {
     tbl_tmp[2, ] <- list("After Training", 0, 0, l_info$prior_sd, l_info$prior_sd)
   }
@@ -174,10 +193,16 @@ plot_marginals <- function(tbl_new, l_info) {
   pl <- ggplot(tbl_plt, aes(x1, x2, group = Timepoint)) +
     geom_point(aes(color = Timepoint), shape = 1) +
     theme_bw() +
+    theme(plot.title = element_text(size=10)) +
     scale_color_brewer(palette = "Set1") +
     labs(
       x = bquote(x[1]),
-      y = bquote(x[2])
+      y = bquote(x[2]),
+      title = str_c(
+        "Prior SD = ", l_info$prior_sd, "\n",
+        "Sampling = ", l_info$sampling, "\n",
+        "Constrain Space = ", l_info$constrain_space
+      )
     )
   
   pl_marginals <- ggMarginal(pl, groupColour = TRUE, type="density", size=10)
@@ -206,9 +231,9 @@ diagnostic_plots <- function(l_categorization) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   # movement of stimulus representations before vs. after
-  pl_centers <- plot_moves(l_results$tbl_posterior, l_info$space_edges)
+  pl_centers <- plot_moves(l_results$tbl_posterior, l_info)
   # histograms of posterior category probabilities before vs. after
-  pl_post <- plot_cat_probs(tbl_posteriors)
+  pl_post <- plot_cat_probs(tbl_posteriors, l_info)
   # x1 and x2 marginals for one stimulus before vs. after
   pl_marginals <- plot_marginals(tbl_new, l_info)
   # plotting list
