@@ -64,11 +64,15 @@ categorize_stimuli <- function(l_info) {
     post_x_old <- round(mean(as_vector(posterior[idxs_stim, l_x$cat_cur])), 3)
     p_thx <- runif(1)
     # decide on whether to accept or reject a proposition
+    is_improvement <- post_x_new > post_x_old
+    mh_is_accepted <- p_thx < min(1, post_x_new/post_x_old)
+    is_in_shown_space <- (
+      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
+        between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+    )
     if (
-      (post_x_new > post_x_old) & 
-      # p_thx < min(1, post_x_new/post_x_old) &
-      between(l_x$X_new$x1, l_info$space_edges[1] - 2, l_info$space_edges[2] + 2) & 
-      between(l_x$X_new$x2, l_info$space_edges[1] - 2, l_info$space_edges[2] + 2)
+      ifelse(l_info$sampling == "improvement", is_improvement, mh_is_accepted) & 
+      ifelse(l_info$constrain_space, is_in_shown_space, TRUE)
     ) {
       #cat("accepted\n")
       onehots <- one_hot(l_info, l_x$cat_cur)
@@ -472,7 +476,9 @@ stimulus_before_after <- function(l_results, stim_id) {
     tmp <- l$tbl_new %>%
       mutate(
         n_categories = factor(max(as.numeric(category))),
-        prior_sd = str_c("Prior SD = ", l$l_info$prior_sd)
+        prior_sd = str_c("Prior SD = ", l$l_info$prior_sd),
+        sampling = str_c("Sampling = ", l$l_info$sampling),
+        space = str_c("Space Constrained = ", l$l_info$constrain_space)
       ) %>%
       filter(stim_id == s_id)
     cols_keep <- !str_detect(colnames(tmp), pattern = "^cat[0-9]+$")
@@ -481,17 +487,19 @@ stimulus_before_after <- function(l_results, stim_id) {
   tbl_stimulus <- reduce(
     map(l_results, prior_posterior_for_stim_id, s_id = stim_id), 
     rbind
-  ) %>% group_by(stim_id, cat_type, timepoint, n_categories, prior_sd) %>%
+  ) %>% group_by(
+    stim_id, cat_type, timepoint, n_categories, prior_sd, sampling, space
+    ) %>%
     summarize(x1 = mean(x1), x2 = mean(x2)) %>% ungroup()
   tbl_stimulus <- tbl_stimulus %>%
-    select(c(x1, x2, cat_type, prior_sd, timepoint, n_categories)) %>%
+    select(c(x1, x2, cat_type, prior_sd, sampling, space, timepoint, n_categories)) %>%
     pivot_wider(
-      id_cols = c(cat_type, prior_sd, n_categories), # 3 + 4 = 7
+      id_cols = c(cat_type, prior_sd, sampling, space, n_categories), # 5 + 4 = 9
       names_from = timepoint, values_from = c(x1, x2),
       names_sort = TRUE
     )
   # in case no samples were stored at all:
-  if(ncol(tbl_stimulus) < 7) { # 7 see above
+  if(ncol(tbl_stimulus) < 9) { # 9 see above
     tbl_stimulus <- cbind(
       tbl_stimulus, 
       x1_aft = rep(tbl_stimulus$x1_bef[1], nrow(tbl_stimulus)), 
@@ -500,7 +508,8 @@ stimulus_before_after <- function(l_results, stim_id) {
       relocate(x2_aft, .after = `x1_Before Training`)
   }
   names(tbl_stimulus) <- c(
-    "cat_type", "prior_sd", "n_categories", "x1_aft", "x1_bef", "x2_aft", "x2_bef"
+    "cat_type", "prior_sd", "sampling", "space", "n_categories", 
+    "x1_aft", "x1_bef", "x2_aft", "x2_bef"
   )
   tbl_stimulus$x1_aft[is.na(tbl_stimulus$x1_aft)] <- tbl_stimulus$x1_bef[1]
   tbl_stimulus$x2_aft[is.na(tbl_stimulus$x2_aft)] <- tbl_stimulus$x2_bef[1]
