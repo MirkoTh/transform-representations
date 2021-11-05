@@ -39,7 +39,8 @@ categorize_stimuli <- function(l_info) {
   pb <- txtProgressBar(min = 1, max = l_info$nruns, initial = 1, char = "*", style = 2)
   for (i in 1:l_info$nruns) {
     # perceive a randomly sampled stimulus
-    while(l_x$stim_id_cur != 1){l_x <- perceive_stimulus(tbl_new, l_info)}
+    # while(l_x$stim_id_cur != 1){}
+    l_x <- perceive_stimulus(tbl_new, l_info)
     
     # propose a new posterior
     if (l_info$cat_type == "rule") {
@@ -560,7 +561,7 @@ predict_gcm <- function(tbl_train, tbl_test, l_info) {
     nFeat = length(l_info$feature_names), 
     sensitivity = l_info$sens, 
     weights = l_info$wgh, 
-    choice_bias = 1 / l_info$n_categories, 
+    choice_bias = rep(1 / l_info$n_categories, l_info$n_categories - 1), 
     p = 1, # 1 exponential, 2 gaussian
     r_metric = 2, # 1 city block, 2 euclidian
     # mp, optional memory strength parameter; i.e., should certain items recieve higher memory strength?
