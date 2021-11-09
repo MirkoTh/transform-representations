@@ -29,13 +29,15 @@ plot_clustered_grid <- function(tbl, stepsize_cat) {
 }
 
 
-plot_arrangement <- function(pl, n_cols = 2) {
+plot_arrangement <- function(pl, n_cols = 2, n_rows = NULL) {
   #' plot a list of plots on one page
   #' 
   #' @param pl all the ggplots
   #' @param n_cols nr columns of the page layout
   n_plots <- length(pl)
-  n_rows <- ceiling(n_plots / n_cols)
+  if (is.null(n_rows)) {
+    n_rows <- ceiling(n_plots / n_cols)
+  }
   marrangeGrob(pl, nrow = n_rows, ncol = n_cols, top = quote(paste("")))
 }
 
@@ -246,3 +248,37 @@ diagnostic_plots <- function(l_categorization) {
   )
   return(l_out)
 }
+
+
+save_results_plots <- function(tbl_info, l_results_plot, p_sd, n_cat) {
+  #' helper function to plot and save prior means alongside posterior means
+  #' a pdf with model type as columns (exemplar, prototype, rule from l.t.r.)
+  #' and the variable 'constrain space' in the rows
+  #' two different pages are printed for the two sampling algorithms
+  #' 
+
+  # select prior means vs. posterior means plots
+  select_nested_plot <- function(l, idx) {
+    l[[idx]][[2]][[1]]
+  }
+  
+  tbl_summary <- tbl_info %>%
+    filter(
+      prior_sd == p_sd,
+      n_categories == n_cat
+    ) %>% 
+    arrange(
+      sampling, cat_type, constrain_space
+    ) %>%
+    select(condition_id)
+  
+  l_pl_summary <- map(tbl_summary$condition_id, select_nested_plot, l = l_results_plots)
+  l_pl_out <- plot_arrangement(l_pl_summary, n_cols = 3, n_rows = 2)
+  
+  file_nm <- str_c(
+    "figures/",
+    "prior-sd-", p_sd, "-n_cats-", n_cat, ".pdf"
+  )
+  return(list(l_pl_out, file_nm))
+}
+
