@@ -35,10 +35,12 @@ l_info <- pmap(
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5
-      )
     )
+  )
 )
-tbl_info <- tibble(do.call(rbind.data.frame, l_info))
+tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
+  mutate(condition_id = seq(1:length(l_info))) %>%
+  relocate(condition_id, .before = n_stimuli)
 
 # sanity checks of parameters
 walk(map(l_info, .f = function(x) x$n_categories), check_categories)
@@ -53,11 +55,22 @@ l_category_results <- future_map(
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
+
+saveRDS(l_category_results, file = "data/xxxx-xx-xx-grid-search.rds")
+l_category_results <- readRDS(file = "data/2021-11-05-grid-search.rds")
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
 # Post Processing & Plotting ----------------------------------------------
 
 l_results_plots <- map(l_category_results, diagnostic_plots)
-l_results_plots[[20]][[2]][[1]]
+
+
+# Plot Prior Means & Posterior Means --------------------------------------
+
+l_tmp <- save_results_plots(tbl_info, l_results_plots, .1, 4)
+ggsave(l_tmp[[2]], l_tmp[[1]], width = 15, height = 7, units = "in")
+
+
+# Plot Movements of Individual Points -------------------------------------
 
 stim_ids <- c(72, 1)
 l_tbl_stimuli <- map(stim_ids, stimulus_before_after, l_results = l_category_results)
