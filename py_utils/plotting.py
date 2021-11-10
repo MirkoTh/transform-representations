@@ -2,17 +2,18 @@ import sys
 
 sys.path.append("..")
 
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-import py_utils as utils
+import py_utils.utils as utils
 
 
 def plot_heatmaps(l_info: list, idxs: list = None) -> None:
     """plot the heatmap of a smooth and a rough condition
 
     Args:
-        l_info (list): list of Pandas core frames with simulation conditions per for
+        l_info (list): list of Pandas core frames with simulation conditions
         idxs (list, optional): inides of rows from l_info to plot. Defaults to None. In that case,
         the first and the last observation from l_info are picked
     """
@@ -37,6 +38,7 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         ax.invert_yaxis()
         ax.set_xlabel("x\N{SUPERSCRIPT ONE}", size=15)
         ax.set_ylabel("x\N{SUPERSCRIPT TWO}", size=15)
+        ax.set_title(title, size=15)
 
     if idxs == None:
         idxs = [0, len(l_info) - 1]
@@ -58,3 +60,25 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         )
     )
 
+
+def plot_1d_waves(l_info: list) -> None:
+    """plot rough and smooth marginals on x1
+
+    Args:
+        l_info (list): list of Pandas core frames with simulation conditions
+    """
+    f, ax = plt.subplots(1, 1, figsize=(6, 5))
+    idx_max = len(l_info) - 1
+    df_plot1 = pd.DataFrame(
+        utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
+    ).reset_index()
+    df_plot1["Condition"] = "Smooth"
+    df_plot2 = pd.DataFrame(
+        utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
+    ).reset_index()
+    df_plot2["Condition"] = "Rough"
+    df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
+    sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
+    ax.legend()
+    ax.set_xlabel("x\N{SUPERSCRIPT ONE}", size=15)
+    ax.set_ylabel("y", size=15)
