@@ -43,17 +43,17 @@ def make_stimuli(t_info: pd.core.frame) -> pd.DataFrame:
                 np.linspace(a, b, c), name=f"""x_{int(d)}"""
             ).round(1),
             list(np.repeat(t_info.space_edge_min, t_info.n_features)),
+            list(np.repeat(t_info.space_edge_max - 1, t_info.n_features)),
             list(np.repeat(t_info.space_edge_max, t_info.n_features)),
-            list(np.repeat(t_info.n_training, t_info.n_features)),
             list(np.linspace(1, t_info.n_features, t_info.n_features)),
         )
     )
     df_xy = reduce(lambda a, b: pd.merge(a, b, how="cross"), l_x)
     if t_info.condition == "smooth":
-        mult = 0.5
+        mult = 1
     elif t_info.condition == "rough":
-        mult = 5
+        mult = 3
     ivs = df_xy.columns
-    df_xy["y"] = (np.sin(df_xy[ivs]) * 3).sum(axis=1)
+    df_xy["y"] = (np.sin(df_xy[ivs]) * mult).sum(axis=1)
 
     return df_xy
