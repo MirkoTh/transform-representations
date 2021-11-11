@@ -36,8 +36,8 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
             annot_kws={"size": 15},
         )
         ax.invert_yaxis()
-        ax.set_xlabel("x\N{SUPERSCRIPT ONE}")
-        ax.set_ylabel("x\N{SUPERSCRIPT TWO}")
+        ax.set_xlabel("$x_{1}$")
+        ax.set_ylabel("$x_{2}$")
         ax.tick_params(axis="both", which="major")
         ax.set_title(title, size=18)
 
@@ -81,8 +81,54 @@ def plot_1d_waves(l_info: list) -> None:
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
     sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
     ax.legend(prop={"size": 15})
-    ax.set_xlabel("x\N{SUPERSCRIPT ONE}")
+    ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("y")
     ax.tick_params(axis="both", which="major")
     ax.set_title("X-Y Relationship: 1D Margin")
 
+
+def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+    """plot sd of test 2d test data points
+
+    Args:
+        df (pd.DataFrame): test df with x coordinates and predicted y means and sds
+        ax (plt.Axes): plt axis object
+
+    Returns:
+        plt.Axes: plt axis object
+    """
+    sns.scatterplot(
+        x="x_1",
+        y="x_2",
+        hue="y_pred_sd",
+        size="y_pred_sd",
+        sizes=(20, 200),
+        data=df,
+        palette="viridis",
+        ax=ax,
+    )
+    ax.set_title("Uncertainty of Test Data After Training")
+    ax.set_xlabel("$x_{1}$")
+    ax.set_ylabel("$x_{2}$")
+    # replace ugly legend with colorbar
+    norm = plt.Normalize(df["y_pred_sd"].min(), df["y_pred_sd"].max())
+    sm = plt.cm.ScalarMappable(cmap="viridis", norm=norm)
+    sm.set_array([])
+    ax.get_legend().remove()
+    ax.figure.colorbar(sm)
+    return ax
+
+
+def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+    """plot distribution of sds as a histogram
+
+    Args:
+        df (pd.DataFrame): test df with x coordinates and predicted y means and sds
+        ax (plt.Axes): plt axis object
+
+    Returns:
+        plt.Axes: plt axis object
+    """
+    sns.histplot(df["y_pred_sd"], ax=ax)
+    ax.set_xlabel("Prediction SD")
+    return ax
