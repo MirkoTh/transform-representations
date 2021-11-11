@@ -102,10 +102,11 @@ def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
         y="x_2",
         hue="y_pred_sd",
         size="y_pred_sd",
-        sizes=(20, 200),
+        sizes=(50, 200),
         data=df,
         palette="viridis",
         ax=ax,
+        alpha=0.5,
     )
     ax.set_title("Uncertainty of Test Data After Training")
     ax.set_xlabel("$x_{1}$")
@@ -131,4 +132,5 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     """
     sns.histplot(df["y_pred_sd"], ax=ax)
     ax.set_xlabel("Prediction SD")
+    ax.set_title("Distribution of SDs on Test Data")
     return ax

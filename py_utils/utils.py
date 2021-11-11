@@ -55,5 +55,25 @@ def make_stimuli(t_info: pd.core.frame) -> pd.DataFrame:
         mult = 3
     ivs = df_xy.columns
     df_xy["y"] = (np.sin(df_xy[ivs]) * mult).sum(axis=1)
+    df_xy["stim_id"] = df_xy.index
+    df_xy = df_xy[["stim_id", "x_1", "x_2", "y"]]
 
     return df_xy
+
+
+def perceive_stimulus(df_test: pd.DataFrame, l_info: list) -> tuple:
+    """perceive a stimulus from the 2D grid using prior_sd from l_info
+
+    Args:
+        df_test (pd.DataFrame): data frame with stimuli not shown during training
+        l_info (list): experimental parameter list
+
+    Returns:
+        tuple: 1-row data frame with stimulus perceived
+    """
+    idx_stimulus = np.random.choice(df_test.index)
+    df_stim = pd.DataFrame(df_test.loc[idx_stimulus,].copy()).T
+    df_stim["x_1"] = np.random.normal(df_stim["x_1"], l_info[0].prior_sd, 1)
+    df_stim["x_2"] = np.random.normal(df_stim["x_2"], l_info[0].prior_sd, 1)
+    return (df_stim, idx_stimulus)
+    # NOTE: indexing on l_info has yet to be changed
