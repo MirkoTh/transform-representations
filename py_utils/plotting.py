@@ -36,9 +36,10 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
             annot_kws={"size": 15},
         )
         ax.invert_yaxis()
-        ax.set_xlabel("x\N{SUPERSCRIPT ONE}", size=15)
-        ax.set_ylabel("x\N{SUPERSCRIPT TWO}", size=15)
-        ax.set_title(title, size=15)
+        ax.set_xlabel("x\N{SUPERSCRIPT ONE}")
+        ax.set_ylabel("x\N{SUPERSCRIPT TWO}")
+        ax.tick_params(axis="both", which="major")
+        ax.set_title(title, size=18)
 
     if idxs == None:
         idxs = [0, len(l_info) - 1]
@@ -67,7 +68,7 @@ def plot_1d_waves(l_info: list) -> None:
     Args:
         l_info (list): list of Pandas core frames with simulation conditions
     """
-    f, ax = plt.subplots(1, 1, figsize=(6, 5))
+    f, ax = plt.subplots(1, 1, figsize=(8, 6))
     idx_max = len(l_info) - 1
     df_plot1 = pd.DataFrame(
         utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
@@ -79,6 +80,9 @@ def plot_1d_waves(l_info: list) -> None:
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
     sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
-    ax.legend()
-    ax.set_xlabel("x\N{SUPERSCRIPT ONE}", size=15)
-    ax.set_ylabel("y", size=15)
+    ax.legend(prop={"size": 15})
+    ax.set_xlabel("x\N{SUPERSCRIPT ONE}")
+    ax.set_ylabel("y")
+    ax.tick_params(axis="both", which="major")
+    ax.set_title("X-Y Relationship: 1D Margin")
+
