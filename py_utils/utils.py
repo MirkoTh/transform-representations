@@ -1,7 +1,12 @@
 from functools import reduce
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
+
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF
+from statsmodels.distributions import ECDF
 
 
 def simulation_conditions(dict_variables: dict):
@@ -77,3 +82,43 @@ def perceive_stimulus(df_test: pd.DataFrame, l_info: list) -> tuple:
     df_stim["x_2"] = np.random.normal(df_stim["x_2"], l_info[0].prior_sd, 1)
     return (df_stim, idx_stimulus)
     # NOTE: indexing on l_info has yet to be changed
+
+
+def run_perception(df_test: pd.DataFrame, l_info: list) -> pd.DataFrame:
+    """iterate over trials noisily perceiving stimuli from test dataset and
+    predicting function values using the gp model
+
+    Args:
+        df_test (pd.DataFrame): data frame with stimuli not shown during training
+        l_info (list): experimental parameter list
+
+    Returns:
+        pd.DataFrame: test data frame with accepted samples appended to df_test
+    """
+    df_new = df_test.copy()
+    for i in tqdm(range(0, l_info[0].n_runs)):
+        df_stim, idx_stimulus = perceive_stimulus(df_test, l_info)
+        # propose a new posterior
+        y_pred_trial_mn, y_pred_trial_sd = gp.predict(
+            df_stim[["x_1", "x_2"]], return_std=True
+        )
+        deviation_test = np.abs(
+            df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
+        )
+        deviation_trial = float(
+            np.abs(y_pred_trial_mn - df_test.loc[idx_stimulus,]["y"])
+        )
+        df_stim["y_pred_mn"] = y_pred_trial_mn
+        df_stim["y_pred_sd"] = y_pred_trial_sd
+        if l_info[0].sampling == "improvement":
+            if deviation_trial < deviation_test:
+                df_new = df_new.append(df_stim, ignore_index=True)
+                print("accepted improvement")
+        elif l_info[0].sampling == "metropolis-hastings":
+            ecdf = ECDF(df_test["y_pred_sd"])
+            prop_deviation = ecdf(deviation_trial)
+            sample_uniform = np.random.uniform()
+            if sample_uniform < prop_deviation:
+                df_new = df_new.append(df_stim, ignore_index=True)
+                print("accepted metropolis-hastings step")
+    return df_new
