@@ -84,41 +84,73 @@ def perceive_stimulus(df_test: pd.DataFrame, l_info: list) -> tuple:
     # NOTE: indexing on l_info has yet to be changed
 
 
-def run_perception(df_test: pd.DataFrame, l_info: list) -> pd.DataFrame:
+def fit_on_train(df_train: pd.DataFrame) -> GaussianProcessRegressor:
+    """fit GP model on train data and return fitted model object
+
+    Args:
+        df_train (pd.DataFrame): data frame with stimuli shown during training
+
+    Returns:
+        GaussianProcessRegressor: the fitted sklearn gp object
+    """
+    kernel = RBF(10, (0.1, 10))
+    gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
+    gp.fit(df_train[["x_1", "x_2"]], df_train["y"])
+    return gp
+
+
+def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor) -> pd.DataFrame:
+    """predict on some new data given fitted GP model
+
+    Args:
+        df (pd.DataFrame): the data frame with x values to predict on
+
+    Returns:
+        pd.DataFrame: the data frame with predictions added
+    """
+    y_pred_mn, y_pred_sigma = gp.predict(df[["x_1", "x_2"]], return_std=True)
+    df["y_pred_mn"] = y_pred_mn
+    df["y_pred_sd"] = y_pred_sigma
+    return df
+
+
+def run_perception(
+    df_train: pd.DataFrame, df_test: pd.DataFrame, l_info: list
+) -> pd.DataFrame:
     """iterate over trials noisily perceiving stimuli from test dataset and
     predicting function values using the gp model
 
     Args:
+        df_train (pd.DataFrame): data frame with stimuli shown during training
         df_test (pd.DataFrame): data frame with stimuli not shown during training
         l_info (list): experimental parameter list
 
     Returns:
         pd.DataFrame: test data frame with accepted samples appended to df_test
     """
+    gp = fit_on_train(df_train)
     df_new = df_test.copy()
     for i in tqdm(range(0, l_info[0].n_runs)):
         df_stim, idx_stimulus = perceive_stimulus(df_test, l_info)
         # propose a new posterior
-        y_pred_trial_mn, y_pred_trial_sd = gp.predict(
-            df_stim[["x_1", "x_2"]], return_std=True
-        )
+        df_stim = predict_on_test(df_stim, gp)
         deviation_test = np.abs(
             df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
         )
         deviation_trial = float(
-            np.abs(y_pred_trial_mn - df_test.loc[idx_stimulus,]["y"])
+            np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
         )
-        df_stim["y_pred_mn"] = y_pred_trial_mn
-        df_stim["y_pred_sd"] = y_pred_trial_sd
+        df_stim["y_pred_mn"] = df_stim["y_pred_mn"]
+        df_stim["y_pred_sd"] = df_stim["y_pred_sd"]
         if l_info[0].sampling == "improvement":
             if deviation_trial < deviation_test:
                 df_new = df_new.append(df_stim, ignore_index=True)
-                print("accepted improvement")
+                # print("accepted improvement")
         elif l_info[0].sampling == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(deviation_trial)
             sample_uniform = np.random.uniform()
             if sample_uniform < prop_deviation:
                 df_new = df_new.append(df_stim, ignore_index=True)
-                print("accepted metropolis-hastings step")
+                # print("accepted metropolis-hastings step")
     return df_new
