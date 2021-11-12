@@ -166,3 +166,28 @@ def run_perception(
         + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
     )
     return df_new_test
+
+
+def split_train_test(dict_variables: dict, l_df_xy: list, l_idx: int) -> tuple:
+    """create train and test dataset
+
+    Args:
+        dict_variables (dict): dict with parameter info
+        l_df_xy (list): list with data frames per simulation condition
+        l_idx (int): condition index of data frame to use
+
+    Returns:
+        tuple
+            df_train (pd.DataFrame): data frame with train data
+            df_test (pd.DataFrame): data frame with prediction on test data
+    """
+    np.random.seed(12433)
+    idx_train = np.random.choice(
+        np.arange(0, dict_variables["space_edge_max"][0] ** 2),
+        size=dict_variables["n_training"][0],
+        replace=False,
+    )
+    idx_test = l_df_xy[l_idx].index[~l_df_xy[l_idx].index.isin(idx_train)]
+    df_train = l_df_xy[l_idx].iloc[idx_train,].sort_index()
+    df_test = l_df_xy[l_idx].iloc[idx_test,].sort_index()
+    return (df_train, df_test)

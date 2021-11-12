@@ -87,7 +87,9 @@ def plot_1d_waves(l_info: list) -> None:
     ax.set_title("X-Y Relationship: 1D Margin")
 
 
-def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
+def two_d_uncertainty_bubbles(
+    df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool
+) -> plt.Axes:
     """plot sd of test 2d test data points
 
     Args:
@@ -116,7 +118,8 @@ def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     sm = plt.cm.ScalarMappable(cmap="viridis", norm=norm)
     sm.set_array([])
     ax.get_legend().remove()
-    ax.figure.colorbar(sm)
+    if show_colorbar:
+        ax.figure.colorbar(sm, orientation="vertical", pad=0.2)
     return ax
 
 
@@ -166,3 +169,20 @@ def plot_gp_deviations(
             f"""{str(df_info.loc[cond_id, "condition"])}\nprior_sd={str(df_info.loc[cond_id, "prior_sd"])}\nconstrain_space={df_info.loc[cond_id, "constrain_space"]}\nsampling={df_info.loc[cond_id, "sampling"]}"""
         )
     return axes
+
+
+def uncertainty_on_test_data(
+    df_train: pd.DataFrame, df_test: pd.DataFrame, axes: plt.Axes, show_colorbar: bool,
+) -> pd.DataFrame:
+    """plot histogram of sds on test data and 2d visualization of individual sds
+
+    Args:
+        df_train (pd.DataFrame): train data
+        df_test (pd.DataFrame): test data
+        axes (plt.Axes): respective axis object
+        show_colorbar (bool): stating whether individual colorbars should be shown
+    """
+    gp = utils.fit_on_train(df_train)
+    df_test = utils.predict_on_test(df_test, gp)
+    two_d_uncertainty_bubbles(df_test, axes[1], show_colorbar)
+    hist_uncertainty(df_test, axes[0])
