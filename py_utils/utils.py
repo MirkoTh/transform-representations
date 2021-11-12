@@ -79,6 +79,7 @@ def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict) -> tuple:
     df_stim = pd.DataFrame(df_test.loc[idx_stimulus,].copy()).T
     df_stim["x_1"] = np.random.normal(df_stim["x_1"], dict_info["prior_sd"], 1)
     df_stim["x_2"] = np.random.normal(df_stim["x_2"], dict_info["prior_sd"], 1)
+    df_stim.reset_index(inplace=True)
     return (df_stim, idx_stimulus)
 
 
@@ -132,6 +133,14 @@ def run_perception(
     df_new_train = df_train.copy()
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info)
+        x1_in = (
+            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"]
+            and df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
+        )
+        x2_in = (
+            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"]
+            and df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
+        )
         # propose a new posterior
         df_stim = predict_on_test(df_stim, gp)
         deviation_test = np.abs(
@@ -142,19 +151,29 @@ def run_perception(
         )
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
-                df_new_test = df_new_test.append(df_stim, ignore_index=True)
-                df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                gp = fit_on_train(df_new_train)
-                # print("accepted improvement")
+                if dict_info["constrain_space"]:
+                    if x1_in and x2_in:
+                        df_new_test = df_new_test.append(df_stim, ignore_index=True)
+                        df_new_train = df_new_train.append(df_stim, ignore_index=True)
+                        gp = fit_on_train(df_new_train)
+                else:
+                    df_new_test = df_new_test.append(df_stim, ignore_index=True)
+                    df_new_train = df_new_train.append(df_stim, ignore_index=True)
+                    gp = fit_on_train(df_new_train)
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(deviation_trial)
             sample_uniform = np.random.uniform()
             if sample_uniform < prop_deviation:
-                df_new_test = df_new_test.append(df_stim, ignore_index=True)
-                df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                gp = fit_on_train(df_new_train)
-                # print("accepted metropolis-hastings step")
+                if dict_info["constrain_space"]:
+                    if x1_in and x2_in:
+                        df_new_test = df_new_test.append(df_stim, ignore_index=True)
+                        df_new_train = df_new_train.append(df_stim, ignore_index=True)
+                        gp = fit_on_train(df_new_train)
+                else:
+                    df_new_test = df_new_test.append(df_stim, ignore_index=True)
+                    df_new_train = df_new_train.append(df_stim, ignore_index=True)
+                    gp = fit_on_train(df_new_train)
     df_new_test = df_new_test.merge(
         df_test[["stim_id", "x_1", "x_2"]],
         how="left",
