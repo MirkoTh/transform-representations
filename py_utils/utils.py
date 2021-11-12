@@ -91,7 +91,7 @@ def fit_on_train(df_train: pd.DataFrame) -> GaussianProcessRegressor:
     Returns:
         GaussianProcessRegressor: the fitted sklearn gp object
     """
-    kernel = RBF(10, (0.1, 10))
+    kernel = RBF(10, (0.001, 10))
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
     gp.fit(df_train[["x_1", "x_2"]], df_train["y"])
     return gp
@@ -127,7 +127,9 @@ def run_perception(
         pd.DataFrame: test data frame with accepted samples appended to df_test
     """
     gp = fit_on_train(df_train)
-    df_new = df_test.copy()
+    df_test = predict_on_test(df_test, gp)
+    df_new_test = df_test.copy()
+    df_new_train = df_train.copy()
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info)
         # propose a new posterior
@@ -138,17 +140,29 @@ def run_perception(
         deviation_trial = float(
             np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
         )
-        df_stim["y_pred_mn"] = df_stim["y_pred_mn"]
-        df_stim["y_pred_sd"] = df_stim["y_pred_sd"]
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
-                df_new = df_new.append(df_stim, ignore_index=True)
+                df_new_test = df_new_test.append(df_stim, ignore_index=True)
+                df_new_train = df_new_train.append(df_stim, ignore_index=True)
+                gp = fit_on_train(df_new_train)
                 # print("accepted improvement")
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(deviation_trial)
             sample_uniform = np.random.uniform()
             if sample_uniform < prop_deviation:
-                df_new = df_new.append(df_stim, ignore_index=True)
+                df_new_test = df_new_test.append(df_stim, ignore_index=True)
+                df_new_train = df_new_train.append(df_stim, ignore_index=True)
+                gp = fit_on_train(df_new_train)
                 # print("accepted metropolis-hastings step")
-    return df_new
+    df_new_test = df_new_test.merge(
+        df_test[["stim_id", "x_1", "x_2"]],
+        how="left",
+        on="stim_id",
+        suffixes=["_sample", "_orig"],
+    )
+    df_new_test["x_deviation"] = np.sqrt(
+        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"]) ** 2
+        + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
+    )
+    return df_new_test
