@@ -136,21 +136,32 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-def plot_gp_deviations(axes, l_idxs, l_plots, df_info) -> None:
-    """plot deviations of gp model after testing phase as histograms
+import numpy as np
 
+
+def plot_gp_deviations(
+    axes: plt.Axes,
+    l_idxs: list,
+    l_plots: list,
+    df_info: pd.DataFrame,
+    s_id: int = None,
+) -> None:
+    """plot deviations of gp model after testing phase as histograms
     Args:
-        axes ([type]): axes of the figure to plot in
-        l_idxs ([type]): indices of the conditions to plot
-        l_plots ([type]): result list containing data frames from simulations
-        df_info ([type]): simulation information data frame
+        axes (plt.Axes): axes of the figure to plot in
+        l_idxs (list): indices of the conditions to plot
+        l_plots (list): result list containing data frames from simulations
+        df_info (pd.DataFrame): simulation information data frame
 
     Returns:
         [type]: [description]
-    """ """"""
+    """
     for idx, ax in enumerate(axes.flat):
         cond_id = l_idxs[idx]
-        sns.histplot(l_plots[cond_id]["x_deviation"], ax=ax)
+        df_plt = l_plots[cond_id]
+        if s_id is not None:
+            df_plt = df_plt[df_plt["stim_id"].isin([s_id])]
+        sns.histplot(df_plt["x_deviation"], ax=ax)
         ax.set_title(
             f"""{str(df_info.loc[cond_id, "condition"])}\nprior_sd={str(df_info.loc[cond_id, "prior_sd"])}\nconstrain_space={df_info.loc[cond_id, "constrain_space"]}\nsampling={df_info.loc[cond_id, "sampling"]}"""
         )
