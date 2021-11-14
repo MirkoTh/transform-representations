@@ -50,16 +50,14 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         min(l_heatmap[0].melt()["value"].min(), l_heatmap[1].melt()["value"].min()),
         max(l_heatmap[0].melt()["value"].max(), l_heatmap[1].melt()["value"].max()),
     )
-    list(
-        map(
-            plot_one_heatmap,
-            l_heatmap,
-            axes,
-            [vmin, vmin],
-            [vmax, vmax],
-            ["Smooth", "Rough"],
-        )
-    )
+    list(map(
+        plot_one_heatmap,
+        l_heatmap,
+        axes,
+        [vmin, vmin],
+        [vmax, vmax],
+        ["Smooth", "Rough"],
+    ))
 
 
 def plot_1d_waves(l_info: list) -> None:
@@ -70,13 +68,10 @@ def plot_1d_waves(l_info: list) -> None:
     """
     f, ax = plt.subplots(1, 1, figsize=(8, 6))
     idx_max = len(l_info) - 1
-    df_plot1 = pd.DataFrame(
-        utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
-    ).reset_index()
+    df_plot1 = pd.DataFrame(utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()).reset_index()
     df_plot1["Condition"] = "Smooth"
-    df_plot2 = pd.DataFrame(
-        utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
-    ).reset_index()
+    df_plot2 = pd.DataFrame(utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
+                           ).reset_index()
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
     sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
@@ -87,9 +82,7 @@ def plot_1d_waves(l_info: list) -> None:
     ax.set_title("X-Y Relationship: 1D Margin")
 
 
-def two_d_uncertainty_bubbles(
-    df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool
-) -> plt.Axes:
+def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool) -> plt.Axes:
     """plot sd of test 2d test data points
 
     Args:
@@ -168,11 +161,15 @@ def plot_gp_deviations(
         ax.set_title(
             f"""{str(df_info.loc[cond_id, "condition"])}\nprior_sd={str(df_info.loc[cond_id, "prior_sd"])}\nconstrain_space={df_info.loc[cond_id, "constrain_space"]}\nsampling={df_info.loc[cond_id, "sampling"]}"""
         )
+        ax.set_xlabel("Deviation in X Coordinates")
     return axes
 
 
 def uncertainty_on_test_data(
-    df_train: pd.DataFrame, df_test: pd.DataFrame, axes: plt.Axes, show_colorbar: bool,
+    df_train: pd.DataFrame,
+    df_test: pd.DataFrame,
+    axes: plt.Axes,
+    show_colorbar: bool,
 ) -> pd.DataFrame:
     """plot histogram of sds on test data and 2d visualization of individual sds
 

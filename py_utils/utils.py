@@ -1,4 +1,6 @@
 from functools import reduce
+
+from numpy.lib.shape_base import split
 from tqdm import tqdm
 
 import numpy as np
@@ -21,9 +23,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     """
     l = list()
     for k, v in dict_variables.items():
-        l.append(
-            pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True)
-        )
+        l.append(pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True))
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
     l_info = list()
     for i in range(0, df_info.shape[0]):
@@ -43,9 +43,7 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
 
     l_x = list(
         map(
-            lambda a, b, c, d: pd.Series(
-                np.linspace(a, b, c), name=f"""x_{int(d)}"""
-            ).round(1),
+            lambda a, b, c, d: pd.Series(np.linspace(a, b, c), name=f"""x_{int(d)}""").round(1),
             list(np.repeat(dict_info["space_edge_min"], dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"] - 1, dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"], dict_info["n_features"])),
@@ -113,20 +111,18 @@ def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor) -> pd.DataFr
     return df
 
 
-def run_perception(
-    dict_info: dict, df_train: pd.DataFrame, df_test: pd.DataFrame
-) -> pd.DataFrame:
+def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     """iterate over trials noisily perceiving stimuli from test dataset and
     predicting function values using the gp model
 
     Args:
-        df_train (pd.DataFrame): data frame with stimuli shown during training
-        df_test (pd.DataFrame): data frame with stimuli not shown during training
         dict_info (dict): experimental parameter dict
+        df_xy (list): data frame with x y values of simulation condition
 
     Returns:
         pd.DataFrame: test data frame with accepted samples appended to df_test
     """
+    df_train, df_test = split_train_test(dict_info, df_xy)
     gp = fit_on_train(df_train)
     df_test = predict_on_test(df_test, gp)
     df_new_test = df_test.copy()
@@ -134,21 +130,19 @@ def run_perception(
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info)
         x1_in = (
-            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"]
-            and df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"] and
+            df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
         )
         x2_in = (
-            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"]
-            and df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"] and
+            df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
         )
         # propose a new posterior
         df_stim = predict_on_test(df_stim, gp)
         deviation_test = np.abs(
             df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
         )
-        deviation_trial = float(
-            np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
-        )
+        deviation_trial = float(np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]))
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
                 if dict_info["constrain_space"]:
@@ -181,32 +175,36 @@ def run_perception(
         suffixes=["_sample", "_orig"],
     )
     df_new_test["x_deviation"] = np.sqrt(
-        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"]) ** 2
-        + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
+        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
+        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
     )
     return df_new_test
 
 
-def split_train_test(dict_variables: dict, l_df_xy: list, l_idx: int) -> tuple:
+def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
     """create train and test dataset
 
     Args:
         dict_variables (dict): dict with parameter info
-        l_df_xy (list): list with data frames per simulation condition
-        l_idx (int): condition index of data frame to use
+        df_xy (list): data frame with x y values of simulation condition
 
     Returns:
         tuple
             df_train (pd.DataFrame): data frame with train data
             df_test (pd.DataFrame): data frame with prediction on test data
     """
+    cols = df_xy.columns
+    cols_ivs_filter = cols.str.startswith("x")
+    cols_ivs = cols[cols_ivs_filter]
+    for c in cols_ivs:
+        df_xy[c] = (df_xy[c] - df_xy[c].mean()) / df_xy[c].std()
     np.random.seed(12433)
     idx_train = np.random.choice(
-        np.arange(0, dict_variables["space_edge_max"][0] ** 2),
-        size=dict_variables["n_training"][0],
+        np.arange(0, dict_variables["space_edge_max"]**2),
+        size=dict_variables["n_training"],
         replace=False,
     )
-    idx_test = l_df_xy[l_idx].index[~l_df_xy[l_idx].index.isin(idx_train)]
-    df_train = l_df_xy[l_idx].iloc[idx_train,].sort_index()
-    df_test = l_df_xy[l_idx].iloc[idx_test,].sort_index()
+    idx_test = df_xy.index[~df_xy.index.isin(idx_train)]
+    df_train = df_xy.iloc[idx_train,].sort_index()
+    df_test = df_xy.iloc[idx_test,].sort_index()
     return (df_train, df_test)
