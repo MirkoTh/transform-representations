@@ -2,6 +2,7 @@ import sys
 
 sys.path.append("..")
 
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -42,7 +43,7 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         ax.set_title(title, size=18)
 
     if idxs == None:
-        idxs = [0, len(l_info) - 1]
+        idxs = [0, len(l_info) - 3]
 
     f, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(13, 20))
     l_heatmap = list(map(pivot_xy, idxs))
@@ -50,16 +51,14 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         min(l_heatmap[0].melt()["value"].min(), l_heatmap[1].melt()["value"].min()),
         max(l_heatmap[0].melt()["value"].max(), l_heatmap[1].melt()["value"].max()),
     )
-    list(
-        map(
-            plot_one_heatmap,
-            l_heatmap,
-            axes,
-            [vmin, vmin],
-            [vmax, vmax],
-            ["Smooth", "Rough"],
-        )
-    )
+    list(map(
+        plot_one_heatmap,
+        l_heatmap,
+        axes,
+        [vmin, vmin],
+        [vmax, vmax],
+        ["Smooth", "Rough"],
+    ))
 
 
 def plot_1d_waves(l_info: list) -> None:
@@ -70,13 +69,10 @@ def plot_1d_waves(l_info: list) -> None:
     """
     f, ax = plt.subplots(1, 1, figsize=(8, 6))
     idx_max = len(l_info) - 1
-    df_plot1 = pd.DataFrame(
-        utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
-    ).reset_index()
+    df_plot1 = pd.DataFrame(utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()).reset_index()
     df_plot1["Condition"] = "Smooth"
-    df_plot2 = pd.DataFrame(
-        utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
-    ).reset_index()
+    df_plot2 = pd.DataFrame(utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
+                           ).reset_index()
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
     sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
@@ -87,9 +83,7 @@ def plot_1d_waves(l_info: list) -> None:
     ax.set_title("X-Y Relationship: 1D Margin")
 
 
-def two_d_uncertainty_bubbles(
-    df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool
-) -> plt.Axes:
+def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool) -> plt.Axes:
     """plot sd of test 2d test data points
 
     Args:
@@ -139,9 +133,6 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-import numpy as np
-
-
 def plot_gp_deviations(
     axes: plt.Axes,
     l_idxs: list,
@@ -168,21 +159,27 @@ def plot_gp_deviations(
         ax.set_title(
             f"""{str(df_info.loc[cond_id, "condition"])}\nprior_sd={str(df_info.loc[cond_id, "prior_sd"])}\nconstrain_space={df_info.loc[cond_id, "constrain_space"]}\nsampling={df_info.loc[cond_id, "sampling"]}"""
         )
+        ax.set_xlabel("Deviation in X Coordinates")
     return axes
 
 
 def uncertainty_on_test_data(
-    df_train: pd.DataFrame, df_test: pd.DataFrame, axes: plt.Axes, show_colorbar: bool,
+    df_train: pd.DataFrame,
+    df_test: pd.DataFrame,
+    l_ivs: list,
+    axes: plt.Axes,
+    show_colorbar: bool,
 ) -> pd.DataFrame:
     """plot histogram of sds on test data and 2d visualization of individual sds
 
     Args:
         df_train (pd.DataFrame): train data
         df_test (pd.DataFrame): test data
+        l_ivs (list): names of ivs
         axes (plt.Axes): respective axis object
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
-    gp = utils.fit_on_train(df_train)
-    df_test = utils.predict_on_test(df_test, gp)
+    gp = utils.fit_on_train(df_train, l_ivs)
+    df_test = utils.predict_on_test(df_test, gp, l_ivs)
     two_d_uncertainty_bubbles(df_test, axes[1], show_colorbar)
     hist_uncertainty(df_test, axes[0])

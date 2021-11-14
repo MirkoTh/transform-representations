@@ -1,4 +1,6 @@
 from functools import reduce
+
+from numpy.lib.shape_base import split
 from tqdm import tqdm
 
 import numpy as np
@@ -6,6 +8,7 @@ import pandas as pd
 
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
+from sklearn.preprocessing import StandardScaler
 from statsmodels.distributions import ECDF
 
 
@@ -21,9 +24,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     """
     l = list()
     for k, v in dict_variables.items():
-        l.append(
-            pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True)
-        )
+        l.append(pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True))
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
     l_info = list()
     for i in range(0, df_info.shape[0]):
@@ -40,12 +41,9 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: x (1, 2, ...) and y values, each in a column
     """
-
     l_x = list(
         map(
-            lambda a, b, c, d: pd.Series(
-                np.linspace(a, b, c), name=f"""x_{int(d)}"""
-            ).round(1),
+            lambda a, b, c, d: pd.Series(np.linspace(a, b, c), name=f"""x_{int(d)}""").round(1),
             list(np.repeat(dict_info["space_edge_min"], dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"] - 1, dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"], dict_info["n_features"])),
@@ -61,7 +59,6 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
     df_xy["y"] = (np.sin(df_xy[ivs]) * mult).sum(axis=1)
     df_xy["stim_id"] = df_xy.index
     df_xy = df_xy[["stim_id", "x_1", "x_2", "y"]]
-
     return df_xy
 
 
@@ -83,83 +80,114 @@ def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict) -> tuple:
     return (df_stim, idx_stimulus)
 
 
-def fit_on_train(df_train: pd.DataFrame) -> GaussianProcessRegressor:
+def scale_ivs(df: pd.DataFrame) -> tuple:
+    """z-scale/standardize the independent variables of df
+
+    Args:
+        df (pd.DataFrame): data frame with Xs
+
+    Returns:
+        tuple
+            pd.DataFrame: data frame with standardized Xs
+            list: names of scaled ivs
+    """
+    cols = df.columns
+    cols_ivs_filter = cols.str.startswith("x")
+    cols_ivs = cols[cols_ivs_filter]
+    scaler = StandardScaler(with_mean=True, with_std=True).fit(df[cols_ivs])
+    df_X_scaled = pd.DataFrame(scaler.transform(df[cols_ivs]))
+    cols_ivs_z = list()
+    for idx, c in enumerate(cols_ivs):
+        cols_ivs_z.append(f"""{c}_z""")
+    df_X_scaled.columns = cols_ivs_z
+    df = pd.concat([df, df_X_scaled], axis=1)
+    return (df, cols_ivs, scaler)
+
+
+def fit_on_train(df_train: pd.DataFrame, l_ivs: list) -> GaussianProcessRegressor:
     """fit GP model on train data and return fitted model object
 
     Args:
         df_train (pd.DataFrame): data frame with stimuli shown during training
+        l_ivs_z (list): names of scaled ivs
 
     Returns:
         GaussianProcessRegressor: the fitted sklearn gp object
     """
-    kernel = RBF(10, (0.001, 10))
+    l_ivs_z = [f"""{iv}_z""" for iv in l_ivs]
+    kernel = RBF(10, (0.1, 100))
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
-    gp.fit(df_train[["x_1", "x_2"]], df_train["y"])
+    gp.fit(df_train[l_ivs_z], df_train["y"])
     return gp
 
 
-def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor) -> pd.DataFrame:
+def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list) -> pd.DataFrame:
     """predict on some new data given fitted GP model
 
     Args:
         df (pd.DataFrame): the data frame with x values to predict on
+        gp (GaussianProcessRegressor): the fitted gp model
+        l_ivs_z (list): names of scaled ivs
 
     Returns:
         pd.DataFrame: the data frame with predictions added
     """
-    y_pred_mn, y_pred_sigma = gp.predict(df[["x_1", "x_2"]], return_std=True)
+    l_ivs_z = [f"""{iv}_z""" for iv in l_ivs]
+    y_pred_mn, y_pred_sigma = gp.predict(df[l_ivs_z], return_std=True)
     df["y_pred_mn"] = y_pred_mn
     df["y_pred_sd"] = y_pred_sigma
     return df
 
 
-def run_perception(
-    dict_info: dict, df_train: pd.DataFrame, df_test: pd.DataFrame
-) -> pd.DataFrame:
+def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     """iterate over trials noisily perceiving stimuli from test dataset and
     predicting function values using the gp model
 
     Args:
-        df_train (pd.DataFrame): data frame with stimuli shown during training
-        df_test (pd.DataFrame): data frame with stimuli not shown during training
         dict_info (dict): experimental parameter dict
+        df_xy (list): data frame with x y values of simulation condition
 
     Returns:
         pd.DataFrame: test data frame with accepted samples appended to df_test
     """
-    gp = fit_on_train(df_train)
-    df_test = predict_on_test(df_test, gp)
+    df_xy, l_ivs, scaler = scale_ivs(df_xy)
+    df_train, df_test = split_train_test(dict_info, df_xy)
+    gp = fit_on_train(df_train, l_ivs)
+    df_test = predict_on_test(df_test, gp, l_ivs)
     df_new_test = df_test.copy()
     df_new_train = df_train.copy()
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info)
+        df_stim.drop([f"""{iv}_z""" for iv in l_ivs], axis=1, inplace=True)
+        df_stim_scaled = pd.DataFrame(scaler.transform(df_stim[l_ivs]))
+        df_stim_scaled.columns = [f"""{iv}_z""" for iv in l_ivs]
+        df_stim = pd.concat([df_stim, df_stim_scaled], axis=1)
         x1_in = (
-            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"]
-            and df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"] and
+            df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
         )
         x2_in = (
-            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"]
-            and df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"] and
+            df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
         )
+
         # propose a new posterior
-        df_stim = predict_on_test(df_stim, gp)
+        df_stim = predict_on_test(df_stim, gp, l_ivs)
         deviation_test = np.abs(
             df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
         )
-        deviation_trial = float(
-            np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
-        )
+        deviation_trial = float(np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]))
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
                 if dict_info["constrain_space"]:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        gp = fit_on_train(df_new_train)
+                        gp = fit_on_train(df_new_train, l_ivs)
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    gp = fit_on_train(df_new_train)
+                    gp = fit_on_train(df_new_train, l_ivs)
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(deviation_trial)
@@ -169,11 +197,11 @@ def run_perception(
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        gp = fit_on_train(df_new_train)
+                        gp = fit_on_train(df_new_train, l_ivs)
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    gp = fit_on_train(df_new_train)
+                    gp = fit_on_train(df_new_train, l_ivs)
     df_new_test = df_new_test.merge(
         df_test[["stim_id", "x_1", "x_2"]],
         how="left",
@@ -181,19 +209,18 @@ def run_perception(
         suffixes=["_sample", "_orig"],
     )
     df_new_test["x_deviation"] = np.sqrt(
-        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"]) ** 2
-        + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
+        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
+        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
     )
     return df_new_test
 
 
-def split_train_test(dict_variables: dict, l_df_xy: list, l_idx: int) -> tuple:
+def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
     """create train and test dataset
 
     Args:
         dict_variables (dict): dict with parameter info
-        l_df_xy (list): list with data frames per simulation condition
-        l_idx (int): condition index of data frame to use
+        df_xy (list): data frame with x y values of simulation condition
 
     Returns:
         tuple
@@ -202,11 +229,11 @@ def split_train_test(dict_variables: dict, l_df_xy: list, l_idx: int) -> tuple:
     """
     np.random.seed(12433)
     idx_train = np.random.choice(
-        np.arange(0, dict_variables["space_edge_max"][0] ** 2),
-        size=dict_variables["n_training"][0],
+        np.arange(0, dict_variables["space_edge_max"]**2),
+        size=dict_variables["n_training"],
         replace=False,
     )
-    idx_test = l_df_xy[l_idx].index[~l_df_xy[l_idx].index.isin(idx_train)]
-    df_train = l_df_xy[l_idx].iloc[idx_train,].sort_index()
-    df_test = l_df_xy[l_idx].iloc[idx_test,].sort_index()
+    idx_test = df_xy.index[~df_xy.index.isin(idx_train)]
+    df_train = df_xy.iloc[idx_train,].sort_index()
+    df_test = df_xy.iloc[idx_test,].sort_index()
     return (df_train, df_test)
