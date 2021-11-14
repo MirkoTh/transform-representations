@@ -2,6 +2,7 @@ import sys
 
 sys.path.append("..")
 
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -42,7 +43,7 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         ax.set_title(title, size=18)
 
     if idxs == None:
-        idxs = [0, len(l_info) - 1]
+        idxs = [0, len(l_info) - 3]
 
     f, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(13, 20))
     l_heatmap = list(map(pivot_xy, idxs))
@@ -132,9 +133,6 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
     return ax
 
 
-import numpy as np
-
-
 def plot_gp_deviations(
     axes: plt.Axes,
     l_idxs: list,
@@ -168,6 +166,7 @@ def plot_gp_deviations(
 def uncertainty_on_test_data(
     df_train: pd.DataFrame,
     df_test: pd.DataFrame,
+    l_ivs: list,
     axes: plt.Axes,
     show_colorbar: bool,
 ) -> pd.DataFrame:
@@ -176,10 +175,11 @@ def uncertainty_on_test_data(
     Args:
         df_train (pd.DataFrame): train data
         df_test (pd.DataFrame): test data
+        l_ivs (list): names of ivs
         axes (plt.Axes): respective axis object
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
-    gp = utils.fit_on_train(df_train)
-    df_test = utils.predict_on_test(df_test, gp)
+    gp = utils.fit_on_train(df_train, l_ivs)
+    df_test = utils.predict_on_test(df_test, gp, l_ivs)
     two_d_uncertainty_bubbles(df_test, axes[1], show_colorbar)
     hist_uncertainty(df_test, axes[0])
