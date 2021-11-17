@@ -256,6 +256,12 @@ def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: data frame with added columns angle, and movements along axes
     """
+    df_movements = (
+        df_movements[df_movements["index"].notnull()]
+        .sort_values(["stim_id", "index"])
+        .groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]]
+        .mean()
+    )
     df_movements.eval("x_1_move = x_1_sample - x_1_orig", inplace=True)
     df_movements.eval("x_2_move = x_2_sample - x_2_orig", inplace=True)
     df_movements["angle"] = np.rad2deg(
