@@ -5,7 +5,9 @@ sys.path.append("..")
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.collections as mc
 
 import py_utils.utils as utils
 
@@ -51,14 +53,16 @@ def plot_heatmaps(l_info: list, idxs: list = None) -> None:
         min(l_heatmap[0].melt()["value"].min(), l_heatmap[1].melt()["value"].min()),
         max(l_heatmap[0].melt()["value"].max(), l_heatmap[1].melt()["value"].max()),
     )
-    list(map(
-        plot_one_heatmap,
-        l_heatmap,
-        axes,
-        [vmin, vmin],
-        [vmax, vmax],
-        ["Smooth", "Rough"],
-    ))
+    list(
+        map(
+            plot_one_heatmap,
+            l_heatmap,
+            axes,
+            [vmin, vmin],
+            [vmax, vmax],
+            ["Smooth", "Rough"],
+        )
+    )
 
 
 def plot_1d_waves(l_info: list) -> None:
@@ -69,10 +73,13 @@ def plot_1d_waves(l_info: list) -> None:
     """
     f, ax = plt.subplots(1, 1, figsize=(8, 6))
     idx_max = len(l_info) - 1
-    df_plot1 = pd.DataFrame(utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()).reset_index()
+    df_plot1 = pd.DataFrame(
+        utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
+    ).reset_index()
     df_plot1["Condition"] = "Smooth"
-    df_plot2 = pd.DataFrame(utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
-                           ).reset_index()
+    df_plot2 = pd.DataFrame(
+        utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
+    ).reset_index()
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
     sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
@@ -83,7 +90,9 @@ def plot_1d_waves(l_info: list) -> None:
     ax.set_title("X-Y Relationship: 1D Margin")
 
 
-def two_d_uncertainty_bubbles(df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool) -> plt.Axes:
+def two_d_uncertainty_bubbles(
+    df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool
+) -> plt.Axes:
     """plot sd of test 2d test data points
 
     Args:
@@ -183,3 +192,61 @@ def uncertainty_on_test_data(
     df_test = utils.predict_on_test(df_test, gp, l_ivs)
     two_d_uncertainty_bubbles(df_test, axes[1], show_colorbar)
     hist_uncertainty(df_test, axes[0])
+
+
+def plot_moves(df_movements: pd.DataFrame, ax: plt.Axes, title: str) -> plt.Axes:
+    """plot average movement from prior to posterior
+
+    Args:
+        df_movements (pd.DataFrame): data frame with average original and accepted (x1, x2) values
+        ax (plt.Axes): Axes object
+        title (str): formatted title as a string
+
+    Returns:
+        plt.Axes: Axes object
+    """
+
+    l_x_start, l_y_start, l_x_end, l_y_end, angle, l_color = (
+        list(),
+        list(),
+        list(),
+        list(),
+        list(),
+        list(),
+    )
+    cmap = mpl.cm.get_cmap("viridis")
+
+    for idx, r in enumerate(df_movements.itertuples()):
+        l_x_start.append(r.x_1_orig)
+        l_y_start.append(r.x_2_orig)
+        l_x_end.append(r.x_1_sample - r.x_1_orig)
+        l_y_end.append(r.x_2_sample - r.x_2_orig)
+        angle.append(
+            np.rad2deg(
+                l_y_end[idx]
+                / np.sqrt(np.abs(l_y_end[idx] ** 2) + np.abs(l_x_end[idx] ** 2))
+            )
+        )
+        if l_x_end[idx] < 0:
+            angle[idx] = +180 - angle[idx]
+        elif l_x_end[idx] > 0 and l_y_end[idx] < 0:
+            angle[idx] = +360 + angle[idx]
+        l_color.append(cmap(angle[idx] / 360))
+
+    ax.scatter("x_1_orig", "x_2_orig", data=df_movements, c="white", s=50, zorder=5)
+    ax.scatter("x_1_orig", "x_2_orig", data=df_movements, c=l_color, zorder=10)
+    widths = np.repeat(2, len(l_x_start))
+    ax.quiver(
+        l_x_start,
+        l_y_start,
+        l_x_end,
+        l_y_end,
+        color=l_color,
+        angles="xy",
+        scale_units="xy",
+        scale=1,
+        linewidths=widths,
+        zorder=4,
+    )
+    ax.set_title(title)
+    return ax
