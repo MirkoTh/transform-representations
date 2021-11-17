@@ -250,3 +250,32 @@ def plot_moves(df_movements: pd.DataFrame, ax: plt.Axes, title: str) -> plt.Axes
     )
     ax.set_title(title)
     return ax
+
+
+def plot_moves_one_condition(
+    idx_plot: int, ax: plt.Axes, list_dfs_new: list, df_info: pd.DataFrame
+) -> plt.Axes:
+    """extract accepted samples from given condition, calculate mean, 
+    and plot movement in space
+
+    Args:
+        idx_plot (int): the condition to be plotted
+        ax (plt.Axes): the axes object to plot in
+        list_dfs_new (list): list with all results
+        df_info (pd.DataFrame): info about simulation conditions
+
+    Returns:
+        plt.Axes: the axes object with the content added
+    """ """"""
+    df_movements = (
+        list_dfs_new[idx_plot][list_dfs_new[idx_plot]["index"].notnull()]
+        .sort_values(["stim_id", "index"])
+        .groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]]
+        .mean()
+    )
+    title = f"""\
+    Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"]},
+    Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
+    """
+    ax = plot_moves(df_movements, ax, title)
+    return ax
