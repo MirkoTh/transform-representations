@@ -24,7 +24,9 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     """
     l = list()
     for k, v in dict_variables.items():
-        l.append(pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True))
+        l.append(
+            pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True)
+        )
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
     l_info = list()
     for i in range(0, df_info.shape[0]):
@@ -43,7 +45,9 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
     """
     l_x = list(
         map(
-            lambda a, b, c, d: pd.Series(np.linspace(a, b, c), name=f"""x_{int(d)}""").round(1),
+            lambda a, b, c, d: pd.Series(
+                np.linspace(a, b, c), name=f"""x_{int(d)}"""
+            ).round(1),
             list(np.repeat(dict_info["space_edge_min"], dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"] - 1, dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"], dict_info["n_features"])),
@@ -121,7 +125,9 @@ def fit_on_train(df_train: pd.DataFrame, l_ivs: list) -> GaussianProcessRegresso
     return gp
 
 
-def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list) -> pd.DataFrame:
+def predict_on_test(
+    df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list
+) -> pd.DataFrame:
     """predict on some new data given fitted GP model
 
     Args:
@@ -163,12 +169,12 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         df_stim_scaled.columns = [f"""{iv}_z""" for iv in l_ivs]
         df_stim = pd.concat([df_stim, df_stim_scaled], axis=1)
         x1_in = (
-            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"] and
-            df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"]
+            and df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
         )
         x2_in = (
-            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"] and
-            df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"]
+            and df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
         )
 
         # propose a new posterior
@@ -176,18 +182,20 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         deviation_test = np.abs(
             df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
         )
-        deviation_trial = float(np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]))
+        deviation_trial = float(
+            np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
+        )
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
                 if dict_info["constrain_space"]:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        gp = fit_on_train(df_new_train, l_ivs)
+                        # gp = fit_on_train(df_new_train, l_ivs)
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    gp = fit_on_train(df_new_train, l_ivs)
+                    # gp = fit_on_train(df_new_train, l_ivs)
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(deviation_trial)
@@ -197,11 +205,11 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        gp = fit_on_train(df_new_train, l_ivs)
+                        # gp = fit_on_train(df_new_train, l_ivs)
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    gp = fit_on_train(df_new_train, l_ivs)
+                    # gp = fit_on_train(df_new_train, l_ivs)
     df_new_test = df_new_test.merge(
         df_test[["stim_id", "x_1", "x_2"]],
         how="left",
@@ -209,8 +217,8 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         suffixes=["_sample", "_orig"],
     )
     df_new_test["x_deviation"] = np.sqrt(
-        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
-        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
+        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"]) ** 2
+        + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
     )
     return df_new_test
 
@@ -229,7 +237,7 @@ def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
     """
     np.random.seed(12433)
     idx_train = np.random.choice(
-        np.arange(0, dict_variables["space_edge_max"]**2),
+        np.arange(0, dict_variables["space_edge_max"] ** 2),
         size=dict_variables["n_training"],
         replace=False,
     )
@@ -237,3 +245,37 @@ def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
     df_train = df_xy.iloc[idx_train,].sort_index()
     df_test = df_xy.iloc[idx_test,].sort_index()
     return (df_train, df_test)
+
+
+def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
+    """add angle of movement from prior to posterior
+
+    Args:
+        df_movements (pd.DataFrame): data frame with original and accepted locations
+
+    Returns:
+        pd.DataFrame: data frame with added columns angle, and movements along axes
+    """
+    df_movements.eval("x_1_move = x_1_sample - x_1_orig", inplace=True)
+    df_movements.eval("x_2_move = x_2_sample - x_2_orig", inplace=True)
+    df_movements["angle"] = np.rad2deg(
+        df_movements["x_2_move"]
+        / np.sqrt(
+            np.abs(df_movements["x_2_move"] ** 2)
+            + np.abs(df_movements["x_1_move"] ** 2)
+        )
+    )
+    df_movements.loc[df_movements["x_1_move"] < 0, "angle"] = 180 - (
+        df_movements.loc[df_movements["x_1_move"] < 0, "angle"]
+    )
+    df_movements.loc[
+        (df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"
+    ] = (
+        360
+        + (
+            df_movements.loc[
+                (df_movements["x_1_move"]) > 0 & (df_movements["x_2_move"] < 0), "angle"
+            ]
+        )
+    )
+    return df_movements
