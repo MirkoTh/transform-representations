@@ -289,9 +289,9 @@ def plot_proportion_accepted_samples(
     Returns:
         plt.Axes: axes object with plot added
     """
+    # throw out training examples
     df = df.query("trial_nr != 0").copy()
-    df["max_nr_trials"] = n_runs
-    df.eval("prop_trial = trial_nr/max_nr_trials", inplace=True)
+
     sns.histplot(x="trial_nr", data=df, stat="proportion", ax=ax)
     ax.set_xlabel("Trial Nr.")
     ax.set_title(title)
@@ -309,6 +309,8 @@ def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> pl
     Returns:
         plt.Axes: axes object with plot added
     """
+
+    df = df.query("trial_nr != 0").copy()
     df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
     df_agg = (
         df.groupby("trial_nr_bin")["y_pred_sd"]
@@ -326,6 +328,7 @@ def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> pl
     )
     ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=100, c="white", zorder=7)
     ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=25, zorder=10)
+    ax.axhline(xmin=0, xmax=9, color="r", linewidth=2)
     ax.set_xlabel("Trial Nr. Binned")
     ax.set_title(title)
     return ax

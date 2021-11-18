@@ -172,6 +172,8 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_new_test = df_test.copy()
     df_new_train = df_train.copy()
+    l_kernel = list()
+    l_kernel.append(gp.kernel_.length_scale)
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info, i)
         df_stim.drop([f"""{iv}_z""" for iv in l_ivs], axis=1, inplace=True)
@@ -201,11 +203,11 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        # gp = fit_on_train(df_new_train, l_ivs)
+                        gp = fit_on_train(df_new_train, l_ivs)
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    # gp = fit_on_train(df_new_train, l_ivs)
+                    gp = fit_on_train(df_new_train, l_ivs)
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(deviation_trial)
@@ -215,11 +217,12 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        # gp = fit_on_train(df_new_train, l_ivs)
+                        gp = fit_on_train(df_new_train, l_ivs)
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    # gp = fit_on_train(df_new_train, l_ivs)
+                    gp = fit_on_train(df_new_train, l_ivs)
+        l_kernel.append(gp.kernel_.length_scale)
     df_new_test = df_new_test.merge(
         df_test[["stim_id", "x_1", "x_2"]],
         how="left",
@@ -230,7 +233,7 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         (df_new_test["x_1_orig"] - df_new_test["x_1_sample"]) ** 2
         + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
     )
-    return df_new_test
+    return (df_new_test, l_kernel)
 
 
 def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
