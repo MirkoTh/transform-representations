@@ -31,7 +31,14 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     l_info = list()
     for i in range(0, df_info.shape[0]):
         l_info.append(df_info.loc[i,].to_dict())
-    return (df_info, l_info)
+    l_titles = [
+        f"""\
+        Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"]},
+        Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
+        """.strip()
+        for idx_plot in range(df_info.shape[0])
+    ]
+    return (df_info, l_info, l_titles)
 
 
 def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
@@ -63,15 +70,17 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
     df_xy["y"] = (np.sin(df_xy[ivs]) * mult).sum(axis=1)
     df_xy["stim_id"] = df_xy.index
     df_xy = df_xy[["stim_id", "x_1", "x_2", "y"]]
+    df_xy["trial_nr"] = 0
     return df_xy
 
 
-def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict) -> tuple:
+def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict, i: int) -> tuple:
     """perceive a stimulus from the 2D grid using prior_sd from dict_info
 
     Args:
         df_test (pd.DataFrame): data frame with stimuli not shown during training
         dict_info (dict): experimental parameter dict
+        i (int): trial number in the function-learning task
 
     Returns:
         tuple: 1-row data frame with stimulus perceived
@@ -80,6 +89,7 @@ def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict) -> tuple:
     df_stim = pd.DataFrame(df_test.loc[idx_stimulus,].copy()).T
     df_stim["x_1"] = np.random.normal(df_stim["x_1"], dict_info["prior_sd"], 1)
     df_stim["x_2"] = np.random.normal(df_stim["x_2"], dict_info["prior_sd"], 1)
+    df_stim["trial_nr"] = i
     df_stim.reset_index(inplace=True)
     return (df_stim, idx_stimulus)
 
@@ -163,7 +173,7 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     df_new_test = df_test.copy()
     df_new_train = df_train.copy()
     for i in tqdm(range(0, dict_info["n_runs"])):
-        df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info)
+        df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info, i)
         df_stim.drop([f"""{iv}_z""" for iv in l_ivs], axis=1, inplace=True)
         df_stim_scaled = pd.DataFrame(scaler.transform(df_stim[l_ivs]))
         df_stim_scaled.columns = [f"""{iv}_z""" for iv in l_ivs]
