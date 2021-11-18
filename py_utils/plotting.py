@@ -143,18 +143,14 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 
 def plot_gp_deviations(
-    axes: plt.Axes,
-    l_idxs: list,
-    l_plots: list,
-    df_info: pd.DataFrame,
-    s_id: int = None,
+    axes: plt.Axes, l_idxs: list, l_plots: list, l_titles: list, s_id: int = None,
 ) -> None:
     """plot deviations of gp model after testing phase as histograms
     Args:
         axes (plt.Axes): axes of the figure to plot in
         l_idxs (list): indices of the conditions to plot
         l_plots (list): result list containing data frames from simulations
-        df_info (pd.DataFrame): simulation information data frame
+        l_tites (list): list with condition titles
 
     Returns:
         [type]: [description]
@@ -165,9 +161,7 @@ def plot_gp_deviations(
         if s_id is not None:
             df_plt = df_plt[df_plt["stim_id"].isin([s_id])]
         sns.histplot(df_plt["x_deviation"], ax=ax)
-        ax.set_title(
-            f"""{str(df_info.loc[cond_id, "condition"])}\nprior_sd={str(df_info.loc[cond_id, "prior_sd"])}\nconstrain_space={df_info.loc[cond_id, "constrain_space"]}\nsampling={df_info.loc[cond_id, "sampling"]}"""
-        )
+        ax.set_title(l_titles[cond_id])
         ax.set_xlabel("Deviation in X Coordinates")
     return axes
 
@@ -278,4 +272,60 @@ def plot_moves_one_condition(
     Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
     """
     ax = plot_moves(df_movements, ax, title)
+    return ax
+
+
+def plot_proportion_accepted_samples(
+    df: pd.DataFrame, title: str, ax: plt.Axes, n_runs: int
+) -> plt.Axes:
+    """plot proportion of accepted samples over total number of trials (binned)
+
+    Args:
+        df (pd.DataFrame): data frame with all accepted samples
+        title (str): title of the condition to be plotted
+        ax (plt.Axes): axes object
+        n_runs (int): nr of runs of the function-learning task in the simulation
+
+    Returns:
+        plt.Axes: axes object with plot added
+    """
+    df = df.query("trial_nr != 0").copy()
+    df["max_nr_trials"] = n_runs
+    df.eval("prop_trial = trial_nr/max_nr_trials", inplace=True)
+    sns.histplot(x="trial_nr", data=df, stat="proportion", ax=ax)
+    ax.set_xlabel("Trial Nr.")
+    ax.set_title(title)
+    return ax
+
+
+def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> plt.Axes:
+    """plot SD of GP model over test trials
+
+    Args:
+        df (pd.DataFrame): data frame with all accepted samples
+        title (str): title of the condition to be plotted
+        ax (plt.Axes): axes object
+
+    Returns:
+        plt.Axes: axes object with plot added
+    """
+    df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
+    df_agg = (
+        df.groupby("trial_nr_bin")["y_pred_sd"]
+        .aggregate({"mean", np.std})
+        .reset_index()
+    )
+    ax.errorbar(
+        x="trial_nr_bin",
+        y="mean",
+        yerr="std",
+        data=df_agg,
+        elinewidth=1.5,
+        capsize=5,
+        zorder=5,
+    )
+    ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=100, c="white", zorder=7)
+    ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=25, zorder=10)
+    ax.set_xlabel("Trial Nr. Binned")
+    ax.set_title(title)
     return ax
