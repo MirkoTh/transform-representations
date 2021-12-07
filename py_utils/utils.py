@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import reduce, partial
 
 from numpy.lib.shape_base import split
 from tqdm import tqdm
@@ -41,7 +41,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     return (df_info, l_info, l_titles)
 
 
-def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
+def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFrame:
     """create x and y values of stimuli shown during training
 
     Args:
@@ -63,12 +63,28 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
     )
     df_xy = reduce(lambda a, b: pd.merge(a, b, how="cross"), l_x)
     # to be changed: add option to sample from GP prior instead of sinus function
-    if dict_info["condition"] == "smooth":
-        mult = 1
-    elif dict_info["condition"] == "rough":
-        mult = 3
-    ivs = df_xy.columns
-    df_xy["y"] = (np.sin(df_xy[ivs]) * mult).sum(axis=1)
+    if gen_model != "GP":
+        if dict_info["condition"] == "smooth":
+            mult = 1
+        elif dict_info["condition"] == "rough":
+            mult = 3
+        ivs = df_xy.columns
+        df_xy["y"] = (np.sin(df_xy[ivs]) * mult).sum(axis=1)
+    elif gen_model == "GP":
+        l_df_xy_1 = list(np.repeat(df_xy.to_numpy(), df_xy.shape[0], 0))
+        l_df_xy_2 = list(np.tile(df_xy.to_numpy().T, df_xy.shape[0]).T)
+        if dict_info["condition"] == "smooth":
+            kernel_rbf_partial = partial(kernel_rbf, sigma=1, length_scale=0.15)
+        elif dict_info["condition"] == "rough":
+            kernel_rbf_partial = partial(kernel_rbf, sigma=1, length_scale=0.5)
+        l_similarities = list(map(kernel_rbf_partial, l_df_xy_1, l_df_xy_2))
+        df_similarities = pd.DataFrame(
+            np.reshape(np.array(l_similarities), (df_xy.shape[0], df_xy.shape[0]))
+        )
+        np.random.seed(8376)
+        df_xy["y"] = np.random.multivariate_normal(
+            np.repeat(0, df_similarities.shape[0]), df_similarities.to_numpy()
+        )
     df_xy["stim_id"] = df_xy.index
     df_xy = df_xy[["stim_id", "x_1", "x_2", "y"]]
     df_xy["trial_nr"] = 0
