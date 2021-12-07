@@ -62,6 +62,7 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
         )
     )
     df_xy = reduce(lambda a, b: pd.merge(a, b, how="cross"), l_x)
+    # to be changed: add option to sample from GP prior instead of sinus function
     if dict_info["condition"] == "smooth":
         mult = 1
     elif dict_info["condition"] == "rough":
@@ -72,6 +73,25 @@ def make_stimuli(dict_info: pd.core.frame) -> pd.DataFrame:
     df_xy = df_xy[["stim_id", "x_1", "x_2", "y"]]
     df_xy["trial_nr"] = 0
     return df_xy
+
+
+def kernel_rbf(
+    X1: np.array, X2: np.array, sigma: float, length_scale: float
+) -> np.array:
+    """rbf kernel implementation ref. Schulz et al. (2018) jmp tutorial paper
+    uses euclidian distance metric
+
+    Args:
+        X1 (np.array): 1xn array whereby n = n feature dimensions
+        X2 (np.array): 1xn array whereby n = n feature dimensions
+        sigma (float): signal variance
+        length_scale (float): length scale
+
+    Returns:
+        np.array: a 1x1 array with the similarity between the two x points
+    """
+    dist_eucl = np.sqrt(np.sum(np.abs(X1 - X2) ** 2))
+    return sigma ** 2 * np.exp(-(dist_eucl / 2 * length_scale ** 2))
 
 
 def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict, i: int) -> tuple:
