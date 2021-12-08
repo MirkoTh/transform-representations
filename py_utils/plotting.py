@@ -82,7 +82,15 @@ def plot_1d_waves(l_info: list) -> None:
     ).reset_index()
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
-    sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", marker="o")
+    sns.lineplot(
+        x="x_1", y="y", data=df_plot, hue="Condition", zorder=5, ax=ax, legend=False
+    )
+    sns.scatterplot(
+        x="x_1", y="y", data=df_plot, s=100, color="white", zorder=10, ax=ax,
+    )
+    sns.scatterplot(
+        x="x_1", y="y", data=df_plot, s=35, hue="Condition", zorder=15, ax=ax,
+    )
     ax.legend(prop={"size": 15})
     ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("y")
