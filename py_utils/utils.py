@@ -29,7 +29,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
         )
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
     df_info["length_scale"] = [
-        2 if bl else 1 for bl in (df_info["condition"] == "smooth").to_list()
+        3 if bl else 1 for bl in (df_info["condition"] == "smooth").to_list()
     ]
     l_info = list()
     for i in range(0, df_info.shape[0]):
@@ -97,7 +97,7 @@ def kernel_rbf(
     X1: np.array, X2: np.array, sigma: float, length_scale: float
 ) -> np.array:
     """rbf kernel implementation ref. Schulz et al. (2018) jmp tutorial paper
-    uses euclidian distance metric
+    n.b., uses euclidian distance metric
 
     Args:
         X1 (np.array): 1xn array whereby n = n feature dimensions
@@ -174,11 +174,10 @@ def fit_on_train(
     if fit_length_scale:
         kernel = RBF(10, (0.01, 100))
     else:
-        kernel = RBF(10, (0.01, 100))
-        # kernel = RBF(dict_info["length_scale"], length_scale_bounds="fixed")
+        # kernel = RBF(1, (0.1, 10))
+        kernel = RBF(dict_info["length_scale"], length_scale_bounds="fixed")
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
     gp.fit(df_train[l_ivs_z], df_train["y"])
-    print(gp.kernel_.length_scale)
     return gp
 
 
@@ -345,3 +344,30 @@ def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
         )
     )
     return df_movements
+
+
+def add_max_gradient(df: pd.DataFrame) -> pd.DataFrame:
+    """add maximum y-stepsize for every datapoint (aka. derivative)
+
+    Args:
+        df (pd.DataFrame): dataframe with training points and stored samples during testing
+
+    Returns:
+        pd.DataFrame: same as input with added column max_gradient
+    """
+    l = list()
+    for i in range(df.shape[0]):
+        df_distance = pd.merge(
+            df.loc[[i]][["x_1_orig", "x_2_orig", "y"]],
+            df[["x_1_orig", "x_2_orig", "y"]],
+            how="cross",
+        )
+        df_distance["dist_eucl"] = np.sqrt(
+            df_distance.eval(
+                "(x_1_orig_x - x_1_orig_y)**2 + (x_2_orig_x - x_2_orig_y)**2"
+            )
+        )
+        df_distance["y_step"] = np.abs(df_distance.eval("y_x - y_y"))
+        l.append(df_distance.query("dist_eucl == 1")["y_step"].max())
+    df["max_gradient"] = l
+    return df

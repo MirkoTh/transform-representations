@@ -369,3 +369,19 @@ def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> pl
     ax.set_xlabel("Trial Nr. Binned")
     ax.set_title(title)
     return ax
+
+
+def regplot_y(df, title, ax):
+    sns.regplot(x="y", y="x_deviation", data=df.query("trial_nr != 0"), ax=ax)
+    ax.set_ylabel("Deviation in x Coordinates")
+    ax.set_xlabel("True y Value")
+    ax.set_title(title)
+
+
+def regplot_max_gradient(df, title, ax):
+    sns.regplot(
+        x="max_gradient", y="x_deviation", data=df.query("trial_nr != 0"), ax=ax
+    )
+    ax.set_ylabel("Deviation in x Coordinates")
+    ax.set_xlabel("Max y Gradient")
+    ax.set_title(title)
