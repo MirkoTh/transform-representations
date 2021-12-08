@@ -28,6 +28,9 @@ def simulation_conditions(dict_variables: dict) -> tuple:
             pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True)
         )
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
+    df_info["length_scale"] = [
+        0.15 if bl else 0.5 for bl in (df_info["condition"] == "smooth").to_list()
+    ]
     l_info = list()
     for i in range(0, df_info.shape[0]):
         l_info.append(df_info.loc[i,].to_dict())
@@ -73,10 +76,9 @@ def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFram
     elif gen_model == "GP":
         l_df_xy_1 = list(np.repeat(df_xy.to_numpy(), df_xy.shape[0], 0))
         l_df_xy_2 = list(np.tile(df_xy.to_numpy().T, df_xy.shape[0]).T)
-        if dict_info["condition"] == "smooth":
-            kernel_rbf_partial = partial(kernel_rbf, sigma=1, length_scale=0.15)
-        elif dict_info["condition"] == "rough":
-            kernel_rbf_partial = partial(kernel_rbf, sigma=1, length_scale=0.5)
+        kernel_rbf_partial = partial(
+            kernel_rbf, sigma=1, length_scale=dict_info["length_scale"]
+        )
         l_similarities = list(map(kernel_rbf_partial, l_df_xy_1, l_df_xy_2))
         df_similarities = pd.DataFrame(
             np.reshape(np.array(l_similarities), (df_xy.shape[0], df_xy.shape[0]))
@@ -154,18 +156,22 @@ def scale_ivs(df: pd.DataFrame) -> tuple:
     return (df, cols_ivs, scaler)
 
 
-def fit_on_train(df_train: pd.DataFrame, l_ivs: list) -> GaussianProcessRegressor:
+def fit_on_train(
+    df_train: pd.DataFrame, l_ivs: list, dict_info: dict, fit_length_scale: bool = False
+) -> GaussianProcessRegressor:
     """fit GP model on train data and return fitted model object
 
     Args:
         df_train (pd.DataFrame): data frame with stimuli shown during training
         l_ivs_z (list): names of scaled ivs
+        dict_info (dict): infos about simulation experiment
+        fit_length_scale (bool): should the length scale be fit? default to False
 
     Returns:
         GaussianProcessRegressor: the fitted sklearn gp object
     """
     l_ivs_z = [f"""{iv}_z""" for iv in l_ivs]
-    kernel = RBF(10, (0.1, 100))
+    kernel = RBF(dict_info["length_scale"], length_scale_bounds="fixed")
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
     gp.fit(df_train[l_ivs_z], df_train["y"])
     return gp
