@@ -95,17 +95,23 @@ def plot_1d_waves(l_info: list) -> None:
     ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("y")
     ax.tick_params(axis="both", which="major")
-    ax.set_title("X-Y Relationship: 1D Margin")
+    ax.set_title("X-Y Relationship: $x_{1}$Margin")
 
 
 def two_d_uncertainty_bubbles(
-    df: pd.DataFrame, ax: plt.Axes, show_colorbar: bool
+    df: pd.DataFrame,
+    ax: plt.Axes,
+    show_colorbar: bool,
+    min_val: float = False,
+    max_val: float = False,
 ) -> plt.Axes:
     """plot sd of test 2d test data points
 
     Args:
         df (pd.DataFrame): test df with x coordinates and predicted y means and sds
         ax (plt.Axes): plt axis object
+        min_val (float): min value to scale pointsize
+        max_val (float): max value to scale pointsize
 
     Returns:
         plt.Axes: plt axis object
@@ -115,7 +121,7 @@ def two_d_uncertainty_bubbles(
         y="x_2",
         hue="y_pred_sd",
         size="y_pred_sd",
-        sizes=(50, 200),
+        sizes=(150000 * df["y_pred_sd"].min(), 175000 * df["y_pred_sd"].max()),
         data=df,
         palette="viridis",
         ax=ax,
@@ -125,7 +131,10 @@ def two_d_uncertainty_bubbles(
     ax.set_xlabel("$x_{1}$")
     ax.set_ylabel("$x_{2}$")
     # replace ugly legend with colorbar
-    norm = plt.Normalize(df["y_pred_sd"].min(), df["y_pred_sd"].max())
+    if min_val is False:
+        norm = plt.Normalize(df["y_pred_sd"].min(), df["y_pred_sd"].max())
+    else:
+        norm = plt.Normalize(min_val, max_val)
     sm = plt.cm.ScalarMappable(cmap="viridis", norm=norm)
     sm.set_array([])
     ax.get_legend().remove()
@@ -177,6 +186,7 @@ def plot_gp_deviations(
 def uncertainty_on_test_data(
     df_train: pd.DataFrame,
     df_test: pd.DataFrame,
+    dict_info: dict,
     l_ivs: list,
     axes: plt.Axes,
     show_colorbar: bool,
@@ -186,13 +196,33 @@ def uncertainty_on_test_data(
     Args:
         df_train (pd.DataFrame): train data
         df_test (pd.DataFrame): test data
+        dict_info (dict): infos about simulation experiment
         l_ivs (list): names of ivs
         axes (plt.Axes): respective axis object
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
-    gp = utils.fit_on_train(df_train, l_ivs)
+    gp = utils.fit_on_train(df_train, l_ivs, dict_info)
     df_test = utils.predict_on_test(df_test, gp, l_ivs)
-    two_d_uncertainty_bubbles(df_test, axes[1], show_colorbar)
+    return df_test
+
+
+def plot_uncertainty_on_test_data(
+    df_test: pd.DataFrame,
+    axes: plt.Axes,
+    show_colorbar: bool,
+    min_val: float,
+    max_val: float,
+) -> None:
+    """plot histogram of model uncertainty and uncertainties per test point in 2d space
+
+    Args:
+        df_test (pd.DataFrame): test data frame with x, y, and predictions
+        axes ([type]): Axes object
+        show_colorbar (bool): should individual colorbars be shown per plot?
+        min_val (float): min value to scale pointsize
+        max_val (float): max value to scale pointsize
+    """
+    two_d_uncertainty_bubbles(df_test, axes[1], show_colorbar, min_val, max_val)
     hist_uncertainty(df_test, axes[0])
 
 
@@ -207,7 +237,6 @@ def plot_moves(df_movements: pd.DataFrame, ax: plt.Axes, title: str) -> plt.Axes
     Returns:
         plt.Axes: Axes object
     """
-
     l_x_start, l_y_start, l_x_end, l_y_end, angle, l_color = (
         list(),
         list(),
