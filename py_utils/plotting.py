@@ -168,6 +168,7 @@ def plot_gp_deviations(
         l_idxs (list): indices of the conditions to plot
         l_plots (list): result list containing data frames from simulations
         l_tites (list): list with condition titles
+        s_id (int): selected stimulus to show
 
     Returns:
         [type]: [description]
@@ -175,6 +176,7 @@ def plot_gp_deviations(
     for idx, ax in enumerate(axes.flat):
         cond_id = l_idxs[idx]
         df_plt = l_plots[cond_id]
+        df_plt = df_plt.query("trial_nr != 0").copy()
         if s_id is not None:
             df_plt = df_plt[df_plt["stim_id"].isin([s_id])]
         sns.histplot(df_plt["x_deviation"], ax=ax)
@@ -184,12 +186,7 @@ def plot_gp_deviations(
 
 
 def uncertainty_on_test_data(
-    df_train: pd.DataFrame,
-    df_test: pd.DataFrame,
-    dict_info: dict,
-    l_ivs: list,
-    axes: plt.Axes,
-    show_colorbar: bool,
+    df_train: pd.DataFrame, df_test: pd.DataFrame, dict_info: dict, l_ivs: list,
 ) -> pd.DataFrame:
     """plot histogram of sds on test data and 2d visualization of individual sds
 
