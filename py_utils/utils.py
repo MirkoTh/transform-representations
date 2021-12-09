@@ -214,6 +214,11 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     """
     df_xy, l_ivs, scaler = scale_ivs(df_xy)
     df_train, df_test = split_train_test(dict_info, df_xy)
+    # after the train test split the random seed could be removed again using the following code
+    # import time
+    # t = 1000 * time.time() # current time in milliseconds
+    # np.random.seed(int(t) % 2**32)
+    # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
     gp = fit_on_train(df_train, l_ivs, dict_info)
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_new_test = df_test.copy()
