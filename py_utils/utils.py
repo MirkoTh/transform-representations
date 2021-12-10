@@ -24,9 +24,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     """
     l = list()
     for k, v in dict_variables.items():
-        l.append(
-            pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True)
-        )
+        l.append(pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True))
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
     df_info["length_scale"] = [
         3 if bl else 1 for bl in (df_info["condition"] == "smooth").to_list()
@@ -38,8 +36,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
         f"""\
         Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"]},
         Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
-        """.strip()
-        for idx_plot in range(df_info.shape[0])
+        """.strip() for idx_plot in range(df_info.shape[0])
     ]
     return (df_info, l_info, l_titles)
 
@@ -55,9 +52,7 @@ def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFram
     """
     l_x = list(
         map(
-            lambda a, b, c, d: pd.Series(
-                np.linspace(a, b, c), name=f"""x_{int(d)}"""
-            ).round(1),
+            lambda a, b, c, d: pd.Series(np.linspace(a, b, c), name=f"""x_{int(d)}""").round(1),
             list(np.repeat(dict_info["space_edge_min"], dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"] - 1, dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"], dict_info["n_features"])),
@@ -76,9 +71,7 @@ def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFram
     elif gen_model == "GP":
         l_df_xy_1 = list(np.repeat(df_xy.to_numpy(), df_xy.shape[0], 0))
         l_df_xy_2 = list(np.tile(df_xy.to_numpy().T, df_xy.shape[0]).T)
-        kernel_rbf_partial = partial(
-            kernel_rbf, sigma=1, length_scale=dict_info["length_scale"]
-        )
+        kernel_rbf_partial = partial(kernel_rbf, sigma=1, length_scale=dict_info["length_scale"])
         l_similarities = list(map(kernel_rbf_partial, l_df_xy_1, l_df_xy_2))
         df_similarities = pd.DataFrame(
             np.reshape(np.array(l_similarities), (df_xy.shape[0], df_xy.shape[0]))
@@ -93,9 +86,7 @@ def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFram
     return df_xy
 
 
-def kernel_rbf(
-    X1: np.array, X2: np.array, sigma: float, length_scale: float
-) -> np.array:
+def kernel_rbf(X1: np.array, X2: np.array, sigma: float, length_scale: float) -> np.array:
     """rbf kernel implementation ref. Schulz et al. (2018) jmp tutorial paper
     n.b., uses euclidian distance metric
 
@@ -108,8 +99,8 @@ def kernel_rbf(
     Returns:
         np.array: a 1x1 array with the similarity between the two x points
     """
-    dist_eucl = np.sqrt(np.sum(np.abs(X1 - X2) ** 2))
-    return (sigma ** 2) * np.exp(-((dist_eucl ** 2) / (2 * (length_scale ** 2))))
+    dist_eucl = np.sqrt(np.sum(np.abs(X1 - X2)**2))
+    return (sigma**2) * np.exp(-((dist_eucl**2) / (2 * (length_scale**2))))
 
 
 def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict, i: int) -> tuple:
@@ -181,9 +172,7 @@ def fit_on_train(
     return gp
 
 
-def predict_on_test(
-    df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list
-) -> pd.DataFrame:
+def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list) -> pd.DataFrame:
     """predict on some new data given fitted GP model
 
     Args:
@@ -199,6 +188,31 @@ def predict_on_test(
     df["y_pred_mn"] = y_pred_mn
     df["y_pred_sd"] = y_pred_sigma
     return df
+
+
+def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
+    """iterate over trials noisily perceiving pairs of stimuli from test dataset
+    feed GP predicted y values into logistic regression predicting probability of accepting
+    the second of the two presented stimuli
+
+    Args:
+        dict_info (dict): experimental parameter dict
+        df_xy (list): data frame with x y values of simulation condition
+
+    Returns:
+        pd.DataFrame: XXX
+    """
+    df_xy, l_ivs, scaler = scale_ivs(df_xy)
+    df_train, df_test = split_train_test(dict_info, df_xy)
+    # after the train test split the random seed could be removed again using the following code
+    # import time
+    # t = 1000 * time.time() # current time in milliseconds
+    # np.random.seed(int(t) % 2**32)
+    # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
+    gp = fit_on_train(df_train, l_ivs, dict_info)
+    df_test = predict_on_test(df_test, gp, l_ivs)
+
+    return df_test
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
@@ -232,12 +246,12 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         df_stim_scaled.columns = [f"""{iv}_z""" for iv in l_ivs]
         df_stim = pd.concat([df_stim, df_stim_scaled], axis=1)
         x1_in = (
-            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"]
-            and df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"] and
+            df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
         )
         x2_in = (
-            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"]
-            and df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"] and
+            df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
         )
 
         # propose a new posterior
@@ -245,9 +259,7 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         deviation_test = np.abs(
             df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
         )
-        deviation_trial = float(
-            np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
-        )
+        deviation_trial = float(np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]))
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
                 if dict_info["constrain_space"]:
@@ -281,8 +293,8 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         suffixes=["_sample", "_orig"],
     )
     df_new_test["x_deviation"] = np.sqrt(
-        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"]) ** 2
-        + (df_new_test["x_2_orig"] - df_new_test["x_2_sample"]) ** 2
+        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
+        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
     )
     return (df_new_test, l_kernel)
 
@@ -301,7 +313,7 @@ def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
     """
     np.random.seed(12433)
     idx_train = np.random.choice(
-        np.arange(0, dict_variables["space_edge_max"] ** 2),
+        np.arange(0, dict_variables["space_edge_max"]**2),
         size=dict_variables["n_training"],
         replace=False,
     )
@@ -321,31 +333,23 @@ def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: data frame with added columns angle, and movements along axes
     """
     df_movements = (
-        df_movements[df_movements["index"].notnull()]
-        .sort_values(["stim_id", "index"])
-        .groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]]
-        .mean()
+        df_movements[df_movements["index"].notnull()].sort_values(
+            ["stim_id", "index"]
+        ).groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]].mean()
     )
     df_movements.eval("x_1_move = x_1_sample - x_1_orig", inplace=True)
     df_movements.eval("x_2_move = x_2_sample - x_2_orig", inplace=True)
     df_movements["angle"] = np.rad2deg(
-        df_movements["x_2_move"]
-        / np.sqrt(
-            np.abs(df_movements["x_2_move"] ** 2)
-            + np.abs(df_movements["x_1_move"] ** 2)
-        )
+        df_movements["x_2_move"] /
+        np.sqrt(np.abs(df_movements["x_2_move"]**2) + np.abs(df_movements["x_1_move"]**2))
     )
     df_movements.loc[df_movements["x_1_move"] < 0, "angle"] = 180 - (
         df_movements.loc[df_movements["x_1_move"] < 0, "angle"]
     )
-    df_movements.loc[
-        (df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"
-    ] = (
-        360
-        + (
-            df_movements.loc[
-                (df_movements["x_1_move"]) > 0 & (df_movements["x_2_move"] < 0), "angle"
-            ]
+    df_movements.loc[(df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"] = (
+        360 + (
+            df_movements.loc[(df_movements["x_1_move"]) > 0 &
+                             (df_movements["x_2_move"] < 0), "angle"]
         )
     )
     return df_movements
@@ -368,9 +372,7 @@ def add_max_gradient(df: pd.DataFrame) -> pd.DataFrame:
             how="cross",
         )
         df_distance["dist_eucl"] = np.sqrt(
-            df_distance.eval(
-                "(x_1_orig_x - x_1_orig_y)**2 + (x_2_orig_x - x_2_orig_y)**2"
-            )
+            df_distance.eval("(x_1_orig_x - x_1_orig_y)**2 + (x_2_orig_x - x_2_orig_y)**2")
         )
         df_distance["y_step"] = np.abs(df_distance.eval("y_x - y_y"))
         l.append(df_distance.query("dist_eucl == 1")["y_step"].max())

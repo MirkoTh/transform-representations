@@ -121,12 +121,14 @@ def two_d_uncertainty_bubbles(
     Returns:
         plt.Axes: plt axis object
     """
+    scale_min = 1 / df["y_pred_sd"].min()
+    scale_max = scale_min * 2
     sns.scatterplot(
         x="x_1",
         y="x_2",
         hue="y_pred_sd",
         size="y_pred_sd",
-        sizes=(150000 * df["y_pred_sd"].min(), 175000 * df["y_pred_sd"].max()),
+        sizes=(scale_min * df["y_pred_sd"].min(), scale_max * df["y_pred_sd"].max()),
         data=df,
         palette="viridis",
         ax=ax,
