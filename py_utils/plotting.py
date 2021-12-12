@@ -12,17 +12,19 @@ import matplotlib.collections as mc
 import py_utils.utils as utils
 
 
-def plot_heatmaps(l_info: list, idxs: list = None) -> None:
+def plot_heatmaps(l_info: list, idxs: list = None, map_to_reward: bool = False) -> None:
     """plot the heatmap of a smooth and a rough condition
 
     Args:
         l_info (list): list of Pandas core frames with simulation conditions
         idxs (list, optional): inides of rows from l_info to plot. Defaults to None. In that case,
         the first and the last observation from l_info are picked
+        map_to_reward (bool): should y values be mapped to positive rewards between 5 and 95?
+
     """
 
     def pivot_xy(idx, l=l_info):
-        df_xy = utils.make_stimuli(l[idx])
+        df_xy = utils.make_stimuli(l[idx], map_to_reward=map_to_reward)
         df_heatmap = df_xy.pivot(index="x_1", columns="x_2", values="y")
         return df_heatmap
 
@@ -212,7 +214,9 @@ def uncertainty_on_test_data(
         axes (plt.Axes): respective axis object
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
-    gp = utils.fit_on_train(df_train, l_ivs, dict_info)
+    gp = utils.fit_on_train(
+        df_train, l_ivs, dict_info, fit_length_scale=False, update_length_scale=True
+    )
     df_test = utils.predict_on_test(df_test, gp, l_ivs)
     return df_test
 
