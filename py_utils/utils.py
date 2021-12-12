@@ -41,11 +41,15 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     return (df_info, l_info, l_titles)
 
 
-def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFrame:
+def make_stimuli(
+    dict_info: pd.core.frame, gen_model: str = "GP", map_to_reward: bool = False
+) -> pd.DataFrame:
     """create x and y values of stimuli shown during training
 
     Args:
         dict_info (dict): dict with variables of simulation study
+        gen_model (str): uses sinus function by default, but can be changed to "GP" to sample from GP prior
+        map_to_reward (bool): should y values be mapped to positive rewards between 5 and 95?
 
     Returns:
         pd.DataFrame: x (1, 2, ...) and y values, each in a column
@@ -83,6 +87,15 @@ def make_stimuli(dict_info: pd.core.frame, gen_model: str = "GP") -> pd.DataFram
     df_xy["stim_id"] = df_xy.index
     df_xy = df_xy[["stim_id", "x_1", "x_2", "y"]]
     df_xy["trial_nr"] = 0
+    if map_to_reward:
+        y = df_xy["y"].copy()
+        min_y = df_xy["y"].min()
+        if min_y < 0:
+            y = y + abs(min_y)
+        range_y = y.max() - y.min()
+        slope = 90 / y.max()
+        y = 5 + slope * y
+        df_xy["y"] = y.round() - 50
     return df_xy
 
 
@@ -148,7 +161,11 @@ def scale_ivs(df: pd.DataFrame) -> tuple:
 
 
 def fit_on_train(
-    df_train: pd.DataFrame, l_ivs: list, dict_info: dict, fit_length_scale: bool = False
+    df_train: pd.DataFrame,
+    l_ivs: list,
+    dict_info: dict,
+    fit_length_scale: bool = False,
+    update_length_scale: bool = False
 ) -> GaussianProcessRegressor:
     """fit GP model on train data and return fitted model object
 
@@ -157,6 +174,7 @@ def fit_on_train(
         l_ivs_z (list): names of scaled ivs
         dict_info (dict): infos about simulation experiment
         fit_length_scale (bool): should the length scale be fit? default to False
+        update_length_scale (bool): should the length scale param be written back into dict_info?
 
     Returns:
         GaussianProcessRegressor: the fitted sklearn gp object
@@ -165,10 +183,11 @@ def fit_on_train(
     if fit_length_scale:
         kernel = RBF(10, (0.01, 100))
     else:
-        # kernel = RBF(1, (0.1, 10))
         kernel = RBF(dict_info["length_scale"], length_scale_bounds="fixed")
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
     gp.fit(df_train[l_ivs_z], df_train["y"])
+    if update_length_scale:
+        dict_info["length_scale"] = gp.kernel_.length_scale
     return gp
 
 
@@ -233,7 +252,7 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     # t = 1000 * time.time() # current time in milliseconds
     # np.random.seed(int(t) % 2**32)
     # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
-    gp = fit_on_train(df_train, l_ivs, dict_info)
+    gp = fit_on_train(df_train, l_ivs, dict_info, update_length_scale=True)
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_new_test = df_test.copy()
     df_new_train = df_train.copy()
