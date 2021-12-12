@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
+from sklearn.gaussian_process.kernels import RBF, StationaryKernelMixin
 from sklearn.preprocessing import StandardScaler
 from statsmodels.distributions import ECDF
 
@@ -212,7 +212,7 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     gp = fit_on_train(df_train, l_ivs, dict_info)
     df_test = predict_on_test(df_test, gp, l_ivs)
 
-    return df_test
+    return df_test, gp, scaler
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
@@ -377,4 +377,45 @@ def add_max_gradient(df: pd.DataFrame) -> pd.DataFrame:
         df_distance["y_step"] = np.abs(df_distance.eval("y_x - y_y"))
         l.append(df_distance.query("dist_eucl == 1")["y_step"].max())
     df["max_gradient"] = l
+    return df
+
+
+def apply_trained_scaler(df, scaler) -> pd.DataFrame:
+    """apply the scaler fit on training data
+
+    Args:
+        df ([type]): df with x vars
+        scaler ([type]): fitted scaler object
+
+    Returns:
+        pd.DataFrame: df with scaled x vars as added columns
+    """
+    df.columns = ["x_1", "x_2"]
+    df.reset_index(drop=True, inplace=True)
+    df_tf = pd.DataFrame(scaler.transform(df), columns=["x_1_z", "x_2_z"])
+    df.columns = ["x_1_sample", "x_2_sample"]
+    return pd.concat([df, df_tf], axis=1)
+
+
+def perceive_block_stim(
+    df_test: pd.DataFrame, n: int, scaler: StandardScaler, prior_sd: float
+) -> pd.DataFrame:
+    """randomly sample from prior for n samples with replacement
+
+    Args:
+        df_text (pd.DataFrame): [description]
+        n (int): [description]
+        scaler (StandardScaler): fitted Scaler object
+        df_info (pd.DataFrame): experimental infos
+
+    Returns:
+        pd.DataFrame: [description]
+    """
+    l_vars = ["stim_id", "x_1", "x_2", "y"]
+    df = df_test.copy()
+    # take a larger sample to drop out overlaps between left and right side
+    df = df[l_vars].sample(int(n * 1.25), replace=True).reset_index(drop=True)
+    df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
+    df_perceived = apply_trained_scaler(df[["x_1_sample", "x_2_sample"]], scaler)
+    df = pd.concat([df[l_vars], df_perceived], axis=1)
     return df
