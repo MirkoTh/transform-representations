@@ -55,14 +55,16 @@ def plot_heatmaps(l_info: list, idxs: list = None, map_to_reward: bool = False) 
         min(l_heatmap[0].melt()["value"].min(), l_heatmap[1].melt()["value"].min()),
         max(l_heatmap[0].melt()["value"].max(), l_heatmap[1].melt()["value"].max()),
     )
-    list(map(
-        plot_one_heatmap,
-        l_heatmap,
-        axes,
-        [vmin, vmin],
-        [vmax, vmax],
-        ["Smooth", "Rough"],
-    ))
+    list(
+        map(
+            plot_one_heatmap,
+            l_heatmap,
+            axes,
+            [vmin, vmin],
+            [vmax, vmax],
+            ["Smooth", "Rough"],
+        )
+    )
 
 
 def plot_1d_waves(l_info: list) -> None:
@@ -73,30 +75,23 @@ def plot_1d_waves(l_info: list) -> None:
     """
     f, ax = plt.subplots(1, 1, figsize=(8, 6))
     idx_max = len(l_info) - 1
-    df_plot1 = pd.DataFrame(utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()).reset_index()
+    df_plot1 = pd.DataFrame(
+        utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
+    ).reset_index()
     df_plot1["Condition"] = "Smooth"
-    df_plot2 = pd.DataFrame(utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
-                           ).reset_index()
+    df_plot2 = pd.DataFrame(
+        utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
+    ).reset_index()
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
-    sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", zorder=5, ax=ax, legend=False)
-    sns.scatterplot(
-        x="x_1",
-        y="y",
-        data=df_plot,
-        s=100,
-        color="white",
-        zorder=10,
-        ax=ax,
+    sns.lineplot(
+        x="x_1", y="y", data=df_plot, hue="Condition", zorder=5, ax=ax, legend=False
     )
     sns.scatterplot(
-        x="x_1",
-        y="y",
-        data=df_plot,
-        s=35,
-        hue="Condition",
-        zorder=15,
-        ax=ax,
+        x="x_1", y="y", data=df_plot, s=100, color="white", zorder=10, ax=ax,
+    )
+    sns.scatterplot(
+        x="x_1", y="y", data=df_plot, s=35, hue="Condition", zorder=15, ax=ax,
     )
     ax.legend(prop={"size": 15})
     ax.set_xlabel("$x_{1}$")
@@ -169,11 +164,7 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 
 def plot_gp_deviations(
-    axes: plt.Axes,
-    l_idxs: list,
-    l_plots: list,
-    l_titles: list,
-    s_id: int = None,
+    axes: plt.Axes, l_idxs: list, l_plots: list, l_titles: list, s_id: int = None,
 ) -> None:
     """plot deviations of gp model after testing phase as histograms
     Args:
@@ -199,10 +190,7 @@ def plot_gp_deviations(
 
 
 def uncertainty_on_test_data(
-    df_train: pd.DataFrame,
-    df_test: pd.DataFrame,
-    dict_info: dict,
-    l_ivs: list,
+    df_train: pd.DataFrame, df_test: pd.DataFrame, dict_info: dict, l_ivs: list,
 ) -> pd.DataFrame:
     """plot histogram of sds on test data and 2d visualization of individual sds
 
@@ -215,7 +203,7 @@ def uncertainty_on_test_data(
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
     gp = utils.fit_on_train(
-        df_train, l_ivs, dict_info, fit_length_scale=False, update_length_scale=True
+        df_train, l_ivs, dict_info, fit_length_scale=False, update_length_scale=False
     )
     df_test = utils.predict_on_test(df_test, gp, l_ivs)
     return df_test
@@ -268,7 +256,10 @@ def plot_moves(df_movements: pd.DataFrame, ax: plt.Axes, title: str) -> plt.Axes
         l_x_end.append(r.x_1_sample - r.x_1_orig)
         l_y_end.append(r.x_2_sample - r.x_2_orig)
         angle.append(
-            np.rad2deg(l_y_end[idx] / np.sqrt(np.abs(l_y_end[idx]**2) + np.abs(l_x_end[idx]**2)))
+            np.rad2deg(
+                l_y_end[idx]
+                / np.sqrt(np.abs(l_y_end[idx] ** 2) + np.abs(l_x_end[idx] ** 2))
+            )
         )
         if l_x_end[idx] < 0:
             angle[idx] = +180 - angle[idx]
@@ -311,9 +302,10 @@ def plot_moves_one_condition(
         plt.Axes: the axes object with the content added
     """ """"""
     df_movements = (
-        list_dfs_new[idx_plot][list_dfs_new[idx_plot]["index"].notnull()].sort_values(
-            ["stim_id", "index"]
-        ).groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]].mean()
+        list_dfs_new[idx_plot][list_dfs_new[idx_plot]["index"].notnull()]
+        .sort_values(["stim_id", "index"])
+        .groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]]
+        .mean()
     )
     title = f"""\
     Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"]},
@@ -359,22 +351,27 @@ def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> pl
     """
 
     df = df.query("trial_nr != 0").copy()
-    df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
-    df_agg = (df.groupby("trial_nr_bin")["y_pred_sd"].aggregate({"mean", np.std}).reset_index())
-    ax.errorbar(
-        x="trial_nr_bin",
-        y="mean",
-        yerr="std",
-        data=df_agg,
-        elinewidth=1.5,
-        capsize=5,
-        zorder=5,
-    )
-    ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=100, c="white", zorder=7)
-    ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=25, zorder=10)
-    ax.axhline(xmin=0, xmax=9, color="r", linewidth=2)
-    ax.set_xlabel("Trial Nr. Binned")
-    ax.set_title(title)
+    if df.shape[0] != 0:
+        df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
+        df_agg = (
+            df.groupby("trial_nr_bin")["y_pred_sd"]
+            .aggregate({"mean", np.std})
+            .reset_index()
+        )
+        ax.errorbar(
+            x="trial_nr_bin",
+            y="mean",
+            yerr="std",
+            data=df_agg,
+            elinewidth=1.5,
+            capsize=5,
+            zorder=5,
+        )
+        ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=100, c="white", zorder=7)
+        ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=25, zorder=10)
+        ax.axhline(xmin=0, xmax=9, color="r", linewidth=2)
+        ax.set_xlabel("Trial Nr. Binned")
+        ax.set_title(title)
     return ax
 
 
@@ -386,17 +383,27 @@ def regplot_y(df, title, ax):
 
 
 def regplot_max_gradient(df, title, ax):
-    sns.regplot(x="max_gradient", y="x_deviation", data=df.query("trial_nr != 0"), ax=ax)
+    sns.regplot(
+        x="max_gradient", y="x_deviation", data=df.query("trial_nr != 0"), ax=ax
+    )
     ax.set_ylabel("Deviation in x Coordinates")
     ax.set_xlabel("Max y Gradient")
     ax.set_title(title)
 
 
 def regplot_start_uncertainty(df, title, ax):
-    df_test_start = df.query("trial_nr == 0").copy()[["stim_id", "y_pred_sd", "x_deviation"]]
-    df_test_sampled = df.query("trial_nr > 0").copy()[["stim_id", "y_pred_sd", "x_deviation"]]
+    df_test_start = df.query("trial_nr == 0").copy()[
+        ["stim_id", "y_pred_sd", "x_deviation"]
+    ]
+    df_test_sampled = df.query("trial_nr > 0").copy()[
+        ["stim_id", "y_pred_sd", "x_deviation"]
+    ]
     df_plot = pd.merge(
-        df_test_start, df_test_sampled, on="stim_id", how="left", suffixes=["_start", "_sampled"]
+        df_test_start,
+        df_test_sampled,
+        on="stim_id",
+        how="left",
+        suffixes=["_start", "_sampled"],
     )
     sns.regplot(x="y_pred_sd_start", y="x_deviation_sampled", data=df_plot, ax=ax)
     ax.set_ylabel("Deviation in x Coordinates")
