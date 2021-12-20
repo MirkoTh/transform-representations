@@ -142,7 +142,7 @@ def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict, i: int) -> tuple:
     df_stim = pd.DataFrame(df_test.loc[idx_stimulus,].copy()).T
     df_stim["x_1"] = np.random.normal(df_stim["x_1"], dict_info["prior_sd"], 1)
     df_stim["x_2"] = np.random.normal(df_stim["x_2"], dict_info["prior_sd"], 1)
-    df_stim["trial_nr"] = i
+    df_stim["trial_nr"] = i + 1
     df_stim.reset_index(inplace=True)
     return (df_stim, idx_stimulus)
 
@@ -277,7 +277,9 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     l_kernel.append(gp.kernel_.length_scale)
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info, i)
+        # drop prior mean x values ...
         df_stim.drop([f"""{iv}_z""" for iv in l_ivs], axis=1, inplace=True)
+        # ... and replace them with z values of sampled x values
         df_stim_scaled = pd.DataFrame(scaler.transform(df_stim[l_ivs]))
         df_stim_scaled.columns = [f"""{iv}_z""" for iv in l_ivs]
         df_stim = pd.concat([df_stim, df_stim_scaled], axis=1)
@@ -315,9 +317,9 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                     )
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
-            prop_deviation = ecdf(deviation_trial)
+            prop_deviation = ecdf(df_stim["y_pred_sd"])
             sample_uniform = np.random.uniform()
-            if sample_uniform < prop_deviation:
+            if sample_uniform < (1 - prop_deviation):
                 if dict_info["constrain_space"]:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
