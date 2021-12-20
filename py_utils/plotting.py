@@ -118,14 +118,13 @@ def two_d_uncertainty_bubbles(
     Returns:
         plt.Axes: plt axis object
     """
-    scale_min = 1 / df["y_pred_sd"].min()
-    scale_max = scale_min * 2
     sns.scatterplot(
         x="x_1",
         y="x_2",
         hue="y_pred_sd",
+        hue_norm=(0, 1),
         size="y_pred_sd",
-        sizes=(scale_min * df["y_pred_sd"].min(), scale_max * df["y_pred_sd"].max()),
+        sizes=(500 * df["y_pred_sd"].min(), 500 * df["y_pred_sd"].max()),
         data=df,
         palette="viridis",
         ax=ax,
@@ -181,8 +180,18 @@ def plot_gp_deviations(
         cond_id = l_idxs[idx]
         df_plt = l_plots[cond_id]
         df_plt = df_plt.query("trial_nr != 0").copy()
+        x_mean = df_plt["x_deviation"].mean()
+        bins_edges = np.histogram_bin_edges(df_plt["x_deviation"], bins="auto")
+        df_plt["x_bin"] = pd.cut(df_plt["x_deviation"], bins_edges)
+        y_mean = df_plt.value_counts("x_bin").mean()
         if s_id is not None:
             df_plt = df_plt[df_plt["stim_id"].isin([s_id])]
+        ax.text(
+            x=x_mean,
+            y=y_mean,
+            s=f"""N Accepted = {df_plt.shape[0]}""",
+            fontdict={"size": 14},
+        )
         sns.histplot(df_plt["x_deviation"], ax=ax)
         ax.set_title(l_titles[cond_id])
         ax.set_xlabel("Deviation in X Coordinates")
@@ -203,7 +212,7 @@ def uncertainty_on_test_data(
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
     gp = utils.fit_on_train(
-        df_train, l_ivs, dict_info, fit_length_scale=False, update_length_scale=False
+        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=True
     )
     df_test = utils.predict_on_test(df_test, gp, l_ivs)
     return df_test
@@ -308,7 +317,7 @@ def plot_moves_one_condition(
         .mean()
     )
     title = f"""\
-    Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"]},
+    Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"].round(2)},
     Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
     """
     ax = plot_moves(df_movements, ax, title)
@@ -338,13 +347,16 @@ def plot_proportion_accepted_samples(
     return ax
 
 
-def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> plt.Axes:
+def plot_var_over_bintime(
+    df: pd.DataFrame, title: str, ax: plt.Axes, var: str
+) -> plt.Axes:
     """plot SD of GP model over test trials
 
     Args:
         df (pd.DataFrame): data frame with all accepted samples
         title (str): title of the condition to be plotted
         ax (plt.Axes): axes object
+        var (str): colname of variable to plot
 
     Returns:
         plt.Axes: axes object with plot added
@@ -354,10 +366,11 @@ def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> pl
     if df.shape[0] != 0:
         df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
         df_agg = (
-            df.groupby("trial_nr_bin")["y_pred_sd"]
-            .aggregate({"mean", np.std})
+            df.groupby("trial_nr_bin")[var]
+            .aggregate({"count", "mean", np.std})
             .reset_index()
         )
+        n_accepted = int(df.shape[0])
         ax.errorbar(
             x="trial_nr_bin",
             y="mean",
@@ -370,6 +383,12 @@ def plot_uncertainty_over_test(df: pd.DataFrame, title: str, ax: plt.Axes) -> pl
         ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=100, c="white", zorder=7)
         ax.scatter(x="trial_nr_bin", y="mean", data=df_agg, s=25, zorder=10)
         ax.axhline(xmin=0, xmax=9, color="r", linewidth=2)
+        ax.text(
+            x=df_agg.loc[2, "trial_nr_bin"] + 0.5,
+            y=df_agg["mean"].max(),
+            s=f"""N Accepted = {n_accepted}""",
+            fontdict={"size": 20},
+        )
         ax.set_xlabel("Trial Nr. Binned")
         ax.set_title(title)
     return ax
@@ -409,3 +428,29 @@ def regplot_start_uncertainty(df, title, ax):
     ax.set_ylabel("Deviation in x Coordinates")
     ax.set_xlabel("Prediction Uncertainty After Training")
     ax.set_title(title)
+
+
+def correlation_between_movement_angles(
+    idx1: int, idx2: int, l_df_movements: list
+) -> float:
+    df_tmp = pd.merge(
+        l_df_movements[idx1],
+        l_df_movements[idx2],
+        how="inner",
+        left_index=True,
+        right_index=True,
+    )
+    return np.corrcoef(df_tmp["angle_x"], df_tmp["angle_y"])[0, 1]
+
+
+def plot_movement_lengths(df, title, ax):
+    df_move_avg = df.groupby("stim_id")[
+        ["x_1_sample", "x_2_sample", "x_1_orig", "x_2_orig"]
+    ].mean()
+    df_move_avg["x_deviation"] = np.sqrt(
+        (df_move_avg["x_1_orig"] - df_move_avg["x_1_sample"]) ** 2
+        + (df_move_avg["x_2_orig"] - df_move_avg["x_2_sample"]) ** 2
+    )
+    ax.hist(df_move_avg["x_deviation"])
+    ax.set_title(title)
+    return ax
