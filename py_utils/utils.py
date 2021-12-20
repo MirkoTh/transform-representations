@@ -37,7 +37,7 @@ def simulation_conditions(dict_variables: dict) -> tuple:
         l_info.append(df_info.loc[i,].to_dict())
     l_titles = [
         f"""\
-        Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"]},
+        Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"].round(2)},
         Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
         """.strip()
         for idx_plot in range(df_info.shape[0])
@@ -268,7 +268,7 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     np.random.seed()
     # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
     gp = fit_on_train(
-        df_train, l_ivs, dict_info, fit_length_scale=False, update_length_scale=False
+        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
     )
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_new_test = df_test.copy()
@@ -277,6 +277,7 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     l_kernel.append(gp.kernel_.length_scale)
     for i in tqdm(range(0, dict_info["n_runs"])):
         df_stim, idx_stimulus = perceive_stimulus(df_test, dict_info, i)
+        stim_id_curr = int(df_stim.loc[0, "stim_id"])
         # drop prior mean x values ...
         df_stim.drop([f"""{iv}_z""" for iv in l_ivs], axis=1, inplace=True)
         # ... and replace them with z values of sampled x values
@@ -295,8 +296,13 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         # propose a new posterior
         df_stim = predict_on_test(df_stim, gp, l_ivs)
         deviation_test = np.abs(
-            df_test.loc[idx_stimulus,]["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]
+            df_new_test.query(f"""stim_id == {stim_id_curr}""")["y_pred_mn"].mean()
+            - df_test.loc[idx_stimulus,]["y"]
         )
+        # deviation_test = np.abs(
+        #     df_new_test.loc[idx_stimulus,]["y_pred_mn"]
+        #     - df_test.loc[idx_stimulus,]["y"]
+        # )
         deviation_trial = float(
             np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
         )
@@ -307,13 +313,13 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
                         gp = fit_on_train(
-                            df_new_train, l_ivs, dict_info, fit_length_scale=False
+                            df_new_train, l_ivs, dict_info, fit_length_scale=True
                         )
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
                     gp = fit_on_train(
-                        df_new_train, l_ivs, dict_info, fit_length_scale=False
+                        df_new_train, l_ivs, dict_info, fit_length_scale=True
                     )
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
@@ -325,13 +331,13 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
                         gp = fit_on_train(
-                            df_new_train, l_ivs, dict_info, fit_length_scale=False
+                            df_new_train, l_ivs, dict_info, fit_length_scale=True
                         )
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
                     gp = fit_on_train(
-                        df_new_train, l_ivs, dict_info, fit_length_scale=False
+                        df_new_train, l_ivs, dict_info, fit_length_scale=True
                     )
         l_kernel.append(gp.kernel_.length_scale)
     df_new_test = df_new_test.merge(
@@ -405,7 +411,7 @@ def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
         360
         + (
             df_movements.loc[
-                (df_movements["x_1_move"]) > 0 & (df_movements["x_2_move"] < 0), "angle"
+                (df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"
             ]
         )
     )
