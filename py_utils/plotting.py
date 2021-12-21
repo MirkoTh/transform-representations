@@ -47,7 +47,7 @@ def plot_heatmaps(l_info: list, idxs: list = None, map_to_reward: bool = False) 
         ax.set_title(title, size=18)
 
     if idxs == None:
-        idxs = [0, len(l_info) - 3]
+        idxs = [0, len(l_info) - 1]
 
     f, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(13, 20))
     l_heatmap = list(map(pivot_xy, idxs))
