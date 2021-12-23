@@ -456,7 +456,7 @@ def perceive_block_stim(
         df_test (pd.DataFrame): [description]
         n (int): [description]
         scaler (StandardScaler): fitted Scaler object
-        df_info (pd.DataFrame): experimental infos
+        prior_sd (float): prior sd of x values
         seed (int): seed of pandas sample call
         perceive (str): sample from prior or use true x value; str can be "sample" or "fixed"
 
@@ -469,11 +469,18 @@ def perceive_block_stim(
         seed = np.random.randint(0, 10000, 1)
         np.random.seed(seed)
         # take a larger sample to drop out overlaps between left and right side
+        #df_unique = df[["stim_id"]].drop_duplicates()
+        df[["move_x_1", "move_x_2"]] = np.random.normal(scale=prior_sd, size=(df.shape[0], 2))
+        #df = df.merge(df_unique, how="left", on="stim_id")
+        df["x_1_sample"] = df["x_1"] + df["move_x_1"]
+        df["x_2_sample"] = df["x_2"] + df["move_x_2"]
+        df.drop(columns=["move_x_1", "move_x_2"], inplace=True)
         df = (
-            df[l_vars].sample(int(n * 1.25), replace=True,
-                              random_state=seed).reset_index(drop=True)
+            df[l_vars +
+               ["x_1_sample", "x_2_sample"]].sample(int(n * 1.25), replace=True,
+                                                    random_state=seed).reset_index(drop=True)
         )
-        df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
+        #df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
     elif perceive == "fixed":
         df[["x_1_sample", "x_2_sample"]] = df[["x_1", "x_2"]]
         df = df.sample(int(n * 1.25), replace=True, random_state=seed).reset_index(drop=True)
@@ -490,9 +497,9 @@ def predict_on_block(
 
     Args:
         list_test (list): list containing
-            df_test with x vals not seen during training
-            m_gp the trained gp model
-            scaler the z scaling object
+            df_test : with x vals not seen during training
+            m_gp    : the trained gp model
+            scaler  : the z scaling object
         dict_info (dict): simulation parameters
         seeds (np.array): two seed values to sample left and right test points
         perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
