@@ -487,7 +487,7 @@ def predict_on_block(
     df_test = list_test[0]
     m_gp = list_test[1]
     scaler = list_test[2]
-    l_vars = ["stim_id", "y_pred", "y"]
+    l_vars_decide = ["stim_id", "y_pred_mn", "y"]
     df_l = perceive_block_stim(
         df_test,
         df_info["n_samples_block"],
@@ -496,7 +496,8 @@ def predict_on_block(
         seeds[0],
         perceive=perceive
     )
-    df_l["y_pred"] = m_gp.predict(df_l[["x_1_z", "x_2_z"]])
+    df_l["y_pred_mn"], df_l["y_pred_sd"] = m_gp.predict(df_l[["x_1_z", "x_2_z"]], return_std=True)
+    df_l["trial_nr"] = df_l.index + df_test["trial_nr"].max()
     df_r = perceive_block_stim(
         df_test,
         df_info["n_samples_block"],
@@ -505,15 +506,18 @@ def predict_on_block(
         seeds[1],
         perceive=perceive
     )
-    df_r["y_pred"] = m_gp.predict(df_r[["x_1_z", "x_2_z"]])
-    df_decide = pd.concat([df_l[l_vars], df_r[l_vars]], axis=1)
+    df_r["y_pred_mn"], df_r["y_pred_sd"] = m_gp.predict(df_r[["x_1_z", "x_2_z"]], return_std=True)
+    df_r["trial_nr"] = df_r.index + df_test["trial_nr"].max()
+    df_l_xpos = pd.concat([df_l[df_test.columns.values]])
+    df_r_xpos = pd.concat([df_r[df_test.columns.values]])
+    df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
-    df_decide = pd.concat([df_l[l_vars], df_r[l_vars]], axis=1)
+    df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
     df_decide.eval("y_pred_diff = y_pred_r - y_pred_l", inplace=True)
     df_decide.query("stim_id_l != stim_id_r").reset_index(inplace=True)
     df_decide = df_decide.loc[0:(df_info["n_samples_block"] - 1),]
-    return df_decide
+    return df_decide, df_l_xpos, df_r_xpos
 
 
 def softmax(df_lr: pd.DataFrame, beta: float) -> np.array:
@@ -543,9 +547,9 @@ def total_reward(list_test: list, df_info: pd.DataFrame, seeds: np.array, percei
     Returns:
         float: sum of received rewards
     """
-    df = predict_on_block(list_test, df_info, seeds, perceive=perceive)
+    df, df_l_xpos, df_r_xpos = predict_on_block(list_test, df_info, seeds, perceive=perceive)
     df["choose_r"] = np.random.binomial(1, softmax(df, df_info["beta_softmax"]))
     df[["choose_r", "choose_l"]] = np.array([df["choose_r"], 1 - df["choose_r"]]).T
     df["reward"] = df[["y_r", "y_l"]].to_numpy()[df[["choose_r",
                                                      "choose_l"]].astype(bool).to_numpy()]
-    return df["reward"].sum()
+    return df["reward"].sum(), df_l_xpos, df_r_xpos
