@@ -469,18 +469,23 @@ def perceive_block_stim(
         seed = np.random.randint(0, 10000, 1)
         np.random.seed(seed)
         # take a larger sample to drop out overlaps between left and right side
-        #df_unique = df[["stim_id"]].drop_duplicates()
-        df[["move_x_1", "move_x_2"]] = np.random.normal(scale=prior_sd, size=(df.shape[0], 2))
-        #df = df.merge(df_unique, how="left", on="stim_id")
-        df["x_1_sample"] = df["x_1"] + df["move_x_1"]
-        df["x_2_sample"] = df["x_2"] + df["move_x_2"]
-        df.drop(columns=["move_x_1", "move_x_2"], inplace=True)
-        df = (
-            df[l_vars +
-               ["x_1_sample", "x_2_sample"]].sample(int(n * 1.25), replace=True,
-                                                    random_state=seed).reset_index(drop=True)
-        )
-        #df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
+        sampling_strategy = "stimulus"
+        if sampling_strategy == "stimulus":
+            df[["move_x_1", "move_x_2"]] = np.random.normal(scale=prior_sd, size=(df.shape[0], 2))
+            df["x_1_sample"] = df["x_1"] + df["move_x_1"]
+            df["x_2_sample"] = df["x_2"] + df["move_x_2"]
+            df.drop(columns=["move_x_1", "move_x_2"], inplace=True)
+            df = (
+                df[l_vars + ["x_1_sample", "x_2_sample"]].sample(
+                    int(n * 1.25), replace=True, random_state=seed
+                ).reset_index(drop=True)
+            )
+        if sampling_strategy == "trial":
+            df = (
+                df[l_vars].sample(int(n * 1.25), replace=True,
+                                  random_state=seed).reset_index(drop=True)
+            )
+            df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
     elif perceive == "fixed":
         df[["x_1_sample", "x_2_sample"]] = df[["x_1", "x_2"]]
         df = df.sample(int(n * 1.25), replace=True, random_state=seed).reset_index(drop=True)
