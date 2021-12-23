@@ -232,8 +232,23 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
     gp = fit_on_train(df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=True)
     df_test = predict_on_test(df_test, gp, l_ivs)
-
-    return df_test, gp, scaler
+    df_test_true = df_test.copy()
+    for i in np.arange(5):  #dict_info["n_runs"]):
+        np.random.seed()
+        seeds = np.random.randint(0, 10000, 2)
+        reward_fixed, _, _ = total_reward([df_test, gp, scaler], dict_info, seeds, "fixed")
+        reward_sample, df_l, df_r = total_reward([df_test, gp, scaler], dict_info, seeds, "sample")
+        if reward_sample > reward_fixed:
+            print(f"""trial {i}""")
+            print(f"""got closer in trial {i}""")
+            df_test = pd.concat([df_l, df_r], axis=0)
+    df_new_test = df_test.merge(
+        df_test_true[["stim_id", "x_1", "x_2"]],
+        how="left",
+        on="stim_id",
+        suffixes=["_sample", "_orig"],
+    )
+    return df_new_test
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
@@ -441,7 +456,7 @@ def perceive_block_stim(
         df_test (pd.DataFrame): [description]
         n (int): [description]
         scaler (StandardScaler): fitted Scaler object
-        df_info (pd.DataFrame): experimental infos
+        prior_sd (float): prior sd of x values
         seed (int): seed of pandas sample call
         perceive (str): sample from prior or use true x value; str can be "sample" or "fixed"
 
@@ -451,13 +466,26 @@ def perceive_block_stim(
     l_vars = ["stim_id", "x_1", "x_2", "y"]
     df = df_test.copy()
     if perceive == "sample":
-        np.random.seed(1243)
+        seed = np.random.randint(0, 10000, 1)
+        np.random.seed(seed)
         # take a larger sample to drop out overlaps between left and right side
-        df = (
-            df[l_vars].sample(int(n * 1.25), replace=True,
-                              random_state=seed).reset_index(drop=True)
-        )
-        df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
+        sampling_strategy = "stimulus"
+        if sampling_strategy == "stimulus":
+            df[["move_x_1", "move_x_2"]] = np.random.normal(scale=prior_sd, size=(df.shape[0], 2))
+            df["x_1_sample"] = df["x_1"] + df["move_x_1"]
+            df["x_2_sample"] = df["x_2"] + df["move_x_2"]
+            df.drop(columns=["move_x_1", "move_x_2"], inplace=True)
+            df = (
+                df[l_vars + ["x_1_sample", "x_2_sample"]].sample(
+                    int(n * 1.25), replace=True, random_state=seed
+                ).reset_index(drop=True)
+            )
+        if sampling_strategy == "trial":
+            df = (
+                df[l_vars].sample(int(n * 1.25), replace=True,
+                                  random_state=seed).reset_index(drop=True)
+            )
+            df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
     elif perceive == "fixed":
         df[["x_1_sample", "x_2_sample"]] = df[["x_1", "x_2"]]
         df = df.sample(int(n * 1.25), replace=True, random_state=seed).reset_index(drop=True)
@@ -467,17 +495,17 @@ def perceive_block_stim(
 
 
 def predict_on_block(
-    list_test: list, df_info: pd.DataFrame, seeds: np.array, perceive: str
+    list_test: list, dict_info: dict, seeds: np.array, perceive: str
 ) -> pd.DataFrame:
     """predict on pairs (aka left and right of two-armed bandit)
     of unseen test points given trained gp model
 
     Args:
         list_test (list): list containing
-            df_test with x vals not seen during training
-            m_gp the trained gp model
-            scaler the z scaling object
-        df_info (pd.DataFrame): df with one row containing simulation parameters
+            df_test : with x vals not seen during training
+            m_gp    : the trained gp model
+            scaler  : the z scaling object
+        dict_info (dict): simulation parameters
         seeds (np.array): two seed values to sample left and right test points
         perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
 
@@ -487,33 +515,54 @@ def predict_on_block(
     df_test = list_test[0]
     m_gp = list_test[1]
     scaler = list_test[2]
-    l_vars = ["stim_id", "y_pred", "y"]
-    df_l = perceive_block_stim(
-        df_test,
-        df_info["n_samples_block"],
-        scaler,
-        df_info["prior_sd"],
-        seeds[0],
-        perceive=perceive
-    )
-    df_l["y_pred"] = m_gp.predict(df_l[["x_1_z", "x_2_z"]])
-    df_r = perceive_block_stim(
-        df_test,
-        df_info["n_samples_block"],
-        scaler,
-        df_info["prior_sd"],
-        seeds[1],
-        perceive=perceive
-    )
-    df_r["y_pred"] = m_gp.predict(df_r[["x_1_z", "x_2_z"]])
-    df_decide = pd.concat([df_l[l_vars], df_r[l_vars]], axis=1)
+    l_vars_decide = ["stim_id", "y_pred_mn", "y"]
+    df_l = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[0], perceive)
+    df_r = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
+    cols = df_test.columns.values  #[if c in ["x_1", "x_2"] for c in df_test.columns.values]
+    df_l_xpos = pd.concat([df_l[cols]])
+    df_r_xpos = pd.concat([df_r[cols]])
+    df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
-    df_decide = pd.concat([df_l[l_vars], df_r[l_vars]], axis=1)
+    df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
     df_decide.eval("y_pred_diff = y_pred_r - y_pred_l", inplace=True)
-    df_decide.query("stim_id_l != stim_id_r").reset_index(inplace=True)
-    df_decide = df_decide.loc[0:(df_info["n_samples_block"] - 1),]
-    return df_decide
+    df_decide.query("stim_id_l != stim_id_r", inplace=True)
+    idxs_keep = df_decide.index.values
+    df_decide.reset_index(inplace=True)
+    df_decide = df_decide.loc[0:(dict_info["n_samples_block"] - 1),]
+    return df_decide, df_l_xpos.iloc[idxs_keep, :], df_r_xpos.iloc[idxs_keep, :]
+
+
+def sample_left_right(
+    df_test: pd.DataFrame, dict_info: dict, m_gp: GaussianProcessRegressor, scaler: StandardScaler,
+    seed: int, perceive: str
+) -> pd.DataFrame:
+    """sample x values from prior for left and right arm of the bandit
+
+    Args:
+        df_test (pd.DataFrame): df with original true x locations to predict
+        dict_info (dict): experimental info
+        scaler (StandardScaler): scaler object to z-transform x values
+        m_gp (GaussianProcessRegressor): GP model
+        seed (int): seed value for sampling
+        perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
+
+    Returns:
+        pd.DataFrame: [description]
+    """
+    df = perceive_block_stim(
+        df_test,
+        dict_info["n_samples_block"],
+        scaler,
+        dict_info["prior_sd"],
+        seed,
+        perceive=perceive
+    )
+    df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(df[["x_1_z", "x_2_z"]], return_std=True)
+    df["trial_nr"] = df.index + df_test["trial_nr"].max()
+    df.drop(columns=["x_1", "x_2"], inplace=True)
+    df.rename(columns={"x_1_sample": "x_1", "x_2_sample": "x_2"}, inplace=True)
+    return df
 
 
 def softmax(df_lr: pd.DataFrame, beta: float) -> np.array:
@@ -531,21 +580,21 @@ def softmax(df_lr: pd.DataFrame, beta: float) -> np.array:
     return above / below
 
 
-def total_reward(list_test: list, df_info: pd.DataFrame, seeds: np.array, perceive: str) -> float:
+def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: str) -> float:
     """sum of received rewards for n pairs of perceived stimuli
 
     Args:
         list_test (list): list with df_test, m_gp, and scaler
-        df_info (pd.DataFrame): simulation parameters
+        dict_info (pd.DataFrame): simulation parameters
         seeds (np.array): two seed values determining which pairs of x values are sampled from unseen points
         perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
 
     Returns:
         float: sum of received rewards
     """
-    df = predict_on_block(list_test, df_info, seeds, perceive=perceive)
-    df["choose_r"] = np.random.binomial(1, softmax(df, df_info["beta_softmax"]))
+    df, df_l_xpos, df_r_xpos = predict_on_block(list_test, dict_info, seeds, perceive=perceive)
+    df["choose_r"] = np.random.binomial(1, softmax(df, dict_info["beta_softmax"]))
     df[["choose_r", "choose_l"]] = np.array([df["choose_r"], 1 - df["choose_r"]]).T
     df["reward"] = df[["y_r", "y_l"]].to_numpy()[df[["choose_r",
                                                      "choose_l"]].astype(bool).to_numpy()]
-    return df["reward"].sum()
+    return df["reward"].sum(), df_l_xpos, df_r_xpos
