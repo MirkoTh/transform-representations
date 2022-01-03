@@ -234,33 +234,44 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     gp = fit_on_train(df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=True)
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_test_true = df_test.copy()
-    for i in np.arange(dict_info["n_runs"]):
+    df_test_new = df_test.copy()
+    df_rewards = pd.DataFrame()
+    for i in np.arange(dict_info["n_runs"]) + 1:
         np.random.seed()
         seeds = np.random.randint(0, 10000, 2)
-        _, reward_fixed, _, _ = total_reward([df_test, gp, scaler], dict_info, seeds, "fixed")
+        df_reward_fixed, reward_fixed, _, _ = total_reward(
+            [df_test, gp, scaler], dict_info, seeds, "fixed"
+        )
+        if i == 0:
+            df_reward_fixed["trial_nr"] = 0
+            df_rewards = pd.concat([df_rewards, df_reward_fixed])
         df_reward_sample, reward_sample, df_l, df_r = total_reward(
             [df_test, gp, scaler], dict_info, seeds, "sample"
         )
+        df_reward_sample["trial_nr"] = i
+        print("block: ", i, ", reward fixed: ", reward_fixed, ", reward sampled: ", reward_sample)
         if reward_sample > reward_fixed:
-            print(f"""trial {i}""")
-            print(f"""got closer in trial {i}""")
-            df_test = pd.concat([df_l, df_r], axis=0)
-            df_test.drop_duplicates(subset=["stim_id"], inplace=True)
-    df_test = pd.concat(
-        [df_test.reset_index(drop=True),
-         df_test_true.reset_index(drop=True)], axis=0
-    )
-    df_new_test = df_test.merge(
+            print(f"""got closer in block {i}""")
+            df_accepted = pd.concat([df_l, df_r], axis=0)
+            df_accepted["trial_nr"] = i
+            df_accepted.drop_duplicates(subset=["stim_id"], inplace=True)
+            df_test_new = pd.concat([df_test_new, df_accepted], axis=0)
+            df_rewards = pd.concat([df_rewards, df_reward_sample])
+    # df_test = pd.concat(
+    #     [df_accepted.reset_index(drop=True),
+    #      df_test_true.reset_index(drop=True)], axis=0
+    # )
+    df_test_true = df_accepted.merge(
         df_test_true[["stim_id", "x_1", "x_2"]],
         how="left",
         on="stim_id",
         suffixes=["_sample", "_orig"],
     )
-    df_new_test["x_deviation"] = np.sqrt(
-        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
-        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
+    df_test_true["x_deviation"] = np.sqrt(
+        (df_test_true["x_1_orig"] - df_test_true["x_1_sample"])**2 +
+        (df_test_true["x_2_orig"] - df_test_true["x_2_sample"])**2
     )
-    return df_new_test, df_reward_sample
+    return df_test_true, df_rewards, df_test_new
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
@@ -475,7 +486,7 @@ def perceive_block_stim(
         pd.DataFrame: [description]
     """
     l_vars = ["stim_id", "x_1", "x_2", "y"]
-    df = df_test.copy()
+    df = df_test.copy().reset_index(drop=True)
     if perceive == "sample":
         seed = np.random.randint(0, 10000, 1)
         np.random.seed(seed)
@@ -538,7 +549,7 @@ def predict_on_block(
     np.random.seed(seeds[0])
     df_r = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
     df_r = df_r.sample(df_r.shape[0], replace=False).reset_index(drop=True)
-    cols = df_test.columns.values  #[if c in ["x_1", "x_2"] for c in df_test.columns.values]
+    cols = [i for i in df_test.columns.values if i != "trial_nr"]
     df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
     df_decide.eval("y_pred_diff = y_pred_r - y_pred_l", inplace=True)
@@ -576,8 +587,7 @@ def sample_left_right(
     df = perceive_block_stim(df_test, scaler, dict_info, seed, perceive=perceive)
     df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(df[["x_1_z", "x_2_z"]], return_std=True)
     df.reset_index(drop=True, inplace=True)
-    df["trial_nr"] = df.index + df_test["trial_nr"].max()
-    a = 10 / 0
+    #df["trial_nr"] = df.index + df_test["trial_nr"].max()
     df.drop(columns=["x_1", "x_2"], inplace=True)
     df.rename(columns={"x_1_sample": "x_1", "x_2_sample": "x_2"}, inplace=True)
     return df
