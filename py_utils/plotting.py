@@ -305,13 +305,14 @@ def plot_moves(df_movements: pd.DataFrame, ax: plt.Axes, title: str) -> plt.Axes
 
 
 def plot_moves_one_condition(
-    idx_plot: int, ax: plt.Axes, list_dfs_new: list, df_info: pd.DataFrame
+    idx_plot: int, title: str, ax: plt.Axes, list_dfs_new: list, df_info: pd.DataFrame
 ) -> plt.Axes:
     """extract accepted samples from given condition, calculate mean, 
     and plot movement in space
 
     Args:
         idx_plot (int): the condition to be plotted
+        title (str): title of the plot
         ax (plt.Axes): the axes object to plot in
         list_dfs_new (list): list with all results
         df_info (pd.DataFrame): info about simulation conditions
@@ -324,10 +325,6 @@ def plot_moves_one_condition(
             ["stim_id", "index"]
         ).groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]].mean()
     )
-    title = f"""\
-    Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"].round(2)},
-    Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
-    """
     ax = plot_moves(df_movements, ax, title)
     return ax
 
@@ -390,6 +387,39 @@ def plot_var_over_bintime(df: pd.DataFrame, title: str, ax: plt.Axes, var: str) 
         ax.text(
             x=df_agg.loc[2, "trial_nr_bin"] + 0.5,
             y=df_agg["mean"].max(),
+            s=f"""N Accepted = {n_accepted}""",
+            fontdict={"size": 20},
+        )
+        ax.set_xlabel("Trial Nr. Binned")
+        ax.set_title(title)
+    return ax
+
+
+def plot_sum_over_bintime(df: pd.DataFrame, title: str, ax: plt.Axes, var: str) -> plt.Axes:
+    """plot SD of GP model over test trials
+
+    Args:
+        df (pd.DataFrame): data frame with all accepted samples
+        title (str): title of the condition to be plotted
+        ax (plt.Axes): axes object
+        var (str): colname of variable to plot
+
+    Returns:
+        plt.Axes: axes object with plot added
+    """
+
+    df = df.query("trial_nr != 0").copy()
+    if df.shape[0] != 0:
+        df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
+        df_agg = (df.groupby("trial_nr_bin")[var].aggregate({"sum"}).reset_index())
+        n_accepted = int(df.shape[0])
+
+        ax.scatter(x="trial_nr_bin", y="sum", data=df_agg, s=100, c="white", zorder=7)
+        ax.scatter(x="trial_nr_bin", y="sum", data=df_agg, s=25, zorder=10)
+        ax.axhline(xmin=0, xmax=9, color="r", linewidth=2)
+        ax.text(
+            x=df_agg.loc[2, "trial_nr_bin"] + 0.5,
+            y=df_agg["sum"].max(),
             s=f"""N Accepted = {n_accepted}""",
             fontdict={"size": 20},
         )
