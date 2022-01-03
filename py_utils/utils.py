@@ -1,4 +1,5 @@
 from functools import reduce, partial
+from re import sub
 
 from numpy.lib.shape_base import split
 from tqdm import tqdm
@@ -35,8 +36,8 @@ def simulation_conditions(dict_variables: dict) -> tuple:
         l_info.append(df_info.loc[i,].to_dict())
     l_titles = [
         f"""\
-        Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"].round(2)},
-        Sampling: {df_info.loc[idx_plot, "sampling"]}, Constrain Space: {df_info.loc[idx_plot, "constrain_space"]}
+        Condition: {df_info.loc[idx_plot, "condition"]}, Sampling: {df_info.loc[idx_plot, "sampling_strategy"]},
+        Beta Softmax: {df_info.loc[idx_plot, "beta_softmax"]}
         """.strip() for idx_plot in range(df_info.shape[0])
     ]
     return (df_info, l_info, l_titles)
@@ -236,19 +237,30 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     for i in np.arange(dict_info["n_runs"]):
         np.random.seed()
         seeds = np.random.randint(0, 10000, 2)
-        reward_fixed, _, _ = total_reward([df_test, gp, scaler], dict_info, seeds, "fixed")
-        reward_sample, df_l, df_r = total_reward([df_test, gp, scaler], dict_info, seeds, "sample")
+        _, reward_fixed, _, _ = total_reward([df_test, gp, scaler], dict_info, seeds, "fixed")
+        df_reward_sample, reward_sample, df_l, df_r = total_reward(
+            [df_test, gp, scaler], dict_info, seeds, "sample"
+        )
         if reward_sample > reward_fixed:
             print(f"""trial {i}""")
             print(f"""got closer in trial {i}""")
             df_test = pd.concat([df_l, df_r], axis=0)
+            df_test.drop_duplicates(subset=["stim_id"], inplace=True)
+    df_test = pd.concat(
+        [df_test.reset_index(drop=True),
+         df_test_true.reset_index(drop=True)], axis=0
+    )
     df_new_test = df_test.merge(
         df_test_true[["stim_id", "x_1", "x_2"]],
         how="left",
         on="stim_id",
         suffixes=["_sample", "_orig"],
     )
-    return df_new_test
+    df_new_test["x_deviation"] = np.sqrt(
+        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
+        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
+    )
+    return df_new_test, df_reward_sample
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
@@ -397,6 +409,7 @@ def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
                              (df_movements["x_2_move"] < 0), "angle"]
         )
     )
+    df_movements["angle"].fillna(0, inplace=True)
     return df_movements
 
 
@@ -526,10 +539,6 @@ def predict_on_block(
     df_r = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
     df_r = df_r.sample(df_r.shape[0], replace=False).reset_index(drop=True)
     cols = df_test.columns.values  #[if c in ["x_1", "x_2"] for c in df_test.columns.values]
-    df_l_xpos = pd.concat([df_l[cols]])
-    df_r_xpos = pd.concat([df_r[cols]])
-    df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
-    df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
     df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
     df_decide.eval("y_pred_diff = y_pred_r - y_pred_l", inplace=True)
@@ -537,7 +546,14 @@ def predict_on_block(
     idxs_keep = df_decide.index.values
     df_decide.reset_index(inplace=True)
     df_decide = df_decide.loc[0:(dict_info["n_samples_block"] - 1),]
-    return df_decide, df_l_xpos.iloc[idxs_keep, :], df_r_xpos.iloc[idxs_keep, :]
+    df_l_xpos = pd.concat([df_l[cols]])
+    df_r_xpos = pd.concat([df_r[cols]])
+    df_l_xpos = df_l_xpos.iloc[idxs_keep, :]
+    df_r_xpos = df_r_xpos.iloc[idxs_keep, :]
+    if dict_info["sampling_strategy"] == "stimulus":
+        df_l_xpos.drop_duplicates(subset=["x_1", "x_2"], inplace=True)
+        df_r_xpos.drop_duplicates(subset=["x_1", "x_2"], inplace=True)
+    return df_decide, df_l_xpos, df_r_xpos
 
 
 def sample_left_right(
@@ -561,6 +577,7 @@ def sample_left_right(
     df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(df[["x_1_z", "x_2_z"]], return_std=True)
     df.reset_index(drop=True, inplace=True)
     df["trial_nr"] = df.index + df_test["trial_nr"].max()
+    a = 10 / 0
     df.drop(columns=["x_1", "x_2"], inplace=True)
     df.rename(columns={"x_1_sample": "x_1", "x_2_sample": "x_2"}, inplace=True)
     return df
@@ -581,7 +598,7 @@ def softmax(df_lr: pd.DataFrame, beta: float) -> np.array:
     return above / below
 
 
-def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: str) -> float:
+def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: str) -> tuple:
     """sum of received rewards for n pairs of perceived stimuli
 
     Args:
@@ -591,7 +608,11 @@ def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: st
         perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
 
     Returns:
-        float: sum of received rewards
+        tuple:
+            df (pd.DataFrame): df with all values from left and right stimuli
+            df["reward"].sum() (float): total reward for batch
+            df_l_xpos (pd.DataFrame): df with left x vals
+            df_r_xpos (pd.DataFrame): df with right x vals
     """
     df, df_l_xpos, df_r_xpos = predict_on_block(list_test, dict_info, seeds, perceive=perceive)
     df["choose_r"] = np.random.binomial(1, softmax(df, dict_info["beta_softmax"]))

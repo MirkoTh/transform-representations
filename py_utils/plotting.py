@@ -17,7 +17,7 @@ def plot_heatmaps(l_info: list, idxs: list = None, map_to_reward: bool = False) 
 
     Args:
         l_info (list): list of Pandas core frames with simulation conditions
-        idxs (list, optional): inides of rows from l_info to plot. Defaults to None. In that case,
+        idxs (list, optional): indices of rows from l_info to plot. Defaults to None. In that case,
         the first and the last observation from l_info are picked
         map_to_reward (bool): should y values be mapped to positive rewards between 5 and 95?
 
@@ -55,16 +55,14 @@ def plot_heatmaps(l_info: list, idxs: list = None, map_to_reward: bool = False) 
         min(l_heatmap[0].melt()["value"].min(), l_heatmap[1].melt()["value"].min()),
         max(l_heatmap[0].melt()["value"].max(), l_heatmap[1].melt()["value"].max()),
     )
-    list(
-        map(
-            plot_one_heatmap,
-            l_heatmap,
-            axes,
-            [vmin, vmin],
-            [vmax, vmax],
-            ["Smooth", "Rough"],
-        )
-    )
+    list(map(
+        plot_one_heatmap,
+        l_heatmap,
+        axes,
+        [vmin, vmin],
+        [vmax, vmax],
+        ["Smooth", "Rough"],
+    ))
 
 
 def plot_1d_waves(l_info: list) -> None:
@@ -75,23 +73,30 @@ def plot_1d_waves(l_info: list) -> None:
     """
     f, ax = plt.subplots(1, 1, figsize=(8, 6))
     idx_max = len(l_info) - 1
-    df_plot1 = pd.DataFrame(
-        utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()
-    ).reset_index()
+    df_plot1 = pd.DataFrame(utils.make_stimuli(l_info[0]).groupby("x_1")["y"].mean()).reset_index()
     df_plot1["Condition"] = "Smooth"
-    df_plot2 = pd.DataFrame(
-        utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
-    ).reset_index()
+    df_plot2 = pd.DataFrame(utils.make_stimuli(l_info[idx_max]).groupby("x_1")["y"].mean()
+                           ).reset_index()
     df_plot2["Condition"] = "Rough"
     df_plot = pd.concat([df_plot1, df_plot2], axis=0).reset_index(drop=True)
-    sns.lineplot(
-        x="x_1", y="y", data=df_plot, hue="Condition", zorder=5, ax=ax, legend=False
+    sns.lineplot(x="x_1", y="y", data=df_plot, hue="Condition", zorder=5, ax=ax, legend=False)
+    sns.scatterplot(
+        x="x_1",
+        y="y",
+        data=df_plot,
+        s=100,
+        color="white",
+        zorder=10,
+        ax=ax,
     )
     sns.scatterplot(
-        x="x_1", y="y", data=df_plot, s=100, color="white", zorder=10, ax=ax,
-    )
-    sns.scatterplot(
-        x="x_1", y="y", data=df_plot, s=35, hue="Condition", zorder=15, ax=ax,
+        x="x_1",
+        y="y",
+        data=df_plot,
+        s=35,
+        hue="Condition",
+        zorder=15,
+        ax=ax,
     )
     ax.legend(prop={"size": 15})
     ax.set_xlabel("$x_{1}$")
@@ -163,7 +168,11 @@ def hist_uncertainty(df: pd.DataFrame, ax: plt.Axes) -> plt.Axes:
 
 
 def plot_gp_deviations(
-    axes: plt.Axes, l_idxs: list, l_plots: list, l_titles: list, s_id: int = None,
+    axes: plt.Axes,
+    l_idxs: list,
+    l_plots: list,
+    l_titles: list,
+    s_id: int = None,
 ) -> None:
     """plot deviations of gp model after testing phase as histograms
     Args:
@@ -199,7 +208,10 @@ def plot_gp_deviations(
 
 
 def uncertainty_on_test_data(
-    df_train: pd.DataFrame, df_test: pd.DataFrame, dict_info: dict, l_ivs: list,
+    df_train: pd.DataFrame,
+    df_test: pd.DataFrame,
+    dict_info: dict,
+    l_ivs: list,
 ) -> pd.DataFrame:
     """plot histogram of sds on test data and 2d visualization of individual sds
 
@@ -265,10 +277,7 @@ def plot_moves(df_movements: pd.DataFrame, ax: plt.Axes, title: str) -> plt.Axes
         l_x_end.append(r.x_1_sample - r.x_1_orig)
         l_y_end.append(r.x_2_sample - r.x_2_orig)
         angle.append(
-            np.rad2deg(
-                l_y_end[idx]
-                / np.sqrt(np.abs(l_y_end[idx] ** 2) + np.abs(l_x_end[idx] ** 2))
-            )
+            np.rad2deg(l_y_end[idx] / np.sqrt(np.abs(l_y_end[idx]**2) + np.abs(l_x_end[idx]**2)))
         )
         if l_x_end[idx] < 0:
             angle[idx] = +180 - angle[idx]
@@ -311,10 +320,9 @@ def plot_moves_one_condition(
         plt.Axes: the axes object with the content added
     """ """"""
     df_movements = (
-        list_dfs_new[idx_plot][list_dfs_new[idx_plot]["index"].notnull()]
-        .sort_values(["stim_id", "index"])
-        .groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]]
-        .mean()
+        list_dfs_new[idx_plot][list_dfs_new[idx_plot]["index"].notnull()].sort_values(
+            ["stim_id", "index"]
+        ).groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]].mean()
     )
     title = f"""\
     Condition: {df_info.loc[idx_plot, "condition"]}, Prior SD: {df_info.loc[idx_plot, "prior_sd"].round(2)},
@@ -347,9 +355,7 @@ def plot_proportion_accepted_samples(
     return ax
 
 
-def plot_var_over_bintime(
-    df: pd.DataFrame, title: str, ax: plt.Axes, var: str
-) -> plt.Axes:
+def plot_var_over_bintime(df: pd.DataFrame, title: str, ax: plt.Axes, var: str) -> plt.Axes:
     """plot SD of GP model over test trials
 
     Args:
@@ -366,9 +372,7 @@ def plot_var_over_bintime(
     if df.shape[0] != 0:
         df["trial_nr_bin"] = pd.cut(df["trial_nr"], 10, labels=range(0, 10))
         df_agg = (
-            df.groupby("trial_nr_bin")[var]
-            .aggregate({"count", "mean", np.std})
-            .reset_index()
+            df.groupby("trial_nr_bin")[var].aggregate({"count", "mean", np.std}).reset_index()
         )
         n_accepted = int(df.shape[0])
         ax.errorbar(
@@ -402,21 +406,15 @@ def regplot_y(df, title, ax):
 
 
 def regplot_max_gradient(df, title, ax):
-    sns.regplot(
-        x="max_gradient", y="x_deviation", data=df.query("trial_nr != 0"), ax=ax
-    )
+    sns.regplot(x="max_gradient", y="x_deviation", data=df.query("trial_nr != 0"), ax=ax)
     ax.set_ylabel("Deviation in x Coordinates")
     ax.set_xlabel("Max y Gradient")
     ax.set_title(title)
 
 
 def regplot_start_uncertainty(df, title, ax):
-    df_test_start = df.query("trial_nr == 0").copy()[
-        ["stim_id", "y_pred_sd", "x_deviation"]
-    ]
-    df_test_sampled = df.query("trial_nr > 0").copy()[
-        ["stim_id", "y_pred_sd", "x_deviation"]
-    ]
+    df_test_start = df.query("trial_nr == 0").copy()[["stim_id", "y_pred_sd", "x_deviation"]]
+    df_test_sampled = df.query("trial_nr > 0").copy()[["stim_id", "y_pred_sd", "x_deviation"]]
     df_plot = pd.merge(
         df_test_start,
         df_test_sampled,
@@ -430,9 +428,7 @@ def regplot_start_uncertainty(df, title, ax):
     ax.set_title(title)
 
 
-def correlation_between_movement_angles(
-    idx1: int, idx2: int, l_df_movements: list
-) -> float:
+def correlation_between_movement_angles(idx1: int, idx2: int, l_df_movements: list) -> float:
     df_tmp = pd.merge(
         l_df_movements[idx1],
         l_df_movements[idx2],
@@ -444,12 +440,10 @@ def correlation_between_movement_angles(
 
 
 def plot_movement_lengths(df, title, ax):
-    df_move_avg = df.groupby("stim_id")[
-        ["x_1_sample", "x_2_sample", "x_1_orig", "x_2_orig"]
-    ].mean()
+    df_move_avg = df.groupby("stim_id")[["x_1_sample", "x_2_sample", "x_1_orig", "x_2_orig"]].mean()
     df_move_avg["x_deviation"] = np.sqrt(
-        (df_move_avg["x_1_orig"] - df_move_avg["x_1_sample"]) ** 2
-        + (df_move_avg["x_2_orig"] - df_move_avg["x_2_sample"]) ** 2
+        (df_move_avg["x_1_orig"] - df_move_avg["x_1_sample"])**2 +
+        (df_move_avg["x_2_orig"] - df_move_avg["x_2_sample"])**2
     )
     ax.hist(df_move_avg["x_deviation"])
     ax.set_title(title)
