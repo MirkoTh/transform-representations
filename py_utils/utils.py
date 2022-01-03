@@ -233,7 +233,7 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     gp = fit_on_train(df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=True)
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_test_true = df_test.copy()
-    for i in np.arange(5):  #dict_info["n_runs"]):
+    for i in np.arange(dict_info["n_runs"]):
         np.random.seed()
         seeds = np.random.randint(0, 10000, 2)
         reward_fixed, _, _ = total_reward([df_test, gp, scaler], dict_info, seeds, "fixed")
@@ -444,9 +444,8 @@ def apply_trained_scaler(df, scaler) -> pd.DataFrame:
 
 def perceive_block_stim(
     df_test: pd.DataFrame,
-    n: int,
     scaler: StandardScaler,
-    prior_sd: float,
+    dict_info: dict,
     seed: int,
     perceive: str = "sample",
 ) -> pd.DataFrame:
@@ -454,9 +453,8 @@ def perceive_block_stim(
 
     Args:
         df_test (pd.DataFrame): [description]
-        n (int): [description]
         scaler (StandardScaler): fitted Scaler object
-        prior_sd (float): prior sd of x values
+        dict_info (dict): simulation parameters
         seed (int): seed of pandas sample call
         perceive (str): sample from prior or use true x value; str can be "sample" or "fixed"
 
@@ -469,26 +467,32 @@ def perceive_block_stim(
         seed = np.random.randint(0, 10000, 1)
         np.random.seed(seed)
         # take a larger sample to drop out overlaps between left and right side
-        sampling_strategy = "stimulus"
-        if sampling_strategy == "stimulus":
-            df[["move_x_1", "move_x_2"]] = np.random.normal(scale=prior_sd, size=(df.shape[0], 2))
+        if dict_info["sampling_strategy"] == "stimulus":
+            df[["move_x_1", "move_x_2"]] = np.random.normal(
+                scale=dict_info["prior_sd"], size=(df.shape[0], 2)
+            )
             df["x_1_sample"] = df["x_1"] + df["move_x_1"]
             df["x_2_sample"] = df["x_2"] + df["move_x_2"]
             df.drop(columns=["move_x_1", "move_x_2"], inplace=True)
             df = (
                 df[l_vars + ["x_1_sample", "x_2_sample"]].sample(
-                    int(n * 1.25), replace=True, random_state=seed
+                    int(dict_info["n_samples_block"] * 1.25), replace=True, random_state=seed
                 ).reset_index(drop=True)
             )
-        if sampling_strategy == "trial":
+        if dict_info["sampling_strategy"] == "trial":
             df = (
-                df[l_vars].sample(int(n * 1.25), replace=True,
-                                  random_state=seed).reset_index(drop=True)
+                df[l_vars].sample(
+                    int(dict_info["n_samples_block"] * 1.25), replace=True, random_state=seed
+                ).reset_index(drop=True)
             )
-            df[["x_1_sample", "x_2_sample"]] = np.random.normal(df[["x_1", "x_2"]], scale=prior_sd)
+            df[["x_1_sample", "x_2_sample"]] = np.random.normal(
+                df[["x_1", "x_2"]], scale=dict_info["prior_sd"]
+            )
     elif perceive == "fixed":
         df[["x_1_sample", "x_2_sample"]] = df[["x_1", "x_2"]]
-        df = df.sample(int(n * 1.25), replace=True, random_state=seed).reset_index(drop=True)
+        df = df.sample(
+            int(dict_info["n_samples_block"] * 1.25), replace=True, random_state=seed
+        ).reset_index(drop=True)
     df_perceived = apply_trained_scaler(df[["x_1_sample", "x_2_sample"]], scaler)
     df = pd.concat([df[l_vars], df_perceived], axis=1)
     return df
@@ -516,8 +520,11 @@ def predict_on_block(
     m_gp = list_test[1]
     scaler = list_test[2]
     l_vars_decide = ["stim_id", "y_pred_mn", "y"]
-    df_l = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[0], perceive)
+    np.random.seed(seeds[0])
+    df_l = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
+    np.random.seed(seeds[0])
     df_r = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
+    df_r = df_r.sample(df_r.shape[0], replace=False).reset_index(drop=True)
     cols = df_test.columns.values  #[if c in ["x_1", "x_2"] for c in df_test.columns.values]
     df_l_xpos = pd.concat([df_l[cols]])
     df_r_xpos = pd.concat([df_r[cols]])
@@ -550,15 +557,9 @@ def sample_left_right(
     Returns:
         pd.DataFrame: [description]
     """
-    df = perceive_block_stim(
-        df_test,
-        dict_info["n_samples_block"],
-        scaler,
-        dict_info["prior_sd"],
-        seed,
-        perceive=perceive
-    )
+    df = perceive_block_stim(df_test, scaler, dict_info, seed, perceive=perceive)
     df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(df[["x_1_z", "x_2_z"]], return_std=True)
+    df.reset_index(drop=True, inplace=True)
     df["trial_nr"] = df.index + df_test["trial_nr"].max()
     df.drop(columns=["x_1", "x_2"], inplace=True)
     df.rename(columns={"x_1_sample": "x_1", "x_2_sample": "x_2"}, inplace=True)
@@ -597,4 +598,4 @@ def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: st
     df[["choose_r", "choose_l"]] = np.array([df["choose_r"], 1 - df["choose_r"]]).T
     df["reward"] = df[["y_r", "y_l"]].to_numpy()[df[["choose_r",
                                                      "choose_l"]].astype(bool).to_numpy()]
-    return df["reward"].sum(), df_l_xpos, df_r_xpos
+    return df, df["reward"].sum(), df_l_xpos, df_r_xpos
