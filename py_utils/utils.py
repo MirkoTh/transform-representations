@@ -235,25 +235,33 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_test_true = df_test.copy()
     df_test_new = df_test.copy()
-    for i in np.arange(dict_info["n_runs"]):
+    df_rewards = pd.DataFrame()
+    for i in np.arange(dict_info["n_runs"]) + 1:
         np.random.seed()
         seeds = np.random.randint(0, 10000, 2)
-        _, reward_fixed, _, _ = total_reward([df_test, gp, scaler], dict_info, seeds, "fixed")
+        df_reward_fixed, reward_fixed, _, _ = total_reward(
+            [df_test, gp, scaler], dict_info, seeds, "fixed"
+        )
+        if i == 0:
+            df_reward_fixed["trial_nr"] = 0
+            df_rewards = pd.concat([df_rewards, df_reward_fixed])
         df_reward_sample, reward_sample, df_l, df_r = total_reward(
             [df_test, gp, scaler], dict_info, seeds, "sample"
         )
+        df_reward_sample["trial_nr"] = i
+        print("block: ", i, ", reward fixed: ", reward_fixed, ", reward sampled: ", reward_sample)
         if reward_sample > reward_fixed:
             print(f"""got closer in block {i}""")
-            df_test = pd.concat([df_l, df_r], axis=0)
-            df_test["trial_nr"] = i
-            df_test.drop_duplicates(subset=["stim_id"], inplace=True)
-            df_test_new = pd.concat([df_test_new, df_test], axis=0)
-            #a = 10 / 0
-    df_test = pd.concat(
-        [df_test.reset_index(drop=True),
-         df_test_true.reset_index(drop=True)], axis=0
-    )
-    df_test_true = df_test.merge(
+            df_accepted = pd.concat([df_l, df_r], axis=0)
+            df_accepted["trial_nr"] = i
+            df_accepted.drop_duplicates(subset=["stim_id"], inplace=True)
+            df_test_new = pd.concat([df_test_new, df_accepted], axis=0)
+            df_rewards = pd.concat([df_rewards, df_reward_sample])
+    # df_test = pd.concat(
+    #     [df_accepted.reset_index(drop=True),
+    #      df_test_true.reset_index(drop=True)], axis=0
+    # )
+    df_test_true = df_accepted.merge(
         df_test_true[["stim_id", "x_1", "x_2"]],
         how="left",
         on="stim_id",
@@ -263,7 +271,7 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         (df_test_true["x_1_orig"] - df_test_true["x_1_sample"])**2 +
         (df_test_true["x_2_orig"] - df_test_true["x_2_sample"])**2
     )
-    return df_test_true, df_reward_sample, df_test_new
+    return df_test_true, df_rewards, df_test_new
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
