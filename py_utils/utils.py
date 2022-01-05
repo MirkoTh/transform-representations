@@ -26,7 +26,9 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     """
     l = list()
     for k, v in dict_variables.items():
-        l.append(pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True))
+        l.append(
+            pd.Series(v, name=k, dtype="category").cat.set_categories(v, ordered=True)
+        )
     df_info = reduce(lambda x, y: pd.merge(x, y, how="cross"), l)
     df_info["length_scale"] = [
         3 if bl else 1 for bl in (df_info["condition"] == "smooth").to_list()
@@ -38,7 +40,8 @@ def simulation_conditions(dict_variables: dict) -> tuple:
         f"""\
         Condition: {df_info.loc[idx_plot, "condition"]}, Sampling: {df_info.loc[idx_plot, "sampling_strategy"]},
         Beta Softmax: {df_info.loc[idx_plot, "beta_softmax"]}
-        """.strip() for idx_plot in range(df_info.shape[0])
+        """.strip()
+        for idx_plot in range(df_info.shape[0])
     ]
     return (df_info, l_info, l_titles)
 
@@ -59,7 +62,9 @@ def make_stimuli(
     """
     l_x = list(
         map(
-            lambda a, b, c, d: pd.Series(np.linspace(a, b, c), name=f"""x_{int(d)}""").round(1),
+            lambda a, b, c, d: pd.Series(
+                np.linspace(a, b, c), name=f"""x_{int(d)}"""
+            ).round(1),
             list(np.repeat(dict_info["space_edge_min"], dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"] - 1, dict_info["n_features"])),
             list(np.repeat(dict_info["space_edge_max"], dict_info["n_features"])),
@@ -78,7 +83,9 @@ def make_stimuli(
     elif gen_model == "GP":
         l_df_xy_1 = list(np.repeat(df_xy.to_numpy(), df_xy.shape[0], 0))
         l_df_xy_2 = list(np.tile(df_xy.to_numpy().T, df_xy.shape[0]).T)
-        kernel_rbf_partial = partial(kernel_rbf, sigma=1, length_scale=dict_info["length_scale"])
+        kernel_rbf_partial = partial(
+            kernel_rbf, sigma=1, length_scale=dict_info["length_scale"]
+        )
         l_similarities = list(map(kernel_rbf_partial, l_df_xy_1, l_df_xy_2))
         df_similarities = pd.DataFrame(
             np.reshape(np.array(l_similarities), (df_xy.shape[0], df_xy.shape[0]))
@@ -102,7 +109,9 @@ def make_stimuli(
     return df_xy
 
 
-def kernel_rbf(X1: np.array, X2: np.array, sigma: float, length_scale: float) -> np.array:
+def kernel_rbf(
+    X1: np.array, X2: np.array, sigma: float, length_scale: float
+) -> np.array:
     """rbf kernel implementation ref. Schulz et al. (2018) jmp tutorial paper
     n.b., uses euclidian distance metric
 
@@ -115,8 +124,8 @@ def kernel_rbf(X1: np.array, X2: np.array, sigma: float, length_scale: float) ->
     Returns:
         np.array: a 1x1 array with the similarity between the two x points
     """
-    dist_eucl = np.sqrt(np.sum(np.abs(X1 - X2)**2))
-    return (sigma**2) * np.exp(-((dist_eucl**2) / (2 * (length_scale**2))))
+    dist_eucl = np.sqrt(np.sum(np.abs(X1 - X2) ** 2))
+    return (sigma ** 2) * np.exp(-((dist_eucl ** 2) / (2 * (length_scale ** 2))))
 
 
 def perceive_stimulus(df_test: pd.DataFrame, dict_info: dict, i: int) -> tuple:
@@ -194,7 +203,9 @@ def fit_on_train(
     return gp
 
 
-def predict_on_test(df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list) -> pd.DataFrame:
+def predict_on_test(
+    df: pd.DataFrame, gp: GaussianProcessRegressor, l_ivs: list
+) -> pd.DataFrame:
     """predict on some new data given fitted GP model
 
     Args:
@@ -231,11 +242,14 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     # t = 1000 * time.time() # current time in milliseconds
     # np.random.seed(int(t) % 2**32)
     # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
-    gp = fit_on_train(df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=True)
+    gp = fit_on_train(
+        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
+    )
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_test_true = df_test.copy()
     df_test_new = df_test.copy()
     df_rewards = pd.DataFrame()
+    df_accepted = pd.DataFrame()
     for i in np.arange(dict_info["n_runs"]) + 1:
         np.random.seed()
         seeds = np.random.randint(0, 10000, 2)
@@ -249,7 +263,14 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
             [df_test, gp, scaler], dict_info, seeds, "sample"
         )
         df_reward_sample["trial_nr"] = i
-        print("block: ", i, ", reward fixed: ", reward_fixed, ", reward sampled: ", reward_sample)
+        print(
+            "block: ",
+            i,
+            ", reward fixed: ",
+            reward_fixed,
+            ", reward sampled: ",
+            reward_sample,
+        )
         if reward_sample > reward_fixed:
             print(f"""got closer in block {i}""")
             df_accepted = pd.concat([df_l, df_r], axis=0)
@@ -261,17 +282,36 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     #     [df_accepted.reset_index(drop=True),
     #      df_test_true.reset_index(drop=True)], axis=0
     # )
-    df_test_true = df_accepted.merge(
-        df_test_true[["stim_id", "x_1", "x_2"]],
+
+    if df_accepted.shape[0] > 0:
+        df_test_new = add_x_deviation(df_test_new, df_test_true)
+        df_test_true = add_x_deviation(df_accepted, df_test_true)
+    return df_test_true, df_rewards, df_test_new
+
+
+def add_x_deviation(df_left: pd.DataFrame, df_right: pd.DataFrame) -> pd.DataFrame:
+    """join df with perceived values on true/orginal values and 
+        calculate deviation in x coordinates
+
+        Args:
+            df_left (pd.DataFrame): df with percevied representations
+            df_right (pd.DataFrame): df with original/true stimulus locations
+
+        Returns:
+            pd.DataFrame: df with x deviation as added column
+        """
+
+    df_out = df_left.merge(
+        df_right[["stim_id", "x_1", "x_2"]],
         how="left",
         on="stim_id",
         suffixes=["_sample", "_orig"],
     )
-    df_test_true["x_deviation"] = np.sqrt(
-        (df_test_true["x_1_orig"] - df_test_true["x_1_sample"])**2 +
-        (df_test_true["x_2_orig"] - df_test_true["x_2_sample"])**2
+    df_out["x_deviation"] = np.sqrt(
+        (df_out["x_1_orig"] - df_out["x_1_sample"]) ** 2
+        + (df_out["x_2_orig"] - df_out["x_2_sample"]) ** 2
     )
-    return df_test_true, df_rewards, df_test_new
+    return df_out
 
 
 def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
@@ -292,7 +332,9 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     # np.random.seed(int(t) % 2 ** 32)
     np.random.seed()
     # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
-    gp = fit_on_train(df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False)
+    gp = fit_on_train(
+        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
+    )
     df_test = predict_on_test(df_test, gp, l_ivs)
     df_new_test = df_test.copy()
     df_new_train = df_train.copy()
@@ -308,36 +350,42 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         df_stim_scaled.columns = [f"""{iv}_z""" for iv in l_ivs]
         df_stim = pd.concat([df_stim, df_stim_scaled], axis=1)
         x1_in = (
-            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"] and
-            df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_1"] > dict_info["space_edge_min"]
+            and df_stim.loc[0, "x_1"] < dict_info["space_edge_max"]
         )
         x2_in = (
-            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"] and
-            df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
+            df_stim.loc[0, "x_2"] > dict_info["space_edge_min"]
+            and df_stim.loc[0, "x_2"] < dict_info["space_edge_max"]
         )
 
         # propose a new posterior
         df_stim = predict_on_test(df_stim, gp, l_ivs)
         deviation_test = np.abs(
-            df_new_test.query(f"""stim_id == {stim_id_curr}""")["y_pred_mn"].mean() -
-            df_test.loc[idx_stimulus,]["y"]
+            df_new_test.query(f"""stim_id == {stim_id_curr}""")["y_pred_mn"].mean()
+            - df_test.loc[idx_stimulus,]["y"]
         )
         # deviation_test = np.abs(
         #     df_new_test.loc[idx_stimulus,]["y_pred_mn"]
         #     - df_test.loc[idx_stimulus,]["y"]
         # )
-        deviation_trial = float(np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"]))
+        deviation_trial = float(
+            np.abs(df_stim["y_pred_mn"] - df_test.loc[idx_stimulus,]["y"])
+        )
         if dict_info["sampling"] == "improvement":
             if deviation_trial < deviation_test:
                 if dict_info["constrain_space"]:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        gp = fit_on_train(df_new_train, l_ivs, dict_info, fit_length_scale=True)
+                        gp = fit_on_train(
+                            df_new_train, l_ivs, dict_info, fit_length_scale=True
+                        )
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    gp = fit_on_train(df_new_train, l_ivs, dict_info, fit_length_scale=True)
+                    gp = fit_on_train(
+                        df_new_train, l_ivs, dict_info, fit_length_scale=True
+                    )
         elif dict_info["sampling"] == "metropolis-hastings":
             ecdf = ECDF(df_test["y_pred_sd"])
             prop_deviation = ecdf(df_stim["y_pred_sd"])
@@ -347,22 +395,17 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
                     if x1_in and x2_in:
                         df_new_test = df_new_test.append(df_stim, ignore_index=True)
                         df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                        gp = fit_on_train(df_new_train, l_ivs, dict_info, fit_length_scale=True)
+                        gp = fit_on_train(
+                            df_new_train, l_ivs, dict_info, fit_length_scale=True
+                        )
                 else:
                     df_new_test = df_new_test.append(df_stim, ignore_index=True)
                     df_new_train = df_new_train.append(df_stim, ignore_index=True)
-                    gp = fit_on_train(df_new_train, l_ivs, dict_info, fit_length_scale=True)
+                    gp = fit_on_train(
+                        df_new_train, l_ivs, dict_info, fit_length_scale=True
+                    )
         l_kernel.append(gp.kernel_.length_scale)
-    df_new_test = df_new_test.merge(
-        df_test[["stim_id", "x_1", "x_2"]],
-        how="left",
-        on="stim_id",
-        suffixes=["_sample", "_orig"],
-    )
-    df_new_test["x_deviation"] = np.sqrt(
-        (df_new_test["x_1_orig"] - df_new_test["x_1_sample"])**2 +
-        (df_new_test["x_2_orig"] - df_new_test["x_2_sample"])**2
-    )
+    df_new_test = add_x_deviation(df_new_test, df_test)
     return (df_new_test, l_kernel)
 
 
@@ -380,7 +423,7 @@ def split_train_test(dict_variables: dict, df_xy: pd.DataFrame) -> tuple:
     """
     np.random.seed(12433)
     idx_train = np.random.choice(
-        np.arange(0, dict_variables["space_edge_max"]**2),
+        np.arange(0, dict_variables["space_edge_max"] ** 2),
         size=dict_variables["n_training"],
         replace=False,
     )
@@ -401,23 +444,31 @@ def add_angle_of_movements(df_movements: pd.DataFrame) -> pd.DataFrame:
     """
     df_movements.reset_index(drop=False, inplace=True)
     df_movements = (
-        df_movements[df_movements["index"].notnull()].sort_values(
-            ["stim_id", "index"]
-        ).groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]].mean()
+        df_movements[df_movements["index"].notnull()]
+        .sort_values(["stim_id", "index"])
+        .groupby("stim_id")[["x_1_orig", "x_2_orig", "x_1_sample", "x_2_sample"]]
+        .mean()
     )
     df_movements.eval("x_1_move = x_1_sample - x_1_orig", inplace=True)
     df_movements.eval("x_2_move = x_2_sample - x_2_orig", inplace=True)
     df_movements["angle"] = np.rad2deg(
-        df_movements["x_2_move"] /
-        np.sqrt(np.abs(df_movements["x_2_move"]**2) + np.abs(df_movements["x_1_move"]**2))
+        df_movements["x_2_move"]
+        / np.sqrt(
+            np.abs(df_movements["x_2_move"] ** 2)
+            + np.abs(df_movements["x_1_move"] ** 2)
+        )
     )
     df_movements.loc[df_movements["x_1_move"] < 0, "angle"] = 180 - (
         df_movements.loc[df_movements["x_1_move"] < 0, "angle"]
     )
-    df_movements.loc[(df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"] = (
-        360 + (
-            df_movements.loc[(df_movements["x_1_move"] > 0) &
-                             (df_movements["x_2_move"] < 0), "angle"]
+    df_movements.loc[
+        (df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"
+    ] = (
+        360
+        + (
+            df_movements.loc[
+                (df_movements["x_1_move"] > 0) & (df_movements["x_2_move"] < 0), "angle"
+            ]
         )
     )
     df_movements["angle"].fillna(0, inplace=True)
@@ -441,7 +492,9 @@ def add_max_gradient(df: pd.DataFrame) -> pd.DataFrame:
             how="cross",
         )
         df_distance["dist_eucl"] = np.sqrt(
-            df_distance.eval("(x_1_orig_x - x_1_orig_y)**2 + (x_2_orig_x - x_2_orig_y)**2")
+            df_distance.eval(
+                "(x_1_orig_x - x_1_orig_y)**2 + (x_2_orig_x - x_2_orig_y)**2"
+            )
         )
         df_distance["y_step"] = np.abs(df_distance.eval("y_x - y_y"))
         l.append(df_distance.query("dist_eucl == 1")["y_step"].max())
@@ -499,15 +552,23 @@ def perceive_block_stim(
             df["x_2_sample"] = df["x_2"] + df["move_x_2"]
             df.drop(columns=["move_x_1", "move_x_2"], inplace=True)
             df = (
-                df[l_vars + ["x_1_sample", "x_2_sample"]].sample(
-                    int(dict_info["n_samples_block"] * 1.25), replace=True, random_state=seed
-                ).reset_index(drop=True)
+                df[l_vars + ["x_1_sample", "x_2_sample"]]
+                .sample(
+                    int(dict_info["n_samples_block"] * 1.25),
+                    replace=True,
+                    random_state=seed,
+                )
+                .reset_index(drop=True)
             )
         if dict_info["sampling_strategy"] == "trial":
             df = (
-                df[l_vars].sample(
-                    int(dict_info["n_samples_block"] * 1.25), replace=True, random_state=seed
-                ).reset_index(drop=True)
+                df[l_vars]
+                .sample(
+                    int(dict_info["n_samples_block"] * 1.25),
+                    replace=True,
+                    random_state=seed,
+                )
+                .reset_index(drop=True)
             )
             df[["x_1_sample", "x_2_sample"]] = np.random.normal(
                 df[["x_1", "x_2"]], scale=dict_info["prior_sd"]
@@ -556,7 +617,9 @@ def predict_on_block(
     df_decide.query("stim_id_l != stim_id_r", inplace=True)
     idxs_keep = df_decide.index.values
     df_decide.reset_index(inplace=True)
-    df_decide = df_decide.loc[0:(dict_info["n_samples_block"] - 1),]
+    df_decide = df_decide.loc[
+        0 : (dict_info["n_samples_block"] - 1),
+    ]
     df_l_xpos = pd.concat([df_l[cols]])
     df_r_xpos = pd.concat([df_r[cols]])
     df_l_xpos = df_l_xpos.iloc[idxs_keep, :]
@@ -568,8 +631,12 @@ def predict_on_block(
 
 
 def sample_left_right(
-    df_test: pd.DataFrame, dict_info: dict, m_gp: GaussianProcessRegressor, scaler: StandardScaler,
-    seed: int, perceive: str
+    df_test: pd.DataFrame,
+    dict_info: dict,
+    m_gp: GaussianProcessRegressor,
+    scaler: StandardScaler,
+    seed: int,
+    perceive: str,
 ) -> pd.DataFrame:
     """sample x values from prior for left and right arm of the bandit
 
@@ -585,9 +652,11 @@ def sample_left_right(
         pd.DataFrame: [description]
     """
     df = perceive_block_stim(df_test, scaler, dict_info, seed, perceive=perceive)
-    df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(df[["x_1_z", "x_2_z"]], return_std=True)
+    df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(
+        df[["x_1_z", "x_2_z"]], return_std=True
+    )
     df.reset_index(drop=True, inplace=True)
-    #df["trial_nr"] = df.index + df_test["trial_nr"].max()
+    # df["trial_nr"] = df.index + df_test["trial_nr"].max()
     df.drop(columns=["x_1", "x_2"], inplace=True)
     df.rename(columns={"x_1_sample": "x_1", "x_2_sample": "x_2"}, inplace=True)
     return df
@@ -608,7 +677,9 @@ def softmax(df_lr: pd.DataFrame, beta: float) -> np.array:
     return above / below
 
 
-def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: str) -> tuple:
+def total_reward(
+    list_test: list, dict_info: dict, seeds: np.array, perceive: str
+) -> tuple:
     """sum of received rewards for n pairs of perceived stimuli
 
     Args:
@@ -624,9 +695,12 @@ def total_reward(list_test: list, dict_info: dict, seeds: np.array, perceive: st
             df_l_xpos (pd.DataFrame): df with left x vals
             df_r_xpos (pd.DataFrame): df with right x vals
     """
-    df, df_l_xpos, df_r_xpos = predict_on_block(list_test, dict_info, seeds, perceive=perceive)
+    df, df_l_xpos, df_r_xpos = predict_on_block(
+        list_test, dict_info, seeds, perceive=perceive
+    )
     df["choose_r"] = np.random.binomial(1, softmax(df, dict_info["beta_softmax"]))
     df[["choose_r", "choose_l"]] = np.array([df["choose_r"], 1 - df["choose_r"]]).T
-    df["reward"] = df[["y_r", "y_l"]].to_numpy()[df[["choose_r",
-                                                     "choose_l"]].astype(bool).to_numpy()]
+    df["reward"] = df[["y_r", "y_l"]].to_numpy()[
+        df[["choose_r", "choose_l"]].astype(bool).to_numpy()
+    ]
     return df, df["reward"].sum(), df_l_xpos, df_r_xpos
