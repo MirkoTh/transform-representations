@@ -114,7 +114,6 @@ def make_stimuli(
         )
     )
     df_xy = reduce(lambda a, b: pd.merge(a, b, how="cross"), l_x)
-    # to be changed: add option to sample from GP prior instead of sinus function
     if gen_model != "GP":
         if dict_info["condition"] == "smooth":
             mult = 1
@@ -660,13 +659,16 @@ def predict_on_block(
     df_decide.query("stim_id_l != stim_id_r", inplace=True)
     idxs_keep = df_decide.index.values
     df_decide.reset_index(inplace=True)
-    df_decide = df_decide.loc[
-        0 : (dict_info["n_samples_block"] - 1),
+    df_decide = df_decide.iloc[
+        0 : dict_info["n_samples_block"],
     ]
     df_l_xpos = pd.concat([df_l[cols]])
     df_r_xpos = pd.concat([df_r[cols]])
-    df_l_xpos = df_l_xpos.iloc[idxs_keep, :]
-    df_r_xpos = df_r_xpos.iloc[idxs_keep, :]
+    df_l_xpos = df_l_xpos.iloc[idxs_keep, :].reset_index(drop=True)
+    df_r_xpos = df_r_xpos.iloc[idxs_keep, :].reset_index(drop=True)
+    df_l_xpos = df_l_xpos.iloc[0 : dict_info["n_samples_block"]]
+    df_r_xpos = df_r_xpos.iloc[0 : dict_info["n_samples_block"]]
+
     if dict_info["sampling_strategy"] == "stimulus":
         df_l_xpos.drop_duplicates(subset=["x_1", "x_2"], inplace=True)
         df_r_xpos.drop_duplicates(subset=["x_1", "x_2"], inplace=True)

@@ -31,7 +31,6 @@ def plot_heatmaps(
                                the first and the last observation from l_info are picked
         map_to_reward (bool): should y values be mapped to positive rewards between 5 and 95?
         l_titles (list): list with titles of subplots
-
     """
 
     def pivot_xy(idx, l=l_info):
@@ -184,7 +183,7 @@ def plot_gp_deviations(
         cond_id = l_idxs[idx]
         df_plt = l_plots[cond_id]
         df_plt = df_plt.query("trial_nr != 0").copy()
-        x_mean = df_plt["x_deviation"].mean()
+        x_mean = np.round(df_plt["x_deviation"].mean(), 2)
         bins_edges = np.histogram_bin_edges(df_plt["x_deviation"], bins="auto")
         df_plt["x_bin"] = pd.cut(df_plt["x_deviation"], bins_edges)
         y_mean = df_plt.value_counts("x_bin").mean()
@@ -193,7 +192,7 @@ def plot_gp_deviations(
         ax.text(
             x=x_mean,
             y=y_mean,
-            s=f"""N Accepted = {df_plt.shape[0]}""",
+            s=f"""N Accepted = {df_plt.shape[0]}\n Mean = {x_mean}""",
             fontdict={"size": 14},
         )
         sns.histplot(df_plt["x_deviation"], ax=ax)
@@ -216,7 +215,7 @@ def uncertainty_on_test_data(
         show_colorbar (bool): stating whether individual colorbars should be shown
     """
     gp = utils.fit_on_train(
-        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=True
+        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
     )
     df_test = utils.predict_on_test(df_test, gp, l_ivs)
     return df_test
