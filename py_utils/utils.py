@@ -2,6 +2,7 @@ from functools import reduce, partial
 from re import sub
 
 from numpy.lib.shape_base import split
+from pandas.core.frame import DataFrame
 from tqdm import tqdm
 
 import numpy as np
@@ -36,14 +37,55 @@ def simulation_conditions(dict_variables: dict) -> tuple:
     l_info = list()
     for i in range(0, df_info.shape[0]):
         l_info.append(df_info.loc[i,].to_dict())
-    l_titles = [
-        f"""\
-        Condition: {df_info.loc[idx_plot, "condition"]}, Sampling: {df_info.loc[idx_plot, "sampling_strategy"]},
-        Beta Softmax: {df_info.loc[idx_plot, "beta_softmax"]}
-        """.strip()
-        for idx_plot in range(df_info.shape[0])
+    variables = [
+        "condition",
+        "sampling_strategy",
+        "prior_sd",
+        "sampling",
+        "constrain_space",
+        "beta_softmax",
     ]
+    l_titles = make_nice_titles(df_info, variables)
     return (df_info, l_info, l_titles)
+
+
+def make_nice_titles(df_info: pd.DataFrame, variables: list) -> list:
+    """create plot titles for the simulation conditions
+
+    Args:
+        df_info (pd.DataFrame): simulation conditions
+        variables (list): varied variables
+
+    Returns:
+        list: with plot titles as strings
+    """
+    l_varied = list()
+    variables = [
+        "condition",
+        "sampling_strategy",
+        "prior_sd",
+        "sampling",
+        "constrain_space",
+        "beta_softmax",
+    ]
+    for v in variables:
+        unique_entries = list(df_info[v].unique())
+        if len(unique_entries) > 1:
+            l_varied.append(v)
+
+    # retrieved from: https://stackoverflow.com/questions/36300158/split-text-after-the-second-occurrence-of-character
+    def split(strng, sep, pos):
+        strng = strng.split(sep)
+        return sep.join(strng[:pos]), sep.join(strng[pos:])
+
+    l_titles = list()
+    for row in df_info[l_varied].itertuples(index=False):
+        title = list()
+        for col in range(len(row)):
+            title.append(f"""{l_varied[col]} = {row[col]}""")
+        l_titles.append(", ".join(title))
+        l_titles[-1] = "\n".join(split(l_titles[-1], ",", 2))
+    return l_titles
 
 
 def make_stimuli(
@@ -278,14 +320,15 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
             df_accepted.drop_duplicates(subset=["stim_id"], inplace=True)
             df_test_new = pd.concat([df_test_new, df_accepted], axis=0)
             df_rewards = pd.concat([df_rewards, df_reward_sample])
-    # df_test = pd.concat(
-    #     [df_accepted.reset_index(drop=True),
-    #      df_test_true.reset_index(drop=True)], axis=0
-    # )
-
     if df_accepted.shape[0] > 0:
+        # if sampling from the prior helped:
         df_test_new = add_x_deviation(df_test_new, df_test_true)
         df_test_true = add_x_deviation(df_accepted, df_test_true)
+    else:
+        # if no samples were accepted
+        df_test_new = add_x_deviation(df_test_true, df_test_true)
+        df_test_true = add_x_deviation(df_test_true, df_test_true)
+
     return df_test_true, df_rewards, df_test_new
 
 
