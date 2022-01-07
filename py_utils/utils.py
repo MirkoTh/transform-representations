@@ -259,7 +259,10 @@ def predict_on_test(
 
 
 def run_perception_pairs(
-    dict_info: dict, df_xy: pd.DataFrame, refit_gp: bool = False
+    dict_info: dict,
+    df_xy: pd.DataFrame,
+    refit_gp: bool = False,
+    readjust_representations: bool = False,
 ) -> tuple:
     """iterate over trials noisily perceiving pairs of stimuli from test dataset
     feed GP predicted y values into logistic regression predicting probability of accepting
@@ -279,10 +282,23 @@ def run_perception_pairs(
     """
     df_xy, l_ivs, scaler = scale_ivs(df_xy)
     df_train, df_test = split_train_test(dict_info, df_xy)
-    gp = fit_on_train(
-        df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
-    )
-    df_test = predict_on_test(df_test, gp, l_ivs)
+    if dict_info["n_training"] > 0:
+        # in that case people are trained on a proportion of the true x, y values
+        # prediction on df_test is done also on the true x, y values
+        gp = fit_on_train(
+            df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
+        )
+        df_test = predict_on_test(df_test, gp, l_ivs)
+    else:
+        # here, people already start by perceiving noisy samples
+        # from the prior and predict
+        df_train = perceive_block_stim(df_xy, scaler, dict_info, 1234, "sample")
+        df_train.drop_duplicates(subset=["x_1", "x_2"], inplace=True)
+        gp = fit_on_train(
+            df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
+        )
+        df_test = df_xy
+
     df_test_true = df_test.copy()
     df_test_new = df_test.copy()
     df_rewards = pd.DataFrame()
@@ -326,6 +342,11 @@ def run_perception_pairs(
                     update_length_scale=False,
                 )
             l_kernel.append(gp.kernel_.length_scale)
+            if readjust_representations:
+                # move points in df_test to accepted samples
+                keep = ~df_test["stim_id"].isin(df_accepted["stim_id"])
+                df_test = pd.concat([df_test[keep], df_accepted], axis=0)
+
     if df_accepted.shape[0] > 0:
         # if sampling from the prior helped:
         df_test_new = add_x_deviation(df_test_new, df_test_true)
@@ -587,7 +608,6 @@ def perceive_block_stim(
     l_vars = ["stim_id", "x_1", "x_2", "y"]
     df = df_test.copy().reset_index(drop=True)
     if perceive == "sample":
-        seed = np.random.randint(0, 10000, 1)
         np.random.seed(seed)
         # take a larger sample to drop out overlaps between left and right side
         if dict_info["sampling_strategy"] == "stimulus":
@@ -629,34 +649,24 @@ def perceive_block_stim(
     return df
 
 
-def predict_on_block(
-    list_test: list, dict_info: dict, seeds: np.array, perceive: str
-) -> pd.DataFrame:
-    """predict on pairs (aka left and right of two-armed bandit)
-    of unseen test points given trained gp model
+def make_decision_df(
+    df_l: pd.DataFrame, df_r: pd.DataFrame, df_test: pd.DataFrame, dict_info: dict
+) -> tuple:
+    """clean decision df and remove duplicates from left and right dfs
 
     Args:
-        list_test (list): list containing
-            df_test : with x vals not seen during training
-            m_gp    : the trained gp model
-            scaler  : the z scaling object
-        dict_info (dict): simulation parameters
-        seeds (np.array): two seed values to sample left and right test points
-        perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
+        df_l (pd.DataFrame): df sampled from left arm of bandit
+        df_r (pd.DataFrame): df sampled from right arm of bandit
+        df_test (pd.DataFrame): [description]
+        dict_info (dict): [description]
 
     Returns:
-        pd.DataFrame: df with predictions on both pairs
+        tuple
+            df_decide (pd.DataFrame): df with prediction difference between left and right arm
+            df_l_xpos (pd.DataFrame): df with unique stimuli of left arm of bandit
+            df_r_xpos (pd.DataFrame): df with unique stimuli of right arm of bandit
     """
-    df_test = list_test[0]
-    m_gp = list_test[1]
-    scaler = list_test[2]
     l_vars_decide = ["stim_id", "y_pred_mn", "y"]
-    np.random.seed(seeds[0])
-    df_l = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
-    np.random.seed(seeds[0])
-    df_r = sample_left_right(df_test, dict_info, m_gp, scaler, seeds[1], perceive)
-    df_r = df_r.sample(df_r.shape[0], replace=False).reset_index(drop=True)
-    cols = [i for i in df_test.columns.values if i != "trial_nr"]
     df_decide = pd.concat([df_l[l_vars_decide], df_r[l_vars_decide]], axis=1)
     df_decide.columns = ["stim_id_l", "y_pred_l", "y_l", "stim_id_r", "y_pred_r", "y_r"]
     df_decide.eval("y_pred_diff = y_pred_r - y_pred_l", inplace=True)
@@ -666,6 +676,7 @@ def predict_on_block(
     df_decide = df_decide.iloc[
         0 : dict_info["n_samples_block"],
     ]
+    cols = [i for i in df_test.columns.values if i != "trial_nr"]
     df_l_xpos = pd.concat([df_l[cols]])
     df_r_xpos = pd.concat([df_r[cols]])
     df_l_xpos = df_l_xpos.iloc[idxs_keep, :].reset_index(drop=True)
@@ -676,36 +687,24 @@ def predict_on_block(
     if dict_info["sampling_strategy"] == "stimulus":
         df_l_xpos.drop_duplicates(subset=["x_1", "x_2"], inplace=True)
         df_r_xpos.drop_duplicates(subset=["x_1", "x_2"], inplace=True)
+
     return df_decide, df_l_xpos, df_r_xpos
 
 
-def sample_left_right(
-    df_test: pd.DataFrame,
-    dict_info: dict,
-    m_gp: GaussianProcessRegressor,
-    scaler: StandardScaler,
-    seed: int,
-    perceive: str,
-) -> pd.DataFrame:
-    """sample x values from prior for left and right arm of the bandit
+def predict_miniblock(df: pd.DataFrame, m_gp: GaussianProcessRegressor) -> pd.DataFrame:
+    """predict y values given df with x values and GP model
 
     Args:
-        df_test (pd.DataFrame): df with original true x locations to predict
-        dict_info (dict): experimental info
-        scaler (StandardScaler): scaler object to z-transform x values
-        m_gp (GaussianProcessRegressor): GP model
-        seed (int): seed value for sampling
-        perceive (str): deterministic perception ("fixed") or perception from prior ("sample")
+        df (pd.DataFrame): df to predict on
+        m_gp (GaussianProcessRegressor): fitted GP object
 
     Returns:
-        pd.DataFrame: [description]
+        pd.DataFrame: df with predictions added as columns (predictions: mean and sd)
     """
-    df = perceive_block_stim(df_test, scaler, dict_info, seed, perceive=perceive)
     df["y_pred_mn"], df["y_pred_sd"] = m_gp.predict(
         df[["x_1_z", "x_2_z"]], return_std=True
     )
     df.reset_index(drop=True, inplace=True)
-    # df["trial_nr"] = df.index + df_test["trial_nr"].max()
     df.drop(columns=["x_1", "x_2"], inplace=True)
     df.rename(columns={"x_1_sample": "x_1", "x_2_sample": "x_2"}, inplace=True)
     return df
@@ -744,12 +743,22 @@ def total_reward(
             df_l_xpos (pd.DataFrame): df with left x vals
             df_r_xpos (pd.DataFrame): df with right x vals
     """
-    df, df_l_xpos, df_r_xpos = predict_on_block(
-        list_test, dict_info, seeds, perceive=perceive
+    df_test, m_gp, scaler = list_test
+    df_l = perceive_block_stim(df_test, scaler, dict_info, seeds[0], perceive=perceive)
+    df_r = perceive_block_stim(df_test, scaler, dict_info, seeds[0], perceive=perceive)
+    df_l = predict_miniblock(df_l, m_gp)
+    df_r = predict_miniblock(df_r, m_gp)
+    df_r = df_r.sample(df_r.shape[0], replace=False, random_state=seeds[1]).reset_index(
+        drop=True
     )
-    df["choose_r"] = np.random.binomial(1, softmax(df, dict_info["beta_softmax"]))
-    df[["choose_r", "choose_l"]] = np.array([df["choose_r"], 1 - df["choose_r"]]).T
-    df["reward"] = df[["y_r", "y_l"]].to_numpy()[
-        df[["choose_r", "choose_l"]].astype(bool).to_numpy()
+    df_decide, df_l_xpos, df_r_xpos = make_decision_df(df_l, df_r, df_test, dict_info)
+    df_decide["choose_r"] = np.random.binomial(
+        1, softmax(df_decide, dict_info["beta_softmax"])
+    )
+    df_decide[["choose_r", "choose_l"]] = np.array(
+        [df_decide["choose_r"], 1 - df_decide["choose_r"]]
+    ).T
+    df_decide["reward"] = df_decide[["y_r", "y_l"]].to_numpy()[
+        df_decide[["choose_r", "choose_l"]].astype(bool).to_numpy()
     ]
-    return df, df["reward"].sum(), df_l_xpos, df_r_xpos
+    return df_decide, df_decide["reward"].sum(), df_l_xpos, df_r_xpos
