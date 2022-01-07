@@ -38,12 +38,7 @@ def simulation_conditions(dict_variables: dict, task: str) -> tuple:
     l_info = list()
     for i in range(0, df_info.shape[0]):
         l_info.append(df_info.loc[i,].to_dict())
-    variables = [
-        "condition",
-        "prior_sd",
-        "sampling",
-        "constrain_space",
-    ]
+    variables = ["condition", "prior_sd", "sampling", "constrain_space", "n_training"]
     if task == "reward":
         variables.append("sampling_strategy")
         variables.append("beta_softmax")
@@ -297,7 +292,7 @@ def run_perception_pairs(
         gp = fit_on_train(
             df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
         )
-        df_test = df_xy
+        df_test = predict_on_test(df_xy, gp, l_ivs)
 
     df_test_true = df_test.copy()
     df_test_new = df_test.copy()
@@ -718,7 +713,7 @@ def softmax(df_lr: pd.DataFrame, beta: float) -> np.array:
         beta (float): temperature parameter of softmax
 
     Returns:
-        np.array: with probabilities choosing left or right option
+        np.array: with probability choosing right option
     """
     above = np.exp(beta * df_lr.loc[:, "y_pred_r"])
     below = np.sum(np.exp(beta * df_lr.loc[:, ["y_pred_r", "y_pred_l"]]), axis=1)
@@ -752,13 +747,17 @@ def total_reward(
         drop=True
     )
     df_decide, df_l_xpos, df_r_xpos = make_decision_df(df_l, df_r, df_test, dict_info)
-    df_decide["choose_r"] = np.random.binomial(
-        1, softmax(df_decide, dict_info["beta_softmax"])
-    )
+    df_decide["p_right"] = softmax(df_decide, dict_info["beta_softmax"])
+    df_decide["p_left"] = 1 - df_decide["p_right"]
+    df_decide["choose_r"] = np.random.binomial(1, df_decide["p_right"])
     df_decide[["choose_r", "choose_l"]] = np.array(
         [df_decide["choose_r"], 1 - df_decide["choose_r"]]
     ).T
-    df_decide["reward"] = df_decide[["y_r", "y_l"]].to_numpy()[
-        df_decide[["choose_r", "choose_l"]].astype(bool).to_numpy()
-    ]
+
+    # only winning side:
+    # df_decide["reward"] = df_decide[["y_r", "y_l"]].to_numpy()[
+    #     df_decide[["choose_r", "choose_l"]].astype(bool).to_numpy()
+    # ]
+    # expected value:
+    df_decide["reward"] = df_decide.eval("p_left * y_l + p_right * y_r")
     return df_decide, df_decide["reward"].sum(), df_l_xpos, df_r_xpos
