@@ -15,11 +15,12 @@ from sklearn.preprocessing import StandardScaler
 from statsmodels.distributions import ECDF
 
 
-def simulation_conditions(dict_variables: dict) -> tuple:
+def simulation_conditions(dict_variables: dict, task: str) -> tuple:
     """create dataframe and list with simulation conditions
 
     Args:
         dict_variables (dict): dictionary with variables as keys and levels as values
+        task (str): "function" or "reward" learning
 
     Returns:
          [df_info] pd.DataFrame: a data frame with the conditions
@@ -39,12 +40,13 @@ def simulation_conditions(dict_variables: dict) -> tuple:
         l_info.append(df_info.loc[i,].to_dict())
     variables = [
         "condition",
-        "sampling_strategy",
         "prior_sd",
         "sampling",
         "constrain_space",
-        "beta_softmax",
     ]
+    if task == "reward":
+        variables.append("sampling_strategy")
+        variables.append("beta_softmax")
     l_titles = make_nice_titles(df_info, variables)
     return (df_info, l_info, l_titles)
 
@@ -60,14 +62,6 @@ def make_nice_titles(df_info: pd.DataFrame, variables: list) -> list:
         list: with plot titles as strings
     """
     l_varied = list()
-    variables = [
-        "condition",
-        "sampling_strategy",
-        "prior_sd",
-        "sampling",
-        "constrain_space",
-        "beta_softmax",
-    ]
     for v in variables:
         unique_entries = list(df_info[v].unique())
         if len(unique_entries) > 1:
@@ -264,7 +258,9 @@ def predict_on_test(
     return df
 
 
-def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
+def run_perception_pairs(
+    dict_info: dict, df_xy: pd.DataFrame, refit_gp: bool = False
+) -> tuple:
     """iterate over trials noisily perceiving pairs of stimuli from test dataset
     feed GP predicted y values into logistic regression predicting probability of accepting
     the second of the two presented stimuli
@@ -272,17 +268,17 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     Args:
         dict_info (dict): experimental parameter dict
         df_xy (list): data frame with x y values of simulation condition
+        refit_gp (bool): should the GP model be refit after miniblock of samples has been accepted
 
     Returns:
-        pd.DataFrame: XXX
+        tuple
+            df_test_true (pd.DataFrame)
+            df_rewards (pd.DataFrame)
+            df_test_new (pd.DataFrame)
+            l_kernel (list)
     """
     df_xy, l_ivs, scaler = scale_ivs(df_xy)
     df_train, df_test = split_train_test(dict_info, df_xy)
-    # after the train test split the random seed could be removed again using the following code
-    # import time
-    # t = 1000 * time.time() # current time in milliseconds
-    # np.random.seed(int(t) % 2**32)
-    # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
     gp = fit_on_train(
         df_train, l_ivs, dict_info, fit_length_scale=True, update_length_scale=False
     )
@@ -291,6 +287,8 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     df_test_new = df_test.copy()
     df_rewards = pd.DataFrame()
     df_accepted = pd.DataFrame()
+    l_kernel = list()
+    l_kernel.append(gp.kernel_.length_scale)
     for i in np.arange(dict_info["n_runs"]) + 1:
         np.random.seed()
         seeds = np.random.randint(0, 10000, 2)
@@ -319,6 +317,15 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
             df_accepted.drop_duplicates(subset=["stim_id"], inplace=True)
             df_test_new = pd.concat([df_test_new, df_accepted], axis=0)
             df_rewards = pd.concat([df_rewards, df_reward_sample])
+            if refit_gp:
+                gp = fit_on_train(
+                    df_test_new,
+                    l_ivs,
+                    dict_info,
+                    fit_length_scale=True,
+                    update_length_scale=False,
+                )
+            l_kernel.append(gp.kernel_.length_scale)
     if df_accepted.shape[0] > 0:
         # if sampling from the prior helped:
         df_test_new = add_x_deviation(df_test_new, df_test_true)
@@ -328,7 +335,7 @@ def run_perception_pairs(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
         df_test_new = add_x_deviation(df_test_true, df_test_true)
         df_test_true = add_x_deviation(df_test_true, df_test_true)
 
-    return df_test_true, df_rewards, df_test_new
+    return df_test_true, df_rewards, df_test_new, l_kernel
 
 
 def add_x_deviation(df_left: pd.DataFrame, df_right: pd.DataFrame) -> pd.DataFrame:
@@ -369,9 +376,6 @@ def run_perception(dict_info: dict, df_xy: pd.DataFrame) -> pd.DataFrame:
     """
     df_xy, l_ivs, scaler = scale_ivs(df_xy)
     df_train, df_test = split_train_test(dict_info, df_xy)
-    # after the train test split the random seed could be removed again using the following code
-    # t = 1000 * time.time()  # current time in milliseconds
-    # np.random.seed(int(t) % 2 ** 32)
     np.random.seed()
     # or just call np.random.seed() without argument, which also resets the seed to a pseudorandom value
     gp = fit_on_train(
