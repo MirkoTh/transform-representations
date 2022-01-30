@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<script src="js-helpers.js" charset="utf-8"></script>
+<!--<script src="transform-reps-cat-1.js" charset="utf-8"></script>-->
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Category Learning - Representations">
+    <meta name="author" content="Mirko Thalmann, Akshay Jagadish, & Eric Schulz">
+    <meta charset="utf-8">
+    <title>Category Learning</title>
+
+    <script src='https://cdn.firebase.com/js/client/1.1.1/firebase.js'></script>
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.min.js"></script>
+    <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet" type="text/css">
+    <link href="js/bootstrap.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+    <div class='container' style="width: 95%; height: 95%">
+        <div id="page1" style="display:block;">
+            <h1>Welcome to the experiment</h1>
+
+            This experiment is part of a research project conducted
+            by the <a href="http://cpilab.org/" target="_blank">Computational Principles of Intelligence Group</a>
+            at the Max Planck Institute for Biological Cybernetics in Tuebingen, Germany.<br><br>
+
+            <!-- images of town + Institute here-->
+            <span>
+                <img src="./pictures/tuebingen.jpg" height="300px">
+                <img src="./pictures/mpi.jpg" height="300px">
+                <figcaption style="font-size: 10px;">By Rabe! - Own work, CC BY-SA 3.0, <a
+                        href=" https://commons.wikimedia.org/w/index.php?curid=33554043" target="_blank"> Source </a>
+                </figcaption>
+            </span>
+            <br>
+
+            In the following you are presented with monsters that are going to look similar as this:</br>
+            <div style="text-align: center;">
+
+                <img src="./pictures/monster-example.PNG" height="300px">
+
+            </div></br>
+            The spikiness of the head and the size of the belly can vary, though. That means that
+            monsters can look differently from each other. Some monsters have a spiked head,
+            whereas others do not have a spiked head. Some have a thin belly, others have a thick belly.
+            Monsters also could also look like the following:<br>
+            <div style="text-align: center;">
+
+                <img src="./pictures/monster-more-examples.PNG" height="300px">
+
+            </div></br>
+            Your task is divided into three parts. The first part and the third part are going to be the same:<br>
+            <ol>
+                <li>Remember the monster that is presented to you;
+                    Reproduce the spikiness of the head and the fill of the belly using sliders.
+                    Takes approx. 20 min</li>
+                <li>Categorize every monster that is presented to you into the right category
+                    Takes approx. 50 min</li>
+                <li>Remember the monster that is presented to you;
+                    Reproduce the spikiness of the head and the fill of the belly using sliders.
+                    Takes approx. 20 min
+                </li>
+            </ol>
+
+            To be eligible to participate, you <strong> MUST </strong> meet the following criteria:
+            <ol>
+                <li>Be 18 years of age or older.</li>
+                <li>Be a fluent speaker of English.</li>
+                <li>Have not previously participated in this experiment.</li>
+            </ol>
+            <b style="color:maroon;">Please use a device with a keyboard.
+                Please do not accept this task if you are using a touch screen device, it will not work!</b>
+
+            <h4>How much time will it take and how much can you earn?</h4>
+            The study will take <b>approx 100 minutes</b>.<br>
+            You will be paid <b>£5</b> pounds for participation plus a bonus of up to <b>£10</b> pounds depending on
+            your performance.<br>
+            <!-- Hence, the <b>expected payment is something around $6.00 to $7.00</b>. -->
+
+            <h4>Confidentiality</h4>
+            Your participation in this study will remain confidential.
+            Your Prolific ID will NOT be shared with anyone outside the research team.
+
+            <h4>Participation and withdrawal</h4>
+            Your participation in this study is completely voluntary and you may refuse to participate<br>
+            or you may choose to withdraw at any time.<br>
+            However, you will only be paid for the participation upon completion<br>
+            and if you enter the correct completion code provided at the end of the study.
+
+            <h4>How to contact the researchers?</h4>
+            If you have questions or concerns about your participation or payment
+            or want to request a summary of research findings,
+            please email the <a href="mailto:cpilab@tuebingen.mpg.de">researcher</a>
+            or the <a href="mailto:eric.schulz@tuebingen.mpg.de">principal investigator</a> (Dr. Eric Schulz).
+
+
+            <h4>Data protection</h4>
+            This has to be changed yet<br>
+            Your data will be anonymized and only used in the manner described in our data protection sheet,
+            available <a href="https://kyblab.tuebingen.mpg.de/compositionalbandits/data_protection.pdf"
+                target="_blank">here</a>
+            (please do not fill out this sheet!).
+            The following text box summarizes the main points. Please read it carefully and provide consent below:<br>
+            <br>
+
+            <textarea rows="10" cols="150" readonly>
+The processing and use of the collected data occurs in a pseudoanonymized form within the scope of the legally prescribed provisions.
+As a general rule, the storage occurs in the form of answered questionnaires, as well as electronic data, for a duration of 10 years or longer, if this is required by the purpose of the study.
+
+By providing of further personal data in pseudoanonymized form, collected personal data may be used for the preparation of anonymized
+scientific research work and may also be published and used in an anonymized form in medical journals and scientific publications, so that a direct assignment to my person cannot be established.
+
+The information obtained during the course of this study may also be sent in an anonymized form to cooperation partners within the scope of
+the European General Data Protection Regulation for scientific purposes and to cooperation partners outside of the European Union, i.e. to countries with a lower data protection level (this also applies to the USA).
+
+The data collected within the scope of the study can also be used and processed in the future inside of the Max Planck Institute.
+
+I was informed about my rights, that at any time:
+
+I can withdraw this declaration of consent.
+
+I can request information about my stored data and request the correction or blocking of data.
+
+By cancellation of my participation in the study,
+I can request that any personal data of mine collected until that point are immediately deleted or anonymized.
+
+I can request that my personal data are handed out to me or to third parties (if technically feasible).
+
+I herewith declare that:
+
+I have been adequately informed about the collection and processing of my personal data and rights.
+
+I consent to the collection and processing of personal data within the scope of the study and its pseudoanonymized disclosure,
+so that only the persons conducting the study can establish a link between the data and my person.
+
+Agreement:
+
+I agree to participate in this experiment.
+
+I consent to the use of my data described in the Data Protection Information Sheet
+and confirm having received a copy of the Data Protection Sheet.
+
+I consent to data transfer from the MPI for Biological Cybernetics encrypted database to the project-related collaborators:
+inside of the Max Planck Society and affiliated research institutes, or at partnering institutions like the University of Tuebingen.
+			</textarea>
+
+            <br>
+            <br>
+            By selecting the consent option below,
+            you acknowledge that you fulfill all of the participation criteria
+            and you agree to your data being used as described.
+            <br>
+            <br>
+
+            <button type="button" name="button" id="buttonConsentForm" onclick="clickStart('page1','page2');">I consent
+                to participate</button><br><br>
+
+        </div>
+    </div>
+    <div id="page2" style="display:none">
+        <br>
+        <div style="text-align: center;">
+
+            <img src="./pictures/monster-world.PNG" height="300px">
+
+        </div></br>
+
+        Today, you find yourself in <b>Monster World</b>.<br>
+        In Monster World, you are introduced to a new species of friendly monsters.
+        All monsters differ from each other. However, the way they differ can be described in two dimensions:
+        <br>
+        <ol>
+            <li>The spikiness of their head differs from not spiky to very spiky.</li>
+            <li>The size of their belly varies from empty to full</li>
+        </ol>
+        <br>
+        <button type="button" name="button" ; onclick="" ;> <span style="color: gray;"> Back </span> </button>
+        <button type="button" name="button" ; onclick="clickStart('page2','page3')" ;> Next</button>
+    </div>
+
+    <div id="page3" style="display:none">
+        <p id="trial_nr_p">1</p>
+        <div style="text-align: center;">
+            <img src="./stimuli/mask.PNG" height="300px" id="item_displayed">
+        </div></br>
+        <script>
+            var current_page = "page3";
+            var i = parseInt(document.getElementById("trial_nr_p").innerHTML)
+        </script>
+        <button type="button" name="button" ;
+            onclick="next_item(current_page, parseInt(document.getElementById('trial_nr_p').innerHTML))" ;> Start
+            Presentation</button>
+
+    </div>
+
+    <div id="page4" style="display:none">
+
+        <head>
+
+
+            <style>
+                .slidecontainer {
+                    width: 100%;
+                }
+
+                .slider {
+                    -webkit-appearance: none;
+                    width: 50%;
+                    height: 25px;
+                    background: #d3d3d3;
+                    outline: none;
+                    opacity: 0.7;
+                    -webkit-transition: .2s;
+                    transition: opacity .2s;
+                }
+
+                .slider:hover {
+                    opacity: 1;
+                }
+
+                .slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 25px;
+                    height: 25px;
+                    background: #04AA6D;
+                    cursor: pointer;
+                }
+
+                .slider::-moz-range-thumb {
+                    width: 25px;
+                    height: 25px;
+                    background: #04AA6D;
+                    cursor: pointer;
+                }
+            </style>
+        </head>
+
+        <body>
+            <p id="trial_nr_r">1</p>
+            <h1>How did the monster look like?</h1>
+            <p>Drag the two sliders to reproduce the monster you just have seen.</p>
+
+            <div class="slidecontainer">
+                <input type="range" min="1" max="3" value="2" class="slider" id="myRange1">
+                <p>Value: <span id="demo1"></span></p>
+            </div>
+            <div class="slidecontainer">
+                <input type="range" min="1" max="3" value="2" class="slider" id="myRange2">
+                <p>Value: <span id="demo2"></span></p>
+            </div>
+            <div style="text-align: center;">
+                <img src="./stimuli/stimulus-1.PNG" height="300px" id="selected_monster">
+            </div></br>
+            <!--let the participants adjust the two sliders and show them what monster results-->
+            <script>
+                let x = slide_adjust();
+            </script>
+            <button type="button" name="button" ; onclick="log_response()" ;> Submit Response</button>
+        </body>
+    </div>
+    <br>
+    <!-- 
+    <div id="page5">
+        <h1>Just To Fiddle Around</h1>
+        <p id="trial_nr_p">2</p>
+        <div style="text-align: center;">
+            <img src="./stimuli/mask.PNG" height="300px" id="item_displayed">
+        </div><br>
+    </div>
+    <br>
+ -->
+    <div id="page66" style="display:none">
+        <h1>
+            Well done! That was it for part 1!
+        </h1>
+        <p>
+            By clicking on the button below, you get to the second part of the experiment
+        </p>
+        <button type="button" name="button" ; onclick="clickStart('page66', 'page7')" ;> Instructions
+            Categorization</button>
+    </div>
+
+    <div id="page7" style="display:none">
+        <h1>
+            Part two of the experiment
+        </h1>
+        <p>
+            In the second part, your task is to categorize the monsters into c categories.
+            You can use the number keys on your keyboard to give responses in the task.
+            The numbers correspond to the respective category:
+            For example, "1" on your keyboard corresponds to category 1.
+            "2" on your keyboard corresponds to category 2.
+            And so on.
+            After every response you are given feedback whether your response was correct or not.
+            In the latter case the category that would have been true is going to be displayed to you.
+        </p>
+        <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
+            Categorization</button>
+    </div>
