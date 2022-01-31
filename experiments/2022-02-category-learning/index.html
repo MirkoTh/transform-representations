@@ -185,18 +185,18 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <button type="button" name="button" ; onclick="clickStart('page2','page3')" ;> Next</button>
     </div>
 
+    <div id="trial_nr">1</div>
+    <div id="show_trial">0</div>
+
     <div id="page3" style="display:none">
-        <p id="trial_nr_p">1</p>
         <div style="text-align: center;">
-            <img src="./stimuli/mask.PNG" height="300px" id="item_displayed">
+            <img src="./stimuli/mask.PNG" height="300px" id="item_displayed_1">
         </div></br>
         <script>
-            var current_page = "page3";
-            var i = parseInt(document.getElementById("trial_nr_p").innerHTML)
+            var i = parseInt(document.getElementById("trial_nr").innerHTML)
         </script>
-        <button type="button" name="button" ;
-            onclick="next_item(current_page, parseInt(document.getElementById('trial_nr_p').innerHTML))" ;> Start
-            Presentation</button>
+        <button type="button" name="button" ; onclick="next_item('page3')" ;> Start
+            Part 1</button>
 
     </div>
 
@@ -244,39 +244,44 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         </head>
 
         <body>
-            <p id="trial_nr_r">1</p>
-            <h1>How did the monster look like?</h1>
+
+            <div style="text-align: center;">
+                <img src="./stimuli/stimulus-1.PNG" height="300px" id="selected_monster">
+            </div></br>
+
             <p>Drag the two sliders to reproduce the monster you just have seen.</p>
 
             <div class="slidecontainer">
                 <input type="range" min="1" max="3" value="2" class="slider" id="myRange1">
-                <p>Value: <span id="demo1"></span></p>
+                <p>Head Spikiness: <span id="demo1"></span></p>
             </div>
+
             <div class="slidecontainer">
                 <input type="range" min="1" max="3" value="2" class="slider" id="myRange2">
-                <p>Value: <span id="demo2"></span></p>
+                <p>Belly Size: <span id="demo2"></span></p>
             </div>
-            <div style="text-align: center;">
-                <img src="./stimuli/stimulus-1.PNG" height="300px" id="selected_monster">
-            </div></br>
+
             <!--let the participants adjust the two sliders and show them what monster results-->
             <script>
                 let x = slide_adjust();
+                var i = parseInt(document.getElementById("trial_nr").innerHTML)
             </script>
-            <button type="button" name="button" ; onclick="log_response()" ;> Submit Response</button>
+            <button type="button" name="button" ; onclick="my_link()" ;> Submit
+                Response</button>
         </body>
     </div>
     <br>
-    <!-- 
-    <div id="page5">
-        <h1>Just To Fiddle Around</h1>
-        <p id="trial_nr_p">2</p>
+
+
+    <div id="page5" style="display:none;">
         <div style="text-align: center;">
-            <img src="./stimuli/mask.PNG" height="300px" id="item_displayed">
+            <img height="300px" id="item_displayed_2">
         </div><br>
+
     </div>
     <br>
- -->
+
+
     <div id="page66" style="display:none">
         <h1>
             Well done! That was it for part 1!
