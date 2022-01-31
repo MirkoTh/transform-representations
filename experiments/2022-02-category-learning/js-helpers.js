@@ -137,7 +137,8 @@ function sleep(ms) {
 let setup_expt = setup_experiment();
 var stimulus_trial = setup_expt["trial_info"]["stimulus_id_r1"]
 async function next_item(old, i) {
-
+    i = parseInt(document.getElementById("trial_nr").innerHTML)
+    clickStart(old, 'page5')
     console.log(i)
     console.log("the currently displayed stimulus_id is " + stimulus_trial[i])
 
@@ -146,25 +147,33 @@ async function next_item(old, i) {
     stim_path_mask = "./stimuli/mask.PNG"
 
     // present stimuli and mask
-    document.getElementById("item_displayed").src = stim_path
+    document.getElementById("item_displayed_2").src = stim_path
     await sleep(setup_expt["display_info"]["reproduction"]["presentation"])
-    document.getElementById("item_displayed").src = stim_path_mask
+    document.getElementById("item_displayed_2").src = stim_path_mask
     await sleep(setup_expt["display_info"]["reproduction"]["ri"])
+
     // increase trial nr by 1
-    document.getElementById("trial_nr_p").innerHTML = i + 1
-    clickStart(old, "page4")
+    clickStart("page5", "page4")
+
 
 }
 
 function log_response() {
     response_x1 = document.getElementById("demo1").value
     response_x2 = document.getElementById("demo2").value
-    i = parseInt(document.getElementById("trial_nr_r").innerHTML)
-    console.log("here, i is: ", i)
-    if (i == 3) {//setup_expt["experiment_info"]["n_trials_reproduction_1"]) {
-        clickStart("page4", "page66")
+    i = parseInt(document.getElementById("trial_nr").innerHTML)
+    console.log("log_response, i is: ", i)
+    document.getElementById("trial_nr").innerHTML = i + 1
+}
+
+function my_link() {
+    i = parseInt(document.getElementById("trial_nr").innerHTML)
+    console.log("main funtion says: " + i)
+    if (i == 3) {
+        log_response();
+        clickStart("page4", "page66");
     } else {
-        document.getElementById("trial_nr_r").innerHTML = i + 1
-        clickStart("page4", "page3")
+        log_response();
+        next_item('page4');
     }
 }
