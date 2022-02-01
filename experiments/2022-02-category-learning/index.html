@@ -47,27 +47,8 @@
                 <img src="./pictures/monster-example.PNG" height="300px">
 
             </div></br>
-            The spikiness of the head and the size of the belly can vary, though. That means that
-            monsters can look differently from each other. Some monsters have a spiked head,
-            whereas others do not have a spiked head. Some have a thin belly, others have a thick belly.
-            Monsters also could also look like the following:<br>
-            <div style="text-align: center;">
-
-                <img src="./pictures/monster-more-examples.PNG" height="300px">
-
-            </div></br>
-            Your task is divided into three parts. The first part and the third part are going to be the same:<br>
-            <ol>
-                <li>Remember the monster that is presented to you;
-                    Reproduce the spikiness of the head and the fill of the belly using sliders.
-                    Takes approx. 20 min</li>
-                <li>Categorize every monster that is presented to you into the right category
-                    Takes approx. 50 min</li>
-                <li>Remember the monster that is presented to you;
-                    Reproduce the spikiness of the head and the fill of the belly using sliders.
-                    Takes approx. 20 min
-                </li>
-            </ol>
+            You are going to carry out two different tasks with these monsters.
+            The instructions for the different tasks are shown in a minute.<br>
 
             To be eligible to participate, you <strong> MUST </strong> meet the following criteria:
             <ol>
@@ -182,20 +163,58 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         </ol>
         <br>
         <button type="button" name="button" ; onclick="" ;> <span style="color: gray;"> Back </span> </button>
-        <button type="button" name="button" ; onclick="clickStart('page2','page3')" ;> Next</button>
+        <button type="button" name="button" ; onclick="clickStart('page2','page2.1')" ;> Overview Tasks </button>
     </div>
 
-    <div id="trial_nr">1</div>
+    <div id="page2.1" style="display:none">
+        <h1>Instructions</h1>
+        <p>
+            Your session today will be split up into three parts.
+        </p>
+        <ol>
+            <li>
+                <b>Memory:</b> Remember the spikiness of the monster's head and
+                the fill of the monster's belly. You are only presented
+                with a monster only for a short period of time on every trial.
+                After that, you are required to adjust two sliders to reconstruct
+                the head and the belly of the monster.
+                <b>Takes approx. 20 min</b>
+            </li>
+            <li>
+                <b>Categorization:</b> The monsters all look somewhat similar, but they
+                come from different tribes. Use the information about the
+                spikiness of their head and the fill of their belly to
+                gauge what tribes they are from.
+                You are going to get a feedback after every trial, which may
+                help getting you started. <b>Takes approx. 50 min</b>.
+                There will be breaks in between these 50 mins.
+            </li>
+            <li>
+                <b>Memory:</b> The third part will be the same as the first part. Try to remember
+                the monsters presented on every trial. <b>Takes approx. 20 min</b>
+            </li>
+        </ol>
+        <div style="text-align: center;">
+
+            <img src="./pictures/monster-more-examples.PNG" height="300px">
+
+        </div></br>
+        <button type="button" name="button" ; onclick="clickStart('page2.1', 'page3')" ;> Start
+            Part 1 </button>
+
+    </div>
+
+    <div id="trial_nr_cr1">1</div>
     <div id="show_trial">0</div>
+    <div id="time_var"></div>
 
     <div id="page3" style="display:none">
-        <div style="text-align: center;">
-            <img src="./stimuli/mask.PNG" height="300px" id="item_displayed_1">
-        </div></br>
+        <h1>Ready for the memory task?</h1>
+        <p>If you feel prepared to start, please press the button below</p>
         <script>
-            var i = parseInt(document.getElementById("trial_nr").innerHTML)
+            var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
         </script>
-        <button type="button" name="button" ; onclick="next_item('page3')" ;> Start
+        <button type="button" name="button" ; onclick="next_item_cr('page3')" ;> Start
             Part 1</button>
 
     </div>
@@ -264,7 +283,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <!--let the participants adjust the two sliders and show them what monster results-->
             <script>
                 let x = slide_adjust();
-                var i = parseInt(document.getElementById("trial_nr").innerHTML)
+                var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
             </script>
             <button type="button" name="button" ; onclick="my_link()" ;> Submit
                 Response</button>
@@ -282,14 +301,14 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
     <br>
 
 
-    <div id="page66" style="display:none">
+    <div id="page6" style="display:none">
         <h1>
             Well done! That was it for part 1!
         </h1>
         <p>
             By clicking on the button below, you get to the second part of the experiment
         </p>
-        <button type="button" name="button" ; onclick="clickStart('page66', 'page7')" ;> Instructions
+        <button type="button" name="button" ; onclick="clickStart('page6', 'page7')" ;> Instructions
             Categorization</button>
     </div>
 
@@ -308,5 +327,48 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             In the latter case the category that would have been true is going to be displayed to you.
         </p>
         <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
+            Categorization</button>
+    </div>
+
+
+    <div id="trial_nr_cat">0</div>
+    <div id="rt">0</div>
+    <div id="key_id">0</div>
+
+    <div id="page8" style="display:none">
+        <h1>
+            Part 2 of the Experiment!
+        </h1>
+        <p>
+            By clicking on the button below, you start the task of part 2.
+        </p>
+        <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start
+            Categorization</button>
+    </div>
+
+    <div id="page9" style="display:none;">
+        <div style="text-align: center;">
+            <img height="300px" id="item_displayed_cat" src="stimuli/placeholder-white.PNG">
+        </div><br>
+
+    </div>
+
+    <div id="page10" style="display:none;">
+        <h1>Time for a break!</h1>
+        <h2 id="progress"></h2>
+        <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
+            Categorization</button>
+
+    </div>
+    <br>
+
+    <div id="page11" style="display:none">
+        <h1>
+            Very well done! That was it for part 2!
+        </h1>
+        <p>
+            By clicking on the button below, you get to the part 3.
+        </p>
+        <button type="button" name="button" ; onclick="clickStart('page6', 'page7')" ;> Instructions
             Categorization</button>
     </div>
