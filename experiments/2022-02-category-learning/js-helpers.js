@@ -255,6 +255,8 @@ function log_response(rt, i, part, stimulus_ids) {
         x2_response: document.getElementById("demo2").value,
         rt: rt
     }
+    document.getElementById("myRange1").value = 2;
+    document.getElementById("myRange2").value = 2;
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     //saveData(JSON.stringify(data_store))
 
