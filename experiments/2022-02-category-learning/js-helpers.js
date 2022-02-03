@@ -1,23 +1,40 @@
-var participant_id = 1;
+
+// get subject ID
+if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+    var participant_id = getQueryVariable('PROLIFIC_PID');
+}
+// If no ID is present, generate one using random numbers - this is useful for testing
+else {
+    var participant_id = Math.floor(Math.random() * 100);
+}
+// STUDY ID
+if (window.location.search.indexOf('STUDY_ID') > -1) {
+    var studyID = getQueryVariable('STUDY_ID');
+}
 
 function setup_experiment() {
 
     // experiment information
     const experiment_info = {
+        n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
         n_trials_reproduction_1: 10,
         n_trials_reproduction_2: 10,
         n_trials_categorization: 20,
+        condition_id: participant_id % 3 + 1,
+        n_categories: [0, 4, 9][participant_id % 3],
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
-
     }
-    if (participant_id % 2 == 0) {
+    console.log("condition_id is: ", participant_id % 3 + 1)
+    if ((participant_id % 3 + 1) == 2) {
         experiment_info["n_categories"] = 4
-    } else {
+    } else if ((participant_id % 3 + 1) == 3) {
         experiment_info["n_categories"] = 9
+    } else if ((participant_id % 3 + 1) == 1) {
+        experiment_info["n_categories"] = 0
     }
     // display info
     const display_info = {
@@ -140,6 +157,18 @@ function clickStart(hide, show) {
     window.scrollTo(0, 0);
 }
 
+function route_instructions(condition) {
+    if (condition == 1) { // control
+        clickStart('page1', 'page2b')
+    } else { clickStart('page1', 'page2') }
+}
+
+function route_categorization(condition) {
+    if (condition == 1) { // control
+        clickStart('page6', 'page7b')
+    } else { clickStart('page6', 'page7') }
+}
+
 function slide_adjust() {
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
@@ -167,6 +196,11 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+
+function set_cond_and_cat() {
+    document.getElementById("condition_id").innerHTML = setup_expt["experiment_info"]["condition_id"]
+    document.getElementById("n_categories").innerHTML = setup_expt["experiment_info"]["n_categories"]
+}
 
 let setup_expt = setup_experiment();
 var stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
@@ -295,6 +329,14 @@ function download(content, fileName, contentType) {
 // continue with display categorization trial
 // log categorization response
 
+function wrap_categorization(old, i) {
+    if (setup_expt["experiment_info"]["condition_id"] == 1) {//control
+        next_item_control(old, i)
+    } else if (setup_expt["experiment_info"]["condition_id"] == 2 | setup_expt["experiment_info"]["condition_id"] == 3) {
+        next_item_cat(old, i)
+    }
+}
+
 async function next_item_cat(old, i) {
     i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     clickStart(old, 'page9')
@@ -308,14 +350,17 @@ async function next_item_cat(old, i) {
     stim_path_mask = "./stimuli/mask.PNG"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_cat").src = "./stimuli/fixcross.PNG"
+    document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.PNG"
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
+    document.getElementById("item_displayed_cat").src = "./stimuli/fixcross.PNG"
+    await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
     document.getElementById("item_displayed_cat").src = stim_path
     document.getElementById("time_var").innerHTML = Date.now()
     document.addEventListener("keydown", handle_response, false);
 }
 
 async function handle_response(e) {
+    var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     var keyCode = e.keyCode;
     if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
@@ -325,11 +370,16 @@ async function handle_response(e) {
     document.removeEventListener("keydown", handle_response, false);
     cat_id_response = keycode_to_integer(keyCode)
     write_cat_results(i, cat_id_response)
-    if (cat_id_response == category_id[i]) {
-        alert("Well Done!")
-    } else {
-        var str = new String("Category would have been: " + category_id[i]);
+    if (condition_id == 1) { // control
+        var str = new String("Your response was: " + cat_id_response);
         alert(str);
+    } else if (condition_id == 2 | condition_id == 3) {
+        if (cat_id_response == category_id[i]) {
+            alert("Well Done!")
+        } else {
+            var str = new String("Category would have been: " + category_id[i]);
+            alert(str);
+        }
     }
     await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
     document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.PNG"
@@ -348,9 +398,8 @@ async function handle_response(e) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         next_item_cat('page9')
     }
-
-
 }
+
 
 function keycode_to_integer(kc) {
     number_codes = {
@@ -361,16 +410,23 @@ function keycode_to_integer(kc) {
 }
 
 function write_cat_results(i, r) {
-    accuracy = setup_expt["trial_info"]["category_id"] == r;
-    console.log(i)
+    condition_id = parseInt(document.getElementById("condition_id").innerHTML)
+    if (condition_id == 1) {
+        accuracy = 0
+    } else if (condition_id == 2 | condition_id == 3) {
+        accuracy = setup_expt["trial_info"]["category_id"] == r;
+    }
 
+    console.log("condition_id is: ", condition_id)
+    console.log("saved categorization trial: ", i)
     var data_store = {
         participant_id: participant_id,
+        condition_id: condition_id,
         trial_id: i,
         x1_true: setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][i]][0],
         x2_true: setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][i]][1],
         cat_true: setup_expt["trial_info"]["category_id"],
-        cat_response: r,
+        response: r,
         accuracy: accuracy,
         rt: document.getElementById("rt").innerHTML
     }

@@ -40,7 +40,7 @@
                 </figcaption>
             </span>
             <br>
-            Today, you are carrying out three tasks with monsters coming from different tribes.
+            Today, you are carrying out three tasks with friendly monsters.
             The different tasks are going to be explained to you on the next page.
             <br>
 
@@ -134,7 +134,8 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <br>
             <br>
 
-            <button type="button" name="button" id="buttonConsentForm" onclick="clickStart('page1','page2');">I consent
+            <button type="button" name="button" id="buttonConsentForm"
+                onclick="route_instructions(parseInt(document.getElementById('condition_id').innerHTML));">I consent
                 to participate</button><br><br>
 
         </div>
@@ -151,8 +152,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <br>
         Today, you find yourself in <b>Monster World</b>.<br>
         In Monster World, you are introduced to a new species of friendly monsters.<br>
-        However, all monsters differ from each other. They even come from different tribes.<br>
-        The way the monsters differ can be described according to variation in two dimensions:
+        All monsters differ from each other. Even though they come from the same planet, they are from different
+        tribes.<br>
+        The way the monsters differ from each other can be described according to variation in two dimensions:
         <br>
         <ol>
             <li>The spikiness of their head differs from not spiky to very spiky.</li>
@@ -171,7 +173,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <ol>
             <li>
                 <b>Memory:</b> Remember the spikiness of the monster's head and
-                the fill of the monster's belly. <br> You are only presented
+                the fill of the monster's belly. <br> You are presented
                 with a monster only for a short period of time on every trial. <br>
                 After that, you are required to adjust two sliders to reconstruct
                 the head and the belly of the monster.<br>
@@ -202,6 +204,78 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
     </div>
 
+    <div id="page2b" style="display:none">
+        <br>
+
+
+        <h1>Welcome to Monster World</h1>
+        <br>
+        <!-- <div>
+            <img src="./pictures/monster-example.PNG" height="300px">
+        </div> -->
+        <br>
+        Today, you find yourself in <b>Monster World</b>.<br>
+        In Monster World, you are introduced to a new species of friendly monsters.<br>
+        All monsters differ from each other.<br>
+        The way the monsters differ can be described according to variation in two dimensions:
+        <br>
+        <ol>
+            <li>The spikiness of their head differs from not spiky to very spiky.</li>
+            <li>The size of their belly varies from empty to full</li>
+        </ol>
+        Thus, monsters are going to look similar to this:
+        <div>
+            <img src="./pictures/monster-more-examples.PNG" height="300px">
+        </div></br>
+        <br>
+
+        <h1>Instructions</h1>
+        <p>
+            Your session today will be split up into three parts.
+        </p>
+        <ol>
+            <li>
+                <b>Memory 1:</b> Remember the spikiness of the monster's head and
+                the fill of the monster's belly. <br> You are presented
+                with a monster only for a short period of time on every trial. <br>
+                After that, you are required to adjust two sliders to reconstruct
+                the head and the belly of the monster.<br>
+                <b> --> Takes approx. 20 min</b><br>
+            </li>
+            <br>
+            <li>
+                <b>Similarity:</b> Your task in the second memory part will be somewhat different.<br>
+                You are asked to judge how similar the monster presented on the current trial is to the
+                monster presented on the last trial.<br>
+                To do so, use the numbers from 1-9 on the keyboard.<br>
+                When the monster is exactly the same as on the previous trials, press 9.<br>
+                When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
+                <b> --> Takes approx. 50 min</b><br>
+                There will be breaks in between these 50 mins.
+            </li>
+            <br>
+            <li>
+                <b>Memory 2:</b> The third part will be the same as the first part. Try to remember
+                the monsters presented on every trial and use the sliders for reconstruction.<br>
+                <b>Important: </b> You only have to remember the monster from the current trial again. You can forget
+                about
+                all previously presented monsters.<br>
+                <b> --> Takes approx. 20 min</b><br>
+            </li>
+            <br>
+        </ol>
+        <button type="button" name="bbutton" ; onclick="clickStart('page2b', 'page1')" ;> Back </button>
+        <button type="button" name="button" ; onclick="clickStart('page2b', 'page3')" ;> Start
+            Part 1 </button>
+
+    </div>
+
+
+    <div id="condition_id" style="display:none">-1</div>
+    <div id="n_categories" style="display:none">-1</div>
+    <script>
+        set_cond_and_cat()
+    </script>
     <div id="trial_nr_cr_practice" style="display:none">0</div>
     <div id="trial_nr_cr1" style="display:none">0</div>
     <div id="part_reproduction" style="display:none">0</div>
@@ -330,8 +404,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <p>
             By clicking on the button below, you get to the second part of the experiment
         </p>
-        <button type="button" name="button" ; onclick="clickStart('page6', 'page7')" ;> Instructions
-            Categorization</button>
+        <button type="button" name="button" ;
+            onclick="route_categorization(parseInt(document.getElementById('condition_id').innerHTML))" ;> Instructions
+        </button>
     </div>
 
     <div id="page7" style="display:none">
@@ -339,17 +414,42 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             Part two of the experiment
         </h1>
         <p>
-            In the second part, your task is to categorize the monsters into c categories.
-            You can use the number keys on your keyboard to give responses in the task.
-            The numbers correspond to the respective category:
+            In the second part, your task is to categorize the monsters into <span id="myText"></span> categories.<br>
+            You can use the number keys on your keyboard to give responses in the task.<br>
+            The numbers correspond to the respective category:<br>
             For example, "1" on your keyboard corresponds to category 1.
             "2" on your keyboard corresponds to category 2.
-            And so on.
-            After every response you are given feedback whether your response was correct or not.
+            And so on.<br>
+            After every response you are given feedback whether your response was correct or not.<br>
             In the latter case the category that would have been true is going to be displayed to you.
         </p>
+        <script>
+                (() => {
+                    document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
+                })();
+        </script>
         <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
             Categorization</button>
+    </div>
+
+    <div id="page7b" style="display:none">
+        <h1>
+            Part two of the experiment
+        </h1>
+        <p>
+            In the second part, your task is to judge how similar the current monster is to the monster on the previous
+            trial.<br>
+            You can use the number keys on your keyboard to give responses in the task.<br>
+            The keys have the following meaning:<br>
+            For example, <b>"1"</b> on your keyboard corresponds to <b>not similar</b> at all.<br>
+            In contrast, <b>"9"</b> on your keyboard corresponds to very <b>similar</b>.<br>
+            The numbers in between represent intermediate similarity levels<br>
+            After every response you are given feedback what your response was.<br><br>
+            There is no option to relate the monster on the first trial to a previous monster.<br>
+            Just respond with any key from 1-9 on the first trial.
+        </p>
+        <button type="button" name="button" ; onclick="clickStart('page7b', 'page8')" ;> Start
+            Similarity Judgments</button>
     </div>
 
 
@@ -364,8 +464,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <p>
             By clicking on the button below, you start the task of part 2.
         </p>
-        <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start
-            Categorization Task </button>
+        <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start Task </button>
     </div>
 
     <div id="page9" style="display:none;">
@@ -379,7 +478,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <h1>Time for a break!</h1>
         <h2 id="progress"></h2>
         <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
-            Categorization Task</button>
+        </button>
 
     </div>
     <br>
