@@ -40,15 +40,9 @@
                 </figcaption>
             </span>
             <br>
-
-            In the following you are presented with monsters that are going to look similar as this:</br>
-            <div style="text-align: center;">
-
-                <img src="./pictures/monster-example.PNG" height="300px">
-
-            </div></br>
-            You are going to carry out two different tasks with these monsters.
-            The instructions for the different tasks are shown in a minute.<br>
+            Today, you are carrying out three tasks with monsters coming from different tribes.
+            The different tasks are going to be explained to you on the next page.
+            <br>
 
             To be eligible to participate, you <strong> MUST </strong> meet the following criteria:
             <ol>
@@ -147,26 +141,29 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
     </div>
     <div id="page2" style="display:none">
         <br>
-        <div style="text-align: center;">
 
-            <img src="./pictures/monster-world.PNG" height="300px">
 
-        </div></br>
-
+        <h1>Welcome to Monster World</h1>
+        <br>
+        <!-- <div>
+            <img src="./pictures/monster-example.PNG" height="300px">
+        </div> -->
+        <br>
         Today, you find yourself in <b>Monster World</b>.<br>
-        In Monster World, you are introduced to a new species of friendly monsters.
-        All monsters differ from each other. However, the way they differ can be described in two dimensions:
+        In Monster World, you are introduced to a new species of friendly monsters.<br>
+        However, all monsters differ from each other. They even come from different tribes.<br>
+        The way the monsters differ can be described according to variation in two dimensions:
         <br>
         <ol>
             <li>The spikiness of their head differs from not spiky to very spiky.</li>
             <li>The size of their belly varies from empty to full</li>
         </ol>
+        Thus, monsters are going to look similar to this:
+        <div>
+            <img src="./pictures/monster-more-examples.PNG" height="300px">
+        </div></br>
         <br>
-        <button type="button" name="button" ; onclick="" ;> <span style="color: gray;"> Back </span> </button>
-        <button type="button" name="button" ; onclick="clickStart('page2','page2.1')" ;> Overview Tasks </button>
-    </div>
 
-    <div id="page2.1" style="display:none">
         <h1>Instructions</h1>
         <p>
             Your session today will be split up into three parts.
@@ -174,48 +171,70 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <ol>
             <li>
                 <b>Memory:</b> Remember the spikiness of the monster's head and
-                the fill of the monster's belly. You are only presented
-                with a monster only for a short period of time on every trial.
+                the fill of the monster's belly. <br> You are only presented
+                with a monster only for a short period of time on every trial. <br>
                 After that, you are required to adjust two sliders to reconstruct
-                the head and the belly of the monster.
-                <b>Takes approx. 20 min</b>
+                the head and the belly of the monster.<br>
+                <b> --> Takes approx. 20 min</b><br>
             </li>
+            <br>
             <li>
                 <b>Categorization:</b> The monsters all look somewhat similar, but they
-                come from different tribes. Use the information about the
+                come from different tribes. <br>Use the information about the
                 spikiness of their head and the fill of their belly to
-                gauge what tribes they are from.
+                gauge what tribes they are from.<br>
                 You are going to get a feedback after every trial, which may
-                help getting you started. <b>Takes approx. 50 min</b>.
+                help getting you started. <br>
+                <b> --> Takes approx. 50 min</b><br>
                 There will be breaks in between these 50 mins.
             </li>
+            <br>
             <li>
                 <b>Memory:</b> The third part will be the same as the first part. Try to remember
-                the monsters presented on every trial. <b>Takes approx. 20 min</b>
+                the monsters presented on every trial.<br>
+                <b> --> Takes approx. 20 min</b><br>
             </li>
+            <br>
         </ol>
-        <div style="text-align: center;">
-
-            <img src="./pictures/monster-more-examples.PNG" height="300px">
-
-        </div></br>
-        <button type="button" name="button" ; onclick="clickStart('page2.1', 'page3')" ;> Start
+        <button type="button" name="bbutton" ; onclick="clickStart('page2', 'page1')" ;> Back </button>
+        <button type="button" name="button" ; onclick="clickStart('page2', 'page3')" ;> Start
             Part 1 </button>
 
     </div>
 
-    <div id="trial_nr_cr1">1</div>
-    <div id="show_trial">0</div>
-    <div id="time_var"></div>
+    <div id="trial_nr_cr_practice" style="display:none">0</div>
+    <div id="trial_nr_cr1" style="display:none">0</div>
+    <div id="part_reproduction" style="display:none">0</div>
+    <div id="show_trial" style="display:none">0</div>
+    <div id="time_var" style="display:none"></div>
 
     <div id="page3" style="display:none">
         <h1>Ready for the memory task?</h1>
-        <p>If you feel prepared to start, please press the button below</p>
+        <p>If you feel prepared to start, please press the button below <br>
+            Remember the spikiness of the monster's head and
+            the fill of the monster's belly. Try hard! <br>You are presented
+            with a monster only for a short period of time on every trial. <br>
+            After that, you are required to adjust two sliders to reconstruct
+            the head and the belly of the monster. <br>
+            You are given three practice trials to get used to the procedure.
+        </p>
         <script>
             var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
         </script>
         <button type="button" name="button" ; onclick="next_item_cr('page3')" ;> Start
-            Part 1</button>
+            Practice Trials </button>
+
+    </div>
+
+    <div id="page3.1" style="display:none">
+        <h1>Practice is Over</h1>
+        <p>The practice trials are now over. Press the button below to start with the Memory Task.
+        </p>
+        <script>
+            var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
+        </script>
+        <button type="button" name="button" ; onclick="next_item_cr('page3.1')" ;> Start
+            Memory Task </button>
 
     </div>
 
@@ -227,12 +246,15 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <style>
                 .slidecontainer {
                     width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
                 .slider {
                     -webkit-appearance: none;
-                    width: 50%;
-                    height: 25px;
+                    width: 20%;
+                    height: 10px;
                     background: #d3d3d3;
                     outline: none;
                     opacity: 0.7;
@@ -247,15 +269,15 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 .slider::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     appearance: none;
-                    width: 25px;
-                    height: 25px;
+                    width: 20px;
+                    height: 20px;
                     background: #04AA6D;
                     cursor: pointer;
                 }
 
                 .slider::-moz-range-thumb {
-                    width: 25px;
-                    height: 25px;
+                    width: 20px;
+                    height: 20px;
                     background: #04AA6D;
                     cursor: pointer;
                 }
@@ -272,12 +294,12 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
             <div class="slidecontainer">
                 <input type="range" min="1" max="3" value="2" class="slider" id="myRange1">
-                <p>Head Spikiness: <span id="demo1"></span></p>
+                <p style="text-align: center">Head : <span id="demo1"></span></p>
             </div>
 
             <div class="slidecontainer">
                 <input type="range" min="1" max="3" value="2" class="slider" id="myRange2">
-                <p>Belly Size: <span id="demo2"></span></p>
+                <p style="text-align: center">Belly: <span id="demo2"></span></p>
             </div>
 
             <!--let the participants adjust the two sliders and show them what monster results-->
@@ -331,9 +353,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
     </div>
 
 
-    <div id="trial_nr_cat">0</div>
-    <div id="rt">0</div>
-    <div id="key_id">0</div>
+    <div id="trial_nr_cat" style="display:none">0</div>
+    <div id="rt" style="display:none">0</div>
+    <div id="key_id" style="display:none">0</div>
 
     <div id="page8" style="display:none">
         <h1>
@@ -343,7 +365,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             By clicking on the button below, you start the task of part 2.
         </p>
         <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start
-            Categorization</button>
+            Categorization Task </button>
     </div>
 
     <div id="page9" style="display:none;">
@@ -357,7 +379,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <h1>Time for a break!</h1>
         <h2 id="progress"></h2>
         <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
-            Categorization</button>
+            Categorization Task</button>
 
     </div>
     <br>
@@ -367,8 +389,31 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             Very well done! That was it for part 2!
         </h1>
         <p>
-            By clicking on the button below, you get to the part 3.
+            By clicking on the button below, you get to part 3.
         </p>
-        <button type="button" name="button" ; onclick="clickStart('page6', 'page7')" ;> Instructions
-            Categorization</button>
+        <button type="button" name="button" ; onclick="clickStart('page11', 'page12')" ;> Instructions
+            Memory Task </button>
+    </div>
+
+
+    <div id="trial_nr_cr2" style="display:none">0</div>
+    <div id="page12" style="display:none">
+        <h1>
+            Part 3 of the Experiment!
+        </h1>
+        <p>
+            By clicking on the button below, you start the task of part 3. It is again the memory task from part 1.
+        </p>
+        <script>
+            var i = parseInt(document.getElementById("trial_nr_cr2").innerHTML);
+        </script>
+        <button type="button" name="button" ; onclick="next_item_cr('page12', i)" ;> Start
+            Memory Task </button>
+    </div>
+
+    <div id="page13" style="display:none">
+        <h1>
+            You are done. Thank you very much for participating.
+        </h1>
+
     </div>
