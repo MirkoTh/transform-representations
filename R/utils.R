@@ -167,6 +167,24 @@ create_categories <- function(tbl, n_cat_per_feat) {
 }
 
 
+rotate_points <- function(x, theta_deg) {
+  #' rotate 2D points in clockwise direction
+  #' according to theta_deg (rotation angle in degrees)
+  #' 
+  #' @description rotate 2D points
+  #' @param x a matrix of 2D points
+  #' @param theta_deg rotation angle in degrees
+  #' @return the rotate x matrix
+  #' 
+  theta_rad <- (theta_deg * pi) / 180
+  theta_sin <- sin(theta_rad)
+  theta_cos <- cos(theta_rad)
+  m_rotate <- matrix(c(theta_cos, -theta_sin, theta_sin, theta_cos), ncol = 2, byrow = FALSE)
+  x_rotated <- apply(x, 2, function(x) x %*% m_rotate)
+  return(x_rotated)
+}
+
+
 create_shepard_categories <- function(tbl, type, dim_anchor){
   #' create Shepard et al. categories with binary features
   #' 
