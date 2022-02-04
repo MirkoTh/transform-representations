@@ -166,6 +166,33 @@ create_categories <- function(tbl, n_cat_per_feat) {
   return(tbl)
 }
 
+
+
+
+sample_ellipse_space <- function(n, thxs, fctr_squash_x, theta_deg) {
+  #' uniformly sample from ellipse
+  #' 
+  #' @description randomly sample from a space defined by an ellipse
+  #' @param n number of samples
+  #' @param thxs min and max vals on x and y axis
+  #' @param fctr_squash_x squashing factor in x dimension
+  #' @param theta_deg rotation angle in degrees
+  #' @return x and y values of samples
+  #' 
+  tbl_ellipse <- ellipse(thxs, fctr_squash_x, theta_deg)
+  min_max <- apply(tbl_ellipse[, c("x_rotated", "y_rotated")], 2, function(x) c(min(x), max(x)))
+  x1 <- round(runif(n, min_max[1, 1], min_max[2, 1]), 1)
+  sample_y_uniform <- function(x_val) {
+    y_bounds <- tbl_ellipse %>% filter(x_rotated == x_val) %>% 
+    summarize(min_y = min(y_rotated), max_y = max(y_rotated)) %>% 
+    as_vector() %>% sort() %>% unname()
+    return(runif(1, y_bounds[1], y_bounds[2]))
+  }
+  x2 <- map_dbl(x1, sample_y_uniform)
+  tbl <- tibble(x1, x2)
+  return(tbl)
+}
+
 ellipse <- function(thxs, fctr_squash_x, theta_deg) {
   #' create an ellipse and rotate it
   #' 
@@ -182,13 +209,12 @@ ellipse <- function(thxs, fctr_squash_x, theta_deg) {
   )
   tbl_circle <- cbind(
     tbl_circle, 
-    t(tbl_circle %>% as.matrix()) %>% rotate_points(theta_deg) %>% t()
+    t(tbl_circle %>% as.matrix()) %>% rotate_points(theta_deg) %>% t() %>%
+      round(1)
   )
   colnames(tbl_circle) <- c("x", "y", "x_rotated", "y_rotated")
   return(tbl_circle)
 } 
-
-
 rotate_points <- function(x, theta_deg) {
   #' rotate 2D points in clockwise direction
   #' according to theta_deg (rotation angle in degrees)
