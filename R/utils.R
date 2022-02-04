@@ -166,6 +166,28 @@ create_categories <- function(tbl, n_cat_per_feat) {
   return(tbl)
 }
 
+ellipse <- function(thxs, fctr_squash_x, theta_deg) {
+  #' create an ellipse and rotate it
+  #' 
+  #' @description create an ellipse within 2D range
+  #' @param thxs min and max vals on x and y axis
+  #' @param fctr_squash_x squashing factor in x dimension
+  #' @param theta_deg rotation angle in degrees
+  #' @return fine grained 2D values of a rotated ellipse
+  #' 
+  x_prep <- seq(0, 2*pi, by = .01)
+  tbl_circle <- tibble(
+    x = thxs[2] * sin(x_prep),
+    y = thxs[2] / fctr_squash_x * cos(x_prep)
+  )
+  tbl_circle <- cbind(
+    tbl_circle, 
+    t(tbl_circle %>% as.matrix()) %>% rotate_points(theta_deg) %>% t()
+  )
+  colnames(tbl_circle) <- c("x", "y", "x_rotated", "y_rotated")
+  return(tbl_circle)
+} 
+
 
 rotate_points <- function(x, theta_deg) {
   #' rotate 2D points in clockwise direction
@@ -180,7 +202,7 @@ rotate_points <- function(x, theta_deg) {
   theta_sin <- sin(theta_rad)
   theta_cos <- cos(theta_rad)
   m_rotate <- matrix(c(theta_cos, -theta_sin, theta_sin, theta_cos), ncol = 2, byrow = FALSE)
-  x_rotated <- apply(x, 2, function(x) x %*% m_rotate)
+  x_rotated <- apply(x, 2, function(a) a %*% m_rotate)
   return(x_rotated)
 }
 
