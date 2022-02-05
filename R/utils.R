@@ -167,54 +167,93 @@ create_categories <- function(tbl, n_cat_per_feat) {
 }
 
 
+distribute_grid_points <- function(tbl, fctrs, n, thxs, theta_deg) {
+  #' define whether 2D points are inside or outside an ellipse
+  #' 
+  #' @description take all integer pairs from a 2D space and decide whether
+  #' each pair is inside or outside a given ellipse
+  #' @param tbl tibble with 2D points (x1 and x2)
+  #' @param fctrs squashing and moving of ellipse
+  #' @param n number of samples
+  #' @param thxs min and max vals on x and y axis
+  #' @param theta_deg rotation angle in degrees
+  #' @return list with tbl defining ellipse and tbl with all 2D points
+  #' 
+  tbl_ellipse <- ellipse(thxs, fctrs, theta_deg)
+  # https://stackoverflow.com/questions/9508518/why-are-these-numbers-not-equal
+  elementwise.all.equal <- Vectorize(function(x, y) {isTRUE(all.equal(x, y))})
+  is_within_ellipse <- function(x1, x2, tbl_ellipse) {
+    tryCatch(
+      warning = function(cnd) FALSE,
+      {
+        y_range <- tbl_ellipse %>% filter(elementwise.all.equal(x_rotated, x1)) %>%
+          summarize(y_min = min(y_rotated), y_max = max(y_rotated))
+        return(between(x2, y_range$y_min, y_range$y_max))
+      }
+    )
+  }
+  tbl$in_ellipse <- pmap_lgl(tbl[, c("x1", "x2")], is_within_ellipse, tbl_ellipse = tbl_ellipse)
+  tbl$category <- fctrs[["category"]]
+  return(list(tbl_ellipse, tbl))
+}
 
-
-sample_ellipse_space <- function(n, thxs, fctr_squash_x, theta_deg) {
+sample_ellipse_space <- function(fctrs, n, thxs, theta_deg) {
   #' uniformly sample from ellipse
   #' 
   #' @description randomly sample from a space defined by an ellipse
+  #' @param fctrs squashing and moving of ellipse
   #' @param n number of samples
   #' @param thxs min and max vals on x and y axis
-  #' @param fctr_squash_x squashing factor in x dimension
   #' @param theta_deg rotation angle in degrees
   #' @return x and y values of samples
   #' 
-  tbl_ellipse <- ellipse(thxs, fctr_squash_x, theta_deg)
+  tbl_ellipse <- ellipse(thxs, fctrs, theta_deg)
   min_max <- apply(tbl_ellipse[, c("x_rotated", "y_rotated")], 2, function(x) c(min(x), max(x)))
   x1 <- round(runif(n, min_max[1, 1], min_max[2, 1]), 1)
+  # https://stackoverflow.com/questions/9508518/why-are-these-numbers-not-equal
+  elementwise.all.equal <- Vectorize(function(x, y) {isTRUE(all.equal(x, y))})
+  
   sample_y_uniform <- function(x_val) {
-    y_bounds <- tbl_ellipse %>% filter(x_rotated == x_val) %>% 
-    summarize(min_y = min(y_rotated), max_y = max(y_rotated)) %>% 
-    as_vector() %>% sort() %>% unname()
+    y_bounds <- tbl_ellipse %>% filter(elementwise.all.equal(x_rotated, x_val)) %>% 
+      summarize(min_y = min(y_rotated), max_y = max(y_rotated)) %>% 
+      as_vector() %>% sort() %>% unname()
     return(runif(1, y_bounds[1], y_bounds[2]))
   }
   x2 <- map_dbl(x1, sample_y_uniform)
   tbl <- tibble(x1, x2)
-  return(tbl)
+  return(tbl_ellipse)
 }
 
-ellipse <- function(thxs, fctr_squash_x, theta_deg) {
+ellipse <- function(thxs, fctrs, theta_deg) {
   #' create an ellipse and rotate it
   #' 
   #' @description create an ellipse within 2D range
   #' @param thxs min and max vals on x and y axis
-  #' @param fctr_squash_x squashing factor in x dimension
+  #' @param fctrs squashing and moving of ellipse
   #' @param theta_deg rotation angle in degrees
   #' @return fine grained 2D values of a rotated ellipse
   #' 
   x_prep <- seq(0, 2*pi, by = .01)
   tbl_circle <- tibble(
-    x = thxs[2] * sin(x_prep),
-    y = thxs[2] / fctr_squash_x * cos(x_prep)
+    x = thxs[2] * fctrs[["squash_all"]] * fctrs[["squash_x"]] * sin(x_prep),
+    y = thxs[2] * fctrs[["squash_all"]] * fctrs[["squash_y"]] * cos(x_prep)
   )
   tbl_circle <- cbind(
     tbl_circle, 
     t(tbl_circle %>% as.matrix()) %>% rotate_points(theta_deg) %>% t() %>%
       round(1)
-  )
-  colnames(tbl_circle) <- c("x", "y", "x_rotated", "y_rotated")
+  ) %>% rename(x_rotated = `1`, y_rotated = `2`) %>% 
+    mutate(
+      x_rotated = x_rotated + thxs[2],
+      y_rotated = y_rotated + thxs[2]
+    )
+  tbl_circle$x_rotated <- tbl_circle$x_rotated + fctrs[["move_x"]]
+  tbl_circle$y_rotated <- tbl_circle$y_rotated + fctrs[["move_y"]]
   return(tbl_circle)
-} 
+}
+
+
+
 rotate_points <- function(x, theta_deg) {
   #' rotate 2D points in clockwise direction
   #' according to theta_deg (rotation angle in degrees)
@@ -228,10 +267,10 @@ rotate_points <- function(x, theta_deg) {
   theta_sin <- sin(theta_rad)
   theta_cos <- cos(theta_rad)
   m_rotate <- matrix(c(theta_cos, -theta_sin, theta_sin, theta_cos), ncol = 2, byrow = FALSE)
-  x_rotated <- apply(x, 2, function(a) a %*% m_rotate)
+  x_rotated <- apply(x, 2, function(a) m_rotate %*% a)
+  x_rotated
   return(x_rotated)
 }
-
 
 create_shepard_categories <- function(tbl, type, dim_anchor){
   #' create Shepard et al. categories with binary features
@@ -555,7 +594,7 @@ stimulus_before_after <- function(l_results, stim_id) {
     rbind
   ) %>% group_by(
     stim_id, cat_type, timepoint, n_categories, prior_sd, sampling, space
-    ) %>%
+  ) %>%
     summarize(x1 = mean(x1), x2 = mean(x2)) %>% ungroup()
   tbl_stimulus <- tbl_stimulus %>%
     select(c(x1, x2, cat_type, prior_sd, sampling, space, timepoint, n_categories)) %>%
