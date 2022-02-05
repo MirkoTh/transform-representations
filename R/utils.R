@@ -115,7 +115,7 @@ categorize_stimuli <- function(l_info) {
 }
 
 
-make_stimuli <- function(l_info) {
+make_stimuli <- function(l_info, category_shape = "squares") {
   #' create stimuli from 2D feature space
   #' 
   #' @param l_info list with parameters
@@ -127,8 +127,15 @@ make_stimuli <- function(l_info) {
   x2 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
-    select(-c(x1_cat, x2_cat))
+  if (category_shape = "squares") {
+    tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
+      select(-c(x1_cat, x2_cat))
+  } else if (category_shape == "ellipse") {
+    l <- create_ellipse_categories(tbl, l_info$n_categories)
+    tbl <- l[[1]]
+    l_info$tbl_ellipses <- l[[2]]
+  }
+  
   l_info$feature_names <- c("x1", "x2")
   l_info$label <- "category"
   tbl$category <- as.factor(tbl$category)
@@ -167,14 +174,58 @@ create_categories <- function(tbl, n_cat_per_feat) {
 }
 
 
-distribute_grid_points <- function(tbl, fctrs, n, thxs, theta_deg) {
+create_ellipse_categories <- function(tbl, n_categories) {
+  #' create ellipse categories from feature space
+  #' 
+  #' @description create one ellipse or three ellipses within feature space
+  #' creating different categories; assign all points to those one/three
+  #' categories or to a baseline category (i.e., points not within any
+  #' of the ellipses)
+  #' @param tbl \code{tibble} containing each of the two features in a column
+  #' @param n_categories \code{integer} stating how many categories to create
+  #' @return a list with the \code{tibble} with an added column stating 
+  #' the category and another \code{tibble} with the ellipse contours
+  #' 
+  thxs <- c(0, 6)
+  theta_deg <- 45
+  fctr_mid <- list(
+    "squash_all" = .9, "squash_y" = 1, "squash_x" = .3, 
+    "move_x" = 0, "move_y" = 0, "category" = 1
+  )
+  fctr_hi <- list(
+    "squash_all" = .85, "squash_y" = .5, "squash_x" = .2,
+    "move_x" = 3, "move_y" = -3, "category" = 2
+  )
+  fctr_lo <- list(
+    "squash_all" = .85, "squash_y" = .5, "squash_x" = .2,
+    "move_x" = -3, "move_y" = 3, "category" = 3
+  )
+  if (n_categories == 4) {
+    l_map <- list(fctr_mid, fctr_hi, fctr_lo)
+  } else if (n_categories == 2) {
+    l_map <- list(fctr_mid)
+  }
+  
+  
+  l <- map(l_map, assign_grid_points, tbl = tbl, thxs = thxs, theta_deg = theta_deg)
+  tbl_all_cats <- reduce(
+    map(l, 2), function(x, y) inner_join(x, y, by = c("stim_id", "x1", "x2"))
+    )
+  tbl_ellipses <- reduce(map(l, 1), rbind)
+  cat_tmp <- apply(tbl_all_cats[, 4: ncol(tbl_all_cats)], 1, max)
+  tbl_all_cats <- tbl_all_cats[, 1:3]
+  tbl_all_cats$category <- as.factor(cat_tmp)
+  
+  return(list(tbl_all_cats, tbl_ellipses))
+}
+
+assign_grid_points <- function(fctrs, tbl, thxs, theta_deg) {
   #' define whether 2D points are inside or outside an ellipse
   #' 
   #' @description take all integer pairs from a 2D space and decide whether
   #' each pair is inside or outside a given ellipse
-  #' @param tbl tibble with 2D points (x1 and x2)
   #' @param fctrs squashing and moving of ellipse
-  #' @param n number of samples
+  #' @param tbl tibble with 2D points (x1 and x2)
   #' @param thxs min and max vals on x and y axis
   #' @param theta_deg rotation angle in degrees
   #' @return list with tbl defining ellipse and tbl with all 2D points
@@ -192,8 +243,10 @@ distribute_grid_points <- function(tbl, fctrs, n, thxs, theta_deg) {
       }
     )
   }
-  tbl$in_ellipse <- pmap_lgl(tbl[, c("x1", "x2")], is_within_ellipse, tbl_ellipse = tbl_ellipse)
-  tbl$category <- fctrs[["category"]]
+  in_ellipse <- pmap_lgl(tbl[, c("x1", "x2")], is_within_ellipse, tbl_ellipse = tbl_ellipse)
+  tbl$category <- 0
+  tbl$category[in_ellipse] <- fctrs[["category"]]
+  tbl_ellipse$category <- fctrs[["category"]]
   return(list(tbl_ellipse, tbl))
 }
 
