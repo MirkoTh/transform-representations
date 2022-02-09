@@ -115,7 +115,7 @@ categorize_stimuli <- function(l_info) {
 }
 
 
-make_stimuli <- function(l_info, category_shape = "squares") {
+make_stimuli <- function(l_info) {
   #' create stimuli from 2D feature space
   #' 
   #' @param l_info list with parameters
@@ -127,10 +127,10 @@ make_stimuli <- function(l_info, category_shape = "squares") {
   x2 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  if (category_shape = "squares") {
+  if (l_info$category_shape == "squares") {
     tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
       select(-c(x1_cat, x2_cat))
-  } else if (category_shape == "ellipse") {
+  } else if (l_info$category_shape == "ellipses") {
     l <- create_ellipse_categories(tbl, l_info$n_categories)
     tbl <- l[[1]]
     l_info$tbl_ellipses <- l[[2]]
@@ -190,15 +190,15 @@ create_ellipse_categories <- function(tbl, n_categories) {
   theta_deg <- 45
   fctr_mid <- list(
     "squash_all" = .9, "squash_y" = 1, "squash_x" = .3, 
-    "move_x" = 0, "move_y" = 0, "category" = 1
+    "move_x" = 0, "move_y" = 0, "category" = 2
   )
   fctr_hi <- list(
     "squash_all" = .85, "squash_y" = .5, "squash_x" = .2,
-    "move_x" = 3, "move_y" = -3, "category" = 2
+    "move_x" = 3, "move_y" = -3, "category" = 3
   )
   fctr_lo <- list(
     "squash_all" = .85, "squash_y" = .5, "squash_x" = .2,
-    "move_x" = -3, "move_y" = 3, "category" = 3
+    "move_x" = -3, "move_y" = 3, "category" = 4
   )
   if (n_categories == 4) {
     l_map <- list(fctr_mid, fctr_hi, fctr_lo)
@@ -244,7 +244,7 @@ assign_grid_points <- function(fctrs, tbl, thxs, theta_deg) {
     )
   }
   in_ellipse <- pmap_lgl(tbl[, c("x1", "x2")], is_within_ellipse, tbl_ellipse = tbl_ellipse)
-  tbl$category <- 0
+  tbl$category <- 1
   tbl$category[in_ellipse] <- fctrs[["category"]]
   tbl_ellipse$category <- fctrs[["category"]]
   return(list(tbl_ellipse, tbl))

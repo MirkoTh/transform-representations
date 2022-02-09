@@ -59,7 +59,7 @@ function setup_experiment() {
     }
 
     // stimulus information
-    const n_x_steps = 12;
+    const n_x_steps = 100;
     var stimulus_info = {
         x1: Array(n_x_steps).fill().map((element, index) => index + 1),
         x2: Array(n_x_steps).fill().map((element, index) => index + 1),
@@ -187,8 +187,8 @@ function slide_adjust() {
 }
 
 replace_monster = function (slider1, slider2) {
-    stimulus_id = (parseInt(slider1.value) - 1) * 3 + parseInt(slider2.value)
-    document.getElementById("selected_monster").src = "./stimuli/stimulus-" + stimulus_id + ".PNG"
+    stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
+    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".PNG"
 }
 
 https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
@@ -255,8 +255,8 @@ function log_response(rt, i, part, stimulus_ids) {
         x2_response: document.getElementById("demo2").value,
         rt: rt
     }
-    document.getElementById("myRange1").value = 2;
-    document.getElementById("myRange2").value = 2;
+    document.getElementById("myRange1").value = 50;
+    document.getElementById("myRange2").value = 50;
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     //saveData(JSON.stringify(data_store))
 
