@@ -11,7 +11,6 @@ def stimulus_parameters(val_steps: int):
     t_dist = 1
 
     # Stimulus values
-    val_steps = 10
     d1val = np.linspace(0.17, 0.9, num=val_steps)  # 0.12, 0.825,
     d2val = np.linspace(0.1 * scale, 0.85 * scale, num=val_steps)
 
@@ -36,6 +35,8 @@ def stimulus_parameters(val_steps: int):
     body_pos = [0.1, 0.4]
     contour_size = 1
     contour_pos = [0, -dim_sep / 2]
+    radius = 1
+    fill_steps = np.linspace(0.1, 0.9, num=val_steps)
 
     # Neck
     neck_size = [0.8, 0.05]
@@ -55,6 +56,9 @@ def stimulus_parameters(val_steps: int):
     params["scale"] = scale
     params["t_dist"] = t_dist
     params["n_spikes"] = n_spikes
+    params["d1val"] = d1val
+    params["radius"] = radius
+    params["fill_steps"] = fill_steps
 
     return params
 
@@ -145,3 +149,35 @@ def head_vertices_psy(radius, pos, stim_dist, params):
     comb_vertices[1::2] = outer_vertices
 
     return comb_vertices
+
+
+def belly(params, i, min_max):
+    fill_steps = np.linspace(
+        params["radius"] * 0.1, params["radius"] * 0.9, num=params["n_steps"]
+    )
+    t = np.linspace(0, 2 * np.pi, num=100)
+    x_outer = params["radius"] * np.cos(t) * min_max
+    y_outer = params["radius"] * np.sin(t) * min_max - 2.4 * min_max
+    x_inner = params["radius"] * params["fill_steps"][i] * np.cos(t) * min_max
+    y_inner = (
+        params["radius"] * params["fill_steps"][i] * np.sin(t) * min_max - 2.4 * min_max
+    )
+    circle = {
+        "x_outer": x_outer,
+        "y_outer": y_outer,
+        "x_inner": x_inner,
+        "y_inner": y_inner,
+    }
+    return circle
+
+
+def rotate_arms(x, y_lo, y_hi, theta_deg):
+    theta_rad = (theta_deg * np.pi) / 180
+    theta_sin = np.sin(theta_rad)
+    theta_cos = np.cos(theta_rad)
+    m_rotate = np.array([[theta_cos, -theta_sin], [theta_sin, theta_cos]])
+    m_xy_hi = np.array([x, y_hi])
+    m_xy_lo = np.array([x, y_lo])
+    m_xy_hi = m_rotate @ m_xy_hi
+    m_xy_lo = m_rotate @ m_xy_lo
+    return m_xy_lo, m_xy_hi
