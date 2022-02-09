@@ -187,7 +187,7 @@ def rotate_arms(x, y_lo, y_hi, theta_deg):
     return m_xy_lo, m_xy_hi
 
 
-def draw_alien(params, head_spikiness, belly_size, ax):
+def draw_alien(head_spikiness, belly_size, ax, params):
     # head
     coord = head_vertices_psy(head_spikiness, [0, 0], 0, params)
     val_max = np.max([np.max(np.abs(i)) for i in coord])
@@ -199,7 +199,7 @@ def draw_alien(params, head_spikiness, belly_size, ax):
     )
     ax.axis("off")
     # belly
-    belly_coord = stim_utils.belly(params, belly_size, val_max)
+    belly_coord = belly(params, belly_size, val_max)
     ax.fill_between(
         belly_coord["x_outer"],
         np.mean(belly_coord["y_outer"]),
@@ -212,7 +212,7 @@ def draw_alien(params, head_spikiness, belly_size, ax):
 
     # cross
     width = val_max / 3
-    height = val_max / 10
+    height = val_max / 20
     x = np.linspace(-width / 2, width / 2, num=50)
     y = np.linspace(-height / 2, height / 2, num=50)
     ax.fill_between(
@@ -229,37 +229,37 @@ def draw_alien(params, head_spikiness, belly_size, ax):
     )
 
     # arms
-    x = np.linspace(0, width * 2, num=50)
-    y_hi = np.repeat(height / 1, 50)
-    y_lo = np.repeat(-height / 1, 50)
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 45)
+    x = np.linspace(-width, width, num=50)
+    y_hi = np.repeat(0, 50)
+    y_lo = np.repeat(0, 50)
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -10)
     ax.fill_between(
         m_xy_hi[0, :] + val_max,
-        m_xy_hi[1, :] - 2.4 * val_max,
-        m_xy_lo[1, :] - 2.4 * val_max,
+        m_xy_hi[1, :] - 2.4 * val_max + height,
+        m_xy_lo[1, :] - 2.4 * val_max - height,
         color=params["col_default"],
     )
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 135)
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 190)
     ax.fill_between(
         m_xy_hi[0, :] - val_max,
-        m_xy_hi[1, :] - 2.4 * val_max,
-        m_xy_lo[1, :] - 2.4 * val_max,
+        m_xy_hi[1, :] - 2.4 * val_max + height,
+        m_xy_lo[1, :] - 2.4 * val_max - height,
         color=params["col_default"],
     )
 
     # legs
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 315)
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -80)
     ax.fill_between(
         m_xy_hi[0, :] + 0.25 * val_max,
-        m_xy_hi[1, :] - 3.3 * val_max,
-        m_xy_lo[1, :] - 3.3 * val_max,
+        m_xy_hi[1, :] - 3.3 * val_max + height,
+        m_xy_lo[1, :] - 3.3 * val_max - height,
         color=params["col_default"],
     )
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 225)
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -100)
     ax.fill_between(
         m_xy_hi[0, :] - 0.25 * val_max,
-        m_xy_hi[1, :] - 3.3 * val_max,
-        m_xy_lo[1, :] - 3.3 * val_max,
+        m_xy_hi[1, :] - 3.3 * val_max + height,
+        m_xy_lo[1, :] - 3.3 * val_max - height,
         color=params["col_default"],
     )
     return ax
