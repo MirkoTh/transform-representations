@@ -179,7 +179,7 @@ def rotate_arms(x, y_lo, y_hi, theta_deg):
     theta_rad = (theta_deg * np.pi) / 180
     theta_sin = np.sin(theta_rad)
     theta_cos = np.cos(theta_rad)
-    m_rotate = np.array([[theta_cos, -theta_sin], [theta_sin, theta_cos]])
+    m_rotate = np.array([[theta_cos, theta_sin], [-theta_sin, theta_cos]])
     m_xy_hi = np.array([x, y_hi])
     m_xy_lo = np.array([x, y_lo])
     m_xy_hi = m_rotate @ m_xy_hi
@@ -229,38 +229,38 @@ def draw_alien(head_spikiness, belly_size, ax, params):
     )
 
     # arms
-    x = np.linspace(-width, width, num=50)
-    y_hi = np.repeat(0, 50)
-    y_lo = np.repeat(0, 50)
+    x = np.linspace(-width, width, num=2)
+    y_hi = np.repeat(0, 2)
+    y_lo = np.repeat(0, 2)
     m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -10)
-    ax.fill_between(
+    ax.plot(
         m_xy_hi[0, :] + val_max,
-        m_xy_hi[1, :] - 2.4 * val_max + height,
-        m_xy_lo[1, :] - 2.4 * val_max - height,
-        color=params["col_default"],
+        m_xy_hi[1, :] - 2.4 * val_max,
+        linewidth=10,
+        c=params["col_default"],
     )
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 190)
-    ax.fill_between(
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -170)
+    ax.plot(
         m_xy_hi[0, :] - val_max,
-        m_xy_hi[1, :] - 2.4 * val_max + height,
-        m_xy_lo[1, :] - 2.4 * val_max - height,
-        color=params["col_default"],
+        m_xy_hi[1, :] - 2.4 * val_max,
+        linewidth=10,
+        c=params["col_default"],
     )
 
     # legs
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -80)
-    ax.fill_between(
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 80)
+    ax.plot(
         m_xy_hi[0, :] + 0.25 * val_max,
-        m_xy_hi[1, :] - 3.3 * val_max + height,
-        m_xy_lo[1, :] - 3.3 * val_max - height,
-        color=params["col_default"],
+        m_xy_hi[1, :] - 3.3 * val_max,
+        linewidth=10,
+        c=params["col_default"],
     )
-    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, -100)
-    ax.fill_between(
+    m_xy_lo, m_xy_hi = rotate_arms(x, y_lo, y_hi, 100)
+    ax.plot(
         m_xy_hi[0, :] - 0.25 * val_max,
-        m_xy_hi[1, :] - 3.3 * val_max + height,
-        m_xy_lo[1, :] - 3.3 * val_max - height,
-        color=params["col_default"],
+        m_xy_hi[1, :] - 3.3 * val_max,
+        linewidth=10,
+        c=params["col_default"],
     )
     return ax
 
