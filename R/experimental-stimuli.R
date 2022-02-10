@@ -2,6 +2,7 @@
 
 rm(list = ls())
 library(tidyverse)
+library(jsonlite)
 
 files <- c("R/utils.R", "R/plotting.R")
 walk(files, source)
@@ -38,11 +39,20 @@ l_info <- pmap(
 
 l_stimuli <- map(l_info, make_stimuli)
 
+l_stimuli[[1]][[1]] %>% mutate(x1 = x1 + 1, x2 = x2 + 1) %>%
+  select(x1, x2, category) %>% as.list() %>% toJSON()
+
 save_category_coords <- function(x){
-  max_category <- max(as.numeric(as.character(x[[1]]$category)))
-  x[[1]] <- x[[1]] %>% mutate(x1 = x1 + 1, x2 = x2 + 1)
-  x[[1]][, c("x1", "x2", "category")] %>%
-    write_csv(str_c("experiments/2022-02-category-learning/category-mapping-", max_category, ".csv"))
+  max_category <- max(as.numeric(as.character(x[[1]][[1]]$category)))
+  x[[1]] <- x[[1]] %>% 
+    mutate(
+      category = as.numeric(as.character(category)),
+      x1 = x1 + 1, x2 = x2 + 1
+      )
+  x[[1]][, c("x1", "x2", "category")] %>% 
+    as.list() %>%
+    toJSON() %>%
+    write_json(str_c("experiments/2022-02-category-learning/category-mapping-", max_category, ".json"))
 }
 
-walk(l_stimuli, save_category_coords)
+map(l_stimuli, save_category_coords)
