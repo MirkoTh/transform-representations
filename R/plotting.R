@@ -43,12 +43,17 @@ plot_arrangement <- function(pl, n_cols = 2, n_rows = NULL) {
 
 
 plot_moves <- function(tbl_results, l_info) {
+  if (l_info$category_shape == "ellipses") {
+    tbl_results2 <- tbl_results %>% filter(category != 1)
+  } else if (l_info$category_shape == "squares") {
+    tbl_results2 <- tbl_results
+  }
   space_edges <- l_info$space_edges
   ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
     geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
     geom_segment(
-      aes(
+      data = tbl_results2, aes(
         x = x1_data, y = x2_data, xend = x1_center, yend = x2_center, 
         color = as.numeric(category)
       ),
@@ -66,9 +71,10 @@ plot_moves <- function(tbl_results, l_info) {
       x = bquote(x[1]),
       y = bquote(x[2]),
       title = str_c(
-        "Prior SD = ", l_info$prior_sd, "\n",
+        "Prior SD = ", l_info$prior_sd, ", ",
         "Sampling = ", l_info$sampling, "\n",
-        "Constrain Space = ", l_info$constrain_space
+        "Constrain Space = ", l_info$constrain_space, ", ",
+        "Model = ", l_info$cat_type
       )
     )
 }
