@@ -1,4 +1,4 @@
-
+/* 
 // get subject ID
 if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
@@ -11,13 +11,14 @@ else {
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
+ */
+const participant_id = 1;
 
 function setup_experiment() {
     // read mapping from x1 and x2 values to categories
-    const cat2map = require('./category-mapping-2.json');
-    const cat2map_val = JSON.parse(cat2map)
-    const cat4map = require('./category-mapping-4.json');
-    const cat4map_val = JSON.parse(cat4map)
+
+    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat4map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     // experiment information
     const experiment_info = {
         n_conditions: 3, // control, 4 categories, 9 categories
@@ -34,20 +35,21 @@ function setup_experiment() {
     }
     console.log("condition_id is: ", participant_id % 3 + 1)
     if ((participant_id % 3 + 1) == 2) {
-        experiment_info["n_categories"] = 4
+        experiment_info["n_categories"] = 2
     } else if ((participant_id % 3 + 1) == 3) {
-        experiment_info["n_categories"] = 9
+        experiment_info["n_categories"] = 4
     } else if ((participant_id % 3 + 1) == 1) {
         experiment_info["n_categories"] = 0
     }
+
     // display info
     const display_info = {
-        screenwidth: window.innerWidth,
+        /* screenwidth: window.innerWidth,
         screenheight: window.innerHeight,
         x_center: window.innerWidth / 2,
         y_center: window.innerHeight / 2,
         size_stimulus: window.innerHeight / 5,
-        size_feedback: window.innerHeight / 10,
+        size_feedback: window.innerHeight / 10, */
 
         reproduction: {
             iti: 1000,
@@ -70,10 +72,15 @@ function setup_experiment() {
         x1_x2: Array(n_x_steps * n_x_steps),
         stimulus_id: Array(n_x_steps * n_x_steps)
     }
+    if (experiment_info["n_categories"] == 2) {
+        stimulus_info["category_id"] = cat2map_val
+    } else if (experiment_info["n_categories"] == 4) {
+        stimulus_info["category_id"] = cat4map_val
+    }
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
-    for (x1 of stimulus_info["x1"]) {
-        for (x2 of stimulus_info["x2"]) {
+    for (let x1 of stimulus_info["x1"]) {
+        for (let x2 of stimulus_info["x2"]) {
             // 12x12 grid of stimuli placed within finer grid of 100x100
             // edge space of 6 units is 
             stimulus_info["x1_x2"][i] = [x1 * 8 - 2, x2 * 8 - 2]
@@ -94,10 +101,10 @@ function setup_experiment() {
     trial_info["category_id"] = Array(experiment_info["n_trial"])
 
 
-    n_reps_practice = 1
-    n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
-    n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
-    n_reps_categorization = Math.ceil(experiment_info["n_trials_categorization"] / stimulus_info["n_stimuli"])
+    const n_reps_practice = 1
+    const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
+    const n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
+    const n_reps_categorization = Math.ceil(experiment_info["n_trials_categorization"] / stimulus_info["n_stimuli"])
 
     append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_reproduction_1)
     append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
@@ -107,13 +114,18 @@ function setup_experiment() {
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
     trial_info["stimulus_id_c"].length = experiment_info["n_trials_categorization"]
+    // ellipse categories
+    for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
+        trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
+    }
 
 
-    segments_per_dim = Math.sqrt(experiment_info["n_categories"])
+
+    // square categories
+    /* segments_per_dim = Math.sqrt(experiment_info["n_categories"])
     category_step = Math.max(...stimulus_info["x1"]) / segments_per_dim
     x1_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
     x2_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
-
     var cat_assign_x1 = Array(segments_per_dim)
     var cat_assign_x2 = Array(segments_per_dim)
     for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
@@ -129,12 +141,12 @@ function setup_experiment() {
             x2_level += x2_tmp[j]
         }
         trial_info["category_id"][i] = x2_level * segments_per_dim + (x1_level + 1)
-    }
+    } */
 
     function append_randomized_arrays(set, n) {
-        sets_randomized = Array()
+        var sets_randomized = [];
         for (let i = 0; i < n; i++) {
-            set_permuted = permute(set)
+            var set_permuted = permute(set)
             sets_randomized.concat(set_permuted);
         }
         return sets_randomized
@@ -174,7 +186,10 @@ function route_categorization(condition) {
         clickStart('page6', 'page7b')
     } else { clickStart('page6', 'page7') }
 }
-
+function replace_monster(slider1, slider2) {
+    stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
+    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".PNG"
+}
 function slide_adjust() {
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
@@ -192,12 +207,9 @@ function slide_adjust() {
     }
 }
 
-replace_monster = function (slider1, slider2) {
-    stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
-    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".PNG"
-}
 
-https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
+
+//https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -275,9 +287,9 @@ function log_response(rt, i, part, stimulus_ids) {
 
 }
 
-total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
-total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
-total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1
+const total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
+const total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
+const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1
 
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
