@@ -208,25 +208,30 @@ var stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
 var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
 var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
+var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
 
 async function next_item_cr(old, i) {
     part = document.getElementById("part_reproduction").innerHTML
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
-        fake_stim_id = stimulus_crp_trial[i] % 9 + 1
+        current_stim_id = stimulus_crp_trial[i]
+        current_stim = stimulus_vals[current_stim_id]
     }
     if (part == 1) {
         i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-        fake_stim_id = stimulus_cr1_trial[i] % 9 + 1
+        current_stim_id = stimulus_cr1_trial[i]
+        current_stim = stimulus_vals[current_stim_id]
     } else if (part == 2) {
         i = parseInt(document.getElementById("trial_nr_cr2").innerHTML)
-        fake_stim_id = stimulus_cr2_trial[i] % 9 + 1
+        current_stim_id = stimulus_cr2_trial[i]
+        current_stim = stimulus_vals[current_stim_id]
     }
     clickStart(old, 'page5')
 
 
-    stim_path = "./stimuli/stimulus-" + fake_stim_id + ".PNG"
+    stim_path = "./stimuli/stimulus[" + current_stim + "].PNG"
     stim_path_mask = "./stimuli/mask.PNG"
+    console.log(stim_path)
 
     // present stimuli and mask
     document.getElementById("item_displayed_2").src = "./stimuli/fixcross.PNG"
@@ -256,7 +261,9 @@ function log_response(rt, i, part, stimulus_ids) {
         rt: rt
     }
     document.getElementById("myRange1").value = 50;
+    document.getElementById("demo1").innerHTML = 50;
     document.getElementById("myRange2").value = 50;
+    document.getElementById("demo2").innerHTML = 50;
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     //saveData(JSON.stringify(data_store))
 
@@ -343,12 +350,11 @@ async function next_item_cat(old, i) {
     i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     clickStart(old, 'page9')
 
-    console.log(i)
     document.getElementById("trial_nr_cat").innerHTML = i
-    console.log("the currently displayed stimulus_id is " + stimulus_cat_trial[i])
 
-    fake_stim_id = stimulus_cat_trial[i] % 9 + 1
-    stim_path = "./stimuli/stimulus-" + fake_stim_id + ".PNG"
+    current_stim_id = stimulus_cat_trial[i]
+    current_stim = stimulus_vals[current_stim_id]
+    stim_path = "./stimuli/stimulus[" + current_stim_id + "].PNG"
     stim_path_mask = "./stimuli/mask.PNG"
 
     // present stimuli and mask
