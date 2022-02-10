@@ -13,7 +13,11 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
 }
 
 function setup_experiment() {
-
+    // read mapping from x1 and x2 values to categories
+    const cat2map = require('./category-mapping-2.json');
+    const cat2map_val = JSON.parse(cat2map)
+    const cat4map = require('./category-mapping-4.json');
+    const cat4map_val = JSON.parse(cat4map)
     // experiment information
     const experiment_info = {
         n_conditions: 3, // control, 4 categories, 9 categories
@@ -59,7 +63,7 @@ function setup_experiment() {
     }
 
     // stimulus information
-    const n_x_steps = 100;
+    const n_x_steps = 12;
     var stimulus_info = {
         x1: Array(n_x_steps).fill().map((element, index) => index + 1),
         x2: Array(n_x_steps).fill().map((element, index) => index + 1),
@@ -70,7 +74,9 @@ function setup_experiment() {
     var i = 0;
     for (x1 of stimulus_info["x1"]) {
         for (x2 of stimulus_info["x2"]) {
-            stimulus_info["x1_x2"][i] = [x1, x2]
+            // 12x12 grid of stimuli placed within finer grid of 100x100
+            // edge space of 6 units is 
+            stimulus_info["x1_x2"][i] = [x1 * 8 - 2, x2 * 8 - 2]
             stimulus_info["stimulus_id"][i] = i + 1
             i += 1
         }
