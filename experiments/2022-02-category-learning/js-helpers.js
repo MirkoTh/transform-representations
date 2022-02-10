@@ -75,8 +75,8 @@ function setup_experiment() {
     for (x1 of stimulus_info["x1"]) {
         for (x2 of stimulus_info["x2"]) {
             // 12x12 grid of stimuli placed within finer grid of 100x100
-            // edge space of 8 units is 
-            stimulus_info["x1_x2"][i] = [(x1 - 1) * 7 + 8, (x2 - 1) * 7 + 8]
+            // edge space of 6 units is 
+            stimulus_info["x1_x2"][i] = [x1 * 8 - 2, x2 * 8 - 2]
             stimulus_info["stimulus_id"][i] = i + 1
             i += 1
         }
