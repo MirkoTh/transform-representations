@@ -19,6 +19,7 @@ function setup_experiment() {
 
     const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat4map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat0map_val = Array(144).fill(0)
     // experiment information
     const experiment_info = {
         n_conditions: 3, // control, 4 categories, 9 categories
@@ -76,6 +77,8 @@ function setup_experiment() {
         stimulus_info["category_id"] = cat2map_val
     } else if (experiment_info["n_categories"] == 4) {
         stimulus_info["category_id"] = cat4map_val
+    } else if (experiment_info["n_categories"] == 0) {
+        stimulus_info["category_id"] = cat0map_val
     }
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
@@ -118,7 +121,7 @@ function setup_experiment() {
     for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
         trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
     }
-
+    console.log(trial_info["category_id"])
 
 
     // square categories
@@ -227,6 +230,7 @@ var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
 var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
+
 
 async function next_item_cr(old, i) {
     part = document.getElementById("part_reproduction").innerHTML
@@ -372,8 +376,9 @@ async function next_item_cat(old, i) {
 
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
-    stim_path = "./stimuli/stimulus[" + current_stim_id + "].PNG"
+    stim_path = "./stimuli/stimulus[" + current_stim + "].PNG"
     stim_path_mask = "./stimuli/mask.PNG"
+    console.log("stim_path is: ", stim_path)
 
     // present stimuli and mask
     document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.PNG"
@@ -438,7 +443,7 @@ function keycode_to_integer(kc) {
 function write_cat_results(i, r) {
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (condition_id == 1) {
-        accuracy = 0
+        accuracy = 9
     } else if (condition_id == 2 | condition_id == 3) {
         accuracy = setup_expt["trial_info"]["category_id"] == r;
     }
@@ -458,4 +463,113 @@ function write_cat_results(i, r) {
     }
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     //saveData(JSON.stringify(data_store))
+}
+
+// color text
+function color(id, col) {
+    console.log(id)
+    document.getElementById(id).style.color = col;
+}
+
+function colorWrongAnswer(question, col) {
+    const rbs = document.querySelectorAll('input[name="' + question + '\"]');
+    for (const rb of rbs) {
+        if (rb.checked) {
+            color(question + rb.id, col)
+            break;
+        }
+    }
+}
+
+function checkOnPage(page) {
+    if (document.getElementById(page).style.display == 'block') { return true }
+    else { return false }
+}
+
+
+//changes inner HTML of div with ID=x to y
+function change(x, y) {
+    document.getElementById(x).innerHTML = y;
+}
+
+function changeColor(element, color) {
+    document.getElementById(element).style.color = color;
+}
+
+var flag = 0;
+var instcounter = 0;
+function instructioncheck(pg, pg_prev) {
+    var ch1 = 0;
+    var ch2 = 0;
+    var ch3 = 0;
+    var ch4 = 0;
+    var ch5 = 0;
+    var ch6 = 0;
+    var ch7 = 0;
+    var ch8 = 0;
+    var ch9 = 0;
+    var ch10 = 0;
+    //check if correct answers are provided
+    if (document.getElementById('icheck1').checked) { var ch1 = 1; color('q1icheck1', 'green') }
+    else { colorWrongAnswer("q1", 'red') }
+    if (document.getElementById('icheck2').checked) { var ch2 = 1; color('q2icheck2', 'green') }
+    else { colorWrongAnswer("q2", 'red') }
+    if (document.getElementById('icheck3').checked) { var ch3 = 1; color('q3icheck3', 'green') }
+    else { colorWrongAnswer("q3", 'red') }
+    if (document.getElementById('icheck4').checked) { var ch4 = 1; color('q4icheck4', 'green') }
+    else { colorWrongAnswer("q4", 'red') }
+    if (document.getElementById('icheck5').checked) { var ch5 = 1; color('q5icheck5', 'green') }
+    else { colorWrongAnswer("q5", 'red') }
+    if (document.getElementById('icheck6').checked) { var ch6 = 1; color('q6icheck6', 'green') }
+    else { colorWrongAnswer("q6", 'red') }
+    if (document.getElementById('icheck7').checked) { var ch7 = 1; color('q7icheck7', 'green') }
+    else { colorWrongAnswer("q7", 'red') }
+    if (document.getElementById('icheck8').checked) { var ch8 = 1; color('q8icheck8', 'green') }
+    else { colorWrongAnswer("q8", 'red') }
+    if (document.getElementById('icheck9').checked) { var ch9 = 1; color('q9icheck9', 'green') }
+    else { colorWrongAnswer("q9", 'red') }
+    if (document.getElementById('icheck10').checked) { var ch10 = 1; color('q10icheck10', 'green') }
+    else { colorWrongAnswer("q10", 'red') }
+    var checksum = ch1 + ch2 + ch3 + ch4 + ch5 + ch6 + ch7 + ch8 + ch9 + ch10;
+    var criterion = 5;
+    console.log(checksum)
+    console.log(criterion)
+    console.log(flag)
+
+
+    // indicate correct answers
+    ++flag;
+    clickStart(pg, pg);
+    change("check", "Continue")
+
+    // page transition 
+    if ((checksum === criterion) && (flag == 2)) {
+        //if correct, continue 
+        //begintrial();
+        clickStart(pg, 'page3');
+        // alert
+        alert('Great, you have answered all of the questions correctly. The study will now start.');
+    }
+    else {
+        if (flag == 2) {
+            instcounter++;
+            colorWrongAnswer("q1", '#333333')
+            colorWrongAnswer("q2", '#333333')
+            colorWrongAnswer("q3", '#333333')
+            colorWrongAnswer("q4", '#333333')
+            colorWrongAnswer("q5", '#333333')
+            colorWrongAnswer("q6", '#333333')
+            colorWrongAnswer("q7", '#333333')
+            colorWrongAnswer("q8", '#333333')
+            colorWrongAnswer("q9", '#333333')
+            colorWrongAnswer("q10", '#333333')
+            //if one or more answers are wrong, raise alert box
+            alert('You have answered some of the questions wrong. Please try again.');
+            // go back to instructions
+            clickStart(pg, pg_prev);
+            flag = 0;
+
+        }
+    }
+
 }
