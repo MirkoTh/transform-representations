@@ -1,4 +1,4 @@
-
+/* 
 // get subject ID
 if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
@@ -11,13 +11,15 @@ else {
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
+ */
+const participant_id = 1;
 
 function setup_experiment() {
     // read mapping from x1 and x2 values to categories
-    const cat2map = require('./category-mapping-2.json');
-    const cat2map_val = JSON.parse(cat2map)
-    const cat4map = require('./category-mapping-4.json');
-    const cat4map_val = JSON.parse(cat4map)
+
+    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat4map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat0map_val = Array(144).fill(0)
     // experiment information
     const experiment_info = {
         n_conditions: 3, // control, 4 categories, 9 categories
@@ -34,20 +36,21 @@ function setup_experiment() {
     }
     console.log("condition_id is: ", participant_id % 3 + 1)
     if ((participant_id % 3 + 1) == 2) {
-        experiment_info["n_categories"] = 4
+        experiment_info["n_categories"] = 2
     } else if ((participant_id % 3 + 1) == 3) {
-        experiment_info["n_categories"] = 9
+        experiment_info["n_categories"] = 4
     } else if ((participant_id % 3 + 1) == 1) {
         experiment_info["n_categories"] = 0
     }
+
     // display info
     const display_info = {
-        screenwidth: window.innerWidth,
+        /* screenwidth: window.innerWidth,
         screenheight: window.innerHeight,
         x_center: window.innerWidth / 2,
         y_center: window.innerHeight / 2,
         size_stimulus: window.innerHeight / 5,
-        size_feedback: window.innerHeight / 10,
+        size_feedback: window.innerHeight / 10, */
 
         reproduction: {
             iti: 1000,
@@ -70,10 +73,17 @@ function setup_experiment() {
         x1_x2: Array(n_x_steps * n_x_steps),
         stimulus_id: Array(n_x_steps * n_x_steps)
     }
+    if (experiment_info["n_categories"] == 2) {
+        stimulus_info["category_id"] = cat2map_val
+    } else if (experiment_info["n_categories"] == 4) {
+        stimulus_info["category_id"] = cat4map_val
+    } else if (experiment_info["n_categories"] == 0) {
+        stimulus_info["category_id"] = cat0map_val
+    }
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
-    for (x1 of stimulus_info["x1"]) {
-        for (x2 of stimulus_info["x2"]) {
+    for (let x1 of stimulus_info["x1"]) {
+        for (let x2 of stimulus_info["x2"]) {
             // 12x12 grid of stimuli placed within finer grid of 100x100
             // edge space of 6 units is 
             stimulus_info["x1_x2"][i] = [x1 * 8 - 2, x2 * 8 - 2]
@@ -94,10 +104,10 @@ function setup_experiment() {
     trial_info["category_id"] = Array(experiment_info["n_trial"])
 
 
-    n_reps_practice = 1
-    n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
-    n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
-    n_reps_categorization = Math.ceil(experiment_info["n_trials_categorization"] / stimulus_info["n_stimuli"])
+    const n_reps_practice = 1
+    const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
+    const n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
+    const n_reps_categorization = Math.ceil(experiment_info["n_trials_categorization"] / stimulus_info["n_stimuli"])
 
     append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_reproduction_1)
     append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
@@ -107,13 +117,18 @@ function setup_experiment() {
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
     trial_info["stimulus_id_c"].length = experiment_info["n_trials_categorization"]
+    // ellipse categories
+    for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
+        trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
+    }
+    console.log(trial_info["category_id"])
 
 
-    segments_per_dim = Math.sqrt(experiment_info["n_categories"])
+    // square categories
+    /* segments_per_dim = Math.sqrt(experiment_info["n_categories"])
     category_step = Math.max(...stimulus_info["x1"]) / segments_per_dim
     x1_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
     x2_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
-
     var cat_assign_x1 = Array(segments_per_dim)
     var cat_assign_x2 = Array(segments_per_dim)
     for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
@@ -129,12 +144,12 @@ function setup_experiment() {
             x2_level += x2_tmp[j]
         }
         trial_info["category_id"][i] = x2_level * segments_per_dim + (x1_level + 1)
-    }
+    } */
 
     function append_randomized_arrays(set, n) {
-        sets_randomized = Array()
+        var sets_randomized = [];
         for (let i = 0; i < n; i++) {
-            set_permuted = permute(set)
+            var set_permuted = permute(set)
             sets_randomized.concat(set_permuted);
         }
         return sets_randomized
@@ -174,7 +189,10 @@ function route_categorization(condition) {
         clickStart('page6', 'page7b')
     } else { clickStart('page6', 'page7') }
 }
-
+function replace_monster(slider1, slider2) {
+    stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
+    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".PNG"
+}
 function slide_adjust() {
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
@@ -192,12 +210,9 @@ function slide_adjust() {
     }
 }
 
-replace_monster = function (slider1, slider2) {
-    stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
-    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".PNG"
-}
 
-https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
+
+//https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -215,6 +230,7 @@ var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
 var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
+
 
 async function next_item_cr(old, i) {
     part = document.getElementById("part_reproduction").innerHTML
@@ -275,9 +291,9 @@ function log_response(rt, i, part, stimulus_ids) {
 
 }
 
-total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
-total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
-total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1
+const total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
+const total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
+const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1
 
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
@@ -360,8 +376,9 @@ async function next_item_cat(old, i) {
 
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
-    stim_path = "./stimuli/stimulus[" + current_stim_id + "].PNG"
+    stim_path = "./stimuli/stimulus[" + current_stim + "].PNG"
     stim_path_mask = "./stimuli/mask.PNG"
+    console.log("stim_path is: ", stim_path)
 
     // present stimuli and mask
     document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.PNG"
@@ -426,7 +443,7 @@ function keycode_to_integer(kc) {
 function write_cat_results(i, r) {
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (condition_id == 1) {
-        accuracy = 0
+        accuracy = 9
     } else if (condition_id == 2 | condition_id == 3) {
         accuracy = setup_expt["trial_info"]["category_id"] == r;
     }
@@ -446,4 +463,113 @@ function write_cat_results(i, r) {
     }
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     //saveData(JSON.stringify(data_store))
+}
+
+// color text
+function color(id, col) {
+    console.log(id)
+    document.getElementById(id).style.color = col;
+}
+
+function colorWrongAnswer(question, col) {
+    const rbs = document.querySelectorAll('input[name="' + question + '\"]');
+    for (const rb of rbs) {
+        if (rb.checked) {
+            color(question + rb.id, col)
+            break;
+        }
+    }
+}
+
+function checkOnPage(page) {
+    if (document.getElementById(page).style.display == 'block') { return true }
+    else { return false }
+}
+
+
+//changes inner HTML of div with ID=x to y
+function change(x, y) {
+    document.getElementById(x).innerHTML = y;
+}
+
+function changeColor(element, color) {
+    document.getElementById(element).style.color = color;
+}
+
+var flag = 0;
+var instcounter = 0;
+function instructioncheck(pg, pg_prev) {
+    var ch1 = 0;
+    var ch2 = 0;
+    var ch3 = 0;
+    var ch4 = 0;
+    var ch5 = 0;
+    var ch6 = 0;
+    var ch7 = 0;
+    var ch8 = 0;
+    var ch9 = 0;
+    var ch10 = 0;
+    //check if correct answers are provided
+    if (document.getElementById('icheck1').checked) { var ch1 = 1; color('q1icheck1', 'green') }
+    else { colorWrongAnswer("q1", 'red') }
+    if (document.getElementById('icheck2').checked) { var ch2 = 1; color('q2icheck2', 'green') }
+    else { colorWrongAnswer("q2", 'red') }
+    if (document.getElementById('icheck3').checked) { var ch3 = 1; color('q3icheck3', 'green') }
+    else { colorWrongAnswer("q3", 'red') }
+    if (document.getElementById('icheck4').checked) { var ch4 = 1; color('q4icheck4', 'green') }
+    else { colorWrongAnswer("q4", 'red') }
+    if (document.getElementById('icheck5').checked) { var ch5 = 1; color('q5icheck5', 'green') }
+    else { colorWrongAnswer("q5", 'red') }
+    if (document.getElementById('icheck6').checked) { var ch6 = 1; color('q6icheck6', 'green') }
+    else { colorWrongAnswer("q6", 'red') }
+    if (document.getElementById('icheck7').checked) { var ch7 = 1; color('q7icheck7', 'green') }
+    else { colorWrongAnswer("q7", 'red') }
+    if (document.getElementById('icheck8').checked) { var ch8 = 1; color('q8icheck8', 'green') }
+    else { colorWrongAnswer("q8", 'red') }
+    if (document.getElementById('icheck9').checked) { var ch9 = 1; color('q9icheck9', 'green') }
+    else { colorWrongAnswer("q9", 'red') }
+    if (document.getElementById('icheck10').checked) { var ch10 = 1; color('q10icheck10', 'green') }
+    else { colorWrongAnswer("q10", 'red') }
+    var checksum = ch1 + ch2 + ch3 + ch4 + ch5 + ch6 + ch7 + ch8 + ch9 + ch10;
+    var criterion = 5;
+    console.log(checksum)
+    console.log(criterion)
+    console.log(flag)
+
+
+    // indicate correct answers
+    ++flag;
+    clickStart(pg, pg);
+    change("check", "Continue")
+
+    // page transition 
+    if ((checksum === criterion) && (flag == 2)) {
+        //if correct, continue 
+        //begintrial();
+        clickStart(pg, 'page3');
+        // alert
+        alert('Great, you have answered all of the questions correctly. The study will now start.');
+    }
+    else {
+        if (flag == 2) {
+            instcounter++;
+            colorWrongAnswer("q1", '#333333')
+            colorWrongAnswer("q2", '#333333')
+            colorWrongAnswer("q3", '#333333')
+            colorWrongAnswer("q4", '#333333')
+            colorWrongAnswer("q5", '#333333')
+            colorWrongAnswer("q6", '#333333')
+            colorWrongAnswer("q7", '#333333')
+            colorWrongAnswer("q8", '#333333')
+            colorWrongAnswer("q9", '#333333')
+            colorWrongAnswer("q10", '#333333')
+            //if one or more answers are wrong, raise alert box
+            alert('You have answered some of the questions wrong. Please try again.');
+            // go back to instructions
+            clickStart(pg, pg_prev);
+            flag = 0;
+
+        }
+    }
+
 }

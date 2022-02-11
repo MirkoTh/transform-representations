@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
 <script src="js-helpers.js" charset="utf-8"></script>
 <!--<script src="transform-reps-cat-1.js" charset="utf-8"></script>-->
 
@@ -45,11 +46,11 @@
             You are randomly going to be assigned to one of several conditions. <br>
             Depending on the condition you are in, you are going to carry out a subset of the following tasks:
             <ul>
-                <li>Memory 1: Remember a monster on every trial as precisely as possible</li>
-                <li>Memory 2: Use your memory to compare the monster from the current trial to that of the previous
-                    trial; again as precisely as possible</li>
-                <li>Category Learning: The monsters come from different tribes. Learn to categorize them into the tribe
-                    the come from over several trials</li>
+                <li><b>Memory:</b> Remember a monster on every trial as precisely as possible</li>
+                <li><b>Similarity:</b> Use your memory to compare the monster from the current trial to the monster of
+                    the previous trial; again as precisely as possible</li>
+                <li><b>Category Learning</b>: The monsters come from different tribes. Learn to categorize them into the
+                    tribes they come from over several trials</li>
             </ul> <br>
             The purpose of the study is to gain knowledge about how people remember two-dimensional
             information.<br>
@@ -208,8 +209,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <br>
         </ol>
         <button type="button" name="bbutton" ; onclick="clickStart('page2', 'page1')" ;> Back </button>
-        <button type="button" name="button" ; onclick="clickStart('page2', 'page3')" ;> Start
-            Part 1 </button>
+        <button type="button" name="button" ; onclick="clickStart('page2', 'page2c')" ;> Check Comprehension </button>
 
     </div>
 
@@ -260,9 +260,164 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <br>
         </ol>
         <button type="button" name="bbutton" ; onclick="clickStart('page2b', 'page1')" ;> Back </button>
-        <button type="button" name="button" ; onclick="clickStart('page2b', 'page3')" ;> Start
-            Part 1 </button>
+        <button type="button" name="button" ; onclick="clickStart('page2b', 'page2bc')" ;> Check Comprehension </button>
 
+    </div>
+
+    <!--Comprehension check-->
+    <div id="page2bc" style="display:none">
+        <fieldset>
+            <legend>Please answer a few questions about this study before proceeding</legend>
+            <p style="font-size:100%;color:maroon;"> You will only be directed to the next page if you manage to answer
+                all of the questions correctly.</p>
+
+            <fieldset>
+                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                <b>What is your goal in the memory task? </b><br>
+                <label for="q1l1" style="font-weight: normal;"><input type="radio" name="q1" id="l1"><span id="q1l1">
+                        Remember the color of the monster. </span></label><br>
+                <label for="q1l2" style="font-weight: normal;"><input type="radio" name="q1" id="icheck1"><span
+                        id="q1icheck1"> Remember the spikiness of the head and the fill of the belly of the monster.
+                    </span></label><br>
+                <label for="q1l3" style="font-weight: normal;"><input type="radio" name="q1" id="l2"><span id="q1l2">
+                        Compare the monster to the monster on the previous trial. </span></label><br>
+                <!-- <label for="q1l4" style="font-weight: normal;"><input type="radio" name="q1" > I do not know. </label> -->
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- style="float:left;width:400px;margin:5px"> -->
+                <b>How do you respond in the memory task? </b><br>
+                <label for="q2l1" style="font-weight: normal;"><input type="radio" name="q2" id="l1" /><span id="q2l1">
+                        Using keys 1-9 on the keyboard. </span></label><br>
+                <label for="q2l2" style="font-weight: normal;"><input type="radio" name="q2" id="l2" /><span id="q2l2">
+                        Using the right and left mouse buttons </span></label><br>
+                <label for="q2l3" style="font-weight: normal;"><input type="radio" name="q2" id="icheck2"> <span
+                        id="q2icheck2"> Using the sliders displayed on the screen </span></label><br>
+                <!-- <label for="q2l4" style="font-weight: normal;"><input type="radio" name="q2"> I do not know. </label>-->
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                <b>What is your goal in the similarity task? </b><br>
+                <label for="q3l1" style="font-weight: normal;"><input type="radio" name="q3" id="l1"><span id="q3l1">
+                        Remember the color of the monster. </span></label><br>
+                <label for="q3l2" style="font-weight: normal;"><input type="radio" name="q3" id="l2"><span
+                        id="q3l2"></span> Reproduce the spikiness of the head and the fill of the belly of the monster
+                    using sliders. </span></label><br>
+                <label for="q3l3" style="font-weight: normal;"><input type="radio" name="q3" id="icheck3"><span
+                        id="q3icheck3"> Compare the monster to the monster on the previous trial.
+                    </span></label><br>
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- style="float:left;width:400px;margin:5px"> -->
+                <b>How do you respond in the similarity task? </b><br>
+                <label for="q4l1" style="font-weight: normal;"><input type="radio" name="q4" id="l1" /><span id="q4l1">
+                        Using keys 1-9 on the keyboard. 9 is very different, 1 is very similar </span></label><br>
+                <label for="q4l2" style="font-weight: normal;"><input type="radio" name="q4" id="l2" /><span id="q4l2">
+                        Using the right and left mouse buttons </span></label><br>
+                <label for="q4l3" style="font-weight: normal;"><input type="radio" name="q4" id="icheck4"> <span
+                        id="q4icheck4"> Using keys 1-9 on the keyboard. 1 is very different, 9 is very similar
+                    </span></label><br>
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- style="float:left;width:400px;margin:5px" -->
+                <b> How long is the experiment going to last approximately? </b><br>
+                <label for="q5l1" style="font-weight: normal;"><input type="radio" name="q5" id="l1"><span id="q5l1">
+                        Roughly 10 minutes </span></label><br>
+                <label for="q5l2" style="font-weight: normal;"><input type="radio" name="q5" id='l2'><span id="q5l2">
+                        Roughly 60 minutes </span></label><br>
+                <label for="q5l3" style="font-weight: normal;"><input type="radio" name="q5" id='icheck5'><span
+                        id="q5icheck5">
+                        Roughly 100 minutes </span></label><br>
+                <label for="q5l4" style="font-weight: normal;"><input type="radio" name="q5" id='l3'><span id="q5l3">
+                        Roughly 200 minutes </span></label><br>
+            </fieldset>
+        </fieldset>
+        <br>
+        <button type="button" name="button" ; onclick="clickStart('page2bc','page2b')" ;> Back </button>
+        <button type="button" name="button" ; onclick="instructioncheck('page2bc', 'page2b')" ;> <span id="check"> Check
+                Answers </span>
+        </button>
+    </div>
+
+    <div id="page2c" style="display:none">
+        <fieldset>
+            <legend>Please answer a few questions about this study before proceeding</legend>
+            <p style="font-size:100%;color:maroon;"> You will only be directed to the next page if you manage to answer
+                all of the questions correctly.</p>
+
+            <fieldset>
+                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                <b>What is your goal in the memory task? </b><br>
+                <label for="q6l1" style="font-weight: normal;"><input type="radio" name="q6" id="l1"><span id="q6l1">
+                        Remember the color of the monster. </span></label><br>
+                <label for="q6l2" style="font-weight: normal;"><input type="radio" name="q6" id="icheck6"><span
+                        id="q6icheck6"> Remember the spikiness of the head and the fill of the belly of the monster.
+                    </span></label><br>
+                <label for="q6l3" style="font-weight: normal;"><input type="radio" name="q6" id="l2"><span id="q6l2">
+                        Compare the monster to the monster on the previous trial. </span></label><br>
+                <!-- <label for="q6l4" style="font-weight: normal;"><input type="radio" name="q6" > I do not know. </label> -->
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- style="float:left;width:400px;margin:5px"> -->
+                <b>How do you respond in the memory task? </b><br>
+                <label for="q7l1" style="font-weight: normal;"><input type="radio" name="q7" id="l1" /><span id="q7l1">
+                        Using keys 1-9 on the keyboard. </span></label><br>
+                <label for="q7l2" style="font-weight: normal;"><input type="radio" name="q7" id="l2" /><span id="q7l2">
+                        Using the right and left mouse buttons </span></label><br>
+                <label for="q7l3" style="font-weight: normal;"><input type="radio" name="q7" id="icheck7"> <span
+                        id="q7icheck7"> Using the sliders displayed on the screen </span></label><br>
+                <!-- <label for="q7l4" style="font-weight: normal;"><input type="radio" name="q7"> I do not know. </label>-->
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                <b>What is your goal in the categorization task? </b><br>
+                <label for="q8l1" style="font-weight: normal;"><input type="radio" name="q8" id="l1"><span id="q8l1">
+                        Remember the color of the monster. </span></label><br>
+                <label for="q8l2" style="font-weight: normal;"><input type="radio" name="q8" id="l2"><span
+                        id="q8l2"></span> Reproduce the spikiness of the head and the fill of the belly of the monster
+                    using sliders. </span></label><br>
+                <label for="q8l3" style="font-weight: normal;"><input type="radio" name="q8" id="icheck8"><span
+                        id="q8icheck8"> Say what tribe/category a monster is from.
+                    </span></label><br>
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- style="float:left;width:400px;margin:5px"> -->
+                <b>How do you respond in the categorization task? </b><br>
+                <label for="q9l1" style="font-weight: normal;"><input type="radio" name="q9" id="icheck9" /><span
+                        id="q9icheck9">
+                        Using the digit keys on the keyboard. Each digit relates to a tribe/category </span></label><br>
+                <label for="q9l2" style="font-weight: normal;"><input type="radio" name="q9" id="l1" /><span id="q9l1">
+                        Using the right and left mouse buttons </span></label><br>
+                <label for="q9l3" style="font-weight: normal;"><input type="radio" name="q9" id="l2"> <span id="q9l2">
+                        Using sliders presented on the screen.
+                    </span></label><br>
+                <br>
+            </fieldset>
+            <fieldset>
+                <!-- style="float:left;width:400px;margin:5px" -->
+                <b> How long is the experiment going to last approximately? </b><br>
+                <label for="q10l1" style="font-weight: normal;"><input type="radio" name="q10" id="l1"><span id="q10l1">
+                        Roughly 10 minutes </span></label><br>
+                <label for="q10l2" style="font-weight: normal;"><input type="radio" name="q10" id='l2'><span id="q10l2">
+                        Roughly 60 minutes </span></label><br>
+                <label for="q10l3" style="font-weight: normal;"><input type="radio" name="q10" id='icheck10'><span
+                        id="q10icheck10">
+                        Roughly 100 minutes </span></label><br>
+                <label for="q10l4" style="font-weight: normal;"><input type="radio" name="q10" id='l3'><span id="q10l3">
+                        Roughly 200 minutes </span></label><br>
+            </fieldset>
+        </fieldset>
+        <br>
+        <button type="button" name="button" ; onclick="clickStart('page2c','page2')" ;> Back </button>
+        <button type="button" name="button" ; onclick="instructioncheck('page2c', 'page2')" ;> <span id="check"> Check
+                Answers </span>
+        </button>
     </div>
 
 
@@ -414,8 +569,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             You can use the number keys on your keyboard to give responses in the task.<br>
             The numbers correspond to the respective category:<br>
             For example, "1" on your keyboard corresponds to category 1.
-            "2" on your keyboard corresponds to category 2.
-            And so on.<br>
+            "2" on your keyboard corresponds to category 2.<br>
             After every response you are given feedback whether your response was correct or not.<br>
             In the latter case the category that would have been true is going to be displayed to you.
         </p>
