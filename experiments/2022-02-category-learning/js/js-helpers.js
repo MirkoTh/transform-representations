@@ -1,6 +1,6 @@
 
 // get subject ID
-if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+/* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
@@ -10,9 +10,9 @@ else {
 // STUDY ID
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
-}
+} */
 
-//const participant_id = 1;
+const participant_id = 1;
 
 function setup_experiment() {
     // read mapping from x1 and x2 values to categories
@@ -34,7 +34,6 @@ function setup_experiment() {
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
-    console.log("condition_id is: ", participant_id % 3 + 1)
     if ((participant_id % 3 + 1) == 2) {
         experiment_info["n_categories"] = 2
     } else if ((participant_id % 3 + 1) == 3) {
@@ -121,7 +120,6 @@ function setup_experiment() {
     for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
         trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
     }
-    console.log(trial_info["category_id"])
 
 
     // square categories
@@ -191,7 +189,7 @@ function route_categorization(condition) {
 }
 function replace_monster(slider1, slider2) {
     stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
-    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".PNG"
+    document.getElementById("selected_monster").src = "stimuli/stimulus" + stimulus_id + ".png"
 }
 function slide_adjust() {
     var slider1 = document.getElementById("myRange1");
@@ -251,12 +249,11 @@ async function next_item_cr(old, i) {
     clickStart(old, 'page5')
 
 
-    stim_path = "./stimuli/stimulus[" + current_stim + "].PNG"
-    stim_path_mask = "./stimuli/mask.PNG"
-    console.log(stim_path)
+    stim_path = "stimuli/stimulus[" + current_stim + "].png"
+    stim_path_mask = "stimuli/mask.png"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_2").src = "./stimuli/fixcross.PNG"
+    document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_2").src = stim_path
     await sleep(setup_expt["display_info"]["reproduction"]["presentation"])
@@ -270,16 +267,14 @@ async function next_item_cr(old, i) {
 }
 
 function log_response(rt, i, part, stimulus_ids) {
-    console.log("log_response, i is: ", i)
-    console.log(stimulus_ids)
     var data_store = {
         participant_id: participant_id,
         session: part,
         trial_id: i,
         x1_true: setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][0],
         x2_true: setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][1],
-        x1_response: document.getElementById("demo1").value,
-        x2_response: document.getElementById("demo2").value,
+        x1_response: document.getElementById("myRange1").value,
+        x2_response: document.getElementById("myRange2").value,
         rt: rt
     }
     document.getElementById("myRange1").value = 50;
@@ -287,7 +282,7 @@ function log_response(rt, i, part, stimulus_ids) {
     document.getElementById("myRange2").value = 50;
     document.getElementById("demo2").innerHTML = 50;
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
-    saveData(JSON.stringify(data_store))
+    //saveData(JSON.stringify(data_store))
 
 }
 
@@ -329,7 +324,6 @@ async function my_link() {
 }
 
 function update_trial_counter(part, i) {
-    console.log(i)
     switch (part) {
         case "0":
             document.getElementById("trial_nr_cr_practice").innerHTML = i + 1
@@ -343,11 +337,11 @@ function update_trial_counter(part, i) {
     }
 }
 
-
+/* 
 function saveData(filedata) {
     var filename = "./data/participant-" + participant_id + ".json";
     $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
-}
+} */
 
 function download(content, fileName, contentType) {
     var a = document.createElement("a");
@@ -376,14 +370,13 @@ async function next_item_cat(old, i) {
 
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
-    stim_path = "./stimuli/stimulus[" + current_stim + "].PNG"
-    stim_path_mask = "./stimuli/mask.PNG"
-    console.log("stim_path is: ", stim_path)
+    stim_path = "stimuli/stimulus[" + current_stim + "].png"
+    stim_path_mask = "stimuli/mask.png"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.PNG"
+    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
-    document.getElementById("item_displayed_cat").src = "./stimuli/fixcross.PNG"
+    document.getElementById("item_displayed_cat").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
     document.getElementById("item_displayed_cat").src = stim_path
     document.getElementById("time_var").innerHTML = Date.now()
@@ -413,7 +406,7 @@ async function handle_response(e) {
         }
     }
     await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
-    document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.PNG"
+    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
 
     if (i == 1) {//setup_expt["experiment_info"]["n_trials_categorization"]) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
@@ -448,8 +441,6 @@ function write_cat_results(i, r) {
         accuracy = setup_expt["trial_info"]["category_id"] == r;
     }
 
-    console.log("condition_id is: ", condition_id)
-    console.log("saved categorization trial: ", i)
     var data_store = {
         participant_id: participant_id,
         condition_id: condition_id,
@@ -462,12 +453,11 @@ function write_cat_results(i, r) {
         rt: document.getElementById("rt").innerHTML
     }
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
-    saveData(JSON.stringify(data_store))
+    //saveData(JSON.stringify(data_store))
 }
 
 // color text
 function color(id, col) {
-    console.log(id)
     document.getElementById(id).style.color = col;
 }
 
@@ -532,10 +522,6 @@ function instructioncheck(pg, pg_prev) {
     else { colorWrongAnswer("q10", 'red') }
     var checksum = ch1 + ch2 + ch3 + ch4 + ch5 + ch6 + ch7 + ch8 + ch9 + ch10;
     var criterion = 5;
-    console.log(checksum)
-    console.log(criterion)
-    console.log(flag)
-
 
     // indicate correct answers
     ++flag;

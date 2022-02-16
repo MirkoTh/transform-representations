@@ -2,17 +2,14 @@
 <html lang="en">
 
 
-<script src="js-helpers.js" charset="utf-8"></script>
-<!--<script src="transform-reps-cat-1.js" charset="utf-8"></script>-->
-
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Category Learning - Representations">
+    <meta name="description" content="2D Memory Representations">
     <meta name="author" content="Mirko Thalmann, Akshay Jagadish, & Eric Schulz">
     <meta charset="utf-8">
-    <title>Category Learning</title>
+    <title>2D Memory Representations</title>
 
     <script src='https://cdn.firebase.com/js/client/1.1.1/firebase.js'></script>
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -155,518 +152,555 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 to participate</button><br><br>
 
         </div>
-    </div>
-    <div id="page2" style="display:none">
-        <br>
-
-
-        <h1>Welcome to Monster World</h1>
-        <br>
-        Today, you find yourself in <b>Monster World</b>.<br>
-        In Monster World, you are introduced to a new species of friendly monsters.<br>
-        All monsters differ from each other. Even though they come from the same planet, they are from different
-        tribes.<br>
-        The way the monsters differ from each other can be described according to variation in two dimensions:
-        <br>
-        <ol>
-            <li>The spikiness of their head varies from very spiky to rather smooth.</li>
-            <li>The size of their belly varies from empty to full</li>
-        </ol>
-        Monsters with a spiky/smooth head and an empty/full belly are going to look like this:
-        <div>
-            <img src="./stimuli/stimulus[1,1].png" height="300px">
-            <img src="./stimuli/stimulus[100,100].png" height="300px">
-        </div></br>
-        <br>
-        These are just two examples, though. All possible combinations of these two dimensions are possible. <br>
-
-        <h1>Instructions</h1>
-        <p>
-            Your session today will be split up into two tasks:
-        </p>
-        <ol>
-            <li>
-                <b>Memory:</b> Remember the spikiness of the monster's head and
-                the fill of the monster's belly. <br> You are presented
-                with a monster only for a short period of time on every trial. <br>
-                After that, you are required to adjust two sliders to reconstruct
-                the head and the belly of the monster.<br>
-                In the beginning, you will get some practice trials on the memory task. These are not going to be used
-                to calculate your bonus payment.<br>
-                <b> --> Takes approx. 40 min</b><br>
-            </li>
+        <div id="page2" style="display:none">
             <br>
-            <li>
-                <b>Categorization:</b> The monsters all look somewhat similar, but they
-                come from different tribes. <br>Use the information about the
-                spikiness of their head and the fill of their belly to
-                gauge what tribes they are from.<br>
-                You are going to get a feedback after every trial, which may
-                help getting you started. <br>
-                <b> --> Takes approx. 60 min</b><br>
-                There will be breaks in between these 60 mins.
-            </li>
+
+
+            <h1>Welcome to Monster World</h1>
             <br>
-        </ol>
-        <button type="button" name="bbutton" ; onclick="clickStart('page2', 'page1')" ;> Back </button>
-        <button type="button" name="button" ; onclick="clickStart('page2', 'page2c')" ;> Check Comprehension </button>
-
-    </div>
-
-    <div id="page2b" style="display:none">
-        <br>
-        <h1>Welcome to Monster World</h1>
-        <br>
-        Today, you find yourself in <b>Monster World</b>.<br>
-        In Monster World, you are introduced to a new species of friendly monsters.<br>
-        All monsters differ from each other.<br>
-        The way the monsters differ can be described according to variation in two dimensions:
-        <br>
-        <ol>
-            <li>The spikiness of their head varies from very spiky to rather smooth.</li>
-            <li>The size of their belly varies from empty to full</li>
-        </ol>
-        Monsters with a spiky/smooth head and an empty/full belly are going to look like this:
-        <div>
-            <img src="./stimuli/stimulus[1,1].png" height="300px">
-            <img src="./stimuli/stimulus[100,100].png" height="300px">
-        </div></br>
-        These are just two examples, though. All possible combinations of these two dimensions are possible. <br>
-
-        <h1>Instructions</h1>
-        <p>
-            Your session today will be split up into two tasks:
-        </p>
-        <ol>
-            <li>
-                <b>Memory:</b> Remember the spikiness of the monster's head and
-                the fill of the monster's belly. <br> You are presented
-                with a monster only for a short period of time on every trial. <br>
-                After that, you are required to adjust two sliders to reconstruct
-                the head and the belly of the monster.<br>
-                <b> --> Takes approx. 40 min</b><br>
-            </li>
+            Today, you find yourself in <b>Monster World</b>.<br>
+            In Monster World, you are introduced to a new species of friendly monsters.<br>
+            All monsters differ from each other. Even though they come from the same planet, they are from different
+            tribes.<br>
+            The way the monsters differ from each other can be described according to variation in two dimensions:
             <br>
-            <li>
-                <b>Similarity:</b> Your task in the second memory part will be somewhat different.<br>
-                You are asked to judge how similar the monster presented on the current trial is to the
-                monster presented on the last trial.<br>
-                To do so, use the numbers from 1-9 on the keyboard.<br>
-                When the monster is exactly the same as on the previous trials, press 9.<br>
-                When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
-                <b> --> Takes approx. 60 min</b><br>
-                There will be breaks in between these 60 mins.
-            </li>
-            <br>
-        </ol>
-        <button type="button" name="bbutton" ; onclick="clickStart('page2b', 'page1')" ;> Back </button>
-        <button type="button" name="button" ; onclick="clickStart('page2b', 'page2bc')" ;> Check Comprehension </button>
-
-    </div>
-
-    <!--Comprehension check-->
-    <div id="page2bc" style="display:none">
-        <fieldset>
-            <legend>Please answer a few questions about this study before proceeding</legend>
-            <p style="font-size:100%;color:maroon;"> You will only be directed to the next page if you manage to answer
-                all of the questions correctly.</p>
-
-            <fieldset>
-                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
-                <b>What is your goal in the memory task? </b><br>
-                <label for="q1l1" style="font-weight: normal;"><input type="radio" name="q1" id="l1"><span id="q1l1">
-                        Remember the color of the monster. </span></label><br>
-                <label for="q1l2" style="font-weight: normal;"><input type="radio" name="q1" id="icheck1"><span
-                        id="q1icheck1"> Remember the spikiness of the head and the fill of the belly of the monster.
-                    </span></label><br>
-                <label for="q1l3" style="font-weight: normal;"><input type="radio" name="q1" id="l2"><span id="q1l2">
-                        Compare the monster to the monster on the previous trial. </span></label><br>
-                <!-- <label for="q1l4" style="font-weight: normal;"><input type="radio" name="q1" > I do not know. </label> -->
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- style="float:left;width:400px;margin:5px"> -->
-                <b>How do you respond in the memory task? </b><br>
-                <label for="q2l1" style="font-weight: normal;"><input type="radio" name="q2" id="l1" /><span id="q2l1">
-                        Using keys 1-9 on the keyboard. </span></label><br>
-                <label for="q2l2" style="font-weight: normal;"><input type="radio" name="q2" id="l2" /><span id="q2l2">
-                        Using the right and left mouse buttons </span></label><br>
-                <label for="q2l3" style="font-weight: normal;"><input type="radio" name="q2" id="icheck2"> <span
-                        id="q2icheck2"> Using the sliders displayed on the screen </span></label><br>
-                <!-- <label for="q2l4" style="font-weight: normal;"><input type="radio" name="q2"> I do not know. </label>-->
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
-                <b>What is your goal in the similarity task? </b><br>
-                <label for="q3l1" style="font-weight: normal;"><input type="radio" name="q3" id="l1"><span id="q3l1">
-                        Remember the color of the monster. </span></label><br>
-                <label for="q3l2" style="font-weight: normal;"><input type="radio" name="q3" id="l2"><span
-                        id="q3l2"></span> Reproduce the spikiness of the head and the fill of the belly of the monster
-                    using sliders. </span></label><br>
-                <label for="q3l3" style="font-weight: normal;"><input type="radio" name="q3" id="icheck3"><span
-                        id="q3icheck3"> Compare the monster to the monster on the previous trial.
-                    </span></label><br>
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- style="float:left;width:400px;margin:5px"> -->
-                <b>How do you respond in the similarity task? </b><br>
-                <label for="q4l1" style="font-weight: normal;"><input type="radio" name="q4" id="l1" /><span id="q4l1">
-                        Using keys 1-9 on the keyboard. 9 is very different, 1 is very similar </span></label><br>
-                <label for="q4l2" style="font-weight: normal;"><input type="radio" name="q4" id="l2" /><span id="q4l2">
-                        Using the right and left mouse buttons </span></label><br>
-                <label for="q4l3" style="font-weight: normal;"><input type="radio" name="q4" id="icheck4"> <span
-                        id="q4icheck4"> Using keys 1-9 on the keyboard. 1 is very different, 9 is very similar
-                    </span></label><br>
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- style="float:left;width:400px;margin:5px" -->
-                <b> How long is the experiment going to last approximately? </b><br>
-                <label for="q5l1" style="font-weight: normal;"><input type="radio" name="q5" id="l1"><span id="q5l1">
-                        Roughly 10 minutes </span></label><br>
-                <label for="q5l2" style="font-weight: normal;"><input type="radio" name="q5" id='l2'><span id="q5l2">
-                        Roughly 60 minutes </span></label><br>
-                <label for="q5l3" style="font-weight: normal;"><input type="radio" name="q5" id='icheck5'><span
-                        id="q5icheck5">
-                        Roughly 100 minutes </span></label><br>
-                <label for="q5l4" style="font-weight: normal;"><input type="radio" name="q5" id='l3'><span id="q5l3">
-                        Roughly 200 minutes </span></label><br>
-            </fieldset>
-        </fieldset>
-        <br>
-        <button type="button" name="button" ; onclick="clickStart('page2bc','page2b')" ;> Back </button>
-        <button type="button" name="button" ; onclick="instructioncheck('page2bc', 'page2b')" ;> <span id="check"> Check
-                Answers </span>
-        </button>
-    </div>
-
-    <div id="page2c" style="display:none">
-        <fieldset>
-            <legend>Please answer a few questions about this study before proceeding</legend>
-            <p style="font-size:100%;color:maroon;"> You will only be directed to the next page if you manage to answer
-                all of the questions correctly.</p>
-
-            <fieldset>
-                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
-                <b>What is your goal in the memory task? </b><br>
-                <label for="q6l1" style="font-weight: normal;"><input type="radio" name="q6" id="l1"><span id="q6l1">
-                        Remember the color of the monster. </span></label><br>
-                <label for="q6l2" style="font-weight: normal;"><input type="radio" name="q6" id="icheck6"><span
-                        id="q6icheck6"> Remember the spikiness of the head and the fill of the belly of the monster.
-                    </span></label><br>
-                <label for="q6l3" style="font-weight: normal;"><input type="radio" name="q6" id="l2"><span id="q6l2">
-                        Compare the monster to the monster on the previous trial. </span></label><br>
-                <!-- <label for="q6l4" style="font-weight: normal;"><input type="radio" name="q6" > I do not know. </label> -->
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- style="float:left;width:400px;margin:5px"> -->
-                <b>How do you respond in the memory task? </b><br>
-                <label for="q7l1" style="font-weight: normal;"><input type="radio" name="q7" id="l1" /><span id="q7l1">
-                        Using keys 1-9 on the keyboard. </span></label><br>
-                <label for="q7l2" style="font-weight: normal;"><input type="radio" name="q7" id="l2" /><span id="q7l2">
-                        Using the right and left mouse buttons </span></label><br>
-                <label for="q7l3" style="font-weight: normal;"><input type="radio" name="q7" id="icheck7"> <span
-                        id="q7icheck7"> Using the sliders displayed on the screen </span></label><br>
-                <!-- <label for="q7l4" style="font-weight: normal;"><input type="radio" name="q7"> I do not know. </label>-->
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
-                <b>What is your goal in the categorization task? </b><br>
-                <label for="q8l1" style="font-weight: normal;"><input type="radio" name="q8" id="l1"><span id="q8l1">
-                        Remember the color of the monster. </span></label><br>
-                <label for="q8l2" style="font-weight: normal;"><input type="radio" name="q8" id="l2"><span
-                        id="q8l2"></span> Reproduce the spikiness of the head and the fill of the belly of the monster
-                    using sliders. </span></label><br>
-                <label for="q8l3" style="font-weight: normal;"><input type="radio" name="q8" id="icheck8"><span
-                        id="q8icheck8"> Say what tribe/category a monster is from.
-                    </span></label><br>
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- style="float:left;width:400px;margin:5px"> -->
-                <b>How do you respond in the categorization task? </b><br>
-                <label for="q9l1" style="font-weight: normal;"><input type="radio" name="q9" id="icheck9" /><span
-                        id="q9icheck9">
-                        Using the digit keys on the keyboard. Each digit relates to a tribe/category </span></label><br>
-                <label for="q9l2" style="font-weight: normal;"><input type="radio" name="q9" id="l1" /><span id="q9l1">
-                        Using the right and left mouse buttons </span></label><br>
-                <label for="q9l3" style="font-weight: normal;"><input type="radio" name="q9" id="l2"> <span id="q9l2">
-                        Using sliders presented on the screen.
-                    </span></label><br>
-                <br>
-            </fieldset>
-            <fieldset>
-                <!-- style="float:left;width:400px;margin:5px" -->
-                <b> How long is the experiment going to last approximately? </b><br>
-                <label for="q10l1" style="font-weight: normal;"><input type="radio" name="q10" id="l1"><span id="q10l1">
-                        Roughly 10 minutes </span></label><br>
-                <label for="q10l2" style="font-weight: normal;"><input type="radio" name="q10" id='l2'><span id="q10l2">
-                        Roughly 60 minutes </span></label><br>
-                <label for="q10l3" style="font-weight: normal;"><input type="radio" name="q10" id='icheck10'><span
-                        id="q10icheck10">
-                        Roughly 100 minutes </span></label><br>
-                <label for="q10l4" style="font-weight: normal;"><input type="radio" name="q10" id='l3'><span id="q10l3">
-                        Roughly 200 minutes </span></label><br>
-            </fieldset>
-        </fieldset>
-        <br>
-        <button type="button" name="button" ; onclick="clickStart('page2c','page2')" ;> Back </button>
-        <button type="button" name="button" ; onclick="instructioncheck('page2c', 'page2')" ;> <span id="check"> Check
-                Answers </span>
-        </button>
-    </div>
-
-
-    <div id="condition_id" style="display:none">-1</div>
-    <div id="n_categories" style="display:none">-1</div>
-    <script>
-        set_cond_and_cat()
-    </script>
-    <div id="trial_nr_cr_practice" style="display:none">0</div>
-    <div id="trial_nr_cr1" style="display:none">0</div>
-    <div id="part_reproduction" style="display:none">0</div>
-    <div id="show_trial" style="display:none">0</div>
-    <div id="time_var" style="display:none"></div>
-
-    <div id="page3" style="display:none">
-        <h1>Ready for the memory task?</h1>
-        <p>If you feel prepared to start, please press the button below <br>
-            Remember the spikiness of the monster's head and
-            the fill of the monster's belly. Try hard! <br>You are presented
-            with a monster only for a short period of time on every trial. <br>
-            After that, you are required to adjust two sliders to reconstruct
-            the head and the belly of the monster. <br>
-            You are given three practice trials to get used to the procedure. <br>
-            These trials are not going to be used to calculate you bonus payment.
-        </p>
-        <script>
-            var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-        </script>
-        <button type="button" name="button" ; onclick="next_item_cr('page3')" ;> Start
-            Practice Trials </button>
-    </div>
-
-    <div id="page3.1" style="display:none">
-        <h1>Practice is Over</h1>
-        <p>The practice trials are now over. Press the button below to start with the Memory Task.
-        </p>
-        <script>
-            var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-        </script>
-        <button type="button" name="button" ; onclick="next_item_cr('page3.1')" ;> Start
-            Memory Task </button>
-
-    </div>
-
-    <div id="page4" style="display:none">
-
-        <head>
-
-
-            <style>
-                .slidecontainer {
-                    width: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .slider {
-                    -webkit-appearance: none;
-                    width: 20%;
-                    height: 10px;
-                    background: #d3d3d3;
-                    outline: none;
-                    opacity: 0.7;
-                    -webkit-transition: .2s;
-                    transition: opacity .2s;
-                }
-
-                .slider:hover {
-                    opacity: 1;
-                }
-
-                .slider::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    appearance: none;
-                    width: 20px;
-                    height: 20px;
-                    background: #04AA6D;
-                    cursor: pointer;
-                }
-
-                .slider::-moz-range-thumb {
-                    width: 20px;
-                    height: 20px;
-                    background: #04AA6D;
-                    cursor: pointer;
-                }
-            </style>
-        </head>
-
-        <body>
-
-            <div style="text-align: center;">
-                <img src="./stimuli/stimulus[50,50].png" height="300px" id="selected_monster">
+            <ol>
+                <li>The spikiness of their head varies from very spiky to rather smooth.</li>
+                <li>The size of their belly varies from empty to full</li>
+            </ol>
+            Monsters with a spiky/smooth head and an empty/full belly, for example, are going to look like this:
+            <div>
+                <img src="./stimuli/stimulus[1,1].png" height="300px">
+                <img src="./stimuli/stimulus[100,100].png" height="300px">
             </div></br>
+            <br>
+            These are just two examples, though. All possible combinations of these two dimensions are possible. <br>
 
-            <p>Drag the two sliders to reproduce the monster you just have seen.</p>
+            <h1>Instructions</h1>
+            <p>
+                Your session today will be split up into two tasks:
+            </p>
+            <ol>
+                <li>
+                    <b>Memory:</b> Remember the spikiness of the monster's head and
+                    the fill of the monster's belly. <br> You are presented
+                    with a monster only for a short period of time on every trial. <br>
+                    After that, you are required to adjust two sliders to reconstruct
+                    the head and the belly of the monster.<br>
+                    In the beginning, you will get some practice trials on the memory task. These are not going to be
+                    used
+                    to calculate your bonus payment.<br>
+                    <b> --> Takes approx. 40 min</b><br>
+                </li>
+                <br>
+                <li>
+                    <b>Categorization:</b> The monsters all look somewhat similar, but they
+                    come from different tribes. <br>Use the information about the
+                    spikiness of their head and the fill of their belly to
+                    gauge what tribes they are from.<br>
+                    You are going to get a feedback after every trial, which may
+                    help getting you started. <br>
+                    <b> --> Takes approx. 60 min</b><br>
+                    There will be breaks in between these 60 mins.
+                </li>
+                <br>
+            </ol>
+            <button type="button" name="bbutton" ; onclick="clickStart('page2', 'page1')" ;> Back </button>
+            <button type="button" name="button" ; onclick="clickStart('page2', 'page2c')" ;> Check Comprehension
+            </button>
 
-            <div class="slidecontainer">
-                <input type="range" min="1" max="100" value="50" class="slider" id="myRange1">
-                <p style="text-align: center">Head : <span id="demo1"></span></p>
-            </div>
+        </div>
 
-            <div class="slidecontainer">
-                <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
-                <p style="text-align: center">Belly: <span id="demo2"></span></p>
-            </div>
+        <div id="page2b" style="display:none">
+            <br>
+            <h1>Welcome to Monster World</h1>
+            <br>
+            Today, you find yourself in <b>Monster World</b>.<br>
+            In Monster World, you are introduced to a new species of friendly monsters.<br>
+            All monsters differ from each other.<br>
+            The way the monsters differ can be described according to variation in two dimensions:
+            <br>
+            <ol>
+                <li>The spikiness of their head varies from very spiky to rather smooth.</li>
+                <li>The size of their belly varies from empty to full</li>
+            </ol>
+            Monsters with a spiky/smooth head and an empty/full belly are going to look like this:
+            <div>
+                <img src="./stimuli/stimulus[1,1].png" height="300px">
+                <img src="./stimuli/stimulus[100,100].png" height="300px">
+            </div></br>
+            These are just two examples, though. All possible combinations of these two dimensions are possible. <br>
 
-            <!--let the participants adjust the two sliders and show them what monster results-->
+            <h1>Instructions</h1>
+            <p>
+                Your session today will be split up into two tasks:
+            </p>
+            <ol>
+                <li>
+                    <b>Memory:</b> Remember the spikiness of the monster's head and
+                    the fill of the monster's belly. <br> You are presented
+                    with a monster only for a short period of time on every trial. <br>
+                    After that, you are required to adjust two sliders to reconstruct
+                    the head and the belly of the monster.<br>
+                    <b> --> Takes approx. 40 min</b><br>
+                </li>
+                <br>
+                <li>
+                    <b>Similarity:</b> Your task in the second memory part will be somewhat different.<br>
+                    You are asked to judge how similar the monster presented on the current trial is to the
+                    monster presented on the last trial.<br>
+                    To do so, use the numbers from 1-9 on the keyboard.<br>
+                    When the monster is exactly the same as on the previous trials, press 9.<br>
+                    When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
+                    <b> --> Takes approx. 60 min</b><br>
+                    There will be breaks in between these 60 mins.
+                </li>
+                <br>
+            </ol>
+            <button type="button" name="bbutton" ; onclick="clickStart('page2b', 'page1')" ;> Back </button>
+            <button type="button" name="button" ; onclick="clickStart('page2b', 'page2bc')" ;> Check Comprehension
+            </button>
+
+        </div>
+
+        <!--Comprehension check-->
+        <div id="page2bc" style="display:none">
+            <fieldset>
+                <legend>Please answer a few questions about this study before proceeding</legend>
+                <p style="font-size:100%;color:maroon;"> You will only be directed to the next page if you manage to
+                    answer
+                    all of the questions correctly.</p>
+
+                <fieldset>
+                    <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                    <b>What is your goal in the memory task? </b><br>
+                    <label for="q1l1" style="font-weight: normal;"><input type="radio" name="q1" id="l1"><span
+                            id="q1l1">
+                            Remember the color of the monster. </span></label><br>
+                    <label for="q1l2" style="font-weight: normal;"><input type="radio" name="q1" id="icheck1"><span
+                            id="q1icheck1"> Remember the spikiness of the head and the fill of the belly of the monster.
+                        </span></label><br>
+                    <label for="q1l3" style="font-weight: normal;"><input type="radio" name="q1" id="l2"><span
+                            id="q1l2">
+                            Compare the monster to the monster on the previous trial. </span></label><br>
+                    <!-- <label for="q1l4" style="font-weight: normal;"><input type="radio" name="q1" > I do not know. </label> -->
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- style="float:left;width:400px;margin:5px"> -->
+                    <b>How do you respond in the memory task? </b><br>
+                    <label for="q2l1" style="font-weight: normal;"><input type="radio" name="q2" id="l1" /><span
+                            id="q2l1">
+                            Using keys 1-9 on the keyboard. </span></label><br>
+                    <label for="q2l2" style="font-weight: normal;"><input type="radio" name="q2" id="l2" /><span
+                            id="q2l2">
+                            Using the right and left mouse buttons </span></label><br>
+                    <label for="q2l3" style="font-weight: normal;"><input type="radio" name="q2" id="icheck2"> <span
+                            id="q2icheck2"> Using the sliders displayed on the screen </span></label><br>
+                    <!-- <label for="q2l4" style="font-weight: normal;"><input type="radio" name="q2"> I do not know. </label>-->
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                    <b>What is your goal in the similarity task? </b><br>
+                    <label for="q3l1" style="font-weight: normal;"><input type="radio" name="q3" id="l1"><span
+                            id="q3l1">
+                            Remember the color of the monster. </span></label><br>
+                    <label for="q3l2" style="font-weight: normal;"><input type="radio" name="q3" id="l2"><span
+                            id="q3l2"></span> Reproduce the spikiness of the head and the fill of the belly of the
+                        monster
+                        using sliders. </span></label><br>
+                    <label for="q3l3" style="font-weight: normal;"><input type="radio" name="q3" id="icheck3"><span
+                            id="q3icheck3"> Compare the monster to the monster on the previous trial.
+                        </span></label><br>
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- style="float:left;width:400px;margin:5px"> -->
+                    <b>How do you respond in the similarity task? </b><br>
+                    <label for="q4l1" style="font-weight: normal;"><input type="radio" name="q4" id="l1" /><span
+                            id="q4l1">
+                            Using keys 1-9 on the keyboard. 9 is very different, 1 is very similar </span></label><br>
+                    <label for="q4l2" style="font-weight: normal;"><input type="radio" name="q4" id="l2" /><span
+                            id="q4l2">
+                            Using the right and left mouse buttons </span></label><br>
+                    <label for="q4l3" style="font-weight: normal;"><input type="radio" name="q4" id="icheck4"> <span
+                            id="q4icheck4"> Using keys 1-9 on the keyboard. 1 is very different, 9 is very similar
+                        </span></label><br>
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- style="float:left;width:400px;margin:5px" -->
+                    <b> How long is the experiment going to last approximately? </b><br>
+                    <label for="q5l1" style="font-weight: normal;"><input type="radio" name="q5" id="l1"><span
+                            id="q5l1">
+                            Roughly 10 minutes </span></label><br>
+                    <label for="q5l2" style="font-weight: normal;"><input type="radio" name="q5" id='l2'><span
+                            id="q5l2">
+                            Roughly 60 minutes </span></label><br>
+                    <label for="q5l3" style="font-weight: normal;"><input type="radio" name="q5" id='icheck5'><span
+                            id="q5icheck5">
+                            Roughly 100 minutes </span></label><br>
+                    <label for="q5l4" style="font-weight: normal;"><input type="radio" name="q5" id='l3'><span
+                            id="q5l3">
+                            Roughly 200 minutes </span></label><br>
+                </fieldset>
+            </fieldset>
+            <br>
+            <button type="button" name="button" ; onclick="clickStart('page2bc','page2b')" ;> Back </button>
+            <button type="button" name="button" ; onclick="instructioncheck('page2bc', 'page2b')" ;> <span id="check">
+                    Check
+                    Answers </span>
+            </button>
+        </div>
+
+        <div id="page2c" style="display:none">
+            <fieldset>
+                <legend>Please answer a few questions about this study before proceeding</legend>
+                <p style="font-size:100%;color:maroon;"> You will only be directed to the next page if you manage to
+                    answer
+                    all of the questions correctly.</p>
+
+                <fieldset>
+                    <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                    <b>What is your goal in the memory task? </b><br>
+                    <label for="q6l1" style="font-weight: normal;"><input type="radio" name="q6" id="l1"><span
+                            id="q6l1">
+                            Remember the color of the monster. </span></label><br>
+                    <label for="q6l2" style="font-weight: normal;"><input type="radio" name="q6" id="icheck6"><span
+                            id="q6icheck6"> Remember the spikiness of the head and the fill of the belly of the monster.
+                        </span></label><br>
+                    <label for="q6l3" style="font-weight: normal;"><input type="radio" name="q6" id="l2"><span
+                            id="q6l2">
+                            Compare the monster to the monster on the previous trial. </span></label><br>
+                    <!-- <label for="q6l4" style="font-weight: normal;"><input type="radio" name="q6" > I do not know. </label> -->
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- style="float:left;width:400px;margin:5px"> -->
+                    <b>How do you respond in the memory task? </b><br>
+                    <label for="q7l1" style="font-weight: normal;"><input type="radio" name="q7" id="l1" /><span
+                            id="q7l1">
+                            Using keys 1-9 on the keyboard. </span></label><br>
+                    <label for="q7l2" style="font-weight: normal;"><input type="radio" name="q7" id="l2" /><span
+                            id="q7l2">
+                            Using the right and left mouse buttons </span></label><br>
+                    <label for="q7l3" style="font-weight: normal;"><input type="radio" name="q7" id="icheck7"> <span
+                            id="q7icheck7"> Using the sliders displayed on the screen </span></label><br>
+                    <!-- <label for="q7l4" style="font-weight: normal;"><input type="radio" name="q7"> I do not know. </label>-->
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- </fieldset> style="float:left;width:400px;margin:5px"> -->
+                    <b>What is your goal in the categorization task? </b><br>
+                    <label for="q8l1" style="font-weight: normal;"><input type="radio" name="q8" id="l1"><span
+                            id="q8l1">
+                            Remember the color of the monster. </span></label><br>
+                    <label for="q8l2" style="font-weight: normal;"><input type="radio" name="q8" id="l2"><span
+                            id="q8l2"></span> Reproduce the spikiness of the head and the fill of the belly of the
+                        monster
+                        using sliders. </span></label><br>
+                    <label for="q8l3" style="font-weight: normal;"><input type="radio" name="q8" id="icheck8"><span
+                            id="q8icheck8"> Say what tribe/category a monster is from.
+                        </span></label><br>
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- style="float:left;width:400px;margin:5px"> -->
+                    <b>How do you respond in the categorization task? </b><br>
+                    <label for="q9l1" style="font-weight: normal;"><input type="radio" name="q9" id="icheck9" /><span
+                            id="q9icheck9">
+                            Using the digit keys on the keyboard. Each digit relates to a tribe/category
+                        </span></label><br>
+                    <label for="q9l2" style="font-weight: normal;"><input type="radio" name="q9" id="l1" /><span
+                            id="q9l1">
+                            Using the right and left mouse buttons </span></label><br>
+                    <label for="q9l3" style="font-weight: normal;"><input type="radio" name="q9" id="l2"> <span
+                            id="q9l2">
+                            Using sliders presented on the screen.
+                        </span></label><br>
+                    <br>
+                </fieldset>
+                <fieldset>
+                    <!-- style="float:left;width:400px;margin:5px" -->
+                    <b> How long is the experiment going to last approximately? </b><br>
+                    <label for="q10l1" style="font-weight: normal;"><input type="radio" name="q10" id="l1"><span
+                            id="q10l1">
+                            Roughly 10 minutes </span></label><br>
+                    <label for="q10l2" style="font-weight: normal;"><input type="radio" name="q10" id='l2'><span
+                            id="q10l2">
+                            Roughly 60 minutes </span></label><br>
+                    <label for="q10l3" style="font-weight: normal;"><input type="radio" name="q10" id='icheck10'><span
+                            id="q10icheck10">
+                            Roughly 100 minutes </span></label><br>
+                    <label for="q10l4" style="font-weight: normal;"><input type="radio" name="q10" id='l3'><span
+                            id="q10l3">
+                            Roughly 200 minutes </span></label><br>
+                </fieldset>
+            </fieldset>
+            <br>
+            <button type="button" name="button" ; onclick="clickStart('page2c','page2')" ;> Back </button>
+            <button type="button" name="button" ; onclick="instructioncheck('page2c', 'page2')" ;> <span id="check">
+                    Check
+                    Answers </span>
+            </button>
+        </div>
+
+
+        <div id="condition_id" style="display:none">-1</div>
+        <div id="n_categories" style="display:none">-1</div>
+        <script>
+            set_cond_and_cat()
+        </script>
+        <div id="trial_nr_cr_practice" style="display:none">0</div>
+        <div id="trial_nr_cr1" style="display:none">0</div>
+        <div id="part_reproduction" style="display:none">0</div>
+        <div id="show_trial" style="display:none">0</div>
+        <div id="time_var" style="display:none"></div>
+
+        <div id="page3" style="display:none">
+            <h1>Ready for the memory task?</h1>
+            <p>If you feel prepared to start, please press the button below. <br>
+                Remember the spikiness of the monster's head and
+                the fill of the monster's belly. Try hard! <br>You are presented
+                with a monster only for a short period of time on every trial. <br>
+                After that, you are required to adjust two sliders to reconstruct
+                the head and the belly of the monster. <br>
+                You are given three practice trials to get used to the procedure. <br>
+                These trials are not going to be used to calculate you bonus payment.
+            </p>
             <script>
-                let x = slide_adjust();
                 var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
             </script>
-            <button type="button" name="button" ; onclick="my_link()" ;> Submit
-                Response</button>
-        </body>
+            <button type="button" name="button" ; onclick="next_item_cr('page3')" ;> Start
+                Practice Trials </button>
+        </div>
+
+        <div id="page3.1" style="display:none">
+            <h1>Practice is Over</h1>
+            <p>The practice trials are now over. Press the button below to start with the Memory Task.
+            </p>
+            <script>
+                var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
+            </script>
+            <button type="button" name="button" ; onclick="next_item_cr('page3.1')" ;> Start
+                Memory Task </button>
+
+        </div>
+
+        <div id="page4" style="display:none">
+
+            <head>
+
+
+                <style>
+                    .slidecontainer {
+                        width: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    .slider {
+                        -webkit-appearance: none;
+                        width: 20%;
+                        height: 10px;
+                        background: #d3d3d3;
+                        outline: none;
+                        opacity: 0.7;
+                        -webkit-transition: .2s;
+                        transition: opacity .2s;
+                    }
+
+                    .slider:hover {
+                        opacity: 1;
+                    }
+
+                    .slider::-webkit-slider-thumb {
+                        -webkit-appearance: none;
+                        appearance: none;
+                        width: 20px;
+                        height: 20px;
+                        background: #04AA6D;
+                        cursor: pointer;
+                    }
+
+                    .slider::-moz-range-thumb {
+                        width: 20px;
+                        height: 20px;
+                        background: #04AA6D;
+                        cursor: pointer;
+                    }
+                </style>
+            </head>
+
+            <body>
+
+                <div style="text-align: center;">
+                    <img src="./stimuli/stimulus[50,50].png" height="300px" id="selected_monster">
+                </div></br>
+
+                <p>Drag the two sliders to reproduce the monster you just have seen.</p>
+
+                <div class="slidecontainer">
+                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange1">
+                    <p style="text-align: center">Head : <span id="demo1"></span></p>
+                </div>
+
+                <div class="slidecontainer">
+                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
+                    <p style="text-align: center">Belly: <span id="demo2"></span></p>
+                </div>
+
+                <!--let the participants adjust the two sliders and show them what monster results-->
+                <script>
+                    let x = slide_adjust();
+                    var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
+                </script>
+                <button type="button" name="button" ; onclick="my_link()" ;> Submit
+                    Response</button>
+            </body>
+        </div>
+        <br>
+
+
+        <div id="page5" style="display:none;">
+            <div style="text-align: center;">
+                <img height="300px" id="item_displayed_2">
+            </div><br>
+
+        </div>
+        <br>
+
+
+        <div id="page6" style="display:none">
+            <h1>
+                Well done! That was it for part 1!
+            </h1>
+            <p>
+                By clicking on the button below, you get to the second part of the study
+            </p>
+            <button type="button" name="button" ;
+                onclick="route_categorization(parseInt(document.getElementById('condition_id').innerHTML))" ;>
+                Instructions
+            </button>
+        </div>
+
+        <div id="page7" style="display:none">
+            <h1>
+                Part two of the study
+            </h1>
+            <p>
+                Remember that the monsters come from different tribes.<br>
+                In the second part, your task is to categorize the monsters into <span id="myText"></span>
+                categories.<br>
+                You can use the number keys on your keyboard to give responses in the task.<br>
+                The numbers correspond to the respective category:<br>
+                For example, "1" on your keyboard corresponds to category 1.
+                "2" on your keyboard corresponds to category 2.<br>
+                After every response you are given feedback whether your response was correct or not.<br>
+                In the latter case the category that would have been true is going to be displayed to you.<br>
+            </p>
+            <script>
+                    (() => {
+                        document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
+                    })();
+            </script>
+            <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
+                Categorization</button>
+        </div>
+
+        <div id="page7b" style="display:none">
+            <h1>
+                Part two of the study
+            </h1>
+            <p>
+                In the second part, your task is to judge how similar the current monster is to the monster on the
+                previous
+                trial.<br>
+                You can use the number keys on your keyboard to give responses in the task.<br>
+                The keys have the following meaning:<br>
+                For example, <b>"1"</b> on your keyboard corresponds to <b>not similar</b> at all.<br>
+                In contrast, <b>"9"</b> on your keyboard corresponds to very <b>similar</b>.<br>
+                The numbers in between represent intermediate similarity levels<br>
+                After every response you are given feedback what your response was.<br><br>
+                There is no option to relate the monster on the first trial to a previous monster.<br>
+                Just respond with any key from 1-9 on the first trial.
+            </p>
+            <button type="button" name="button" ; onclick="clickStart('page7b', 'page8')" ;> Start
+                Similarity Judgments</button>
+        </div>
+
+
+        <div id="trial_nr_cat" style="display:none">0</div>
+        <div id="rt" style="display:none">0</div>
+        <div id="key_id" style="display:none">0</div>
+
+        <div id="page8" style="display:none">
+            <h1>
+                Part 2 of the study!
+            </h1>
+            <p>
+                By clicking on the button below, you start the task of part 2.
+            </p>
+            <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start Task </button>
+        </div>
+
+        <div id="page9" style="display:none;">
+            <div style="text-align: center;">
+                <img height="300px" id="item_displayed_cat" src="stimuli/placeholder-white.PNG">
+            </div><br>
+
+        </div>
+
+        <div id="page10" style="display:none;">
+            <h1>Time for a break!</h1>
+            <h2 id="progress"></h2>
+            <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
+            </button>
+
+        </div>
+        <br>
+
+        <div id="page11" style="display:none">
+            <h1>
+                Very well done! That was it for part 2!
+            </h1>
+            <p>
+                By clicking on the button below, you get to part 3.
+            </p>
+            <button type="button" name="button" ; onclick="clickStart('page11', 'page12')" ;> Instructions
+                Memory Task </button>
+        </div>
+
+
+        <div id="trial_nr_cr2" style="display:none">0</div>
+        <div id="page12" style="display:none">
+            <h1>
+                Part 3 of the study!
+            </h1>
+            <p>
+                The third part is the final part of the study. It is again the memory task from part 1.<br>
+                That is, your task is again to remember the spikiness of the head and the fill of the belly of a monster
+                presented in a trial.<br>After presentation, use the two sliders to reproduce the monster just seen as
+                precisely as possible.<br>
+                By clicking on the button below, you start the third and last part of that study.
+            </p>
+            <script>
+                var i = parseInt(document.getElementById("trial_nr_cr2").innerHTML);
+            </script>
+            <button type="button" name="button" ; onclick="next_item_cr('page12', i)" ;> Start
+                Memory Task </button>
+        </div>
+
+        <div id="page13" style="display:none">
+            <h1>
+                You are done. Thank you very much for participating.
+            </h1>
+
+        </div>
     </div>
-    <br>
+    <script src="js/js-helpers.js" charset="utf-8"></script>
+</body>
 
-
-    <div id="page5" style="display:none;">
-        <div style="text-align: center;">
-            <img height="300px" id="item_displayed_2">
-        </div><br>
-
-    </div>
-    <br>
-
-
-    <div id="page6" style="display:none">
-        <h1>
-            Well done! That was it for part 1!
-        </h1>
-        <p>
-            By clicking on the button below, you get to the second part of the study
-        </p>
-        <button type="button" name="button" ;
-            onclick="route_categorization(parseInt(document.getElementById('condition_id').innerHTML))" ;> Instructions
-        </button>
-    </div>
-
-    <div id="page7" style="display:none">
-        <h1>
-            Part two of the study
-        </h1>
-        <p>
-            Remember that the monsters come from different tribes.<br>
-            In the second part, your task is to categorize the monsters into <span id="myText"></span> categories.<br>
-            You can use the number keys on your keyboard to give responses in the task.<br>
-            The numbers correspond to the respective category:<br>
-            For example, "1" on your keyboard corresponds to category 1.
-            "2" on your keyboard corresponds to category 2.<br>
-            After every response you are given feedback whether your response was correct or not.<br>
-            In the latter case the category that would have been true is going to be displayed to you.<br>
-        </p>
-        <script>
-                (() => {
-                    document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
-                })();
-        </script>
-        <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
-            Categorization</button>
-    </div>
-
-    <div id="page7b" style="display:none">
-        <h1>
-            Part two of the study
-        </h1>
-        <p>
-            In the second part, your task is to judge how similar the current monster is to the monster on the previous
-            trial.<br>
-            You can use the number keys on your keyboard to give responses in the task.<br>
-            The keys have the following meaning:<br>
-            For example, <b>"1"</b> on your keyboard corresponds to <b>not similar</b> at all.<br>
-            In contrast, <b>"9"</b> on your keyboard corresponds to very <b>similar</b>.<br>
-            The numbers in between represent intermediate similarity levels<br>
-            After every response you are given feedback what your response was.<br><br>
-            There is no option to relate the monster on the first trial to a previous monster.<br>
-            Just respond with any key from 1-9 on the first trial.
-        </p>
-        <button type="button" name="button" ; onclick="clickStart('page7b', 'page8')" ;> Start
-            Similarity Judgments</button>
-    </div>
-
-
-    <div id="trial_nr_cat" style="display:none">0</div>
-    <div id="rt" style="display:none">0</div>
-    <div id="key_id" style="display:none">0</div>
-
-    <div id="page8" style="display:none">
-        <h1>
-            Part 2 of the study!
-        </h1>
-        <p>
-            By clicking on the button below, you start the task of part 2.
-        </p>
-        <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start Task </button>
-    </div>
-
-    <div id="page9" style="display:none;">
-        <div style="text-align: center;">
-            <img height="300px" id="item_displayed_cat" src="stimuli/placeholder-white.PNG">
-        </div><br>
-
-    </div>
-
-    <div id="page10" style="display:none;">
-        <h1>Time for a break!</h1>
-        <h2 id="progress"></h2>
-        <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
-        </button>
-
-    </div>
-    <br>
-
-    <div id="page11" style="display:none">
-        <h1>
-            Very well done! That was it for part 2!
-        </h1>
-        <p>
-            By clicking on the button below, you get to part 3.
-        </p>
-        <button type="button" name="button" ; onclick="clickStart('page11', 'page12')" ;> Instructions
-            Memory Task </button>
-    </div>
-
-
-    <div id="trial_nr_cr2" style="display:none">0</div>
-    <div id="page12" style="display:none">
-        <h1>
-            Part 3 of the study!
-        </h1>
-        <p>
-            The third part is the final part of the study. It is again the memory task from part 1.<br>
-            That is, your task is again to remember the spikiness of the head and the fill of the belly of a monster
-            presented in a trial.<br>After presentation, use the two sliders to reproduce the monster just seen as
-            precisely as possible.<br>
-            By clicking on the button below, you start the third and last part of that study.
-        </p>
-        <script>
-            var i = parseInt(document.getElementById("trial_nr_cr2").innerHTML);
-        </script>
-        <button type="button" name="button" ; onclick="next_item_cr('page12', i)" ;> Start
-            Memory Task </button>
-    </div>
-
-    <div id="page13" style="display:none">
-        <h1>
-            You are done. Thank you very much for participating.
-        </h1>
-
-    </div>
+</html>
