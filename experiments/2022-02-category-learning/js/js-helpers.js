@@ -1,4 +1,4 @@
-/* 
+
 // get subject ID
 if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
@@ -11,8 +11,8 @@ else {
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
- */
-const participant_id = 1;
+
+//const participant_id = 1;
 
 function setup_experiment() {
     // read mapping from x1 and x2 values to categories
@@ -29,7 +29,7 @@ function setup_experiment() {
         n_trials_reproduction_2: 10,
         n_trials_categorization: 20,
         condition_id: participant_id % 3 + 1,
-        n_categories: [0, 4, 9][participant_id % 3],
+        n_categories: [0, 2, 4][participant_id % 3],
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
@@ -287,7 +287,7 @@ function log_response(rt, i, part, stimulus_ids) {
     document.getElementById("myRange2").value = 50;
     document.getElementById("demo2").innerHTML = 50;
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
-    //saveData(JSON.stringify(data_store))
+    saveData(JSON.stringify(data_store))
 
 }
 
@@ -345,7 +345,7 @@ function update_trial_counter(part, i) {
 
 
 function saveData(filedata) {
-    var filename = "./data/" + participant_id + ".json";
+    var filename = "./data/participant-" + participant_id + ".json";
     $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
 }
 
@@ -462,7 +462,7 @@ function write_cat_results(i, r) {
         rt: document.getElementById("rt").innerHTML
     }
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
-    //saveData(JSON.stringify(data_store))
+    saveData(JSON.stringify(data_store))
 }
 
 // color text
