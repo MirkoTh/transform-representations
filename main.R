@@ -103,8 +103,19 @@ ggplot() + geom_point(data = tbl_all_cats, aes(x1, x2, color = category), size =
   )
 
 
+## evaluate results from one simulation condition
+l_category_results <- readRDS(file = "data/2021-11-05-grid-search.rds")
+add_shape <- function(x) {x$l_info[["category_shape"]] <- "squares"; return(x)}
+l_category_results <- map(l_category_results, add_shape)
 
+# look at simulation conditions
+map(l_category_results, function(x) c(x$l_info$sampling, x$l_info$cat_type, x$l_info$prior_sd))
 
+tbl_test <- l_category_results[[9]]$tbl_new %>% arrange(stim_id)
+
+ggplot(tbl_test, aes(x1, x2, group = stim_id)) +
+  geom_point(aes(color = stim_id)) +
+  scale_color_continuous()
 
 
 
