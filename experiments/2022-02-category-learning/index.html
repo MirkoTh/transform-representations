@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<script src="js/js-helpers.js" charset="utf-8"></script>
 
 <head>
     <meta charset="utf-8">
@@ -503,7 +504,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
                     .slider {
                         -webkit-appearance: none;
-                        width: 20%;
+                        width: 50%;
                         height: 10px;
                         background: #d3d3d3;
                         outline: none;
@@ -536,7 +537,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
             <body>
 
-                <div style="text-align: center;">
+                <div style="text-align: center;" class="centered">
                     <img src="./stimuli/stimulus[50,50].png" height="300px" id="selected_monster">
                 </div></br>
 
@@ -595,11 +596,15 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 In the second part, your task is to categorize the monsters into <span id="myText"></span>
                 categories.<br>
                 You can use the number keys on your keyboard to give responses in the task.<br>
+                To go to the next trial, use the <b>enter</b> key on your keyboard.<br>
+                Using your left hand for the numbers and your right hand for the enter key, you can leave your hands on
+                the keyboard for the whole duration of the categorization task.<br>
                 The numbers correspond to the respective category:<br>
                 For example, "1" on your keyboard corresponds to category 1.
                 "2" on your keyboard corresponds to category 2.<br>
                 After every response you are given feedback whether your response was correct or not.<br>
                 In the latter case the category that would have been true is going to be displayed to you.<br>
+                In the beginning, it won't be an easy task, but no worries, you will get better with practice!
             </p>
             <script>
                     (() => {
@@ -619,6 +624,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 previous
                 trial.<br>
                 You can use the number keys on your keyboard to give responses in the task.<br>
+                To go to the next trial, use the <b>enter</b> key on your keyboard.<br>
+                Using your left hand for the numbers and your right hand for the enter key, you can leave your hands on
+                the keyboard for the whole duration of the categorization task.<br>
                 The keys have the following meaning:<br>
                 For example, <b>"1"</b> on your keyboard corresponds to <b>not similar</b> at all.<br>
                 In contrast, <b>"9"</b> on your keyboard corresponds to very <b>similar</b>.<br>
@@ -700,7 +708,6 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
         </div>
     </div>
-    <script src="js/js-helpers.js" charset="utf-8"></script>
 </body>
 
 </html>

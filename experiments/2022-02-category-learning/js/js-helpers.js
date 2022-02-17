@@ -12,7 +12,7 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 
-const participant_id = 1;
+const participant_id = 2;
 
 function setup_experiment() {
     // read mapping from x1 and x2 values to categories
@@ -25,9 +25,9 @@ function setup_experiment() {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 10,
-        n_trials_reproduction_2: 10,
-        n_trials_categorization: 20,
+        n_trials_reproduction_1: 144,
+        n_trials_reproduction_2: 144,
+        n_trials_categorization: 200,
         condition_id: participant_id % 3 + 1,
         n_categories: [0, 2, 4][participant_id % 3],
         file_path_stimuli: "/stimuli/",
@@ -187,11 +187,11 @@ function route_categorization(condition) {
         clickStart('page6', 'page7b')
     } else { clickStart('page6', 'page7') }
 }
-function replace_monster(slider1, slider2) {
+async function replace_monster(slider1, slider2) {
     stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
     document.getElementById("selected_monster").src = "stimuli/stimulus" + stimulus_id + ".png"
 }
-function slide_adjust() {
+async function slide_adjust() {
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
     output1.innerHTML = slider1.value;
@@ -207,8 +207,6 @@ function slide_adjust() {
         replace_monster(slider1, slider2)
     }
 }
-
-
 
 //https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
 function sleep(ms) {
@@ -281,8 +279,9 @@ function log_response(rt, i, part, stimulus_ids) {
     document.getElementById("demo1").innerHTML = 50;
     document.getElementById("myRange2").value = 50;
     document.getElementById("demo2").innerHTML = 50;
+    document.getElementById("selected_monster").src = "stimuli/stimulus[50,50].png"
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
-    //saveData(JSON.stringify(data_store))
+    saveData(JSON.stringify(data_store), "cr")
 
 }
 
@@ -310,10 +309,10 @@ async function my_link() {
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page3.1")
         document.getElementById("part_reproduction").innerHTML = 1
-    } else if (i == 0 & part == 1) { //total_trials1
+    } else if (i == total_trials1 & part == 1) { //0
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page6");
-    } else if (i == 0 & part == 2) { //total_trials2
+    } else if (i == total_trials2 & part == 2) { //0
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page13");
     } else {
@@ -337,11 +336,11 @@ function update_trial_counter(part, i) {
     }
 }
 
-/* 
-function saveData(filedata) {
-    var filename = "./data/participant-" + participant_id + ".json";
+
+function saveData(filedata, task) {
+    var filename = "./data/" + task + "-participant-" + participant_id + ".json";
     $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
-} */
+}
 
 function download(content, fileName, contentType) {
     var a = document.createElement("a");
@@ -408,7 +407,7 @@ async function handle_response(e) {
     await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
     document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
 
-    if (i == 1) {//setup_expt["experiment_info"]["n_trials_categorization"]) {
+    if (i == setup_expt["experiment_info"]["n_trials_categorization"]) {//1) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         document.getElementById("part_reproduction").innerHTML = 2;
         clickStart("page9", "page11")
@@ -447,13 +446,13 @@ function write_cat_results(i, r) {
         trial_id: i,
         x1_true: setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][i]][0],
         x2_true: setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][i]][1],
-        cat_true: setup_expt["trial_info"]["category_id"],
+        cat_true: setup_expt["trial_info"]["category_id"][i],
         response: r,
         accuracy: accuracy,
         rt: document.getElementById("rt").innerHTML
     }
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
-    //saveData(JSON.stringify(data_store))
+    saveData(JSON.stringify(data_store), "cat")
 }
 
 // color text
