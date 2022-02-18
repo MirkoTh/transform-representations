@@ -756,3 +756,81 @@ one_hot <- function(l_info, idx) {
   v_zeros[idx] <- 1
   return(v_zeros)
 }
+
+tt_split_rewards <- function(tbl, proportion) {
+  #' prioritize 5 items from two categories close to the category boundary
+  #' 
+  #' @description given one ellipse category and second category around
+  #' create 5 examples from each category to be high-reward items
+  #' 
+  #' @param tbl tibble with all 2d location spanning the grid
+  #' @param proportion of items seen during training
+  #' @return a tibble with new columns reward and timepoint (i.e., train or test)
+  #' 
+  n_by_cat <- tbl %>% count(category)
+  tmp <- ceiling(n_by_cat$n * proportion)
+  # n train per category should be an even number for symmetry reasons
+  n_by_cat$n_train <- ifelse(tmp %% 2 == 1, tmp + 1, tmp)
+  n_by_cat$n_test <- n_by_cat$n - n_by_cat$n_train
+  
+  
+  # close-to-boundary train examples
+  tbl_outside_hi <- tibble(
+    x1 = seq(5, 9, by = 1),
+    x2 = seq(2, 6, by = 1),
+    reward = rep(5, 5),
+    timepoint = "train"
+  )
+  tbl_inside_hi <- tibble(
+    x1 = seq(3, 7, by = 1),
+    x2 = seq(5, 9, by = 1),
+    reward = rep(5, 5),
+    timepoint = "train"
+  )
+  # randomly select remaining train examples given proportion
+  tbl_inside_lo <- tbl %>% 
+    filter(category == 2 & x2 >= x1) %>%
+    left_join(tbl_inside_hi, by = c("x1", "x2")) %>%
+    filter(is.na(reward)) %>%
+    select(x1, x2) %>%
+    mutate(reward = 1)
+  
+  tbl_inside_lo <- tbl_inside_lo[sample(
+    1:nrow(tbl_inside_lo), size = nrow(tbl_inside_lo), replace = FALSE
+  ), ]
+  
+  tbl_outside_lo_1 <- tbl %>%
+    filter(x1 >= x2 + 3)  %>%
+    left_join(tbl_outside_hi, by = c("x1", "x2")) %>%
+    filter(is.na(reward)) %>%
+    select(x1, x2) %>%
+    mutate(reward = 1)
+  tbl_outside_lo_2 <- tbl %>%
+    filter(x1 <= x2 - 3)  %>%
+    left_join(tbl_outside_hi, by = c("x1", "x2")) %>%
+    filter(is.na(reward)) %>%
+    select(x1, x2) %>%
+    mutate(reward = 1)
+  tbl_outside_lo <- rbind(tbl_outside_lo_1, tbl_outside_lo_2)
+  tbl_outside_lo <- tbl_outside_lo[sample(
+    1:nrow(tbl_outside_lo), size = nrow(tbl_outside_lo), replace = FALSE
+  ), ]
+  
+  
+  n_by_cat$n_train_hi <- c(nrow(tbl_outside_hi), nrow(tbl_inside_hi))
+  n_by_cat$n_train_lo <- n_by_cat$n_train - n_by_cat$n_train_hi
+  tbl_outside_lo$timepoint <- "test"
+  tbl_outside_lo$timepoint[1:n_by_cat$n_train_lo[n_by_cat$category == 1]] <- "train"
+  tbl_inside_lo$timepoint <- "test"
+  tbl_inside_lo$timepoint[1:n_by_cat$n_train_lo[n_by_cat$category == 2]] <- "train"
+  
+  tbl_reward <- rbind(
+    tbl_outside_hi, tbl_outside_lo,
+    tbl_inside_hi, tbl_inside_lo
+  )
+  tbl <- tbl %>% left_join(tbl_reward, by = c("x1", "x2"))
+  tbl$reward[is.na(tbl$reward)] <- 1
+  tbl$timepoint[is.na(tbl$timepoint)] <- "test"
+  
+  return(tbl)
+}
