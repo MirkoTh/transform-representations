@@ -20,14 +20,16 @@ nruns <- 10000
 # constant
 l_info_prep <- list(
   n_stimuli = n_stimuli,
-  nruns = nruns
+  nruns = nruns,
+  prop_train = .4,
+  is_reward = TRUE
 )
 
 # variable
 tbl_vary <- crossing(
   n_categories = c(2L, 4L), cat_type = c("prototype", "exemplar"), # "rule", 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
-  constrain_space = c(FALSE), category_shape = c("ellipses") 
+  constrain_space = c(FALSE), category_shape = c("ellipses")
 )
 
 l_info <- pmap(
@@ -44,11 +46,37 @@ tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
   mutate(condition_id = seq(1:length(l_info))) %>%
   relocate(condition_id, .before = n_stimuli)
 
+# how much should sd of prior be widened by a large reward?
+l_info <- map(l_info, function(x) {x$nudge_prior = list("1" = 1, "5" = 1.02); return(x)})
+
 # sanity checks of parameters
 # makes only sense with square categories:
 # walk(map(l_info, .f = function(x) x$n_categories), check_categories)
 walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 
+
+# Visualize the conditions with training and testing examples -------------
+
+l_stim <- make_stimuli(l_info[[1]])
+tbl_stim <- l_stim[[1]]
+l_info <- l_stim[[2]]
+tbl_stim %>% ggplot(aes(x1, x2, group = category)) + geom_point(aes(color = category))
+
+
+l_stim <- tt_split_rewards(tbl_stim, l_info)
+tbl_stim <- l_stim[[1]]
+l_info <- l_stim[[2]]
+
+tbl_stim %>% ggplot(aes(x1, x2, group = category)) + 
+  geom_point(aes(color = category, size = as.factor(reward), shape = timepoint)) +
+  theme_bw() +
+  scale_size_discrete(range = c(1.5, 3), name = "Reward") +
+  scale_color_brewer(palette = "Set1", name = "Category") +
+  scale_shape_discrete(name = "Timepoint") +
+  labs(
+    x = expression(X["1"]),
+    y = expression(X["2"])
+  )
 
 # Run Category Learning Task ----------------------------------------------
 
@@ -86,7 +114,8 @@ l_plt_stimulus_movements <- map(l_tbl_stimuli_split, plot_stimulus_movements)
 
 l_plt_stimulus_movements[[1]][[1]]
 
-
+# make that plot nicer to look at for presentation
+ggplot(tbl, aes(x1, x2, group = category)) + geom_point(aes(color = category, shape = timepoint))
 
 l_tmp <- make_stimuli(l_info[[1]])
 tbl_all_cats <- l_tmp[[1]]
@@ -112,6 +141,13 @@ ggplot() + geom_point(data = tbl_all_cats, aes(x1, x2, color = category), size =
 
 
 
-
-
-
+# 
+# 
+# 
+# min_distance_from_boundary <- function(x1, x2) {
+#   min(sqrt(
+#     (x1 - l_info$tbl_ellipses$x_rotated)^2 +
+#       (x2 - l_info$tbl_ellipses$y_rotated)^2
+#   ))
+# }
+# tbl$distance_bd <- pmap_dbl(tbl[, c("x1", "x2")], min_distance_from_boundary)

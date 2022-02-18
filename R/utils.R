@@ -148,6 +148,9 @@ make_stimuli <- function(l_info) {
     ) %>%
     mutate(category = tbl$category)
   tbl[is.na(tbl)] <- 0
+  if (l_info$is_reward) {
+    tbl$prior_sd <- l_info$prior_sd
+  }
   
   return(list(tbl, l_info))
 }
@@ -210,7 +213,7 @@ create_ellipse_categories <- function(tbl, n_categories) {
   l <- map(l_map, assign_grid_points, tbl = tbl, thxs = thxs, theta_deg = theta_deg)
   tbl_all_cats <- reduce(
     map(l, 2), function(x, y) inner_join(x, y, by = c("stim_id", "x1", "x2"))
-    )
+  )
   tbl_ellipses <- reduce(map(l, 1), rbind)
   cat_tmp <- apply(tbl_all_cats[, 4: ncol(tbl_all_cats)], 1, max)
   tbl_all_cats <- tbl_all_cats[, 1:3]
@@ -387,7 +390,7 @@ priors <- function(l_info, tbl) {
 }
 
 
-perceive_stimulus <- function(tbl_new, l_info) {
+perceive_stimulus <- function(tbl_new, l_info, is_reward = FALSE) {
   #' simulate noisy perception of a 2D stimulus
   #' 
   #' @param tbl_new \code{tibble} containing the stimulus id, two features,
@@ -396,20 +399,32 @@ perceive_stimulus <- function(tbl_new, l_info) {
   #' @return three different X tbls (before, after, together)
   #' 
   # randomly move random observation
-  idx <- sample(l_info$n_stimuli, 1)
+  idx <- sample(l_info$n_train, 1)
   cat_cur <- tbl_new$category[idx]
   stim_id_cur <- tbl_new$stim_id[idx]
-  X_new <-  tibble(
-    tbl_new[idx, "x1"] + rnorm(1, 0, l_info$prior_sd), 
-    tbl_new[idx, "x2"] + rnorm(1, 0, l_info$prior_sd)
-  )
+  prior_sd <- as_vector(tbl_new[idx, "prior_sd"])
+  reward_magnitude <- 1
+  if (is_reward) {
+    reward_magnitude <- tbl_new[idx, "reward"]
+    X_new <-  tibble(
+      tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
+      tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
+    )
+  } else {
+    X_new <-  tibble(
+      tbl_new[idx, "x1"] + rnorm(1, 0, l_info$prior_sd), 
+      tbl_new[idx, "x2"] + rnorm(1, 0, l_info$prior_sd)
+    )
+  }
+  
   X_old <- tbl_new[, c("x1", "x2")]
   # create new X matrix
   X <- rbind(X_old, X_new)
   colnames(X) <- l_info$feature_names
   l_out <- list(
     X_old = X_old, X_new = X_new, X = X,
-    cat_cur = cat_cur, stim_id_cur = stim_id_cur
+    cat_cur = cat_cur, stim_id_cur = stim_id_cur,
+    prior_sd = prior_sd, reward_magnitude = as_vector(reward_magnitude)
   )
   return(l_out)
 }
@@ -731,7 +746,7 @@ predict_gcm <- function(tbl_train, tbl_test, l_info) {
     choice_bias = rep(1 / l_info$n_categories, l_info$n_categories - 1), 
     p = 1, # 1 exponential, 2 gaussian
     r_metric = 2, # 1 city block, 2 euclidian
-    # mp, optional memory strength parameter; i.e., should certain items recieve higher memory strength?
+    # mp, optional memory strength parameter; i.e., should certain items receive higher memory strength?
     gamma = 1
   )
   stsimGCM(l_st)
@@ -757,22 +772,24 @@ one_hot <- function(l_info, idx) {
   return(v_zeros)
 }
 
-tt_split_rewards <- function(tbl, proportion) {
+tt_split_rewards <- function(tbl, l_info) {
   #' prioritize 5 items from two categories close to the category boundary
   #' 
   #' @description given one ellipse category and second category around
   #' create 5 examples from each category to be high-reward items
   #' 
   #' @param tbl tibble with all 2d location spanning the grid
-  #' @param proportion of items seen during training
-  #' @return a tibble with new columns reward and timepoint (i.e., train or test)
+  #' @param l_info list of simulation settings
+  #' @return list containing 
+  #' a tibble with new columns reward and timepoint (i.e., train or test)
+  #' the updated list with the parameter settings
   #' 
   n_by_cat <- tbl %>% count(category)
-  tmp <- ceiling(n_by_cat$n * proportion)
+  tmp <- ceiling(n_by_cat$n * l_info$prop_train)
   # n train per category should be an even number for symmetry reasons
   n_by_cat$n_train <- ifelse(tmp %% 2 == 1, tmp + 1, tmp)
   n_by_cat$n_test <- n_by_cat$n - n_by_cat$n_train
-  
+  l_info$n_train <- sum(n_by_cat$n_train)
   
   # close-to-boundary train examples
   tbl_outside_hi <- tibble(
@@ -800,13 +817,13 @@ tt_split_rewards <- function(tbl, proportion) {
   ), ]
   
   tbl_outside_lo_1 <- tbl %>%
-    filter(x1 >= x2 + 3)  %>%
+    filter(x1 >= x2 + 4)  %>%
     left_join(tbl_outside_hi, by = c("x1", "x2")) %>%
     filter(is.na(reward)) %>%
     select(x1, x2) %>%
     mutate(reward = 1)
   tbl_outside_lo_2 <- tbl %>%
-    filter(x1 <= x2 - 3)  %>%
+    filter(x1 <= x2 - 4)  %>%
     left_join(tbl_outside_hi, by = c("x1", "x2")) %>%
     filter(is.na(reward)) %>%
     select(x1, x2) %>%
@@ -832,5 +849,121 @@ tt_split_rewards <- function(tbl, proportion) {
   tbl$reward[is.na(tbl$reward)] <- 1
   tbl$timepoint[is.na(tbl$timepoint)] <- "test"
   
-  return(tbl)
+  return(list(tbl, l_info))
+}
+
+reward_categorization <- function(l_info) {
+  #' main reward-learning categorization function
+  #' 
+  #' @description categorize stimuli, store accepted samples, and visualize results
+  #' 
+  #' @param l_info parameter list with fields n_stimuli, n_categories, prior_sd, nruns
+  #' @return a list with prior, samples, and posterior in [[1]] and some
+  #' visualizations in [[2]]
+  #' 
+  
+  l_tmp <- make_stimuli(l_info)
+  l_split <- tt_split_rewards(l_tmp[[1]], l_tmp[[2]])
+  tbl <- l_split[[1]]
+  l_info <- l_split[[2]]
+  tbl_train <- tbl %>% filter(timepoint == "train")
+  tbl_test <- tbl %>% filter(timepoint == "test")
+  # compute priors
+  l_m <- priors(l_info, tbl_train)
+  
+  
+  # save prior for later and copy original tbl
+  l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl_train)
+  tbl_prior_long <- l_prior_prep[[1]]
+  l_prior <- l_prior_prep[[2]]
+  posterior <- l_m$posterior_prior
+  tbl_new <- tbl_train
+  
+  unique_boundaries <- boundaries(tbl_train, l_info)
+  thx_grt <- thxs(unique_boundaries)
+  
+  
+  # Categorization Simulation -----------------------------------------------
+  
+  pb <- txtProgressBar(min = 1, max = l_info$nruns, initial = 1, char = "*", style = 2)
+  for (i in 1:l_info$nruns) {
+    # perceive a randomly sampled stimulus
+    # while(l_x$stim_id_cur != 1){}
+    l_x <- perceive_stimulus(tbl_new, l_info, is_reward = TRUE)
+    
+    # propose a new posterior
+    if (l_info$cat_type == "rule") {
+      posterior_new <- pmap(
+        thx_grt, grt_cat_probs, tbl_stim = l_x$X_new, l_info = l_info
+      ) %>% unlist() %>%
+        matrix(nrow = 1) %>%
+        as_tibble(.name_repair = ~ l_info$categories)
+    } else if (l_info$cat_type == "prototype") {
+      posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
+    } else if (l_info$cat_type == "exemplar") {
+      l_info$sens <- l_m$gcm_params[1]
+      l_info$wgh <- l_m$gcm_params[2]
+      posterior_new <- predict_gcm(tbl_new, l_x$X_new, l_info)
+      colnames(posterior_new) <- l_info$categories
+    }
+    
+    post_x_new <- round(as_vector(tail(posterior_new[, l_x$cat_cur], 1)), 3)
+    # compare to average prediction given previously perceived stimuli
+    idxs_stim <- which(tbl_new$stim_id == l_x$stim_id_cur)
+    post_x_old <- round(mean(as_vector(posterior[idxs_stim, l_x$cat_cur])), 3)
+    p_thx <- runif(1)
+    # decide on whether to accept or reject a proposition
+    is_improvement <- post_x_new > post_x_old
+    mh_is_accepted <- p_thx < min(1, post_x_new/post_x_old)
+    is_in_shown_space <- (
+      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
+        between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+    )
+    if (
+      ifelse(l_info$sampling == "improvement", is_improvement, mh_is_accepted) & 
+      ifelse(l_info$constrain_space, is_in_shown_space, TRUE)
+    ) {
+      #cat("accepted\n")
+      onehots <- one_hot(l_info, l_x$cat_cur)
+      m_onehots <- as_tibble(t(as.matrix(onehots)))
+      tbl_new <- rbind(
+        tbl_new, tibble(
+          stim_id = l_x$stim_id_cur, l_x$X_new,
+          cat_type = l_info$cat_type, 
+          m_onehots, category = l_x$cat_cur, 
+          prior_sd = l_x$prior_sd*as_vector(l_info$nudge_prior[str_c(l_x$reward)]),
+          reward = l_x$reward,
+          timepoint = "train"
+        )
+      )
+      tbl_new <- tbl_new %>% filter(stim_id == l_x$stim_id_cur) %>% 
+        mutate(prior_sd = max(prior_sd))
+      posterior <- rbind(posterior, posterior_new)
+      # refit prototype and exemplar models when sample was accepted
+      # if (l_info$cat_type == "prototype") {
+      #   l_m$m_nb_update <- naive_bayes(l_m$fml, data = tbl_new)
+      # }
+      # if (l_info$cat_type == "exemplar") {
+      #   fit_gcm <- optim(
+      #     f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
+      #     l_info = l_info, tbl_stim = tbl_new, method = "L-BFGS-B"
+      #   )
+      #   l_m$gcm_params <- fit_gcm$par
+      # }
+    }
+    setTxtProgressBar(pb,i)
+  }
+  close(pb)
+  
+  # Post Processing ---------------------------------------------------------
+  
+  nstart <- nrow(tbl)
+  nnew <- nrow(tbl_new) - nstart
+  tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
+  
+  l_out <- list(
+    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m,
+    posterior = posterior, l_info = l_info
+  )
+  return(l_out)
 }
