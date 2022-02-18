@@ -15,7 +15,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 144L
-nruns <- 1000
+nruns <- 250
 
 # constant
 l_info_prep <- list(
@@ -56,7 +56,6 @@ walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 
 # Run Category Learning Task ----------------------------------------------
 
-
 plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
 l_category_results <- future_map(
   l_info, reward_categorization, 
@@ -70,7 +69,10 @@ saveRDS(l_category_results, file = str_c("data/", td, "-grid-search.rds"))
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
 # Post Processing & Plotting ----------------------------------------------
 
+
+
 l_results_plots <- map(l_category_results, diagnostic_plots)
+
 # Plot Prior Means & Posterior Means --------------------------------------
 
 l_tmp <- save_results_plots(tbl_info, l_results_plots, .75, 2)
