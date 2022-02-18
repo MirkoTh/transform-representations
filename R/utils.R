@@ -908,7 +908,12 @@ reward_categorization <- function(l_info) {
     }
     
     post_x_new <- round(as_vector(tail(posterior_new[, l_x$cat_cur], 1)), 3)
-    # compare to average prediction given previously perceived stimuli
+    
+    # has the right category be chosen on that trial?
+    category_chosen <- c(1:l_info$n_categories)[as.logical(rmultinom(1, 1, posterior_new))]
+    is_correct <- category_chosen == l_x$cat_cur
+    
+    # has the average prediction given previously perceived stimuli improved?
     idxs_stim <- which(tbl_new$stim_id == l_x$stim_id_cur)
     post_x_old <- round(mean(as_vector(posterior[idxs_stim, l_x$cat_cur])), 3)
     p_thx <- runif(1)
@@ -920,6 +925,7 @@ reward_categorization <- function(l_info) {
         between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
     )
     if (
+      is_correct &
       ifelse(l_info$sampling == "improvement", is_improvement, mh_is_accepted) & 
       ifelse(l_info$constrain_space, is_in_shown_space, TRUE)
     ) {
@@ -936,8 +942,10 @@ reward_categorization <- function(l_info) {
           timepoint = "train"
         )
       )
-      tbl_new <- tbl_new %>% filter(stim_id == l_x$stim_id_cur) %>% 
+      tbl_new_unchanged <- tbl_new %>% filter(stim_id != l_x$stim_id_cur)
+      tbl_new_prior <- tbl_new %>% filter(stim_id == l_x$stim_id_cur) %>% 
         mutate(prior_sd = max(prior_sd))
+      tbl_new <- rbind(tbl_new_unchanged, tbl_new_prior)
       posterior <- rbind(posterior, posterior_new)
       # refit prototype and exemplar models when sample was accepted
       # if (l_info$cat_type == "prototype") {
@@ -957,7 +965,7 @@ reward_categorization <- function(l_info) {
   
   # Post Processing ---------------------------------------------------------
   
-  nstart <- nrow(tbl)
+  nstart <- nrow(tbl_train)
   nnew <- nrow(tbl_new) - nstart
   tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
   

@@ -15,7 +15,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 144L
-nruns <- 10000
+nruns <- 1000
 
 # constant
 l_info_prep <- list(
@@ -27,7 +27,7 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- crossing(
-  n_categories = c(2L, 4L), cat_type = c("prototype", "exemplar"), # "rule", 
+  n_categories = c(2L), cat_type = c("prototype", "exemplar"), # "rule", 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
   constrain_space = c(FALSE), category_shape = c("ellipses")
 )
@@ -54,35 +54,12 @@ l_info <- map(l_info, function(x) {x$nudge_prior = list("1" = 1, "5" = 1.02); re
 # walk(map(l_info, .f = function(x) x$n_categories), check_categories)
 walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 
-
-# Visualize the conditions with training and testing examples -------------
-
-l_stim <- make_stimuli(l_info[[1]])
-tbl_stim <- l_stim[[1]]
-l_info <- l_stim[[2]]
-tbl_stim %>% ggplot(aes(x1, x2, group = category)) + geom_point(aes(color = category))
-
-
-l_stim <- tt_split_rewards(tbl_stim, l_info)
-tbl_stim <- l_stim[[1]]
-l_info <- l_stim[[2]]
-
-tbl_stim %>% ggplot(aes(x1, x2, group = category)) + 
-  geom_point(aes(color = category, size = as.factor(reward), shape = timepoint)) +
-  theme_bw() +
-  scale_size_discrete(range = c(1.5, 3), name = "Reward") +
-  scale_color_brewer(palette = "Set1", name = "Category") +
-  scale_shape_discrete(name = "Timepoint") +
-  labs(
-    x = expression(X["1"]),
-    y = expression(X["2"])
-  )
-
 # Run Category Learning Task ----------------------------------------------
+
 
 plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
 l_category_results <- future_map(
-  l_info, categorize_stimuli, 
+  l_info, reward_categorization, 
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
@@ -134,14 +111,31 @@ ggplot() + geom_point(data = tbl_all_cats, aes(x1, x2, color = category), size =
 
 
 
+# Visualize the conditions with training and testing examples -------------
+
+l_stim <- make_stimuli(l_info[[1]])
+tbl_stim <- l_stim[[1]]
+l_info <- l_stim[[2]]
+tbl_stim %>% ggplot(aes(x1, x2, group = category)) + geom_point(aes(color = category))
 
 
+l_stim <- tt_split_rewards(tbl_stim, l_info)
+tbl_stim <- l_stim[[1]]
+l_info <- l_stim[[2]]
+
+tbl_stim %>% ggplot(aes(x1, x2, group = category)) + 
+  geom_point(aes(color = category, size = as.factor(reward), shape = timepoint)) +
+  theme_bw() +
+  scale_size_discrete(range = c(1.5, 3), name = "Reward") +
+  scale_color_brewer(palette = "Set1", name = "Category") +
+  scale_shape_discrete(name = "Timepoint") +
+  labs(
+    x = expression(X["1"]),
+    y = expression(X["2"])
+  )
 
 
-
-
-
-# 
+# maybe useful code at a later point in time
 # 
 # 
 # min_distance_from_boundary <- function(x1, x2) {
