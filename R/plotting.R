@@ -172,8 +172,10 @@ plot_marginals <- function(tbl_new, l_info) {
   n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
     group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
     ungroup() %>% arrange(desc(rwn))
-  if(n_accept_stimuli %>% filter(stim_id == nice_showcase) %>% 
-     select(rwn) %>% as_vector() %>% max() > 2) {
+  n_accepted <- n_accept_stimuli %>% filter(stim_id == nice_showcase) %>% 
+    select(rwn) %>% as_vector()
+  if (!is_empty(n_accepted)) {n_accepted <- n_accepted %>% max()} else {n_accepted <- 0}
+  if(n_accepted > 2) {
     showcase <- nice_showcase
   } else {
     showcase <- n_accept_stimuli %>% head(1) %>% select(stim_id) %>% as_vector()
