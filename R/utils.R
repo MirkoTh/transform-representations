@@ -878,6 +878,7 @@ reward_categorization <- function(l_info) {
   l_prior <- l_prior_prep[[2]]
   posterior <- l_m$posterior_prior
   tbl_new <- tbl_train
+  tbl_new$rwn <- row_number(tbl_new$stim_id)
   
   unique_boundaries <- boundaries(tbl_train, l_info)
   thx_grt <- thxs(unique_boundaries)
@@ -939,13 +940,13 @@ reward_categorization <- function(l_info) {
           m_onehots, category = l_x$cat_cur, 
           prior_sd = l_x$prior_sd*as_vector(l_info$nudge_prior[str_c(l_x$reward)]),
           reward = l_x$reward,
-          timepoint = "train"
+          timepoint = "train", rwn = max(tbl_new$rwn) + 1
         )
       )
       tbl_new_unchanged <- tbl_new %>% filter(stim_id != l_x$stim_id_cur)
       tbl_new_prior <- tbl_new %>% filter(stim_id == l_x$stim_id_cur) %>% 
         mutate(prior_sd = max(prior_sd))
-      tbl_new <- rbind(tbl_new_unchanged, tbl_new_prior)
+      tbl_new <- rbind(tbl_new_unchanged, tbl_new_prior) %>% arrange(rwn)
       posterior <- rbind(posterior, posterior_new)
       # refit prototype and exemplar models when sample was accepted
       # if (l_info$cat_type == "prototype") {
@@ -962,6 +963,7 @@ reward_categorization <- function(l_info) {
     setTxtProgressBar(pb,i)
   }
   close(pb)
+  tbl_new <- tbl_new %>% select(-rwn)
   
   # Post Processing ---------------------------------------------------------
   
