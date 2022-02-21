@@ -192,7 +192,7 @@ create_ellipse_categories <- function(tbl, n_categories) {
   thxs <- c(0, apply(tbl[, c("x1")], 2, function(x) (min(x) + max(x))/2))
   theta_deg <- 45
   fctr_mid <- list(
-    "squash_all" = .9, "squash_y" = 1, "squash_x" = .3, 
+    "squash_all" = .9, "squash_y" = 1, "squash_x" = .395, 
     "move_x" = 0, "move_y" = 0, "category" = 2
   )
   fctr_hi <- list(
