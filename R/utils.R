@@ -793,15 +793,15 @@ tt_split_rewards <- function(tbl, l_info) {
   
   # close-to-boundary train examples
   tbl_outside_hi <- tibble(
-    x1 = seq(5, 9, by = 1),
-    x2 = seq(2, 6, by = 1),
-    reward = rep(5, 5),
+    x1 = seq(4, 10, by = 1),
+    x2 = seq(1, 7, by = 1),
+    reward = rep(5, 7),
     timepoint = "train"
   )
   tbl_inside_hi <- tibble(
-    x1 = seq(3, 7, by = 1),
-    x2 = seq(5, 9, by = 1),
-    reward = rep(5, 5),
+    x1 = seq(2, 7, by = 1),
+    x2 = seq(4, 9, by = 1),
+    reward = rep(5, 6),
     timepoint = "train"
   )
   # randomly select remaining train examples given proportion
