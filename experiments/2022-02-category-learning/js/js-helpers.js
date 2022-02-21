@@ -12,7 +12,7 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 
-const participant_id = 2;
+const participant_id = 3;
 
 function setup_experiment() {
 
@@ -22,9 +22,9 @@ function setup_experiment() {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 10, //144, //
+        n_trials_reproduction_1: 1, //144, //10
         n_trials_reproduction_2: 10, //144, //
-        n_trials_categorization: 500, //10, //
+        n_trials_categorization: 10, //500, //
         condition_id: participant_id % 3 + 1,
         n_categories: [0, 2, 4][participant_id % 3],
         file_path_stimuli: "/stimuli/",
@@ -36,14 +36,14 @@ function setup_experiment() {
     } else if ((participant_id % 3 + 1) == 3) {
         experiment_info["n_categories"] = 4
     } else if ((participant_id % 3 + 1) == 1) {
-        experiment_info["n_categories"] = 0
+        experiment_info["n_categories"] = 1
     }
 
     // read mapping from x1 and x2 values to categories
 
     const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat4map_val = [1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 4, 3, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1]
-    const cat0map_val = Array(experiment_info["n_stimuli"]).fill(0)
+    const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
 
     // display info
     const display_info = {
@@ -80,7 +80,7 @@ function setup_experiment() {
         stimulus_info["category_id"] = cat2map_val
     } else if (experiment_info["n_categories"] == 4) {
         stimulus_info["category_id"] = cat4map_val
-    } else if (experiment_info["n_categories"] == 0) {
+    } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
     }
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
@@ -257,7 +257,22 @@ var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
 
-/* 
+/* for (var idx = 0; idx < stimulus_vals.length; idx++) {
+    console.log(stimulus_vals[idx])
+}
+for (var idx = 0; idx < stimulus_cr2_trial.length; idx++) {
+    console.log(stimulus_cr2_trial[idx])
+}
+for (var idx = 0; idx < stimulus_cat_trial.length; idx++) {
+    console.log(stimulus_cat_trial[idx])
+}
+for (var idx = 0; idx < category_id.length; idx++) {
+    console.log(category_id[idx])
+}
+for (var idx = 0; idx < setup_expt["trial_info"]["stimulus_id_c"].length; idx++) {
+    console.log(setup_expt["trial_info"]["stimulus_id_c"][idx])
+    console.log(idx)
+}
 
 for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]; idx++) {
     console.log(
@@ -266,7 +281,7 @@ for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]
         " category id is: " + setup_expt["trial_info"]["category_id"][idx]
     )
 }
- */
+*/
 
 async function next_item_cr(old, i) {
     part = document.getElementById("part_reproduction").innerHTML
@@ -447,7 +462,7 @@ async function handle_response(e) {
     await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
     document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
 
-    if (i == setup_expt["experiment_info"]["n_trials_categorization"]) {//1) {
+    if (i == setup_expt["experiment_info"]["n_trials_categorization"] - 1) {//1) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         document.getElementById("part_reproduction").innerHTML = 2;
         clickStart("page9", "page11")
