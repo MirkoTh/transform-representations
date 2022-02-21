@@ -25,9 +25,9 @@ function setup_experiment() {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 144,
-        n_trials_reproduction_2: 144,
-        n_trials_categorization: 200,
+        n_trials_reproduction_1: 10, //144,
+        n_trials_reproduction_2: 10, //144,
+        n_trials_categorization: 10, //200,
         condition_id: participant_id % 3 + 1,
         n_categories: [0, 2, 4][participant_id % 3],
         file_path_stimuli: "/stimuli/",
@@ -86,29 +86,29 @@ function setup_experiment() {
             // 12x12 grid of stimuli placed within finer grid of 100x100
             // edge space of 6 units is 
             stimulus_info["x1_x2"][i] = [x1 * 8 - 2, x2 * 8 - 2]
-            stimulus_info["stimulus_id"][i] = i + 1
+            stimulus_info["stimulus_id"][i] = i
             i += 1
         }
     }
+
     // trial info
     const trial_info = {}
     trial_info["stimulus_id_rp"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_rp"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_rp"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r1"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_r1"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_r1"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r2"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_r2"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_r2"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_c"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_c"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_c"].push(n_x_steps * n_x_steps - 1)
     trial_info["category_id"] = Array(experiment_info["n_trial"])
-
 
     const n_reps_practice = 1
     const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
     const n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
     const n_reps_categorization = Math.ceil(experiment_info["n_trials_categorization"] / stimulus_info["n_stimuli"])
 
-    append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_reproduction_1)
+    append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_practice)
     append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
     append_randomized_arrays(trial_info["stimulus_id_r2"], n_reps_reproduction_2)
     append_randomized_arrays(trial_info["stimulus_id_c"], n_reps_categorization)
@@ -227,6 +227,25 @@ var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
 
+
+
+/* 
+for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_reproduction_1"]; idx++) {
+    console.log("trial nr " + idx + ", stimulus id is: " + stimulus_cr1_trial[idx] +
+        " stimulus values are: " + stimulus_vals[stimulus_cr1_trial[idx]])
+    console.log(stimulus_cr1_trial[idx])
+}
+console.log("length is: " + stimulus_cr1_trial.length)
+
+var counts = {}
+for (let idx of setup_expt["trial_info"]["stimulus_id_r1"]) {
+    counts[idx] = counts[idx] ? counts[idx] + 1 : 1;
+}
+
+for (let idx of setup_expt["trial_info"]["stimulus_id_r1"]) {
+    console.log("idx is: ", idx, ", counts sum to: " + counts[idx])
+}
+ */
 
 async function next_item_cr(old, i) {
     part = document.getElementById("part_reproduction").innerHTML
