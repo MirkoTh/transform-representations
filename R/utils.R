@@ -817,13 +817,13 @@ tt_split_rewards <- function(tbl, l_info) {
   ), ]
   
   tbl_outside_lo_1 <- tbl %>%
-    filter(x1 >= x2 + 4)  %>%
+    filter(x1 >= x2 + 4 | (x1 <= 3 & x2 <= 3))  %>%
     left_join(tbl_outside_hi, by = c("x1", "x2")) %>%
     filter(is.na(reward)) %>%
     select(x1, x2) %>%
     mutate(reward = 1)
   tbl_outside_lo_2 <- tbl %>%
-    filter(x1 <= x2 - 4)  %>%
+    filter(x1 <= x2 - 4 | (x1 >= 8 & x2 >= 8))  %>%
     left_join(tbl_outside_hi, by = c("x1", "x2")) %>%
     filter(is.na(reward)) %>%
     select(x1, x2) %>%
@@ -911,6 +911,7 @@ reward_categorization <- function(l_info) {
     post_x_new <- round(as_vector(tail(posterior_new[, l_x$cat_cur], 1)), 3)
     
     # has the right category be chosen on that trial?
+
     category_chosen <- c(1:l_info$n_categories)[as.logical(rmultinom(1, 1, posterior_new))]
     is_correct <- category_chosen == l_x$cat_cur
     

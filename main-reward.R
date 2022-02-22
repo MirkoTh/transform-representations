@@ -15,13 +15,13 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 144L
-nruns <- 250
+nruns <- 5000
 
 # constant
 l_info_prep <- list(
   n_stimuli = n_stimuli,
   nruns = nruns,
-  prop_train = .4,
+  prop_train = .5,
   is_reward = TRUE
 )
 
@@ -47,7 +47,7 @@ tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
   relocate(condition_id, .before = n_stimuli)
 
 # how much should sd of prior be widened by a large reward?
-l_info <- map(l_info, function(x) {x$nudge_prior = list("1" = 1, "5" = 1.02); return(x)})
+l_info <- map(l_info, function(x) {x$nudge_prior = list("1" = 1, "5" = 1.025); return(x)})
 
 # sanity checks of parameters
 # makes only sense with square categories:
@@ -80,6 +80,45 @@ ggsave(l_tmp[[2]], l_tmp[[1]], width = 15, height = 7, units = "in")
 l_tmp <- save_results_plots(tbl_info, l_results_plots, .75, 4)
 ggsave(l_tmp[[2]], l_tmp[[1]], width = 15, height = 7, units = "in")
 
+
+
+tbl <- l_category_results[[2]]$tbl_new
+
+tbl_movement <- tbl %>% filter(timepoint == "After Training") %>% left_join(
+  tbl %>% filter(timepoint == "Before Training") %>% select(stim_id, x1, x2), 
+  by = "stim_id", suffix = c("_after", "_before"))
+
+tbl_movement_agg <- tbl_movement %>%
+  mutate(deviation = sqrt((x1_after - x1_before)^2 + (x2_after - x2_before)^2)) %>%
+  mutate(x1_before, x2_before) %>%
+  group_by(stim_id, x1_before, x2_before, reward) %>%
+  summarize(
+    deviation_avg = mean(deviation),
+    x1_after_avg = mean(x1_after),
+    x2_after_avg = mean(x2_after)
+    ) %>% ungroup()
+
+ggplot() +
+  geom_point(data = tbl_movement_agg, aes(
+      x1_before, x2_before, color = as.factor(stim_id), size = deviation_avg, shape = as.factor(reward)
+      )) +
+  geom_point(data = tbl_movement_agg, aes(
+    x1_after_avg, x2_after_avg, group = stim_id, color = as.factor(stim_id), shape = as.factor(reward)
+    ), size = 1.5) +
+  geom_segment(data = tbl_movement_agg, aes(
+    x = x1_before, xend = x1_after_avg, y = x2_before, yend = x2_after_avg, color = as.factor(stim_id)
+    ), arrow = arrow(type = "open", length = unit(0.05, "inches"))) +
+  theme_bw() +
+  geom_point(data = l_category_results[[2]]$l_info$tbl_ellipses, aes(
+    x_rotated, y_rotated, group = category
+    ), color = "grey", size = .75) + 
+  scale_color_viridis_d(guide = "none") +
+  scale_size_continuous(name = "Avg. Deviation", range = c(1, 5)) +
+  scale_shape_discrete(name = "Reward Magnitude") +
+  labs(
+    x = expression(X["1"]),
+    y = expression(X["2"])
+  )
 
 # Plot Movements of Individual Points -------------------------------------
 
