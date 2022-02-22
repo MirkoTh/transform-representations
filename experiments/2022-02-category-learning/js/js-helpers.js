@@ -12,7 +12,7 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 
-const participant_id = 3;
+const participant_id = 2;
 
 function setup_experiment() {
 
@@ -22,9 +22,9 @@ function setup_experiment() {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 1, //144, //10
-        n_trials_reproduction_2: 10, //144, //
-        n_trials_categorization: 10, //500, //
+        n_trials_reproduction_1: 2, //144, //10
+        n_trials_reproduction_2: 2, //144, //
+        n_trials_categorization: 2, //500, //
         condition_id: participant_id % 3 + 1,
         n_categories: [0, 2, 4][participant_id % 3],
         file_path_stimuli: "/stimuli/",
@@ -41,7 +41,7 @@ function setup_experiment() {
 
     // read mapping from x1 and x2 values to categories
     const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat4map_val = [1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 4, 3, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1],
+    const cat4map_val = [1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 4, 3, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
 
     // display info
@@ -491,7 +491,7 @@ function write_cat_results(i, r) {
     if (condition_id == 1) {
         accuracy = 9
     } else if (condition_id == 2 | condition_id == 3) {
-        accuracy = setup_expt["trial_info"]["category_id"] == r;
+        accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
 
     var data_store = {
