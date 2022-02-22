@@ -12,22 +12,19 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 
-const participant_id = 2;
+const participant_id = 3;
 
 function setup_experiment() {
-    // read mapping from x1 and x2 values to categories
 
-    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat4map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat0map_val = Array(144).fill(0)
     // experiment information
     const experiment_info = {
+        n_stimuli: 144,
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 144,
-        n_trials_reproduction_2: 144,
-        n_trials_categorization: 200,
+        n_trials_reproduction_1: 1, //144, //10
+        n_trials_reproduction_2: 10, //144, //
+        n_trials_categorization: 10, //500, //
         condition_id: participant_id % 3 + 1,
         n_categories: [0, 2, 4][participant_id % 3],
         file_path_stimuli: "/stimuli/",
@@ -39,8 +36,13 @@ function setup_experiment() {
     } else if ((participant_id % 3 + 1) == 3) {
         experiment_info["n_categories"] = 4
     } else if ((participant_id % 3 + 1) == 1) {
-        experiment_info["n_categories"] = 0
+        experiment_info["n_categories"] = 1
     }
+
+    // read mapping from x1 and x2 values to categories
+    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat4map_val = [1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 4, 3, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1],
+    const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
 
     // display info
     const display_info = {
@@ -64,11 +66,12 @@ function setup_experiment() {
         }
     }
 
-    // stimulus information
+
+
     const n_x_steps = 12;
     var stimulus_info = {
-        x1: Array(n_x_steps).fill().map((element, index) => index + 1),
-        x2: Array(n_x_steps).fill().map((element, index) => index + 1),
+        x1: Array(n_x_steps).fill().map((element, index) => index),
+        x2: Array(n_x_steps).fill().map((element, index) => index),
         x1_x2: Array(n_x_steps * n_x_steps),
         stimulus_id: Array(n_x_steps * n_x_steps)
     }
@@ -76,7 +79,7 @@ function setup_experiment() {
         stimulus_info["category_id"] = cat2map_val
     } else if (experiment_info["n_categories"] == 4) {
         stimulus_info["category_id"] = cat4map_val
-    } else if (experiment_info["n_categories"] == 0) {
+    } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
     }
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
@@ -85,42 +88,68 @@ function setup_experiment() {
         for (let x2 of stimulus_info["x2"]) {
             // 12x12 grid of stimuli placed within finer grid of 100x100
             // edge space of 6 units is 
-            stimulus_info["x1_x2"][i] = [x1 * 8 - 2, x2 * 8 - 2]
-            stimulus_info["stimulus_id"][i] = i + 1
+            stimulus_info["x1_x2"][i] = [(x1 + 1) * 8 - 2, (x2 + 1) * 8 - 2]
+            stimulus_info["stimulus_id"][i] = i
             i += 1
         }
     }
+
     // trial info
     const trial_info = {}
     trial_info["stimulus_id_rp"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_rp"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_rp"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r1"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_r1"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_r1"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r2"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_r2"].push(n_x_steps * n_x_steps)
-    trial_info["stimulus_id_c"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_c"].push(n_x_steps * n_x_steps)
+    //trial_info["stimulus_id_r2"].push(n_x_steps * n_x_steps - 1)
     trial_info["category_id"] = Array(experiment_info["n_trial"])
-
 
     const n_reps_practice = 1
     const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
     const n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
-    const n_reps_categorization = Math.ceil(experiment_info["n_trials_categorization"] / stimulus_info["n_stimuli"])
 
-    append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_reproduction_1)
-    append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
-    append_randomized_arrays(trial_info["stimulus_id_r2"], n_reps_reproduction_2)
-    append_randomized_arrays(trial_info["stimulus_id_c"], n_reps_categorization)
+    trial_info["stimulus_id_rp"] = append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_practice)
+    trial_info["stimulus_id_r1"] = append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
+    trial_info["stimulus_id_r2"] = append_randomized_arrays(trial_info["stimulus_id_r2"], n_reps_reproduction_2)
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
-    trial_info["stimulus_id_c"].length = experiment_info["n_trials_categorization"]
+    trial_info["stimulus_id_c"] = []
+
+    // stimulus information
+    // create an equal proportion of items from the categories
+    const proportion_categories = 1 / experiment_info["n_categories"]
+    const items_per_category_required = experiment_info["n_trials_categorization"] * proportion_categories
+    const items_per_category_repeats = {}
+    const items_per_category_gridpoints = {}
+    var stimulus_ids_per_category = {}
+    var n_items_per_cat, prop_available, repeats;
+    // https://www.w3resource.com/javascript-exercises/fundamental/javascript-fundamental-exercise-70.php
+    const countOccurrences = (arr, val) => arr.reduce((a, v) => (v === val ? a + 1 : a), 0);
+    for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
+        n_items_per_cat = countOccurrences(stimulus_info["category_id"], idx + 1)
+        items_per_category_gridpoints[idx + 1] = n_items_per_cat
+        prop_available = n_items_per_cat / items_per_category_required
+        repeats = Math.ceil(1 / prop_available)
+        items_per_category_repeats[idx + 1] = repeats
+        stimulus_ids_per_category[idx + 1] = []
+    }
+    for (let idx = 0; idx < experiment_info["n_stimuli"]; idx++) {
+        stimulus_ids_per_category[stimulus_info["category_id"][idx]].push(stimulus_info["stimulus_id"][idx])
+    }
+    for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
+        //console.log(items_per_category_repeats[idx + 1])
+        stimulus_ids_per_category[idx + 1] = append_randomized_arrays(stimulus_ids_per_category[idx + 1], items_per_category_repeats[idx + 1])
+        stimulus_ids_per_category[idx + 1].length = items_per_category_required
+        trial_info["stimulus_id_c"] = trial_info["stimulus_id_c"].concat(stimulus_ids_per_category[idx + 1])
+
+    }
+    trial_info["stimulus_id_c"] = append_randomized_arrays(trial_info["stimulus_id_c"], 1)
+
     // ellipse categories
     for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
         trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
     }
-
 
     // square categories
     /* segments_per_dim = Math.sqrt(experiment_info["n_categories"])
@@ -148,7 +177,7 @@ function setup_experiment() {
         var sets_randomized = [];
         for (let i = 0; i < n; i++) {
             var set_permuted = permute(set)
-            sets_randomized.concat(set_permuted);
+            sets_randomized = sets_randomized.concat(set_permuted);
         }
         return sets_randomized
     }
@@ -227,6 +256,31 @@ var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
 
+/* for (var idx = 0; idx < stimulus_vals.length; idx++) {
+    console.log(stimulus_vals[idx])
+}
+for (var idx = 0; idx < stimulus_cr2_trial.length; idx++) {
+    console.log(stimulus_cr2_trial[idx])
+}
+for (var idx = 0; idx < stimulus_cat_trial.length; idx++) {
+    console.log(stimulus_cat_trial[idx])
+}
+for (var idx = 0; idx < category_id.length; idx++) {
+    console.log(category_id[idx])
+}
+for (var idx = 0; idx < setup_expt["trial_info"]["stimulus_id_c"].length; idx++) {
+    console.log(setup_expt["trial_info"]["stimulus_id_c"][idx])
+    console.log(idx)
+}
+
+for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]; idx++) {
+    console.log(
+        "stimulus id is: " + setup_expt["trial_info"]["stimulus_id_c"][idx] +
+        " x1 x2 vals are: " + setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][idx]] +
+        " category id is: " + setup_expt["trial_info"]["category_id"][idx]
+    )
+}
+*/
 
 async function next_item_cr(old, i) {
     part = document.getElementById("part_reproduction").innerHTML
@@ -407,7 +461,7 @@ async function handle_response(e) {
     await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
     document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
 
-    if (i == setup_expt["experiment_info"]["n_trials_categorization"]) {//1) {
+    if (i == setup_expt["experiment_info"]["n_trials_categorization"] - 1) {//1) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         document.getElementById("part_reproduction").innerHTML = 2;
         clickStart("page9", "page11")
