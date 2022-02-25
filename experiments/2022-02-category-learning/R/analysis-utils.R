@@ -176,5 +176,39 @@ category_centers <- function() {
   cat_2_mns <- category_means(cat_boundaries_2)
   cat_4_mns <- category_means(cat_boundaries_4)
   l_cat_mns <- list(cat_2_mns, cat_4_mns)
-  return(l_cat_mns)
+  return(list(l_cat_mns, l_ellipses))
+}
+
+
+add_distance_to_nearest_center <- function(tbl_cr) {
+  #' add distance to closest category centroid
+  #' 
+  #' @description calculates distances to all possible category centroids and returns min of those
+  #' @param tbl_cr the tibble with the by-trial responses
+  #' 
+  #' @return the tibble with the min distance as added column
+  #' 
+  # read individual performance
+  l_tmp <- category_centers()
+  l_cat_mns <- l_tmp[[1]]
+  l_ellipses <- l_tmp[[2]]
+  euclidian_distance_to_center <- function(x_mn, y_mn, tbl) {
+    sqrt((tbl$x1_response - x_mn)^2 + (tbl$x2_response - y_mn)^2)
+  }
+  # split by nr of categories
+  l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
+  # uncomment only when data from category 2 condition is available
+  # tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]]) %>% 
+  #   unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
+  # l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+  # colnames(tbl_d2) <- c("dmin")
+  
+  tbl_d4 <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["4"]]) %>% 
+    unlist() %>% matrix(ncol = 3) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d4) <- c("d1", "d2", "d3")
+  tbl_d4 <- tibble(dmin = apply(tbl_d4, 1, min))
+  l_tbl_cr[["4"]] <- l_tbl_cr[["4"]] %>% cbind(tbl_d4) %>% left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+  
+  tbl_cr <- rbind(l_tbl_cr[["4"]], l_tbl_cr[["2"]])
+  return(tbl_cr)
 }
