@@ -27,9 +27,12 @@ load_data <- function() {
   js_cr_txt <- read_file("experiments/2022-02-category-learning/data/cr-participant-2.json")
   js_cr_txt <- str_c("[", str_replace(js_cr_txt, ",$", ""), "]")
   tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble()
+  
+  
   # only pilot data have to be corrected currently...
   tbl_cr$session <- as.numeric(tbl_cr$session)
   tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
+  
   
   js_cat_txt <- read_file("experiments/2022-02-category-learning/data/cat-participant-2.json")
   js_cat_txt <- str_c("[", str_replace(js_cat_txt, ",$", ""), "]")
@@ -39,10 +42,14 @@ load_data <- function() {
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
   tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
+  # add stim_id
+  tbl_cr <- tbl_cr %>% group_by(participant_id) %>% arrange(x1_true, x2_true) %>% 
+    mutate(stim_id = row_number(x1_true)) %>% ungroup()
   
   l_data <- list(tbl_cr, tbl_cat)
   return(l_data)
 }
+
 
 
 plot_marginals_one_session <- function(idx_session, tbl) {
@@ -145,3 +152,29 @@ plot_1d_marginals <- function(tbl) {
     )
 }
 
+
+category_centers <- function() {
+  #' helper function to define category centers
+  #' 
+  #' @description returns x1 and x2 means of the ellipse categories (n_categories - 1)
+  #' 
+  #' @return the list with the centers of the 2 and 4 category conditions
+  #' 
+  # read individual performance
+  x1 <- seq(0, 11, by = 1)
+  x2 <- seq(0, 11, by = 1)
+  tbl_tmp <- crossing(x1, x2)
+  tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 144, by = 1))
+  l_ellipses <- map(c(2, 4), create_ellipse_categories, tbl = tbl_tmp)
+  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
+  cat_boundaries_4 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
+  
+  category_means <- function(tbl) {
+    tbl %>% group_by(category) %>%
+      summarize(x_mn = mean(x_rotated), y_mn = mean(y_rotated)) %>% ungroup()
+  }
+  cat_2_mns <- category_means(cat_boundaries_2)
+  cat_4_mns <- category_means(cat_boundaries_4)
+  l_cat_mns <- list(cat_2_mns, cat_4_mns)
+  return(l_cat_mns)
+}
