@@ -26,7 +26,7 @@ load_data <- function() {
   # read individual performance
   js_cr_txt <- read_file("experiments/2022-02-category-learning/data/cr-participant-2.json")
   js_cr_txt <- str_c("[", str_replace(js_cr_txt, ",$", ""), "]")
-  tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble()
+  tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble() %>% filter(session %in% c(1, 3))
   
   
   # only pilot data have to be corrected currently...
@@ -38,13 +38,13 @@ load_data <- function() {
   js_cat_txt <- str_c("[", str_replace(js_cat_txt, ",$", ""), "]")
   tbl_cat <- jsonlite::fromJSON(js_cat_txt) %>% as_tibble()
   
-  factors <- c("participant_id", "session")
+  factors <- c("participant_id", "session", "cat_true")
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
   tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
   # add stim_id
   tbl_cr <- tbl_cr %>% group_by(participant_id) %>% arrange(x1_true, x2_true) %>% 
-    mutate(stim_id = row_number(x1_true)) %>% ungroup()
+    mutate(stim_id = rep(seq(1, 144, by = 1), each = 2)) %>% ungroup()
   
   l_data <- list(tbl_cr, tbl_cat)
   return(l_data)
@@ -192,22 +192,37 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tmp <- category_centers()
   l_cat_mns <- l_tmp[[1]]
   l_ellipses <- l_tmp[[2]]
-  euclidian_distance_to_center <- function(x_mn, y_mn, tbl) {
-    sqrt((tbl$x1_response - x_mn)^2 + (tbl$x2_response - y_mn)^2)
+  euclidian_distance_to_center <- function(x_mn, y_mn, tbl, is_response) {
+    if(is_response) {
+      sqrt((tbl$x1_response - x_mn)^2 + (tbl$x2_response - y_mn)^2)
+    } else {
+      sqrt((tbl$x1_true - x_mn)^2 + (tbl$x2_true - y_mn)^2)
+    }
+    
   }
   # split by nr of categories
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
   # uncomment only when data from category 2 condition is available
-  # tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]]) %>% 
+  # as only one category center, can directly compute distance from response to that center
+  # tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>% 
   #   unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   # l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   # colnames(tbl_d2) <- c("dmin")
   
-  tbl_d4 <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["4"]]) %>% 
+  # here, we first have to compute what the closest center of a given stimulus is and then index using that id
+  tbl_d4_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["4"]], is_response = FALSE) %>% 
     unlist() %>% matrix(ncol = 3) %>% as.data.frame() %>% tibble()
-  colnames(tbl_d4) <- c("d1", "d2", "d3")
-  tbl_d4 <- tibble(dmin = apply(tbl_d4, 1, min))
-  l_tbl_cr[["4"]] <- l_tbl_cr[["4"]] %>% cbind(tbl_d4) %>% left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+  colnames(tbl_d4_true) <- c("d1", "d2", "d3")
+  tbl_d4_response <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["4"]], is_response = TRUE) %>% 
+    unlist() %>% matrix(ncol = 3) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d4_response) <- seq(1:3)
+  col_idx_closest <- apply(tbl_d4_true, 1, function(x) which(x == min(x)))
+  tbl_d4_response$col_idx_closest <- col_idx_closest
+  tbl_d4_response$d_closest <- apply(tbl_d4_response, 1, function(x) x[1:3][x[4]])
+  d_closest <- as_vector(tbl_d4_response$d_closest) %>% unname()
+  
+  l_tbl_cr[["4"]] <- l_tbl_cr[["4"]] %>% cbind(d_closest) %>%
+    left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
   tbl_cr <- rbind(l_tbl_cr[["4"]], l_tbl_cr[["2"]])
   return(tbl_cr)
