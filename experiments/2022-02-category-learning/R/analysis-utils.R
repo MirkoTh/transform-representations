@@ -113,3 +113,35 @@ plot_2d_binned_heatmaps <- function(tbl, n_agg_x) {
   
   return(pl)
 }
+
+
+
+plot_1d_marginals <- function(tbl) {
+  #' histograms with freq polys overlaid of 1D deviation (i.e., distance) from true values
+  #' 
+  #' @description plots histograms and freq polys of 1D distance from true values
+  #' facets for x1/x2 and before/after category learning are teased apart
+  #' @param tbl the tibble with the by-trial responses
+  #' 
+  #' @return the plot
+  #' 
+  # read individual performance
+  tbl %>% filter(session %in% c(1, 3)) %>%
+    pivot_longer(c(x1_deviation, x2_deviation), names_to = "var_deviation", values_to = "val_deviation") %>%
+    mutate(
+      var_deviation = factor(var_deviation, labels = c("Head Spikiness", "Belly Fill")),
+      session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning"))
+    ) %>%
+    ggplot(aes(val_deviation, group = session)) +
+    geom_histogram(aes(fill = session), bins = 10, alpha = .5, color = "black") +
+    geom_freqpoly(aes(color = session), bins = 10) +
+    facet_wrap(~ var_deviation + session) +
+    theme_bw() +
+    scale_color_brewer(name = "Timepoint", palette = "Set1") +
+    scale_fill_brewer(name = "Timepoint", palette = "Set1") +
+    labs(
+      x = "Deviation from True Value",
+      y = "Nr. Responses"
+    )
+}
+
