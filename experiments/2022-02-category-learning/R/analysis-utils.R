@@ -43,3 +43,32 @@ load_data <- function() {
   l_data <- list(tbl_cr, tbl_cat)
   return(l_data)
 }
+
+
+plot_marginals_one_session <- function(idx_session, tbl) {
+  #' scatter plot of 2D deviations with marginals
+  #' 
+  #' @description makes a scatter plot of deviation of responses and adds marginal distributions
+  #' @param idx_session which session should be plotted (i.e. before or after categorization task)
+  #' @param tbl the tibble with the by-trial responses
+  #' 
+  #' @return the complete ggMarginal plot object
+  #' 
+  # read individual performance
+  idx_session <- 1
+  idx_color <- ifelse(idx_session == 1, 1, 2)
+  col <- c("#3399FF", "#990099")[idx_color]
+  pl <- ggplot(tbl %>% filter(session == idx_session), aes(x1_deviation, x2_deviation, group = session)) +
+    geom_point(color = col, shape = 1, size = 2) +
+    theme_bw() +
+    theme(plot.title = element_text(size=10)) +
+    scale_color_brewer(palette = "Set1") +
+    labs(
+      x = bquote(x[1]),
+      y = bquote(x[2])
+    ) + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
+  
+  pl_marginals <- ggMarginal(pl, groupColor = TRUE, fill = col, type = "densigram")
+  return(pl_marginals)
+}
+
