@@ -55,20 +55,61 @@ plot_marginals_one_session <- function(idx_session, tbl) {
   #' @return the complete ggMarginal plot object
   #' 
   # read individual performance
-  idx_session <- 1
   idx_color <- ifelse(idx_session == 1, 1, 2)
+  title <- c("Before Category Learning", "After Category Learning")[idx_color]
   col <- c("#3399FF", "#990099")[idx_color]
-  pl <- ggplot(tbl %>% filter(session == idx_session), aes(x1_deviation, x2_deviation, group = session)) +
+  tbl_plot <- tbl %>% filter(session == idx_session)
+  pl <- ggplot(tbl_plot, aes(x1_deviation, x2_deviation)) +
     geom_point(color = col, shape = 1, size = 2) +
+    geom_density2d() +
     theme_bw() +
-    theme(plot.title = element_text(size=10)) +
+    theme(plot.title = element_text(size=20)) +
     scale_color_brewer(palette = "Set1") +
+    # somehow ggMarginal does not like coord_cartesian...
+    # the following excludes some of the responses, though
+    scale_x_continuous(limits = c(-50, 50)) +
+    scale_y_continuous(limits = c(-50, 50)) +
     labs(
       x = bquote(x[1]),
-      y = bquote(x[2])
-    ) + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
+      y = bquote(x[2]),
+      title = title
+    )# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
   
-  pl_marginals <- ggMarginal(pl, groupColor = TRUE, fill = col, type = "densigram")
+  pl_marginals <- ggMarginal(pl, fill = col, type = "histogram", bins = 15)
   return(pl_marginals)
 }
 
+
+plot_2d_binned_heatmaps <- function(tbl, n_agg_x) {
+  #' 2D heat maps of average deviation (L2 norm) from true values
+  #' 
+  #' @description plots heat maps of avg deviation before and after the categorization task
+  #' @param tbl the tibble with the by-trial responses
+  #' @param n_agg_x into how many bins should x1 and x2 be cut?
+  #' 
+  #' @return the plot
+  #' 
+  # read individual performance
+  lims <- tbl %>% 
+    summarise(min_x = min(x1_true), max_x = max(x2_true)) %>%
+    mutate(min_x = min_x - 1, max_x = max_x + 1) %>%
+    as_vector()
+  cutpoints <- seq(lims[1], lims[2], length.out = n_agg_x + 1)
+  tbl_cr_agg <- tbl %>%
+    filter(session %in% c(1, 3)) %>%
+    mutate(
+      x1_true_binned = cut(x1_true, cutpoints, labels = FALSE),
+      x2_true_binned = cut(x2_true, cutpoints, labels = FALSE)
+    ) %>% group_by(participant_id, session, x1_true_binned, x2_true_binned) %>%
+    summarise(avg_deviation_x1x2 = mean(sqrt(x1_deviation^2 + x2_deviation^2))) %>%
+    ungroup()
+  pl <- ggplot(tbl_cr_agg, aes(x1_true_binned, x2_true_binned)) +
+    geom_tile(aes(fill = avg_deviation_x1x2)) +
+    scale_fill_gradient(name = "Avg. Deviation", low = "#009966", high = "#FF6666") +
+    labs(
+      x = "Spikiness of Head (Binned)",
+      y = "Fill of Belly (Binned)"
+    ) + facet_wrap(~ session) + theme_bw()
+  
+  return(pl)
+}
