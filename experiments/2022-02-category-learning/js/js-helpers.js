@@ -1,5 +1,3 @@
-
-// get subject ID
 /* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
@@ -11,8 +9,23 @@ else {
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
+// get subject ID
+const participant_id = 1
 
-const participant_id = 2;
+// make sure categories are alternated 
+var cond_json = readConditions();
+cond_json = [6, 8, 8];
+var condition_counts = 9999999999;
+var condition_id = -99;
+for (var i = 0; i < cond_json.length; i++) {
+    var obj = cond_json[i]
+    if (obj < condition_counts) {
+        condition_counts = obj
+        condition_id = [1, 2, 3][i]
+    }
+}
+cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
+//saveCondition(cond_json)
 
 function setup_experiment() {
 
@@ -25,18 +38,11 @@ function setup_experiment() {
         n_trials_reproduction_1: 2, //144, //10
         n_trials_reproduction_2: 2, //144, //
         n_trials_categorization: 2, //500, //
-        condition_id: participant_id % 3 + 1,
-        n_categories: [0, 2, 4][participant_id % 3],
+        condition_id: condition_id,
+        n_categories: [0, 2, 4][condition_id - 1],
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
-    }
-    if ((participant_id % 3 + 1) == 2) {
-        experiment_info["n_categories"] = 2
-    } else if ((participant_id % 3 + 1) == 3) {
-        experiment_info["n_categories"] = 4
-    } else if ((participant_id % 3 + 1) == 1) {
-        experiment_info["n_categories"] = 1
     }
 
     // read mapping from x1 and x2 values to categories
@@ -119,7 +125,7 @@ function setup_experiment() {
     // stimulus information
     // create an equal proportion of items from the categories
     const proportion_categories = 1 / experiment_info["n_categories"]
-    const items_per_category_required = experiment_info["n_trials_categorization"] * proportion_categories
+    const items_per_category_required = Math.ceil(experiment_info["n_trials_categorization"] * proportion_categories)
     const items_per_category_repeats = {}
     const items_per_category_gridpoints = {}
     var stimulus_ids_per_category = {}
@@ -209,6 +215,7 @@ function route_instructions(condition) {
     if (condition == 1) { // control
         clickStart('page1', 'page2b')
     } else { clickStart('page1', 'page2') }
+    var obj = { participant_id: participant_id, condition_id: setup_expt["experiment_info"]["condition_id"] };
 }
 
 function route_categorization(condition) {
@@ -272,7 +279,7 @@ for (var idx = 0; idx < setup_expt["trial_info"]["stimulus_id_c"].length; idx++)
     console.log(setup_expt["trial_info"]["stimulus_id_c"][idx])
     console.log(idx)
 }
-
+ 
 for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]; idx++) {
     console.log(
         "stimulus id is: " + setup_expt["trial_info"]["stimulus_id_c"][idx] +
@@ -318,7 +325,7 @@ async function next_item_cr(old, i) {
 
 }
 
-function log_response(rt, i, part, stimulus_ids) {
+async function log_response(rt, i, part, stimulus_ids) {
     var data_store = {
         participant_id: participant_id,
         session: part,
@@ -336,7 +343,6 @@ function log_response(rt, i, part, stimulus_ids) {
     document.getElementById("selected_monster").src = "stimuli/stimulus[50,50].png"
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cr")
-
 }
 
 const total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
@@ -390,6 +396,17 @@ function update_trial_counter(part, i) {
     }
 }
 
+
+function readConditions() {
+    var data;
+    // $.getJSON('get_conditions.php', {}, function (data) {
+    // });
+    return (data)
+}
+function saveCondition(filedata) {
+    var filename = "./data/rotate-conditions.json";
+    $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
+}
 
 function saveData(filedata, task) {
     var filename = "./data/" + task + "-participant-" + participant_id + ".json";
