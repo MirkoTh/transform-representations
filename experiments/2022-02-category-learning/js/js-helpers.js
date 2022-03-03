@@ -10,22 +10,56 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 // get subject ID
-const participant_id = 1
+//const participant_id = 1
 
 // make sure categories are alternated 
-var cond_json = readConditions();
-cond_json = [6, 8, 8];
-var condition_counts = 9999999999;
-var condition_id = -99;
-for (var i = 0; i < cond_json.length; i++) {
-    var obj = cond_json[i]
-    if (obj < condition_counts) {
-        condition_counts = obj
-        condition_id = [1, 2, 3][i]
-    }
+function csvToArray(str, delimiter = ",") {
+    // slice from start of text to the first \n index
+    // use split to create an array from string by delimiter
+    const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
+
+    // slice from \n index + 1 to the end of the text
+    // use split to create an array of each csv value row
+    const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+
+    // Map the rows
+    // split values from each row into an array
+    // use headers.reduce to create an object
+    // object properties derived from headers:values
+    // the object passed as an element of the array
+    const arr = rows.map(function (row) {
+        const values = row.split(delimiter);
+        const el = headers.reduce(function (object, header, index) {
+            object[header] = values[index];
+            return object;
+        }, {});
+        return el;
+    });
+
+    // return the array
+    return arr;
 }
-cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
+
+function initialize_variables() {
+    tmp = csvToArray("condition_counts.csv")
+    //cond_json = [0, 0, 0]
+    console.log(tmp)
+    document.getElementById("check").innerHTML = tmp
+    clickStart('page0', 'page1')
+}
+//cond_json = [6, 8, 8];
+// var condition_counts = 9999999999;
+// var condition_id = -99;
+// for (var i = 0; i < cond_json.length; i++) {
+//     var obj = cond_json[i]
+//     if (obj < condition_counts) {
+//         condition_counts = obj
+//         condition_id = [1, 2, 3][i]
+//     }
+// }
+// cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
 //saveCondition(cond_json)
+var condition_id = 1;
 
 function setup_experiment() {
 
@@ -39,7 +73,7 @@ function setup_experiment() {
         n_trials_reproduction_2: 2, //144, //
         n_trials_categorization: 2, //500, //
         condition_id: condition_id,
-        n_categories: [0, 2, 4][condition_id - 1],
+        n_categories: [1, 2, 3][condition_id - 1],
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
@@ -47,7 +81,7 @@ function setup_experiment() {
 
     // read mapping from x1 and x2 values to categories
     const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat4map_val = [1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 4, 4, 4, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 4, 3, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1]
+    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
 
     // display info
@@ -84,7 +118,7 @@ function setup_experiment() {
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
     } else if (experiment_info["n_categories"] == 4) {
-        stimulus_info["category_id"] = cat4map_val
+        stimulus_info["category_id"] = cat3map_val
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
     }
@@ -394,18 +428,6 @@ function update_trial_counter(part, i) {
             document.getElementById("trial_nr_cr2").innerHTML = i + 1
             break;
     }
-}
-
-
-function readConditions() {
-    var data;
-    // $.getJSON('get_conditions.php', {}, function (data) {
-    // });
-    return (data)
-}
-function saveCondition(filedata) {
-    var filename = "./data/rotate-conditions.json";
-    $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
 }
 
 function saveData(filedata, task) {
