@@ -21,7 +21,7 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- crossing(
-  n_categories = c(2L, 4L), cat_type = c("prototype"),
+  n_categories = c(2L, 3L), cat_type = c("prototype"),
   prior_sd = c(.75), sampling = c("improvement"),
   constrain_space = c(TRUE), category_shape = c("ellipses"),
   is_reward = c(FALSE)
@@ -43,20 +43,26 @@ l_stimuli <- map(l_info, make_stimuli)
 l_stimuli[[2]][[1]] %>% mutate(x1 = x1 + 1, x2 = x2 + 1) %>%
   select(x1, x2, category) %>% as.list() %>% toJSON()
 
-
-
-l_stimuli[[2]][[1]] %>% mutate(x1 = x1, x2 = x2) %>%
-  ggplot(aes(x1, x2, group = category)) +
-  geom_point(aes(color = category)) +
-  scale_color_brewer(palette = "Set1") +
-  theme_bw()
+plot_conditions <- function(tbl) {
+  ggplot() +
+    geom_point(data = tbl[[1]], aes(x1, x2, group = category, color = category)) + 
+    geom_point(data = tbl[[2]]$tbl_ellipses, aes(x_rotated, y_rotated, group = category), color = "grey", size = .5) +
+    scale_color_brewer(name = "Category", palette = "Set1") +
+    theme_bw() +
+    labs(
+      x = "Head Spikiness",
+      y = "Fill of Belly"
+    )
+}
+plot_conditions(l_stimuli[[2]])
+plot_conditions(l_stimuli[[1]])
 
 save_category_coords <- function(x){
   max_category <- max(as.numeric(as.character(x[[1]]$category)))
   x[[1]] <- x[[1]] %>% 
     mutate(
       category = as.numeric(as.character(category))
-      )
+    )
   x[[1]][, c("x1", "x2", "category")] %>% 
     as.list() %>%
     jsonlite::toJSON(dataframe = "values") %>%

@@ -203,8 +203,18 @@ create_ellipse_categories <- function(tbl, n_categories) {
     "squash_all" = .85, "squash_y" = .75, "squash_x" = .225,
     "move_x" = -3, "move_y" = 3, "category" = 4
   )
+  fctr_mid_hi <- list(
+    "squash_all" = .9, "squash_y" = .6, "squash_x" = .395, 
+    "move_x" = -1, "move_y" = 2, "category" = 2
+  )
+  fctr_mid_lo <- list(
+    "squash_all" = .9, "squash_y" = .6, "squash_x" = .395, 
+    "move_x" = 1, "move_y" = -2, "category" = 3 
+  )
   if (n_categories == 4) {
     l_map <- list(fctr_mid, fctr_hi, fctr_lo)
+  } else if (n_categories == 3) {
+    l_map <- list(fctr_mid_hi, fctr_mid_lo)
   } else if (n_categories == 2) {
     l_map <- list(fctr_mid)
   }
@@ -911,7 +921,7 @@ reward_categorization <- function(l_info) {
     post_x_new <- round(as_vector(tail(posterior_new[, l_x$cat_cur], 1)), 3)
     
     # has the right category be chosen on that trial?
-
+    
     category_chosen <- c(1:l_info$n_categories)[as.logical(rmultinom(1, 1, posterior_new))]
     is_correct <- category_chosen == l_x$cat_cur
     
