@@ -494,15 +494,29 @@ async function handle_response(e) {
     document.removeEventListener("keydown", handle_response, false);
     cat_id_response = keycode_to_integer(keyCode)
     write_cat_results(i, cat_id_response)
+    document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.png"
+    document.getElementById("background_displayed_2").src = "./stimuli/fixcross.png"
+
     if (condition_id == 1) { // control
+
         var str = new String("Your response was: " + cat_id_response);
-        alert(str);
+        document.getElementById("feedback_cat_true").innerHTML = str
+        await sleep(500)
+        document.getElementById("feedback_cat_true").innerHTML = ""
+        //alert(str);
     } else if (condition_id == 2 | condition_id == 3) {
         if (cat_id_response == category_id[i]) {
-            alert("Well Done!")
+            document.getElementById("feedback_cat_true").innerHTML = "Well Done!"
+            await sleep(500)
+            document.getElementById("feedback_cat_true").innerHTML = ""
+            //alert("Well Done!")
         } else {
             var str = new String("Category would have been: " + category_id[i]);
-            alert(str);
+            document.getElementById("feedback_cat_wrong").innerHTML = str
+            await sleep(1000)
+            document.getElementById("feedback_cat_wrong").innerHTML = ""
+
+            //alert(str);
         }
     }
     await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
