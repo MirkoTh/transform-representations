@@ -10,7 +10,7 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 // get subject ID
-//const participant_id = 1
+const participant_id = 2
 
 // make sure categories are alternated 
 function csvToArray(str, delimiter = ",") {
@@ -59,7 +59,7 @@ function initialize_variables() {
 // }
 // cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
 //saveCondition(cond_json)
-var condition_id = 1;
+var condition_id = 2;
 
 function setup_experiment() {
 
@@ -117,7 +117,7 @@ function setup_experiment() {
     }
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
-    } else if (experiment_info["n_categories"] == 4) {
+    } else if (experiment_info["n_categories"] == 3) {
         stimulus_info["category_id"] = cat3map_val
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
@@ -259,13 +259,18 @@ function route_categorization(condition) {
 }
 async function replace_monster(slider1, slider2) {
     stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
-    document.getElementById("selected_monster").src = "stimuli/stimulus" + stimulus_id + ".png"
+    document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".png"
+    console.log("./stimuli/stimulus" + stimulus_id + ".png")
 }
 async function slide_adjust() {
+    console.log("within slide_adjust()")
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
+    console.log(document.getElementById("demo1").innerHTML)
+    console.log("bla")
     output1.innerHTML = slider1.value;
     slider1.oninput = function () {
+        console.log("within slider1.oninput")
         output1.innerHTML = this.value;
         replace_monster(slider1, slider2)
     }
@@ -387,9 +392,11 @@ async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
 
     part = document.getElementById("part_reproduction").innerHTML
+    console.log("within my_link(), part = " + part)
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         stimulus_ids = setup_expt["trial_info"]["stimulus_id_rp"]
+        console.log(stimulus_ids + ", i = " + i)
     }
     if (part == 1) {
         i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
@@ -410,6 +417,7 @@ async function my_link() {
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page13");
     } else {
+        console.log("in else part of my_link()")
         log_response(rt, i, part, stimulus_ids);
         update_trial_counter(part, i)
         next_item_cr('page4');
