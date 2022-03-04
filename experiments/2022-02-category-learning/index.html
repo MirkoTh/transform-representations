@@ -23,7 +23,44 @@
 
 <body>
     <div class='container' style="width: 95%; height: 95%">
-        <div id="page1" style="display:block;">
+
+        <div id="page0" style="display:none">
+
+            <body>
+
+                <div style="text-align: center" ; class="present_stimulus">
+                    <img id="item_displayed_99" src="./stimuli/stimulus[1,1].png" height="300px">
+                </div><br>
+
+                <div style="text-align: center" ; class="present_stimulus">
+                    <img id="item_displayed_100" src="./stimuli/fixcross.PNG" height="300px">
+                </div><br>
+
+                <div style="text-align: center" ; class="present_stimulus">
+                    <img id="item_displayed_101" src="./stimuli/placeholder-white.PNG" , height="300px">
+                </div><br>
+
+
+
+
+
+                <div class="slidecontainer1">
+                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange10">
+                    <p style="text-align: center">Head : <span id="demo10"></span></p>
+                </div>
+
+                <div class="slidecontainer2">
+                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange20">
+                    <p style="text-align: center">Belly: <span id="demo20"></span></p>
+                </div>
+
+
+                <button type="button" name="button" class="cr_button" ; onclick="my_link()" ;> Submit
+                    Response</button>
+            </body>
+        </div>
+
+        <div id="page1" style="display:none;">
             <h1>Welcome to the study</h1>
 
             This study is part of a research project conducted
@@ -493,11 +530,22 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
 
                 <style>
-                    .slidecontainer {
+                    .slidecontainer1 {
                         width: 100%;
                         display: flex;
                         align-items: center;
                         justify-content: center;
+                        position: absolute;
+                        top: 350px;
+                    }
+
+                    .slidecontainer2 {
+                        width: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: absolute;
+                        top: 400px;
                     }
 
                     .slider {
@@ -530,42 +578,61 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                         background: #04AA6D;
                         cursor: pointer;
                     }
+
+                    .cr_button {
+                        position: absolute;
+                        bottom: 400px;
+                        left: 46%;
+                        width: 100px;
+                    }
+
+                    .present_stimulus {
+                        position: absolute;
+                        top: 50px;
+                        left: 43.225%;
+                        width: 200px;
+                        height: 300px;
+                    }
                 </style>
             </head>
 
-            <body>
+            <div class="present_stimulus">
+                <img id="background_displayed_1" src="stimuli/mask.png" height="300px">
+            </div><br>
+            <div class="present_stimulus">
+                <img src="./stimuli/stimulus[50,50].png" height="300px" id="selected_monster">
+            </div></br>
 
-                <div style="text-align: center;" class="centered">
-                    <img src="./stimuli/stimulus[50,50].png" height="300px" id="selected_monster">
-                </div></br>
+            <!-- <p>Drag the two sliders to reproduce the monster you just have seen.</p> -->
 
-                <p>Drag the two sliders to reproduce the monster you just have seen.</p>
+            <div class="slidecontainer1">
+                <input type="range" min="1" max="100" value="50" class="slider" id="myRange1">
+                <p style="text-align: center">Head : <span id="demo1"></span></p>
+            </div>
 
-                <div class="slidecontainer">
-                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange1">
-                    <p style="text-align: center">Head : <span id="demo1"></span></p>
-                </div>
+            <div class="slidecontainer2">
+                <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
+                <p style="text-align: center">Belly: <span id="demo2"></span></p>
+            </div>
 
-                <div class="slidecontainer">
-                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
-                    <p style="text-align: center">Belly: <span id="demo2"></span></p>
-                </div>
-
-                <!--let the participants adjust the two sliders and show them what monster results-->
-                <script>
-                    let x = slide_adjust();
-                    var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-                </script>
-                <button type="button" name="button" ; onclick="my_link()" ;> Submit
-                    Response</button>
-            </body>
+            <!--let the participants adjust the two sliders and show them what monster results-->
+            <script>
+                let x = slide_adjust();
+                var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
+            </script>
+            <button type="button" name="button" class="cr_button" ; onclick="my_link()" ;> Submit
+                Response</button>
         </div>
         <br>
 
 
         <div id="page5" style="display:none;">
-            <div style="text-align: center;">
-                <img height="300px" id="item_displayed_2">
+
+            <div class="present_stimulus">
+                <img id="background_displayed_2" src="stimuli/mask.png" height="300px">
+            </div><br>
+            <div class="present_stimulus">
+                <img id="item_displayed_2" height="300px">
             </div><br>
 
         </div>
@@ -617,7 +684,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 Categorization</button>
         </div>
 
-        <div id="page7b" style="display:none">
+        <div id="page7b" style="display:block">
             <h1>
                 Part two of the study
             </h1>
@@ -657,8 +724,17 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         </div>
 
         <div id="page9" style="display:none;">
-            <div style="text-align: center;">
-                <img height="300px" id="item_displayed_cat" src="stimuli/placeholder-white.PNG">
+            <div style="text-align: center; color:red; font-size:30px">
+                <p id="feedback_cat_wrong"></p>
+            </div>
+            <div style="text-align: center; color:green; font-size:30px">
+                <p id="feedback_cat_true"></p>
+            </div>
+            <div class="present_stimulus">
+                <img id="background_displayed_2" src="stimuli/mask.png" height="300px">
+            </div><br>
+            <div class="present_stimulus">
+                <img id="item_displayed_cat" height="300px" src="stimuli/placeholder-white.PNG">
             </div><br>
 
         </div>
