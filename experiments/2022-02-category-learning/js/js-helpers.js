@@ -533,11 +533,36 @@ async function handle_response(e) {
             " / " + setup_expt["experiment_info"]["n_trials_categorization"]
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         clickStart("page9", "page10")
+        var fiveMinutes = 5;
+        var display = document.querySelector('#time');
+        startTimer(fiveMinutes, display);
+        var timeout = setTimeout(function () {
+            clickStart("page10", 'page9');
+            next_item_cat('page9')
+        }, 5000);
     } else {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         next_item_cat('page9')
     }
 }
+
+function startTimer(duration, display) {
+    var timer = duration, minutes, seconds;
+    setInterval(function () {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        display.textContent = minutes + ":" + seconds;
+
+        if (--timer < 0) {
+            timer = duration;
+        }
+    }, 1000);
+}
+
 
 
 function keycode_to_integer(kc) {
