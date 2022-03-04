@@ -593,6 +593,20 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                         width: 200px;
                         height: 300px;
                     }
+
+                    .cat_feedback_neg {
+                        position: absolute;
+                        bottom: 400px;
+                        left: 39%;
+                        width: 400px;
+                    }
+
+                    .cat_feedback_pos {
+                        position: absolute;
+                        bottom: 400px;
+                        left: 46%;
+                        width: 400px;
+                    }
                 </style>
             </head>
 
@@ -720,18 +734,18 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <p>
                 By clicking on the button below, you start the task of part 2.
             </p>
-            <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start Task </button>
+            <button type="button" name="button" ; onclick="next_item_cat('page8', 0)" ;> Start Task </button>
         </div>
 
         <div id="page9" style="display:none;">
-            <div style="text-align: center; color:red; font-size:30px">
+            <div class="cat_feedback_neg" style="color:red; font-size:30px">
                 <p id="feedback_cat_wrong"></p>
             </div>
-            <div style="text-align: center; color:green; font-size:30px">
+            <div class="cat_feedback_pos" style="color:green; font-size:30px">
                 <p id="feedback_cat_true"></p>
             </div>
             <div class="present_stimulus">
-                <img id="background_displayed_2" src="stimuli/mask.png" height="300px">
+                <img id="background_displayed_2" src="stimuli/mask.PNG" height="300px">
             </div><br>
             <div class="present_stimulus">
                 <img id="item_displayed_cat" height="300px" src="stimuli/placeholder-white.PNG">

@@ -491,11 +491,11 @@ async function handle_response(e) {
         document.getElementById("key_id").innerHTML = keyCode;
         document.getElementById("rt").innerHTML = Date.now() - document.getElementById("time_var").innerHTML;
     }
-    document.removeEventListener("keydown", handle_response, false);
     cat_id_response = keycode_to_integer(keyCode)
     write_cat_results(i, cat_id_response)
-    document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.png"
-    document.getElementById("background_displayed_2").src = "./stimuli/fixcross.png"
+    console.log("just before replacing black mask")
+    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.PNG"
+    document.getElementById("background_displayed_2").src = "stimuli/placeholder-white.PNG"
 
     if (condition_id == 1) { // control
 
@@ -519,8 +519,9 @@ async function handle_response(e) {
             //alert(str);
         }
     }
-    await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
+    //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
     document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
+    document.removeEventListener("keydown", handle_response, false);
 
     if (i == setup_expt["experiment_info"]["n_trials_categorization"] - 1) {//1) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
