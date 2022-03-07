@@ -674,25 +674,22 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 Remember that the monsters come from different tribes.<br>
                 In the second part, your task is to categorize the monsters into <span id="myText"></span>
                 categories.<br>
-                After every response you are given feedback whether your response was correct or not.<br>
-                If it was not, the category that would have been corect is going to be displayed to you.<br><br>
-                <b>Responding:</b><br>
-                You can use the number keys on your keyboard to give a response in the task.<br>
-                The numbers correspond to the respective category:<br>
-                For example, "1" on your keyboard corresponds to category 1.
-                "2" on your keyboard corresponds to category 2.<br>
-                Use the <b>enter</b> key on your keyboard to start the next trial while the feedback message is
-                displayed to you.<br>
-                There will be four blocks of trials. Between the blocks you can take a break if you want.<br>
+            </p>
+            <p id="category_instruction"></p>
+            <p>
+                <br>
+                There will be four blocks of trials after the target-training phase. Between the blocks you can take a
+                break if you want, but the experiment continues after 1 min at the latest.<br>
                 Please leave your hands on the keyboard while responding in a block. Use your left hand for the
                 numbers and your right hand for the enter key.<br><br>
                 The only way to learn about the categories is to learn from the feedack.<br>
                 In the beginning, it won't be an easy task, but no worries, you will get better with practice!
             </p>
             <script>
-                    (() => {
-                        document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
-                    })();
+                document.getElementById("category_instruction").innerHTML = set_category_instruction();
+                (() => {
+                    document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
+                })();
             </script>
             <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
                 Categorization</button>
@@ -764,8 +761,18 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             </body>
 
         </div>
-        <br>
 
+        <div id="page10b" style="display:none;">
+            <h1>Target Categories</h1>
+            <h2 id="progress"></h2>
+            <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
+            </button>
+
+            <body>
+                <div>Experiment continues in <span id="time">00:05</span> minutes!</div>
+            </body>
+
+        </div>
         <div id="page11" style="display:none">
             <h1>
                 Very well done! That was it for part 2!
