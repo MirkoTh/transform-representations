@@ -73,7 +73,7 @@ function setup_experiment() {
         n_trials_reproduction_2: 2, //144, //
         n_trials_categorization_train_target: 6,
         n_trials_categorization: 10, //500, //
-        n_trials_categorization_total: 10 + 6,
+        n_trials_categorization_total: 6 + 10,
         condition_id: condition_id,
         n_categories: [1, 2, 3][condition_id - 1],
         file_path_stimuli: "/stimuli/",
@@ -96,9 +96,10 @@ function setup_experiment() {
     var cat3_stim_ids_all = []
     cat2_stim_ids_cat2 = append_randomized_arrays(cat2_stim_ids_cat2, 1)
     cat2_stim_ids_cat2.length = experiment_info["n_trials_categorization_train_target"]
-    cat3_stim_ids_cat2 = append_randomized_arrays(cat3_stim_ids_cat2)
+    cat3_stim_ids_cat2 = append_randomized_arrays(cat3_stim_ids_cat2, 1)
     cat3_stim_ids_cat3 = append_randomized_arrays(cat3_stim_ids_cat3, 1)
     cat3_stim_ids_all = cat3_stim_ids_cat2.concat(cat3_stim_ids_cat3)
+    cat3_stim_ids_all = append_randomized_arrays(cat3_stim_ids_all, 1)
     cat3_stim_ids_all.length = experiment_info["n_trials_categorization_train_target"]
 
 
@@ -319,7 +320,6 @@ var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
 var category_name = setup_expt["stimulus_info"]["category_name"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
-console.log(setup_expt["trial_info"]["stimulus_id_c"])
 
 
 /* for (var idx = 0; idx < stimulus_vals.length; idx++) {
@@ -489,9 +489,10 @@ async function next_item_cat(old, i) {
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
-    stim_path_mask = "stimuli/mask.png"
+    mask_path = "stimuli/mask.png"
 
     // present stimuli and mask
+    document.getElementById("item_displayed_cat").src = mask_path
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_cat").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
@@ -501,6 +502,10 @@ async function next_item_cat(old, i) {
 }
 
 async function handle_response(e) {
+    var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
+    var str_frame = "timeframe" + Math.max(break_idx, 1)
+    document.getElementById("cat_continued").innerHTML = 0
+    document.getElementById("item_displayed_cat").src = "stimuli/mask.PNG"
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     var keyCode = e.keyCode;
@@ -536,7 +541,7 @@ async function handle_response(e) {
         document.getElementById("feedback_cat_wrong").innerHTML = ""
     }
     //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
-    document.getElementById("item_displayed_cat").src = "stimuli/mask.PNG"
+
     document.getElementById("trial_nr_cat").innerHTML = i + 1
     if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
         document.getElementById("part_reproduction").innerHTML = 2;
@@ -545,21 +550,31 @@ async function handle_response(e) {
         clickStart("page9", "page10b")
     }
     else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0) {
+        document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
+        var break_idx = document.getElementById("break_idx").innerHTML
         trial_nr = i + 1
         document.getElementById("progress").innerHTML = "Your Categorization Progress: " + trial_nr +
             " / " + setup_expt["experiment_info"]["n_trials_categorization_total"]
         clickStart("page9", "page10")
+        str_countdown = "#time" + break_idx
+        str_frame = "timeframe" + break_idx
+        document.getElementById(str_frame).style.display = "block"
         var seconds = 5;
-        var display = document.querySelector('#time');
+        var display = document.querySelector(str_countdown);
         startTimer(seconds, display);
+
         var timeout = setTimeout(function () {
-            clickStart("page10", 'page9');
-            next_item_cat('page9')
-            document.getElementById("time").innerHTML = "00:05"
-        }, 5000);
-    } else {
-        document.getElementById("time").innerHTML = "00:05"
-        next_item_cat('page9')
+            if (document.getElementById("cat_continued").innerHTML == 0) {
+                clickStart("page10", 'page9');
+                next_item_cat("page9")
+                document.getElementById("cat_continued").innerHTML = 1
+                document.getElementById(str_frame).style.display = "none"
+            }
+        }, 6000);
+    } else if (document.getElementById("cat_continued").innerHTML == 0) {
+        next_item_cat('page9');
+
+        document.getElementById(str_frame).style.display = "none"
     }
 }
 
@@ -597,6 +612,8 @@ function write_cat_results(i, r) {
     } else if (condition_id == 2 | condition_id == 3) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
+    console.log(setup_expt["trial_info"]["stimulus_id_c"])
+    console.log(i)
     var data_store = {
         participant_id: participant_id,
         condition_id: condition_id,
@@ -717,12 +734,14 @@ function instructioncheck(pg, pg_prev) {
 }
 function set_category_instruction() {
     n_categories = setup_expt["experiment_info"]["n_categories"]
-    const text_3 = `There are two target categories and one non-target category.<br>One target category is called Bukil, the other target category is called Venak.<br>
+    const text_3 = `There are two target categories and one non-target category.<br>One target category is called <b>Bukil</b>, the other target category is called <b>Venak</b>.<br>
     In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
         ` monsters only from the Bukil and Venak categories to get familiar with the two target categories.<br>
     After that phase, you are presented with all types of monsters.<br>
-    After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br>
-    Responding:<br>
+    After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
+    
+    <b>Responding:</b><br>
+    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
@@ -730,12 +749,14 @@ function set_category_instruction() {
     "3" corresponds to the "Venak" category.<br>
     Use the enter key on your keyboard to start the next trial while the feedback message is
     displayed to you.`
-    const text_2 = `There is one target category and one non-target category. The target category is called Bukil.<br>    
+    const text_2 = `There is one target category and one non-target category. The target category is called <b>Bukil</b>.<br>    
     In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
         ` monsters only from the Bukil category to get familiar with it.<br>
     After that phase, you are presented with all types of monsters.<br>
-    After every response you are given feedback whether your response was correct or not.<br>
-    Responding:<br>
+    After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
+    
+    <b>Responding:</b><br>
+    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>

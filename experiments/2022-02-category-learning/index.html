@@ -753,24 +753,37 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <div id="page10" style="display:none;">
             <h1>Time for a break!</h1>
             <h2 id="progress"></h2>
-            <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
+            <div id="cat_continued" style="display:none">0</div>
+            <div id="break_idx" style="display:none">0</div>
+            <button type="button" name="button" id="cat_button" ; onclick="next_item_cat('page10')" ;> Continue
             </button>
+            <script>
+                const element = document.getElementById("cat_button");
+                element.addEventListener("click", function () {
+                    document.getElementById("cat_continued").innerHTML = 1;
+                });
+            </script>
 
             <body>
-                <div>Experiment continues in <span id="time">00:05</span> minutes!</div>
+                <div id="timeframe1" style="display:none">Experiment continues in <span id="time1"></span> minutes!
+                </div>
+                <div id="timeframe2" style="display:none">Experiment continues in <span id="time2"></span> minutes!
+                </div>
+                <div id="timeframe3" style="display:none">Experiment continues in <span id="time3"></span> minutes!
+                </div>
+                <div id="timeframe4" style="display:none">Experiment continues in <span id="time4"></span> minutes!
+                </div>
             </body>
 
         </div>
 
         <div id="page10b" style="display:none;">
-            <h1>Target Categories</h1>
-            <h2 id="progress"></h2>
-            <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
+            <h1>Target Examples</h1><br>
+            <p>The initial block with target category examples is now over.<br>
+                In the following, your task is to categorize monsters from all categories, including the
+                non-target category.</p>
+            <button type="button" name="button" ; onclick="next_item_cat('page10b')" ;> Continue with all categories
             </button>
-
-            <body>
-                <div>Experiment continues in <span id="time">00:05</span> minutes!</div>
-            </body>
 
         </div>
         <div id="page11" style="display:none">
