@@ -10,7 +10,9 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 // get subject ID
-const participant_id = 2
+const participant_id = 2;
+var condition_id = 2;
+
 
 // make sure categories are alternated 
 function csvToArray(str, delimiter = ",") {
@@ -43,7 +45,6 @@ function csvToArray(str, delimiter = ",") {
 function initialize_variables() {
     tmp = csvToArray("condition_counts.csv")
     //cond_json = [0, 0, 0]
-    console.log(tmp)
     document.getElementById("check").innerHTML = tmp
     clickStart('page0', 'page1')
 }
@@ -59,7 +60,6 @@ function initialize_variables() {
 // }
 // cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
 //saveCondition(cond_json)
-var condition_id = 2;
 
 function setup_experiment() {
 
@@ -78,31 +78,25 @@ function setup_experiment() {
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
-
     // read mapping from x1 and x2 values to categories
-    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 2, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
 
     // display info
     const display_info = {
-        /* screenwidth: window.innerWidth,
-        screenheight: window.innerHeight,
-        x_center: window.innerWidth / 2,
-        y_center: window.innerHeight / 2,
-        size_stimulus: window.innerHeight / 5,
-        size_feedback: window.innerHeight / 10, */
-
         reproduction: {
-            iti: 1000,
-            fixcross: 1000,
+            iti: 500,
+            fixcross: 500,
             presentation: 1000,
-            ri: 2000
+            ri: 1500
         },
         categorization: {
             iti: 1000,
             fixcross: 1000,
-            feedbacktime: 1000,
+            feedbacktime_true: 500,
+            feedbacktime_wrong: 1000,
+            deadlinetime: 3000
         }
     }
 
@@ -113,7 +107,8 @@ function setup_experiment() {
         x1: Array(n_x_steps).fill().map((element, index) => index),
         x2: Array(n_x_steps).fill().map((element, index) => index),
         x1_x2: Array(n_x_steps * n_x_steps),
-        stimulus_id: Array(n_x_steps * n_x_steps)
+        stimulus_id: Array(n_x_steps * n_x_steps),
+        category_name: ["No Target Category", "Bukil", "Venak"]
     }
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
@@ -137,12 +132,11 @@ function setup_experiment() {
     // trial info
     const trial_info = {}
     trial_info["stimulus_id_rp"] = [...stimulus_info["stimulus_id"]]
-    //trial_info["stimulus_id_rp"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r1"] = [...stimulus_info["stimulus_id"]]
-    //trial_info["stimulus_id_r1"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r2"] = [...stimulus_info["stimulus_id"]]
-    //trial_info["stimulus_id_r2"].push(n_x_steps * n_x_steps - 1)
+    trial_info["stimulus_id_c"] = Array(experiment_info["n_trial"])
     trial_info["category_id"] = Array(experiment_info["n_trial"])
+    trial_info["category_name"] = Array(experiment_info["n_trial"])
 
     const n_reps_practice = 1
     const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
@@ -154,7 +148,6 @@ function setup_experiment() {
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
-    trial_info["stimulus_id_c"] = []
 
     // stimulus information
     // create an equal proportion of items from the categories
@@ -189,6 +182,7 @@ function setup_experiment() {
     // ellipse categories
     for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
         trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
+        trial_info["category_name"] = stimulus_info["category_name"][trial_info["category_id"][i] - 1]
     }
 
     // square categories
@@ -260,17 +254,12 @@ function route_categorization(condition) {
 async function replace_monster(slider1, slider2) {
     stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
     document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".png"
-    console.log("./stimuli/stimulus" + stimulus_id + ".png")
 }
 async function slide_adjust() {
-    console.log("within slide_adjust()")
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
-    console.log(document.getElementById("demo1").innerHTML)
-    console.log("bla")
     output1.innerHTML = slider1.value;
     slider1.oninput = function () {
-        console.log("within slider1.oninput")
         output1.innerHTML = this.value;
         replace_monster(slider1, slider2)
     }
@@ -300,6 +289,7 @@ var stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
 var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
 var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
+var category_name = setup_expt["trial_info"]["category_name"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
 
 /* for (var idx = 0; idx < stimulus_vals.length; idx++) {
@@ -329,7 +319,7 @@ for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]
 */
 
 async function next_item_cr(old, i) {
-    part = document.getElementById("part_reproduction").innerHTML
+    part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         current_stim_id = stimulus_crp_trial[i]
@@ -351,8 +341,9 @@ async function next_item_cr(old, i) {
     stim_path_mask = "stimuli/mask.png"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
+    document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
+    await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
     document.getElementById("item_displayed_2").src = stim_path
     await sleep(setup_expt["display_info"]["reproduction"]["presentation"])
     document.getElementById("item_displayed_2").src = stim_path_mask
@@ -391,12 +382,10 @@ const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] -
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
 
-    part = document.getElementById("part_reproduction").innerHTML
-    console.log("within my_link(), part = " + part)
+    part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         stimulus_ids = setup_expt["trial_info"]["stimulus_id_rp"]
-        console.log(stimulus_ids + ", i = " + i)
     }
     if (part == 1) {
         i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
@@ -417,7 +406,6 @@ async function my_link() {
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page13");
     } else {
-        console.log("in else part of my_link()")
         log_response(rt, i, part, stimulus_ids);
         update_trial_counter(part, i)
         next_item_cr('page4');
@@ -426,14 +414,15 @@ async function my_link() {
 
 function update_trial_counter(part, i) {
     switch (part) {
-        case "0":
+        case 0:
             document.getElementById("trial_nr_cr_practice").innerHTML = i + 1
             break;
-        case "1":
+        case 1:
             document.getElementById("trial_nr_cr1").innerHTML = i + 1
             break;
-        case "2":
+        case 2:
             document.getElementById("trial_nr_cr2").innerHTML = i + 1
+            console.log("updated trial counter cr part 2")
             break;
     }
 }
@@ -474,7 +463,6 @@ async function next_item_cat(old, i) {
     stim_path_mask = "stimuli/mask.png"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_cat").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
@@ -484,44 +472,43 @@ async function next_item_cat(old, i) {
 }
 
 async function handle_response(e) {
+    document.removeEventListener("keydown", handle_response, false);
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     var keyCode = e.keyCode;
     if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
         document.getElementById("key_id").innerHTML = keyCode;
-        document.getElementById("rt").innerHTML = Date.now() - document.getElementById("time_var").innerHTML;
+        rt = Date.now() - document.getElementById("time_var").innerHTML;
+        document.getElementById("rt").innerHTML = rt;
     }
     cat_id_response = keycode_to_integer(keyCode)
     write_cat_results(i, cat_id_response)
-    console.log("just before replacing black mask")
-    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.PNG"
-    document.getElementById("background_displayed_2").src = "stimuli/placeholder-white.PNG"
 
-    if (condition_id == 1) { // control
-
+    if (condition_id == 1 & rt <= setup_expt["display_info"]["categorization"]["dealinetime"]) { // control
         var str = new String("Your response was: " + cat_id_response);
         document.getElementById("feedback_cat_true").innerHTML = str
-        await sleep(500)
+        await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
         document.getElementById("feedback_cat_true").innerHTML = ""
-        //alert(str);
-    } else if (condition_id == 2 | condition_id == 3) {
+    } else if (condition_id == 2 | condition_id == 3 & rt <= setup_expt["display_info"]["categorization"]["dealinetime"]) {
         if (cat_id_response == category_id[i]) {
-            document.getElementById("feedback_cat_true").innerHTML = "Well Done!"
-            await sleep(500)
+            document.getElementById("feedback_cat_true").innerHTML = "Well Done: " + category_name[i] + "!"
+            await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
             document.getElementById("feedback_cat_true").innerHTML = ""
-            //alert("Well Done!")
         } else {
-            var str = new String("Category would have been: " + category_id[i]);
+            var str = new String("Category would have been: " + category_name[i]);
             document.getElementById("feedback_cat_wrong").innerHTML = str
-            await sleep(1000)
+            await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_wrong"])
             document.getElementById("feedback_cat_wrong").innerHTML = ""
-
-            //alert(str);
         }
     }
+    if (rt > dealinetime) {
+        document.getElementById("feedback_cat_wrong").innerHTML = "Too slow, please respond faster!"
+        await sleep(1000)
+        document.getElementById("feedback_cat_wrong").innerHTML = ""
+    }
     //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
-    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
-    document.removeEventListener("keydown", handle_response, false);
+    console.log(cat_id_response == category_id[i])
+    document.getElementById("item_displayed_cat").src = "stimuli/mask.PNG"
 
     if (i == setup_expt["experiment_info"]["n_trials_categorization"] - 1) {//1) {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
@@ -533,15 +520,17 @@ async function handle_response(e) {
             " / " + setup_expt["experiment_info"]["n_trials_categorization"]
         document.getElementById("trial_nr_cat").innerHTML = i + 1
         clickStart("page9", "page10")
-        var fiveMinutes = 5;
+        var seconds = 5;
         var display = document.querySelector('#time');
-        startTimer(fiveMinutes, display);
+        startTimer(seconds, display);
         var timeout = setTimeout(function () {
             clickStart("page10", 'page9');
             next_item_cat('page9')
+            document.getElementById("time").innerHTML = "00:05"
         }, 5000);
     } else {
         document.getElementById("trial_nr_cat").innerHTML = i + 1
+        document.getElementById("time").innerHTML = "00:05"
         next_item_cat('page9')
     }
 }
