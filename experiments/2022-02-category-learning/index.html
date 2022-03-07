@@ -593,6 +593,20 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                         width: 200px;
                         height: 300px;
                     }
+
+                    .cat_feedback_neg {
+                        position: absolute;
+                        bottom: 400px;
+                        left: 41.5%;
+                        width: 300px;
+                    }
+
+                    .cat_feedback_pos {
+                        position: absolute;
+                        bottom: 400px;
+                        left: 41.5%;
+                        width: 300px;
+                    }
                 </style>
             </head>
 
@@ -652,7 +666,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             </button>
         </div>
 
-        <div id="page7" style="display:none">
+        <div id="page7" style="display:block">
             <h1>
                 Part two of the study
             </h1>
@@ -660,31 +674,28 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 Remember that the monsters come from different tribes.<br>
                 In the second part, your task is to categorize the monsters into <span id="myText"></span>
                 categories.<br>
-                After every response you are given feedback whether your response was correct or not.<br>
-                If it was not, the category that would have been corect is going to be displayed to you.<br><br>
-                <b>Responding:</b><br>
-                You can use the number keys on your keyboard to give a response in the task.<br>
-                The numbers correspond to the respective category:<br>
-                For example, "1" on your keyboard corresponds to category 1.
-                "2" on your keyboard corresponds to category 2.<br>
-                Use the <b>enter</b> key on your keyboard to start the next trial while the feedback message is
-                displayed to you.<br>
-                There will be four blocks of trials. Between the blocks you can take a break if you want.<br>
+            </p>
+            <p id="category_instruction"></p>
+            <p>
+                <br>
+                There will be four blocks of trials after the target-training phase. Between the blocks you can take a
+                break if you want, but the experiment continues after 1 min at the latest.<br>
                 Please leave your hands on the keyboard while responding in a block. Use your left hand for the
                 numbers and your right hand for the enter key.<br><br>
                 The only way to learn about the categories is to learn from the feedack.<br>
                 In the beginning, it won't be an easy task, but no worries, you will get better with practice!
             </p>
             <script>
-                    (() => {
-                        document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
-                    })();
+                document.getElementById("category_instruction").innerHTML = set_category_instruction();
+                (() => {
+                    document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
+                })();
             </script>
             <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
                 Categorization</button>
         </div>
 
-        <div id="page7b" style="display:block">
+        <div id="page7b" style="display:none">
             <h1>
                 Part two of the study
             </h1>
@@ -720,21 +731,21 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <p>
                 By clicking on the button below, you start the task of part 2.
             </p>
-            <button type="button" name="button" ; onclick="next_item_cat('page8')" ;> Start Task </button>
+            <button type="button" name="button" ; onclick="next_item_cat('page8', 0)" ;> Start Task </button>
         </div>
 
         <div id="page9" style="display:none;">
-            <div style="text-align: center; color:red; font-size:30px">
+            <div class="cat_feedback_neg" style="color:red; font-size:30px">
                 <p id="feedback_cat_wrong"></p>
             </div>
-            <div style="text-align: center; color:green; font-size:30px">
+            <div class="cat_feedback_pos" style="color:green; font-size:30px">
                 <p id="feedback_cat_true"></p>
             </div>
             <div class="present_stimulus">
-                <img id="background_displayed_2" src="stimuli/mask.png" height="300px">
+                <img id="background_displayed_3" src="stimuli/mask.PNG" height="300px">
             </div><br>
             <div class="present_stimulus">
-                <img id="item_displayed_cat" height="300px" src="stimuli/placeholder-white.PNG">
+                <img id="item_displayed_cat" height="300px" src="stimuli/mask.PNG">
             </div><br>
 
         </div>
@@ -742,25 +753,55 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <div id="page10" style="display:none;">
             <h1>Time for a break!</h1>
             <h2 id="progress"></h2>
-            <button type="button" name="button" ; onclick="next_item_cat('page10')" ;> Continue
+            <div id="cat_continued" style="display:none">0</div>
+            <div id="break_idx" style="display:none">0</div>
+            <button type="button" name="button" id="cat_button" ; onclick="next_item_cat('page10')" ;> Continue
+            </button>
+            <script>
+                const element = document.getElementById("cat_button");
+                element.addEventListener("click", function () {
+                    document.getElementById("cat_continued").innerHTML = 1;
+                });
+            </script>
+
+            <body>
+                <div id="timeframe1" style="display:none">Experiment continues in <span id="time1"></span> minutes!
+                </div>
+                <div id="timeframe2" style="display:none">Experiment continues in <span id="time2"></span> minutes!
+                </div>
+                <div id="timeframe3" style="display:none">Experiment continues in <span id="time3"></span> minutes!
+                </div>
+                <div id="timeframe4" style="display:none">Experiment continues in <span id="time4"></span> minutes!
+                </div>
+            </body>
+
+        </div>
+
+        <div id="page10b" style="display:none;">
+            <h1>Target Examples</h1><br>
+            <p>The initial block with target category examples is now over.<br>
+                In the following, your task is to categorize monsters from all categories, including the
+                non-target category.</p>
+            <button type="button" name="button" ; onclick="next_item_cat('page10b')" ;> Continue with all categories
             </button>
 
         </div>
-        <br>
-
         <div id="page11" style="display:none">
             <h1>
                 Very well done! That was it for part 2!
             </h1>
             <p>
                 By clicking on the button below, you get to part 3.
+                The experiment will continue after 60 seconds, if you do not press the button.
             </p>
             <button type="button" name="button" ; onclick="clickStart('page11', 'page12')" ;> Instructions
                 Memory Task </button>
+
         </div>
 
 
         <div id="trial_nr_cr2" style="display:none">0</div>
+        <!-- <div id="part_reproduction" style="display:none">2</div> -->
         <div id="page12" style="display:none">
             <h1>
                 Part 3 of the study!

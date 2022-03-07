@@ -10,7 +10,9 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 } */
 // get subject ID
-const participant_id = 2
+const participant_id = 2;
+var condition_id = 3;
+
 
 // make sure categories are alternated 
 function csvToArray(str, delimiter = ",") {
@@ -43,7 +45,6 @@ function csvToArray(str, delimiter = ",") {
 function initialize_variables() {
     tmp = csvToArray("condition_counts.csv")
     //cond_json = [0, 0, 0]
-    console.log(tmp)
     document.getElementById("check").innerHTML = tmp
     clickStart('page0', 'page1')
 }
@@ -59,7 +60,6 @@ function initialize_variables() {
 // }
 // cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
 //saveCondition(cond_json)
-var condition_id = 2;
 
 function setup_experiment() {
 
@@ -71,7 +71,9 @@ function setup_experiment() {
         n_practice_reproduction: 3,
         n_trials_reproduction_1: 2, //144, //10
         n_trials_reproduction_2: 2, //144, //
-        n_trials_categorization: 2, //500, //
+        n_trials_categorization_train_target: 6,
+        n_trials_categorization: 10, //500, //
+        n_trials_categorization_total: 6 + 10,
         condition_id: condition_id,
         n_categories: [1, 2, 3][condition_id - 1],
         file_path_stimuli: "/stimuli/",
@@ -79,30 +81,42 @@ function setup_experiment() {
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
 
+    // stim_ids of cat2 and cat3
+    // randomize these ids
+    // select first n_only_target_cat or n_only_target_cat/2 and append them to category_id, category_name, category_stimulus_id
+
     // read mapping from x1 and x2 values to categories
-    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 2, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
+    var cat2_stim_ids_cat2 = [26, 27, 28, 38, 39, 40, 41, 42, 50, 51, 52, 53, 54, 55, 63, 64, 65, 66, 67, 68, 75, 76, 77, 78, 79, 80, 88, 89, 90, 91, 92, 93, 101, 102, 103, 104, 105, 115, 116, 117]
+    var cat3_stim_ids_cat2 = [17, 18, 19, 29, 30, 31, 32, 41, 42, 43, 44, 45, 53, 54, 55, 56, 57, 58, 66, 67, 68, 69, 70, 79, 80, 81, 82, 92, 93, 94]
+    var cat3_stim_ids_cat3 = [49, 50, 51, 61, 62, 63, 64, 73, 74, 75, 76, 77, 85, 86, 87, 88, 89, 90, 98, 99, 100, 101, 102, 111, 112, 113, 114, 124, 125, 126]
+    var stim_ids_cats_tt = []
+    var cat3_stim_ids_all = []
+    cat2_stim_ids_cat2 = append_randomized_arrays(cat2_stim_ids_cat2, 1)
+    cat2_stim_ids_cat2.length = experiment_info["n_trials_categorization_train_target"]
+    cat3_stim_ids_cat2 = append_randomized_arrays(cat3_stim_ids_cat2, 1)
+    cat3_stim_ids_cat3 = append_randomized_arrays(cat3_stim_ids_cat3, 1)
+    cat3_stim_ids_all = cat3_stim_ids_cat2.concat(cat3_stim_ids_cat3)
+    cat3_stim_ids_all = append_randomized_arrays(cat3_stim_ids_all, 1)
+    cat3_stim_ids_all.length = experiment_info["n_trials_categorization_train_target"]
+
 
     // display info
     const display_info = {
-        /* screenwidth: window.innerWidth,
-        screenheight: window.innerHeight,
-        x_center: window.innerWidth / 2,
-        y_center: window.innerHeight / 2,
-        size_stimulus: window.innerHeight / 5,
-        size_feedback: window.innerHeight / 10, */
-
         reproduction: {
-            iti: 1000,
-            fixcross: 1000,
+            iti: 500,
+            fixcross: 500,
             presentation: 1000,
-            ri: 2000
+            ri: 1500
         },
         categorization: {
             iti: 1000,
             fixcross: 1000,
-            feedbacktime: 1000,
+            feedbacktime_true: 500,
+            feedbacktime_wrong: 1000,
+            deadlinetime: 3000
         }
     }
 
@@ -113,14 +127,20 @@ function setup_experiment() {
         x1: Array(n_x_steps).fill().map((element, index) => index),
         x2: Array(n_x_steps).fill().map((element, index) => index),
         x1_x2: Array(n_x_steps * n_x_steps),
-        stimulus_id: Array(n_x_steps * n_x_steps)
+        stimulus_id: Array(n_x_steps * n_x_steps),
+        category_name: ["No Target Category", "Bukil", "Venak"]
     }
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
+        stim_ids_cats_tt = cat2_stim_ids_cat2
+        //set_category_instruction(experiment_info["n_categories"])
     } else if (experiment_info["n_categories"] == 3) {
         stimulus_info["category_id"] = cat3map_val
+        stim_ids_cats_tt = cat3_stim_ids_all
+        //set_category_instruction()
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
+        stim_ids_cats_tt = []
     }
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
@@ -137,12 +157,11 @@ function setup_experiment() {
     // trial info
     const trial_info = {}
     trial_info["stimulus_id_rp"] = [...stimulus_info["stimulus_id"]]
-    //trial_info["stimulus_id_rp"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r1"] = [...stimulus_info["stimulus_id"]]
-    //trial_info["stimulus_id_r1"].push(n_x_steps * n_x_steps - 1)
     trial_info["stimulus_id_r2"] = [...stimulus_info["stimulus_id"]]
-    //trial_info["stimulus_id_r2"].push(n_x_steps * n_x_steps - 1)
-    trial_info["category_id"] = Array(experiment_info["n_trial"])
+    trial_info["stimulus_id_c"] = []
+    trial_info["category_id"] = []
+    trial_info["category_name"] = []
 
     const n_reps_practice = 1
     const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
@@ -154,7 +173,6 @@ function setup_experiment() {
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
-    trial_info["stimulus_id_c"] = []
 
     // stimulus information
     // create an equal proportion of items from the categories
@@ -182,13 +200,17 @@ function setup_experiment() {
         stimulus_ids_per_category[idx + 1] = append_randomized_arrays(stimulus_ids_per_category[idx + 1], items_per_category_repeats[idx + 1])
         stimulus_ids_per_category[idx + 1].length = items_per_category_required
         trial_info["stimulus_id_c"] = trial_info["stimulus_id_c"].concat(stimulus_ids_per_category[idx + 1])
-
     }
+
     trial_info["stimulus_id_c"] = append_randomized_arrays(trial_info["stimulus_id_c"], 1)
+    // add target training in the beginning
+
+    trial_info["stimulus_id_c"] = stim_ids_cats_tt.concat(trial_info["stimulus_id_c"])
 
     // ellipse categories
-    for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
+    for (let i = 0; i < (experiment_info["n_trials_categorization_train_target"] + experiment_info["n_trials_categorization"]); i++) {
         trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
+        trial_info["category_name"][i] = stimulus_info["category_name"][trial_info["category_id"][i] - 1]
     }
 
     // square categories
@@ -260,17 +282,12 @@ function route_categorization(condition) {
 async function replace_monster(slider1, slider2) {
     stimulus_id = "[" + slider1.value + "," + slider2.value + "]"
     document.getElementById("selected_monster").src = "./stimuli/stimulus" + stimulus_id + ".png"
-    console.log("./stimuli/stimulus" + stimulus_id + ".png")
 }
 async function slide_adjust() {
-    console.log("within slide_adjust()")
     var slider1 = document.getElementById("myRange1");
     var output1 = document.getElementById("demo1");
-    console.log(document.getElementById("demo1").innerHTML)
-    console.log("bla")
     output1.innerHTML = slider1.value;
     slider1.oninput = function () {
-        console.log("within slider1.oninput")
         output1.innerHTML = this.value;
         replace_monster(slider1, slider2)
     }
@@ -295,12 +312,15 @@ function set_cond_and_cat() {
 }
 
 let setup_expt = setup_experiment();
+const instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
 var stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
 var stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
 var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
 var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
 var category_id = setup_expt["trial_info"]["category_id"]
+var category_name = setup_expt["stimulus_info"]["category_name"]
 var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
+
 
 /* for (var idx = 0; idx < stimulus_vals.length; idx++) {
     console.log(stimulus_vals[idx])
@@ -329,7 +349,7 @@ for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]
 */
 
 async function next_item_cr(old, i) {
-    part = document.getElementById("part_reproduction").innerHTML
+    part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         current_stim_id = stimulus_crp_trial[i]
@@ -351,8 +371,9 @@ async function next_item_cr(old, i) {
     stim_path_mask = "stimuli/mask.png"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
+    document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
+    await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
     document.getElementById("item_displayed_2").src = stim_path
     await sleep(setup_expt["display_info"]["reproduction"]["presentation"])
     document.getElementById("item_displayed_2").src = stim_path_mask
@@ -391,12 +412,10 @@ const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] -
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
 
-    part = document.getElementById("part_reproduction").innerHTML
-    console.log("within my_link(), part = " + part)
+    part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         stimulus_ids = setup_expt["trial_info"]["stimulus_id_rp"]
-        console.log(stimulus_ids + ", i = " + i)
     }
     if (part == 1) {
         i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
@@ -417,7 +436,6 @@ async function my_link() {
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page13");
     } else {
-        console.log("in else part of my_link()")
         log_response(rt, i, part, stimulus_ids);
         update_trial_counter(part, i)
         next_item_cr('page4');
@@ -426,13 +444,13 @@ async function my_link() {
 
 function update_trial_counter(part, i) {
     switch (part) {
-        case "0":
+        case 0:
             document.getElementById("trial_nr_cr_practice").innerHTML = i + 1
             break;
-        case "1":
+        case 1:
             document.getElementById("trial_nr_cr1").innerHTML = i + 1
             break;
-        case "2":
+        case 2:
             document.getElementById("trial_nr_cr2").innerHTML = i + 1
             break;
     }
@@ -471,10 +489,10 @@ async function next_item_cat(old, i) {
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
-    stim_path_mask = "stimuli/mask.png"
+    mask_path = "stimuli/mask.png"
 
     // present stimuli and mask
-    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
+    document.getElementById("item_displayed_cat").src = mask_path
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_cat").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
@@ -484,59 +502,99 @@ async function next_item_cat(old, i) {
 }
 
 async function handle_response(e) {
+    var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
+    var str_frame = "timeframe" + Math.max(break_idx, 1)
+    document.getElementById("cat_continued").innerHTML = 0
+    document.getElementById("item_displayed_cat").src = "stimuli/mask.PNG"
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     var keyCode = e.keyCode;
     if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
         document.getElementById("key_id").innerHTML = keyCode;
-        document.getElementById("rt").innerHTML = Date.now() - document.getElementById("time_var").innerHTML;
+        rt = Date.now() - document.getElementById("time_var").innerHTML;
+        document.getElementById("rt").innerHTML = rt;
     }
     document.removeEventListener("keydown", handle_response, false);
     cat_id_response = keycode_to_integer(keyCode)
     write_cat_results(i, cat_id_response)
-    document.getElementById("item_displayed_cat").src = "./stimuli/placeholder-white.png"
-    document.getElementById("background_displayed_2").src = "./stimuli/fixcross.png"
 
-    if (condition_id == 1) { // control
-
+    if (condition_id == 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
         var str = new String("Your response was: " + cat_id_response);
         document.getElementById("feedback_cat_true").innerHTML = str
-        await sleep(500)
+        await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
         document.getElementById("feedback_cat_true").innerHTML = ""
-        //alert(str);
-    } else if (condition_id == 2 | condition_id == 3) {
+    } else if (condition_id == 2 | condition_id == 3 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
         if (cat_id_response == category_id[i]) {
-            document.getElementById("feedback_cat_true").innerHTML = "Well Done!"
-            await sleep(500)
+            document.getElementById("feedback_cat_true").innerHTML = "Well Done: " + category_name[category_id[i] - 1] + "!"
+            await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
             document.getElementById("feedback_cat_true").innerHTML = ""
-            //alert("Well Done!")
         } else {
-            var str = new String("Category would have been: " + category_id[i]);
+            var str = new String("Category would have been: " + category_name[category_id[i] - 1]);
             document.getElementById("feedback_cat_wrong").innerHTML = str
-            await sleep(1000)
+            await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_wrong"])
             document.getElementById("feedback_cat_wrong").innerHTML = ""
-
-            //alert(str);
         }
     }
-    await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
-    document.getElementById("item_displayed_cat").src = "stimuli/placeholder-white.png"
+    if (rt > setup_expt["display_info"]["categorization"]["deadlinetime"]) {
+        document.getElementById("feedback_cat_wrong").innerHTML = "Too slow, please respond faster!"
+        await sleep(1000)
+        document.getElementById("feedback_cat_wrong").innerHTML = ""
+    }
+    //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
 
-    if (i == setup_expt["experiment_info"]["n_trials_categorization"] - 1) {//1) {
-        document.getElementById("trial_nr_cat").innerHTML = i + 1
+    document.getElementById("trial_nr_cat").innerHTML = i + 1
+    if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
         document.getElementById("part_reproduction").innerHTML = 2;
         clickStart("page9", "page11")
-    } else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization"] / 4) == 0) {
+    } else if (i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
+        clickStart("page9", "page10b")
+    }
+    else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0) {
+        document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
+        var break_idx = document.getElementById("break_idx").innerHTML
         trial_nr = i + 1
         document.getElementById("progress").innerHTML = "Your Categorization Progress: " + trial_nr +
-            " / " + setup_expt["experiment_info"]["n_trials_categorization"]
-        document.getElementById("trial_nr_cat").innerHTML = i + 1
+            " / " + setup_expt["experiment_info"]["n_trials_categorization_total"]
         clickStart("page9", "page10")
-    } else {
-        document.getElementById("trial_nr_cat").innerHTML = i + 1
-        next_item_cat('page9')
+        str_countdown = "#time" + break_idx
+        str_frame = "timeframe" + break_idx
+        document.getElementById(str_frame).style.display = "block"
+        var seconds = 5;
+        var display = document.querySelector(str_countdown);
+        startTimer(seconds, display);
+
+        var timeout = setTimeout(function () {
+            if (document.getElementById("cat_continued").innerHTML == 0) {
+                clickStart("page10", 'page9');
+                next_item_cat("page9")
+                document.getElementById("cat_continued").innerHTML = 1
+                document.getElementById(str_frame).style.display = "none"
+            }
+        }, 6000);
+    } else if (document.getElementById("cat_continued").innerHTML == 0) {
+        next_item_cat('page9');
+
+        document.getElementById(str_frame).style.display = "none"
     }
 }
+
+function startTimer(duration, display) {
+    var timer = duration, minutes, seconds;
+    setInterval(function () {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        display.textContent = minutes + ":" + seconds;
+
+        if (--timer < 0) {
+            timer = duration;
+        }
+    }, 1000);
+}
+
 
 
 function keycode_to_integer(kc) {
@@ -554,7 +612,8 @@ function write_cat_results(i, r) {
     } else if (condition_id == 2 | condition_id == 3) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
-
+    console.log(setup_expt["trial_info"]["stimulus_id_c"])
+    console.log(i)
     var data_store = {
         participant_id: participant_id,
         condition_id: condition_id,
@@ -672,4 +731,44 @@ function instructioncheck(pg, pg_prev) {
         }
     }
 
+}
+function set_category_instruction() {
+    n_categories = setup_expt["experiment_info"]["n_categories"]
+    const text_3 = `There are two target categories and one non-target category.<br>One target category is called <b>Bukil</b>, the other target category is called <b>Venak</b>.<br>
+    In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
+        ` monsters only from the Bukil and Venak categories to get familiar with the two target categories.<br>
+    After that phase, you are presented with all types of monsters.<br>
+    After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
+    
+    <b>Responding:</b><br>
+    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    You can use the number keys on your keyboard to give a response in the task.<br>
+    The numbers correspond to the respective category:<br>
+    "1" on your keyboard corresponds to the non-target category.<br>
+    "2" on your keyboard corresponds to the "Bukil" category.<br>
+    "3" corresponds to the "Venak" category.<br>
+    Use the enter key on your keyboard to start the next trial while the feedback message is
+    displayed to you.`
+    const text_2 = `There is one target category and one non-target category. The target category is called <b>Bukil</b>.<br>    
+    In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
+        ` monsters only from the Bukil category to get familiar with it.<br>
+    After that phase, you are presented with all types of monsters.<br>
+    After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
+    
+    <b>Responding:</b><br>
+    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    You can use the number keys on your keyboard to give a response in the task.<br>
+    The numbers correspond to the respective category:<br>
+    "1" on your keyboard corresponds to the non-target category.<br>
+    "2" on your keyboard corresponds to the "Bukil" category.<br>
+    Use the enter key on your keyboard to start the next trial while the feedback message is
+    displayed to you.`
+    if (n_categories == 2) {
+        text = text_2
+    } else if (n_categories == 3) {
+        text = text_3
+    } else if (n_categories == 1) {
+        text = ""
+    }
+    return (text)
 }
