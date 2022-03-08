@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<script src="js/js-helpers.js" charset="utf-8"></script>
+
+<div id="condition_id_prep" style="display:none"></div>
 
 <head>
     <meta charset="utf-8">
@@ -13,11 +14,11 @@
     <title>2D Memory Representations</title>
 
     <script src='https://cdn.firebase.com/js/client/1.1.1/firebase.js'></script>
-    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.min.js"></script>
     <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet" type="text/css">
-    <link href="js/bootstrap.css" rel="stylesheet" type="text/css">
+    <script src="js/d3.v4.js" charset="utf-8"></script>
+    <script src="js/js-helpers.js" charset="utf-8"></script>
 
 </head>
 
@@ -60,7 +61,7 @@
             </body>
         </div>
 
-        <div id="page1" style="display:none;">
+        <div id="page1" style="display:block;">
             <h1>Welcome to the study</h1>
 
             This study is part of a research project conducted
@@ -485,9 +486,6 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
         <div id="condition_id" style="display:none">-1</div>
         <div id="n_categories" style="display:none">-1</div>
-        <script>
-            set_cond_and_cat()
-        </script>
         <div id="trial_nr_cr_practice" style="display:none">0</div>
         <div id="trial_nr_cr1" style="display:none">0</div>
         <div id="part_reproduction" style="display:none">0</div>
@@ -666,7 +664,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             </button>
         </div>
 
-        <div id="page7" style="display:block">
+        <div id="page7" style="display:none">
             <h1>
                 Part two of the study
             </h1>
@@ -686,10 +684,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 In the beginning, it won't be an easy task, but no worries, you will get better with practice!
             </p>
             <script>
-                document.getElementById("category_instruction").innerHTML = set_category_instruction();
-                (() => {
-                    document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
-                })();
+                    (() => {
+                        document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
+                    })();
             </script>
             <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
                 Categorization</button>

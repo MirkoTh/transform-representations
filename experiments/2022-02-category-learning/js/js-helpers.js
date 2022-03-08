@@ -1,4 +1,4 @@
-/* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
@@ -8,60 +8,11 @@ else {
 // STUDY ID
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
-} */
+}
 // get subject ID
-const participant_id = 2;
-var condition_id = 3;
 
 
-// make sure categories are alternated 
-function csvToArray(str, delimiter = ",") {
-    // slice from start of text to the first \n index
-    // use split to create an array from string by delimiter
-    const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
-
-    // slice from \n index + 1 to the end of the text
-    // use split to create an array of each csv value row
-    const rows = str.slice(str.indexOf("\n") + 1).split("\n");
-
-    // Map the rows
-    // split values from each row into an array
-    // use headers.reduce to create an object
-    // object properties derived from headers:values
-    // the object passed as an element of the array
-    const arr = rows.map(function (row) {
-        const values = row.split(delimiter);
-        const el = headers.reduce(function (object, header, index) {
-            object[header] = values[index];
-            return object;
-        }, {});
-        return el;
-    });
-
-    // return the array
-    return arr;
-}
-
-function initialize_variables() {
-    tmp = csvToArray("condition_counts.csv")
-    //cond_json = [0, 0, 0]
-    document.getElementById("check").innerHTML = tmp
-    clickStart('page0', 'page1')
-}
-//cond_json = [6, 8, 8];
-// var condition_counts = 9999999999;
-// var condition_id = -99;
-// for (var i = 0; i < cond_json.length; i++) {
-//     var obj = cond_json[i]
-//     if (obj < condition_counts) {
-//         condition_counts = obj
-//         condition_id = [1, 2, 3][i]
-//     }
-// }
-// cond_json[condition_id - 1] = cond_json[condition_id - 1] + 1;
-//saveCondition(cond_json)
-
-function setup_experiment() {
+function setup_experiment(condition_id) {
 
     // experiment information
     const experiment_info = {
@@ -128,8 +79,10 @@ function setup_experiment() {
         x2: Array(n_x_steps).fill().map((element, index) => index),
         x1_x2: Array(n_x_steps * n_x_steps),
         stimulus_id: Array(n_x_steps * n_x_steps),
-        category_name: ["No Target Category", "Bukil", "Venak"]
+        category_name: ["No Target Category", "Bukil", "Venak"],
+        category_id: []
     }
+
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
         stim_ids_cats_tt = cat2_stim_ids_cat2
@@ -142,6 +95,7 @@ function setup_experiment() {
         stimulus_info["category_id"] = cat0map_val
         stim_ids_cats_tt = []
     }
+    console.log("n_categories is set to: " + experiment_info["n_categories"])
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
     for (let x1 of stimulus_info["x1"]) {
@@ -244,14 +198,16 @@ function setup_experiment() {
         return sets_randomized
     }
 
-    var setup_expt;
-    setup_expt = {
+
+    var obj_setup_expt;
+    obj_setup_expt = {
         experiment_info: experiment_info,
         display_info: display_info,
         stimulus_info: stimulus_info,
         trial_info: trial_info
     }
-    return setup_expt
+
+    return obj_setup_expt
 }
 
 //permute a list
@@ -268,10 +224,13 @@ function clickStart(hide, show) {
 }
 
 function route_instructions(condition) {
+    load_csv();
+
     if (condition == 1) { // control
         clickStart('page1', 'page2b')
     } else { clickStart('page1', 'page2') }
     var obj = { participant_id: participant_id, condition_id: setup_expt["experiment_info"]["condition_id"] };
+    document.getElementById("category_instruction").innerHTML = set_category_instruction();
 }
 
 function route_categorization(condition) {
@@ -305,48 +264,6 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
-function set_cond_and_cat() {
-    document.getElementById("condition_id").innerHTML = setup_expt["experiment_info"]["condition_id"]
-    document.getElementById("n_categories").innerHTML = setup_expt["experiment_info"]["n_categories"]
-}
-
-let setup_expt = setup_experiment();
-const instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
-var stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
-var stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
-var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
-var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
-var category_id = setup_expt["trial_info"]["category_id"]
-var category_name = setup_expt["stimulus_info"]["category_name"]
-var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
-
-
-/* for (var idx = 0; idx < stimulus_vals.length; idx++) {
-    console.log(stimulus_vals[idx])
-}
-for (var idx = 0; idx < stimulus_cr2_trial.length; idx++) {
-    console.log(stimulus_cr2_trial[idx])
-}
-for (var idx = 0; idx < stimulus_cat_trial.length; idx++) {
-    console.log(stimulus_cat_trial[idx])
-}
-for (var idx = 0; idx < category_id.length; idx++) {
-    console.log(category_id[idx])
-}
-for (var idx = 0; idx < setup_expt["trial_info"]["stimulus_id_c"].length; idx++) {
-    console.log(setup_expt["trial_info"]["stimulus_id_c"][idx])
-    console.log(idx)
-}
- 
-for (let idx = 0; idx < setup_expt["experiment_info"]["n_trials_categorization"]; idx++) {
-    console.log(
-        "stimulus id is: " + setup_expt["trial_info"]["stimulus_id_c"][idx] +
-        " x1 x2 vals are: " + setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][idx]] +
-        " category id is: " + setup_expt["trial_info"]["category_id"][idx]
-    )
-}
-*/
 
 async function next_item_cr(old, i) {
     part = parseInt(document.getElementById("part_reproduction").innerHTML)
@@ -404,10 +321,6 @@ async function log_response(rt, i, part, stimulus_ids) {
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cr")
 }
-
-const total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
-const total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
-const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1
 
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
@@ -772,3 +685,58 @@ function set_category_instruction() {
     }
     return (text)
 }
+
+function load_csv() {
+    var txt = d3.json("rotate-conditions.json", function (data) {
+        var condition_counts;
+        condition_counts = Object.values(data);
+        var max_counts = 9999999999;
+        var condition_id = -99;
+        for (var i = 0; i < condition_counts.length; i++) {
+            var obj = condition_counts[i]
+            if (obj < max_counts) {
+                max_counts = obj
+                condition_id = [1, 2, 3][i]
+            }
+        }
+        const str_idx = "condition" + condition_id
+        console.log(data)
+        data[str_idx] += 1;
+        console.log(data)
+        saveConditions(JSON.stringify(data));
+    });
+}
+
+function saveConditions(filedata) {
+    var filename = "rotate-conditions.json";
+    $.post("overwrite_data.php", { postresult: filedata + "\n", postfile: filename })
+}
+
+let setup_expt;
+const instruction_category;
+var stimulus_crp_trial;
+var stimulus_cr1_trial;
+var stimulus_cr2_trial;
+var stimulus_cat_trial;
+var category_id;
+var category_name;
+var stimulus_vals;
+const total_trials0;
+const total_trials1;
+const total_trials2;
+
+var condition_id;
+let setup_expt = setup_experiment(condition_id);
+const instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
+var stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
+var stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
+var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
+var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
+var category_id = setup_expt["trial_info"]["category_id"]
+var category_name = setup_expt["stimulus_info"]["category_name"]
+var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
+const total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
+const total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
+const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
+document.getElementById("condition_id").innerHTML = obj_setup_expt["experiment_info"]["condition_id"]
+document.getElementById("n_categories").innerHTML = obj_setup_expt["experiment_info"]["n_categories"]
