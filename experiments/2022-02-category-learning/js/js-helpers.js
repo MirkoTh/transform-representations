@@ -1,4 +1,4 @@
-if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+/* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
@@ -10,7 +10,7 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
 // get subject ID
-
+ */
 
 function setup_experiment(condition_id) {
 
@@ -224,7 +224,8 @@ function clickStart(hide, show) {
 }
 
 function route_instructions(condition) {
-    load_csv();
+    set_main_vars(condition)
+    //load_csv();
 
     if (condition == 1) { // control
         clickStart('page1', 'page2b')
@@ -645,8 +646,8 @@ function instructioncheck(pg, pg_prev) {
     }
 
 }
-function set_category_instruction() {
-    n_categories = setup_expt["experiment_info"]["n_categories"]
+function set_category_instruction(n_categories) {
+    var text;
     const text_3 = `There are two target categories and one non-target category.<br>One target category is called <b>Bukil</b>, the other target category is called <b>Venak</b>.<br>
     In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
         ` monsters only from the Bukil and Venak categories to get familiar with the two target categories.<br>
@@ -712,8 +713,12 @@ function saveConditions(filedata) {
     $.post("overwrite_data.php", { postresult: filedata + "\n", postfile: filename })
 }
 
-let setup_expt;
-const instruction_category;
+
+var condition_id;
+var n_categories;
+var participant_id;
+var setup_expt;
+var instruction_category;
 var stimulus_crp_trial;
 var stimulus_cr1_trial;
 var stimulus_cr2_trial;
@@ -721,22 +726,35 @@ var stimulus_cat_trial;
 var category_id;
 var category_name;
 var stimulus_vals;
-const total_trials0;
-const total_trials1;
-const total_trials2;
+var total_trials0;
+var total_trials1;
+var total_trials2;
 
-var condition_id;
-let setup_expt = setup_experiment(condition_id);
-const instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
-var stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
-var stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
-var stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
-var stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
-var category_id = setup_expt["trial_info"]["category_id"]
-var category_name = setup_expt["stimulus_info"]["category_name"]
-var stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
-const total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
-const total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
-const total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
-document.getElementById("condition_id").innerHTML = obj_setup_expt["experiment_info"]["condition_id"]
-document.getElementById("n_categories").innerHTML = obj_setup_expt["experiment_info"]["n_categories"]
+function condition_participant_id() {
+    condition_id = 87;
+    participant_id = 99;
+    n_categories = [1, 2, 3][(condition_id % 3)]
+    document.getElementById("condition_id").innerHTML = condition_id
+    document.getElementById("n_categories").innerHTML = n_categories
+    clickStart('page0', 'page1')
+    console.log("condition_id is: " + condition_id)
+    console.log("participant_id is: " + participant_id)
+    console.log("n_categories is: " + n_categories)
+
+}
+
+function set_main_vars(condition_id) {
+    setup_expt = setup_experiment(condition_id);
+    instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
+    stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
+    stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
+    stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
+    stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
+    category_id = setup_expt["trial_info"]["category_id"]
+    category_name = setup_expt["stimulus_info"]["category_name"]
+    stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
+    total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
+    total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
+    total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
+}
+
