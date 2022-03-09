@@ -1,4 +1,4 @@
-/* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
@@ -10,7 +10,7 @@ if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
 // get subject ID
- */
+
 
 function setup_experiment(condition_id) {
 
@@ -26,7 +26,7 @@ function setup_experiment(condition_id) {
         n_trials_categorization: 10, //500, //
         n_trials_categorization_total: 6 + 10,
         condition_id: condition_id,
-        n_categories: [1, 2, 3][condition_id - 1],
+        n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
@@ -95,7 +95,6 @@ function setup_experiment(condition_id) {
         stimulus_info["category_id"] = cat0map_val
         stim_ids_cats_tt = []
     }
-    console.log("n_categories is set to: " + experiment_info["n_categories"])
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
     for (let x1 of stimulus_info["x1"]) {
@@ -150,7 +149,6 @@ function setup_experiment(condition_id) {
         stimulus_ids_per_category[stimulus_info["category_id"][idx]].push(stimulus_info["stimulus_id"][idx])
     }
     for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
-        //console.log(items_per_category_repeats[idx + 1])
         stimulus_ids_per_category[idx + 1] = append_randomized_arrays(stimulus_ids_per_category[idx + 1], items_per_category_repeats[idx + 1])
         stimulus_ids_per_category[idx + 1].length = items_per_category_required
         trial_info["stimulus_id_c"] = trial_info["stimulus_id_c"].concat(stimulus_ids_per_category[idx + 1])
@@ -224,10 +222,13 @@ function clickStart(hide, show) {
 }
 
 function route_instructions(condition) {
+    //condition_id = 87;
+    //participant_id = 99;
+    //n_categories = [1, 2, 3][(condition_id % 3)]
+    condition_id = document.getElementById("condition_id").innerHTML
+    n_categories = document.getElementById("n_categories").innerHTML
     set_main_vars(condition)
-    //load_csv();
-
-    if (condition == 1) { // control
+    if (condition == 3) { // control
         clickStart('page1', 'page2b')
     } else { clickStart('page1', 'page2') }
     var obj = { participant_id: participant_id, condition_id: setup_expt["experiment_info"]["condition_id"] };
@@ -526,8 +527,6 @@ function write_cat_results(i, r) {
     } else if (condition_id == 2 | condition_id == 3) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
-    console.log(setup_expt["trial_info"]["stimulus_id_c"])
-    console.log(i)
     var data_store = {
         participant_id: participant_id,
         condition_id: condition_id,
@@ -692,7 +691,6 @@ function load_csv() {
         var condition_counts;
         condition_counts = Object.values(data);
         var max_counts = 9999999999;
-        var condition_id = -99;
         for (var i = 0; i < condition_counts.length; i++) {
             var obj = condition_counts[i]
             if (obj < max_counts) {
@@ -700,12 +698,14 @@ function load_csv() {
                 condition_id = [1, 2, 3][i]
             }
         }
+        n_categories = [1, 2, 3][(condition_id % 3)]
         const str_idx = "condition" + condition_id
-        console.log(data)
         data[str_idx] += 1;
-        console.log(data)
+        document.getElementById("condition_id").innerHTML = condition_id
+        document.getElementById("n_categories").innerHTML = n_categories
         saveConditions(JSON.stringify(data));
     });
+    clickStart('page0', 'page1')
 }
 
 function saveConditions(filedata) {
@@ -729,19 +729,6 @@ var stimulus_vals;
 var total_trials0;
 var total_trials1;
 var total_trials2;
-
-function condition_participant_id() {
-    condition_id = 87;
-    participant_id = 99;
-    n_categories = [1, 2, 3][(condition_id % 3)]
-    document.getElementById("condition_id").innerHTML = condition_id
-    document.getElementById("n_categories").innerHTML = n_categories
-    clickStart('page0', 'page1')
-    console.log("condition_id is: " + condition_id)
-    console.log("participant_id is: " + participant_id)
-    console.log("n_categories is: " + n_categories)
-
-}
 
 function set_main_vars(condition_id) {
     setup_expt = setup_experiment(condition_id);
