@@ -466,6 +466,8 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
         <div id="part_reproduction" style="display:none">0</div>
         <div id="show_trial" style="display:none">0</div>
         <div id="time_var" style="display:none"></div>
+        <div id="cr_deviation_cum" style="display:none">0</div>
+        <div id="cat_accuracy_cum" style="display:none">0</div>
 
         <div id="page3" style="display:none">
             <h1>Ready for the memory task?</h1>
@@ -793,10 +795,28 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
         <div id="page13" style="display:none">
             <h1>
-                You are done. Thank you very much for participating.
+                Bonus Payment<br>
             </h1>
 
+            <p>
+                In addition to the base payment of £7.60 you earn a bonus of £<span id="total_bonus"></span>
+                .<br>
+                Your bonus in the memory task is £<span id="cr_bonus"></span>.<br>
+                Your bonus in the second task is £<span id="cat_bonus"></span><br><br>
+                The base payment for your participation will be paid as soon as possible.<br>
+                The rest will be paid within the next few of days.
+            </p>
+
+            <br>
+            <h2>Please do not forget to click the button below to get re-directed
+                to the prolific webpage</h2>
+            <p>Your successful completion of the study is only registered on your prolific account
+                after you have been redirected to the prolific webpage</p>
+
+            <button type="button" name="button" ; onclick="redirect_to_prolific()" ;> Return to Prolific </button>
+
         </div>
+
     </div>
 </body>
 
