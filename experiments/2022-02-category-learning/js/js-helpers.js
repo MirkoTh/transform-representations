@@ -20,19 +20,17 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 2, //144, //10
-        n_trials_reproduction_2: 2, //144, //
-        n_trials_categorization_train_target: 6,
-        n_trials_categorization: 10, //500, //
-        n_trials_categorization_total: 6 + 10,
+        n_trials_reproduction_1: 144, //5, //144, //
+        n_trials_reproduction_2: 144, //5, //144, //
+        n_trials_categorization_train_target: 40,
+        n_trials_categorization: 180, //500, //
+        n_trials_categorization_total: 40 + 180,
         condition_id: condition_id,
         n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
-    console.log(condition_id)
-    console.log(n_categories)
     // stim_ids of cat2 and cat3
     // randomize these ids
     // select first n_only_target_cat or n_only_target_cat/2 and append them to category_id, category_name, category_stimulus_id
@@ -60,12 +58,12 @@ function setup_experiment(condition_id) {
         reproduction: {
             iti: 500,
             fixcross: 500,
-            presentation: 1000,
-            ri: 1500
+            presentation: 750,
+            ri: 2000
         },
         categorization: {
-            iti: 1000,
-            fixcross: 1000,
+            iti: 500,
+            fixcross: 500,
             feedbacktime_true: 500,
             feedbacktime_wrong: 1000,
             deadlinetime: 3000
@@ -233,7 +231,6 @@ function route_instructions(condition) {
         clickStart('page1', 'page2b')
     } else { clickStart('page1', 'page2') }
     var obj = { participant_id: participant_id, condition_id: setup_expt["experiment_info"]["condition_id"] };
-    document.getElementById("category_instruction").innerHTML = set_category_instruction();
 }
 
 function route_categorization(condition) {
@@ -409,90 +406,93 @@ async function next_item_cat(old, i) {
 
     // present stimuli and mask
     document.getElementById("item_displayed_cat").src = mask_path
-    await sleep(setup_expt["display_info"]["reproduction"]["iti"])
+    await sleep(setup_expt["display_info"]["categorization"]["iti"])
     document.getElementById("item_displayed_cat").src = "stimuli/fixcross.png"
-    await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
+    await sleep(setup_expt["display_info"]["categorization"]["fixcross"])
     document.getElementById("item_displayed_cat").src = stim_path
     document.getElementById("time_var").innerHTML = Date.now()
     document.addEventListener("keydown", handle_response, false);
 }
 
 async function handle_response(e) {
-    var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
-    var str_frame = "timeframe" + Math.max(break_idx, 1)
-    document.getElementById("item_displayed_cat").src = "stimuli/mask.png"
-    var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
-    var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
-    var keyCode = e.keyCode;
-    if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
+    if ((e.keyCode >= 49 && e.keyCode <= 51) || (e.keyCode >= 97 && e.keyCode <= 99)) {
+        var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
+        var str_frame = "timeframe" + Math.max(break_idx, 1)
+        document.getElementById("item_displayed_cat").src = "stimuli/mask.png"
+        var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
+        var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
+        var keyCode = e.keyCode;
         document.getElementById("key_id").innerHTML = keyCode;
         rt = Date.now() - document.getElementById("time_var").innerHTML;
         document.getElementById("rt").innerHTML = rt;
-    }
-    document.removeEventListener("keydown", handle_response, false);
-    cat_id_response = keycode_to_integer(keyCode)
-    write_cat_results(i, cat_id_response)
 
-    if (condition_id == 3 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
-        var str = new String("Your response was: " + cat_id_response);
-        document.getElementById("feedback_cat_true").innerHTML = str
-        await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
-        document.getElementById("feedback_cat_true").innerHTML = ""
-    } else if (condition_id == 1 | condition_id == 2 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
-        if (cat_id_response == category_id[i]) {
-            document.getElementById("feedback_cat_true").innerHTML = "Well Done: " + category_name[category_id[i] - 1] + "!"
+        document.removeEventListener("keydown", handle_response, false);
+        cat_id_response = keycode_to_integer(keyCode)
+        write_cat_results(i, cat_id_response)
+
+        if (condition_id == 3 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
+            var str = new String("Your response was: " + cat_id_response);
+            document.getElementById("feedback_cat_true").innerHTML = str
             await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
             document.getElementById("feedback_cat_true").innerHTML = ""
-        } else {
-            var str = new String("Category would have been: " + category_name[category_id[i] - 1]);
-            document.getElementById("feedback_cat_wrong").innerHTML = str
-            await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_wrong"])
+        } else if (condition_id == 1 | condition_id == 2 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
+            if (cat_id_response == category_id[i]) {
+                document.getElementById("feedback_cat_true").innerHTML = "Well Done: " + category_name[category_id[i] - 1] + "!"
+                await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
+                document.getElementById("feedback_cat_true").innerHTML = ""
+            } else {
+                var str = new String("Category would have been: " + category_name[category_id[i] - 1]);
+                document.getElementById("feedback_cat_wrong").innerHTML = str
+                await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_wrong"])
+                document.getElementById("feedback_cat_wrong").innerHTML = ""
+            }
+        }
+        if (rt > setup_expt["display_info"]["categorization"]["deadlinetime"]) {
+            document.getElementById("feedback_cat_wrong").innerHTML = "Too slow, please respond faster!"
+            await sleep(1000)
             document.getElementById("feedback_cat_wrong").innerHTML = ""
         }
-    }
-    if (rt > setup_expt["display_info"]["categorization"]["deadlinetime"]) {
-        document.getElementById("feedback_cat_wrong").innerHTML = "Too slow, please respond faster!"
-        await sleep(1000)
-        document.getElementById("feedback_cat_wrong").innerHTML = ""
-    }
-    //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
-    if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 2) {
-        document.getElementById("cat_continued").innerHTML = 0
+        //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
+        if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 2) {
+            document.getElementById("cat_continued").innerHTML = 0
+        }
+
+        document.getElementById("trial_nr_cat").innerHTML = i + 1
+        if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
+            document.getElementById("part_reproduction").innerHTML = 2;
+            clickStart("page9", "page11")
+        } else if (i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
+            clickStart("page9", "page10b")
+        } else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0) {
+            document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
+            var break_idx = document.getElementById("break_idx").innerHTML
+            trial_nr = i + 1
+            document.getElementById("progress").innerHTML = "Your Categorization Progress: " + trial_nr +
+                " / " + setup_expt["experiment_info"]["n_trials_categorization_total"]
+            clickStart("page9", "page10")
+            str_countdown = "#time" + break_idx
+            str_frame = "timeframe" + break_idx
+            document.getElementById(str_frame).style.display = "block"
+            var seconds = 5;
+            var display = document.querySelector(str_countdown);
+            startTimer(seconds, display);
+
+            var timeout = setTimeout(function () {
+                if (document.getElementById("cat_continued").innerHTML == 0) {
+                    clickStart("page10", 'page9');
+                    next_item_cat("page9")
+                    document.getElementById("cat_continued").innerHTML = 1
+                    document.getElementById(str_frame).style.display = "none"
+                }
+            }, 6000);
+        } else {
+            next_item_cat('page9');
+
+            document.getElementById(str_frame).style.display = "none"
+        }
+
     }
 
-    document.getElementById("trial_nr_cat").innerHTML = i + 1
-    if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
-        document.getElementById("part_reproduction").innerHTML = 2;
-        clickStart("page9", "page11")
-    } else if (i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
-        clickStart("page9", "page10b")
-    } else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0) {
-        document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
-        var break_idx = document.getElementById("break_idx").innerHTML
-        trial_nr = i + 1
-        document.getElementById("progress").innerHTML = "Your Categorization Progress: " + trial_nr +
-            " / " + setup_expt["experiment_info"]["n_trials_categorization_total"]
-        clickStart("page9", "page10")
-        str_countdown = "#time" + break_idx
-        str_frame = "timeframe" + break_idx
-        document.getElementById(str_frame).style.display = "block"
-        var seconds = 5;
-        var display = document.querySelector(str_countdown);
-        startTimer(seconds, display);
-
-        var timeout = setTimeout(function () {
-            if (document.getElementById("cat_continued").innerHTML == 0) {
-                clickStart("page10", 'page9');
-                next_item_cat("page9")
-                document.getElementById("cat_continued").innerHTML = 1
-                document.getElementById(str_frame).style.display = "none"
-            }
-        }, 6000);
-    } else {
-        next_item_cat('page9');
-
-        document.getElementById(str_frame).style.display = "none"
-    }
 }
 
 function startTimer(duration, display) {
@@ -662,8 +662,7 @@ function set_category_instruction(n_categories) {
     "1" on your keyboard corresponds to the non-target category.<br>
     "2" on your keyboard corresponds to the "Bukil" category.<br>
     "3" corresponds to the "Venak" category.<br>
-    Use the enter key on your keyboard to start the next trial while the feedback message is
-    displayed to you.`
+    The next trial starts immediately after the feedback message has been displayed to you.`
     const text_2 = `There is one target category and one non-target category. The target category is called <b>Bukil</b>.<br>    
     In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
         ` monsters only from the Bukil category to get familiar with it.<br>
@@ -676,8 +675,7 @@ function set_category_instruction(n_categories) {
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
     "2" on your keyboard corresponds to the "Bukil" category.<br>
-    Use the enter key on your keyboard to start the next trial while the feedback message is
-    displayed to you.`
+    The next trial starts immediately after the feedback message has been displayed to you.`
     if (n_categories == 2) {
         text = text_2
     } else if (n_categories == 3) {
@@ -735,13 +733,10 @@ var total_trials2;
 function set_main_vars(condition_id) {
     setup_expt = setup_experiment(condition_id);
     instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
-    console.log("in set_main_vars n_categories is set to: " + setup_expt["experiment_info"]["n_categories"])
-    console.log(instruction_category)
 
     var x = document.getElementById("page7");
     x.querySelector(".category_instruction").innerHTML = instruction_category;;
 
-    //document.getElementById("category_instruction").innerHTML = instruction_category;
     (() => {
         document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
     })();
