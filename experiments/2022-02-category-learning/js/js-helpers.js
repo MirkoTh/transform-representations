@@ -313,6 +313,8 @@ async function log_response(rt, i, part, stimulus_ids) {
         x2_response: document.getElementById("myRange2").value,
         rt: rt
     }
+    var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response)))
+    document.getElementById("cr_deviation_cum").innerHTML = parseInt(document.getElementById("cr_deviation_cum").innerHTML) + deviation
     document.getElementById("myRange1").value = 50;
     document.getElementById("demo1").innerHTML = 50;
     document.getElementById("myRange2").value = 50;
@@ -347,6 +349,7 @@ async function my_link() {
         clickStart("page4", "page6");
     } else if (i == total_trials2 & part == 2) { //0
         log_response(rt, i, part, stimulus_ids);
+        calculate_bonus()
         clickStart("page4", "page13");
     } else {
         log_response(rt, i, part, stimulus_ids);
@@ -539,6 +542,9 @@ function write_cat_results(i, r) {
         response: r,
         accuracy: accuracy,
         rt: document.getElementById("rt").innerHTML
+    }
+    if (accuracy === true) {
+        document.getElementById("cat_accuracy_cum").innerHTML = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) + 1
     }
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cat")
@@ -752,3 +758,35 @@ function set_main_vars(condition_id) {
     total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
 }
 
+function calculate_bonus() {
+    // bonus continuous reproduction
+    const bonus_cr_max = 2.05
+    var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
+    var avg_deviation = parseInt(document.getElementById("cr_deviation_cum")) / n_trials_reproduction
+    var coef_bonus = Math.min(51, avg_deviation)
+    var above_chance = 51 - coef_bonus
+    var prop_bonus = above_chance / 46 // anything closer than 5 from the target counts as "perfect"
+    var bonus_cr = Math.round((prop_bonus * bonus_cr_max * 100) / 100)
+
+    // bonus categorization
+    var bonus_cat;
+    if (setup_expt["experiment_info"]["condition_id"] == 3) {
+        bonus_cat = 1.05
+    } else {
+        const bonus_cat_max = 2.05
+        var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
+        var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
+        bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100) / 100)
+    }
+
+    var bonus_total = bonus_cr + bonus_cat;
+    var x = document.getElementById("page13");
+    x.querySelector(".total_bonus").innerHTML = bonus_total;
+    x.querySelector(".cr_bonus").innerHTML = bonus_cr;
+    x.querySelector(".cat_bonus").innerHTML = bonus_cat;
+
+}
+
+function redirect_to_prolific() {
+    window.location.href = "https://app.prolific.co/submissions/complete?cc=240D34C0";
+}
