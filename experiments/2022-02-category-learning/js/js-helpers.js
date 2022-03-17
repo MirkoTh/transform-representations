@@ -20,10 +20,10 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 144, //5, //144, //
-        n_trials_reproduction_2: 144, //5, //144, //
+        n_trials_reproduction_1: 144, //5, //144, // 100
+        n_trials_reproduction_2: 144, //5, //144, // 100
         n_trials_categorization_train_target: 40,
-        n_trials_categorization: 180, //500, //
+        n_trials_categorization: 180, //500, // 380
         n_trials_categorization_total: 40 + 180,
         condition_id: condition_id,
         n_categories: n_categories,
@@ -43,6 +43,7 @@ function setup_experiment(condition_id) {
     var cat3_stim_ids_cat2 = [17, 18, 19, 29, 30, 31, 32, 41, 42, 43, 44, 45, 53, 54, 55, 56, 57, 58, 66, 67, 68, 69, 70, 79, 80, 81, 82, 92, 93, 94]
     var cat3_stim_ids_cat3 = [49, 50, 51, 61, 62, 63, 64, 73, 74, 75, 76, 77, 85, 86, 87, 88, 89, 90, 98, 99, 100, 101, 102, 111, 112, 113, 114, 124, 125, 126]
     var stim_ids_cats_tt = []
+    var stim_ids_cat_nt = []
     var cat3_stim_ids_all = []
     cat2_stim_ids_cat2 = append_randomized_arrays(cat2_stim_ids_cat2, 1)
     cat2_stim_ids_cat2.length = experiment_info["n_trials_categorization_train_target"]
@@ -84,16 +85,17 @@ function setup_experiment(condition_id) {
 
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
-        stim_ids_cats_tt = cat2_stim_ids_cat2
+        stim_ids_cats_tt = append_randomized_arrays(cat2_stim_ids_cat2, 1)
         //set_category_instruction(experiment_info["n_categories"])
     } else if (experiment_info["n_categories"] == 3) {
         stimulus_info["category_id"] = cat3map_val
-        stim_ids_cats_tt = cat3_stim_ids_all
+        stim_ids_cats_tt = append_randomized_arrays(cat3_stim_ids_all, 1)
         //set_category_instruction()
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
         stim_ids_cats_tt = []
     }
+
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
     for (let x1 of stimulus_info["x1"]) {
@@ -103,8 +105,12 @@ function setup_experiment(condition_id) {
             stimulus_info["x1_x2"][i] = [(x1 + 1) * 8 - 2, (x2 + 1) * 8 - 2]
             stimulus_info["stimulus_id"][i] = i
             i += 1
+            if (!stim_ids_cats_tt.includes(i)) {
+                stim_ids_cat_nt.push(i)
+            }
         }
     }
+    stim_ids_cat_nt = append_randomized_arrays(stim_ids_cat_nt, 1)
 
     // trial info
     const trial_info = {}
@@ -122,9 +128,18 @@ function setup_experiment(condition_id) {
     trial_info["stimulus_id_rp"] = append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_practice)
     trial_info["stimulus_id_r1"] = append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
     trial_info["stimulus_id_r2"] = append_randomized_arrays(trial_info["stimulus_id_r2"], n_reps_reproduction_2)
+
+    // the following can be un-commented if number of items of reproduction task is < n different stimuli
+    /* stim_ids_cats_tt_cr1 = append_randomized_arrays(stim_ids_cats_tt, 1)
+    stim_ids_cat_nt_cr1 = append_randomized_arrays(stim_ids_cat_nt_cr1, 1)
+    trial_info["stimulus_id_r1"] = stim_ids_cats_tt_cr1.concat(stim_ids_cat_nt_cr1)
+    stim_ids_cats_tt_cr2 = append_randomized_arrays(stim_ids_cats_tt, 1)
+    stim_ids_cat_nt_cr2 = append_randomized_arrays(stim_ids_cat_nt_cr1, 1)
+    trial_info["stimulus_id_r2"] = stim_ids_cats_tt_cr2.concat(stim_ids_cat_nt_cr2)
+
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
-    trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
+    trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"] */
 
     // stimulus information
     // create an equal proportion of items from the categories
@@ -760,7 +775,7 @@ function set_main_vars(condition_id) {
 
 function calculate_bonus() {
     // bonus continuous reproduction
-    const bonus_cr_max = 2.05
+    const bonus_cr_max = 2.35
     var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
     var avg_deviation = parseInt(document.getElementById("cr_deviation_cum")) / n_trials_reproduction
     var coef_bonus = Math.min(51, avg_deviation)
@@ -771,9 +786,9 @@ function calculate_bonus() {
     // bonus categorization
     var bonus_cat;
     if (setup_expt["experiment_info"]["condition_id"] == 3) {
-        bonus_cat = 1.05
+        bonus_cat = 1.20
     } else {
-        const bonus_cat_max = 2.05
+        const bonus_cat_max = 2.35
         var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
         var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
         bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100) / 100)
