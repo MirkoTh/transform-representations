@@ -102,7 +102,7 @@ function setup_experiment(condition_id) {
         for (let x2 of stimulus_info["x2"]) {
             // 10x10 grid of stimuli placed within finer grid of 100x100
             // edge space of 6 units is 
-            stimulus_info["x1_x2"][i] = [(x1 + 1) * 8 - 2, (x2 + 1) * 8 - 2]
+            stimulus_info["x1_x2"][i] = [(x1 + 1) * 9 + 1, (x2 + 1) * 9 + 1]
             stimulus_info["stimulus_id"][i] = i
             i += 1
             if (!stim_ids_cats_tt.includes(i)) {
