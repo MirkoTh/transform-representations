@@ -16,12 +16,12 @@ function setup_experiment(condition_id) {
 
     // experiment information
     const experiment_info = {
-        n_stimuli: 144,
+        n_stimuli: 100,
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 144, //5, //144, // 100
-        n_trials_reproduction_2: 144, //5, //144, // 100
+        n_trials_reproduction_1: 100, //5, //100, // 100
+        n_trials_reproduction_2: 100, //5, //100, // 100
         n_trials_categorization_train_target: 40,
         n_trials_categorization: 180, //500, // 380
         n_trials_categorization_total: 40 + 180,
@@ -36,12 +36,12 @@ function setup_experiment(condition_id) {
     // select first n_only_target_cat or n_only_target_cat/2 and append them to category_id, category_name, category_stimulus_id
 
     // read mapping from x1 and x2 values to categories
-    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 3, 3, 3, 1, 2, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 3, 1, 2, 2, 2, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
-    var cat2_stim_ids_cat2 = [26, 27, 28, 38, 39, 40, 41, 42, 50, 51, 52, 53, 54, 55, 63, 64, 65, 66, 67, 68, 75, 76, 77, 78, 79, 80, 88, 89, 90, 91, 92, 93, 101, 102, 103, 104, 105, 115, 116, 117]
-    var cat3_stim_ids_cat2 = [17, 18, 19, 29, 30, 31, 32, 41, 42, 43, 44, 45, 53, 54, 55, 56, 57, 58, 66, 67, 68, 69, 70, 79, 80, 81, 82, 92, 93, 94]
-    var cat3_stim_ids_cat3 = [49, 50, 51, 61, 62, 63, 64, 73, 74, 75, 76, 77, 85, 86, 87, 88, 89, 90, 98, 99, 100, 101, 102, 111, 112, 113, 114, 124, 125, 126]
+    var cat2_stim_ids_cat2 = [22, 23, 24, 32, 33, 34, 35, 42, 43, 44, 45, 46, 53, 54, 55, 56, 57, 64, 65, 66, 67, 75, 76, 77]
+    var cat3_stim_ids_cat2 = [14, 15, 16, 24, 25, 26, 27, 34, 35, 36, 37, 38, 45, 46, 47, 48, 56, 57, 58]
+    var cat3_stim_ids_cat3 = [41, 42, 43, 51, 52, 53, 54, 61, 62, 63, 64, 65, 72, 73, 74, 75, 83, 84, 85]
     var stim_ids_cats_tt = []
     var stim_ids_cat_nt = []
     var cat3_stim_ids_all = []
@@ -73,7 +73,7 @@ function setup_experiment(condition_id) {
 
 
 
-    const n_x_steps = 12;
+    const n_x_steps = 10;
     var stimulus_info = {
         x1: Array(n_x_steps).fill().map((element, index) => index),
         x2: Array(n_x_steps).fill().map((element, index) => index),
@@ -100,7 +100,7 @@ function setup_experiment(condition_id) {
     var i = 0;
     for (let x1 of stimulus_info["x1"]) {
         for (let x2 of stimulus_info["x2"]) {
-            // 12x12 grid of stimuli placed within finer grid of 100x100
+            // 10x10 grid of stimuli placed within finer grid of 100x100
             // edge space of 6 units is 
             stimulus_info["x1_x2"][i] = [(x1 + 1) * 8 - 2, (x2 + 1) * 8 - 2]
             stimulus_info["stimulus_id"][i] = i
