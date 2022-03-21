@@ -10,7 +10,7 @@ walk(files, source)
 
 # Simulation Parameters ---------------------------------------------------
 
-n_stimuli <- 144L
+n_stimuli <- 100L
 nruns <- 10000
 
 # constant
@@ -54,19 +54,30 @@ plot_conditions <- function(tbl) {
       y = "Fill of Belly"
     )
 }
+x11()
 plot_conditions(l_stimuli[[2]])
+x11()
 plot_conditions(l_stimuli[[1]])
 
 save_category_coords <- function(x){
   max_category <- max(as.numeric(as.character(x[[1]]$category)))
   x[[1]] <- x[[1]] %>% 
     mutate(
-      category = as.numeric(as.character(category))
+      category = as.numeric(as.character(category)),
+      stim_id = stim_id - 1
     )
-  x[[1]][, c("x1", "x2", "category")] %>% 
+  x[[1]][, c("stim_id", "x1", "x2", "category")] %>% 
     as.list() %>%
     jsonlite::toJSON(dataframe = "values") %>%
     write_json(str_c("experiments/2022-02-category-learning/category-mapping-", max_category, ".json"))
+  for (i in 2:max_category) {
+    x[[1]][, c("stim_id", "category")] %>% 
+      filter(category == i) %>%
+      select(-category) %>%
+      as.list() %>%
+      jsonlite::toJSON(dataframe = "values") %>%
+      write_json(str_c("experiments/2022-02-category-learning/category-exemplars-", max_category, "-", i, ".json"))
+      }
 }
 
 walk(l_stimuli, save_category_coords)
