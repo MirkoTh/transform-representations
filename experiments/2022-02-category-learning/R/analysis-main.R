@@ -6,6 +6,8 @@ library(grid)
 library(gridExtra)
 library(ggExtra)
 library(docstring)
+library(rutils)
+
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -16,9 +18,9 @@ files <- c(
 walk(files, source)
 
 l_tbl_data <- load_data()
-tbl_cr <- l_tbl_data[[1]] %>% filter(session %in% c(1, 3))
+tbl_cr <- l_tbl_data[[1]] %>% filter(session %in% c(1, 2))
 tbl_cat <- l_tbl_data[[2]]
-tbl_conditions <- tbl_cat %>% group_by(participant_id) %>% summarise(n_categories = max(cat_true)) %>% ungroup()
+tbl_conditions <- tbl_cat %>% group_by(participant_id) %>% summarise(n_categories = max(as.numeric(as.character(cat_true)))) %>% ungroup()
 tbl_cr <- tbl_cr %>% left_join(tbl_conditions, by = c("participant_id"))
 # add deviation variables
 tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
@@ -28,7 +30,7 @@ tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
 # Overview Plots ----------------------------------------------------------
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
-pl_marginal_after <- plot_marginals_one_session(3, tbl_cr)
+pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
 
 # heat map of errors over 2d space
 pl_heamaps <- plot_2d_binned_heatmaps(tbl_cr, 4)
@@ -57,8 +59,19 @@ ggplot() +
   )
 
 
+
+# Categorization ----------------------------------------------------------
+
+
 tbl_cat <- tbl_cat %>%
-  mutate(trial_id_binned = as.factor(ceiling((trial_id + 1) / 20)))
+  filter(trial_id >= 40) %>%
+  group_by(cat_true) %>%
+  arrange(trial_id, participant_id) %>%
+  mutate(
+    trial_id_by_condition = row_number(trial_id)) %>%
+  ungroup() %>% mutate(
+    trial_id_binned = as.factor(ceiling((trial_id_by_condition) / 10))
+    )
 tbl_cat_agg <- tbl_cat %>% group_by(participant_id, cat_true, trial_id_binned) %>%
   summarize(
     accuracy_avg = mean(accuracy),
@@ -77,3 +90,32 @@ ggplot() +
 
 
 
+# Similarity Judgments ----------------------------------------------------
+
+tbl_cat <- tbl_cat %>%
+  mutate(
+    x1_prev_true = lag(x1_true, 1),
+    x2_prev_true = lag(x2_true, 1),
+    distance_euclidian = sqrt((x1_true - x1_prev_true)^2 + (x2_true - x2_prev_true)^2)
+  ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
+n_bins_distance <- 10
+bins_distance <- c(seq(-1, max(tbl_cat$distance_euclidian), n_bins_distance - 1), Inf)
+tbl_cat$distance_binned <- cut(tbl_cat$distance_euclidian, bins_distance, labels = FALSE)
+tbl_cat$distance_binned %>% unique()
+
+tbl_cat_agg <- tbl_cat %>% 
+  rutils::grouped_agg(c(distance_binned), c(response, rt))
+
+ggplot(tbl_cat_agg, aes(distance_binned, mean_response)) +
+  geom_errorbar(aes(
+    distance_binned, 
+    ymin = mean_response - 1.96 * se_response, 
+    ymax = mean_response + 1.96 * se_response
+    )) + geom_point(size = 3, color = "white") +
+  geom_point() +
+  geom_smooth() + 
+  theme_bw() +
+  labs(
+    x = "Distance Binned",
+    y = "Average Similarity (Range: 1 - 4)"
+  )
