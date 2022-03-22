@@ -20,11 +20,11 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 5, //100, //100, // 100
-        n_trials_reproduction_2: 2, //100, //100, // 100
-        n_trials_categorization_train_target: 1,
-        n_trials_categorization: 1, //500, // 380
-        n_trials_categorization_total: 1 + 1,
+        n_trials_reproduction_1: 100, //5, //100, // 100
+        n_trials_reproduction_2: 100, //2, //100, // 100
+        n_trials_categorization_train_target: 40,
+        n_trials_categorization: 400, //500, // 380
+        n_trials_categorization_total: 40 + 400,
         condition_id: condition_id,
         n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
