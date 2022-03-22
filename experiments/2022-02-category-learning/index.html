@@ -32,11 +32,11 @@
                 height: 95%;
                 list-style-position: inside;
                 display: block;
-                font-size: 150%
+                font-size: 120%
             }
         </style>
 
-        <div id="page0">
+        <div id="page0" style="display:block">
 
             <h1>Welcome to the study</h1>
 
@@ -231,7 +231,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 <br>
             </ol>
             <button type="button" name="bbutton" ; onclick="clickStart('page2', 'page1')" ;> Back </button>
-            <button type="button" name="button" ; onclick="clickStart('page2', 'page2c')" ;> Check Comprehension
+            <button type="button" name="button" ; onclick="clickStart('page2', 'page6')" ;> Check Comprehension
             </button>
 
         </div>
@@ -576,6 +576,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                         top: 500px;
                         left: 46%;
                         width: 150px;
+                        height: 30px;
                     }
 
                     .present_stimulus {
@@ -614,12 +615,14 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
 
             <div class="slidecontainer1">
                 <input type="range" min="1" max="100" value="50" class="slider" id="myRange1">
-                <p style="text-align: center">Head : <span id="demo1"></span></p>
+                <!-- <p style="text-align: center">Head : <span id="demo1"></span></p> -->
+                <p style="text-align: center">Head <span id="demo1"></span></p>
             </div>
 
             <div class="slidecontainer2">
                 <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
-                <p style="text-align: center">Belly: <span id="demo2"></span></p>
+                <!-- <p style="text-align: center">Belly: <span id="demo2"></span></p> -->
+                <p style="text-align: center">Belly<span id="demo2"></span></p>
             </div>
 
             <!--let the participants adjust the two sliders and show them what monster results-->

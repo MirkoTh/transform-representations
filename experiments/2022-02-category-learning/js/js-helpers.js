@@ -21,10 +21,10 @@ function setup_experiment(condition_id) {
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
         n_trials_reproduction_1: 5, //100, //100, // 100
-        n_trials_reproduction_2: 5, //100, //100, // 100
-        n_trials_categorization_train_target: 10,
-        n_trials_categorization: 20, //500, // 380
-        n_trials_categorization_total: 10 + 20,
+        n_trials_reproduction_2: 2, //100, //100, // 100
+        n_trials_categorization_train_target: 1,
+        n_trials_categorization: 1, //500, // 380
+        n_trials_categorization_total: 1 + 1,
         condition_id: condition_id,
         n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
@@ -259,17 +259,17 @@ async function replace_monster(slider1, slider2) {
 }
 async function slide_adjust() {
     var slider1 = document.getElementById("myRange1");
-    var output1 = document.getElementById("demo1");
-    output1.innerHTML = slider1.value;
+    //var output1 = document.getElementById("demo1");
+    //output1.innerHTML = slider1.value;
     slider1.oninput = function () {
-        output1.innerHTML = this.value;
+        //output1.innerHTML = this.value;
         replace_monster(slider1, slider2)
     }
     var slider2 = document.getElementById("myRange2");
-    var output2 = document.getElementById("demo2");
-    output2.innerHTML = slider2.value;
+    //var output2 = document.getElementById("demo2");
+    //output2.innerHTML = slider2.value;
     slider2.oninput = function () {
-        output2.innerHTML = this.value;
+        //output2.innerHTML = this.value;
         replace_monster(slider1, slider2)
     }
 }
@@ -318,22 +318,26 @@ async function next_item_cr(old, i) {
 }
 
 async function log_response(rt, i, part, stimulus_ids) {
+    var x1_true = parseFloat(setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][0])
+    var x2_true = parseFloat(setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][1])
+    var x1_response = parseFloat(document.getElementById("myRange1").value)
+    var x2_response = parseFloat(document.getElementById("myRange2").value)
     var data_store = {
         participant_id: participant_id,
         session: part,
         trial_id: i,
-        x1_true: setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][0],
-        x2_true: setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][1],
-        x1_response: document.getElementById("myRange1").value,
-        x2_response: document.getElementById("myRange2").value,
+        x1_true: x1_true,
+        x2_true: x2_true,
+        x1_response: x1_response,
+        x2_response: x2_response,
         rt: rt
     }
-    var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response)))
-    document.getElementById("cr_deviation_cum").innerHTML = parseInt(document.getElementById("cr_deviation_cum").innerHTML) + deviation
+    var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response), 2))
+    document.getElementById("cr_deviation_cum").innerHTML = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) + deviation
     document.getElementById("myRange1").value = 50;
-    document.getElementById("demo1").innerHTML = 50;
+    //document.getElementById("demo1").innerHTML = 50;
     document.getElementById("myRange2").value = 50;
-    document.getElementById("demo2").innerHTML = 50;
+    //document.getElementById("demo2").innerHTML = 50;
     document.getElementById("selected_monster").src = "stimuli/stimulus[50,50].png"
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cr")
@@ -421,7 +425,10 @@ async function next_item_cat(old, i) {
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
     mask_path = "stimuli/mask.png"
-
+    console.log(
+        "in next_item_cat function; stim_id is: " + current_stim_id +
+        "; stimulus_val is: " + current_stim
+    )
     // present stimuli and mask
     document.getElementById("item_displayed_cat").src = mask_path
     await sleep(setup_expt["display_info"]["categorization"]["iti"])
@@ -433,6 +440,7 @@ async function next_item_cat(old, i) {
 }
 
 async function handle_response(e) {
+    var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (
         condition_id == 3 & (e.keyCode >= 49 && e.keyCode <= 52) ||
         condition_id == 3 & (e.keyCode >= 97 && e.keyCode <= 100) ||
@@ -444,7 +452,9 @@ async function handle_response(e) {
         var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
         var str_frame = "timeframe" + Math.max(break_idx, 1)
         document.getElementById("item_displayed_cat").src = "stimuli/mask.png"
-        var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
+
+        console.log("condition_id is: " + condition_id)
+        console.log("keyCode is: " + e.keyCode)
         var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
         var keyCode = e.keyCode;
         document.getElementById("key_id").innerHTML = keyCode;
@@ -784,11 +794,11 @@ function calculate_bonus() {
     // bonus continuous reproduction
     const bonus_cr_max = 2.35
     var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
-    var avg_deviation = parseInt(document.getElementById("cr_deviation_cum")) / n_trials_reproduction
+    var avg_deviation = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) / n_trials_reproduction
     var coef_bonus = Math.min(51, avg_deviation)
     var above_chance = 51 - coef_bonus
     var prop_bonus = above_chance / 46 // anything closer than 5 from the target counts as "perfect"
-    var bonus_cr = Math.round((prop_bonus * bonus_cr_max * 100) / 100)
+    var bonus_cr = Math.round((prop_bonus * bonus_cr_max * 100)) / 100
 
     // bonus categorization
     var bonus_cat;
@@ -798,14 +808,18 @@ function calculate_bonus() {
         const bonus_cat_max = 2.35
         var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
         var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
-        bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100) / 100)
+        bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
     }
+    console.log("bonus_cat is: " + bonus_cat)
 
-    var bonus_total = bonus_cr + bonus_cat;
-    var x = document.getElementById("page13");
-    x.querySelector(".total_bonus").innerHTML = bonus_total;
-    x.querySelector(".cr_bonus").innerHTML = bonus_cr;
-    x.querySelector(".cat_bonus").innerHTML = bonus_cat;
+    var bonus_total = Math.round((bonus_cr + bonus_cat) * 100) / 100;
+    console.log("bonus_total is: " + bonus_total);
+
+    (() => {
+        document.getElementById("total_bonus").innerHTML = bonus_total;
+        document.getElementById("cr_bonus").innerHTML = bonus_cr;
+        document.getElementById("cat_bonus").innerHTML = bonus_cat;
+    })();
 
 }
 
