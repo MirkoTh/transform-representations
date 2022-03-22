@@ -433,7 +433,14 @@ async function next_item_cat(old, i) {
 }
 
 async function handle_response(e) {
-    if ((e.keyCode >= 49 && e.keyCode <= 51) || (e.keyCode >= 97 && e.keyCode <= 99)) {
+    if (
+        condition_id == 3 & (e.keyCode >= 49 && e.keyCode <= 52) ||
+        condition_id == 3 & (e.keyCode >= 97 && e.keyCode <= 100) ||
+        condition_id == 2 & (e.keyCode >= 49 && e.keyCode <= 51) ||
+        condition_id == 2 & (e.keyCode >= 97 && e.keyCode <= 99) ||
+        condition_id == 1 & (e.keyCode >= 49 && e.keyCode <= 50) ||
+        condition_id == 1 & (e.keyCode >= 97 && e.keyCode <= 98)
+    ) {
         var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
         var str_frame = "timeframe" + Math.max(break_idx, 1)
         document.getElementById("item_displayed_cat").src = "stimuli/mask.png"
@@ -479,7 +486,7 @@ async function handle_response(e) {
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
             document.getElementById("part_reproduction").innerHTML = 2;
             clickStart("page9", "page11")
-        } else if (i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
+        } else if (condition_id != 3 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
             clickStart("page9", "page10b")
         } else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0) {
             document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
