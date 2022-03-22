@@ -15,7 +15,8 @@ fix_data_types <- function(tbl, fs, ns) {
   tbl[, ns_available] <- map(tbl[, ns_available], as.numeric)
   return(tbl)
 }
-
+txt_ex <- "this is a bad example }how can you add something? Especially, when there is several examples of the thing } to be replaced?"
+str_replace_all(txt_ex, "\\}", "\\},")
 load_data <- function() {
   #' load continuous reproduction ("cr") and category learning ("cat") data
   #' 
@@ -24,18 +25,20 @@ load_data <- function() {
   #' @return a list with the two tibbles
   #' 
   # read individual performance
-  js_cr_txt <- read_file("experiments/2022-02-category-learning/data/cr-participant-2.json")
-  js_cr_txt <- str_c("[", str_replace(js_cr_txt, ",$", ""), "]")
-  tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble() %>% filter(session %in% c(1, 3))
+  js_cr_txt <- read_file("experiments/2022-02-category-learning/data/pilot-alex-cr-participant-60.json")
+  js_cr_txt <-str_c("[", str_replace_all(js_cr_txt, "\\}", "\\},"), "]")
+  js_cr_txt <- str_replace(js_cr_txt, ",\n]", "]")
+  tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble() %>% filter(session %in% c(1, 2))
   
   
   # only pilot data have to be corrected currently...
   tbl_cr$session <- as.numeric(tbl_cr$session)
-  tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
+  #tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
   
   
-  js_cat_txt <- read_file("experiments/2022-02-category-learning/data/cat-participant-2.json")
-  js_cat_txt <- str_c("[", str_replace(js_cat_txt, ",$", ""), "]")
+  js_cat_txt <- read_file("experiments/2022-02-category-learning/data/pilot-mirko-cat-participant-51.json")
+  js_cat_txt <-str_c("[", str_replace_all(js_cat_txt, "\\}", "\\},"), "]")
+  js_cat_txt <- str_replace(js_cat_txt, ",\n]", "]")
   tbl_cat <- jsonlite::fromJSON(js_cat_txt) %>% as_tibble()
   
   factors <- c("participant_id", "session", "cat_true")
@@ -133,7 +136,7 @@ plot_1d_marginals <- function(tbl) {
   #' @return the plot
   #' 
   # read individual performance
-  tbl %>% filter(session %in% c(1, 3)) %>%
+  tbl %>% filter(session %in% c(1, 2)) %>%
     pivot_longer(c(x1_deviation, x2_deviation), names_to = "var_deviation", values_to = "val_deviation") %>%
     mutate(
       var_deviation = factor(var_deviation, labels = c("Head Spikiness", "Belly Fill")),
@@ -165,17 +168,17 @@ category_centers <- function() {
   x2 <- seq(0, 11, by = 1)
   tbl_tmp <- crossing(x1, x2)
   tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 144, by = 1))
-  l_ellipses <- map(c(2, 4), create_ellipse_categories, tbl = tbl_tmp)
+  l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
   cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
-  cat_boundaries_4 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
+  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
   
   category_means <- function(tbl) {
     tbl %>% group_by(category) %>%
       summarize(x_mn = mean(x_rotated), y_mn = mean(y_rotated)) %>% ungroup()
   }
   cat_2_mns <- category_means(cat_boundaries_2)
-  cat_4_mns <- category_means(cat_boundaries_4)
-  l_cat_mns <- list(cat_2_mns, cat_4_mns)
+  cat_3_mns <- category_means(cat_boundaries_3)
+  l_cat_mns <- list(cat_2_mns, cat_3_mns)
   return(list(l_cat_mns, l_ellipses))
 }
 
@@ -210,20 +213,20 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   # colnames(tbl_d2) <- c("dmin")
   
   # here, we first have to compute what the closest center of a given stimulus is and then index using that id
-  tbl_d4_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["4"]], is_response = FALSE) %>% 
-    unlist() %>% matrix(ncol = 3) %>% as.data.frame() %>% tibble()
-  colnames(tbl_d4_true) <- c("d1", "d2", "d3")
-  tbl_d4_response <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["4"]], is_response = TRUE) %>% 
-    unlist() %>% matrix(ncol = 3) %>% as.data.frame() %>% tibble()
-  colnames(tbl_d4_response) <- seq(1:3)
-  col_idx_closest <- apply(tbl_d4_true, 1, function(x) which(x == min(x)))
-  tbl_d4_response$col_idx_closest <- col_idx_closest
-  tbl_d4_response$d_closest <- apply(tbl_d4_response, 1, function(x) x[1:3][x[4]])
-  d_closest <- as_vector(tbl_d4_response$d_closest) %>% unname()
+  tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
+    unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d3_true) <- c("d1", "d2")
+  tbl_d3_response <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = TRUE) %>% 
+    unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d3_response) <- seq(1:2)
+  col_idx_closest <- apply(tbl_d3_true, 1, function(x) which(x == min(x)))
+  tbl_d3_response$col_idx_closest <- col_idx_closest
+  tbl_d3_response$d_closest <- apply(tbl_d3_response, 1, function(x) x[1:2][x[3]])
+  d_closest <- as_vector(tbl_d3_response$d_closest) %>% unname()
   
-  l_tbl_cr[["4"]] <- l_tbl_cr[["4"]] %>% cbind(d_closest) %>%
+  l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
     left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
-  tbl_cr <- rbind(l_tbl_cr[["4"]], l_tbl_cr[["2"]])
+  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]])
   return(tbl_cr)
 }
