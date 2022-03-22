@@ -425,10 +425,6 @@ async function next_item_cat(old, i) {
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
     mask_path = "stimuli/mask.png"
-    console.log(
-        "in next_item_cat function; stim_id is: " + current_stim_id +
-        "; stimulus_val is: " + current_stim
-    )
     // present stimuli and mask
     document.getElementById("item_displayed_cat").src = mask_path
     await sleep(setup_expt["display_info"]["categorization"]["iti"])
@@ -453,8 +449,6 @@ async function handle_response(e) {
         var str_frame = "timeframe" + Math.max(break_idx, 1)
         document.getElementById("item_displayed_cat").src = "stimuli/mask.png"
 
-        console.log("condition_id is: " + condition_id)
-        console.log("keyCode is: " + e.keyCode)
         var i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
         var keyCode = e.keyCode;
         document.getElementById("key_id").innerHTML = keyCode;
@@ -789,7 +783,10 @@ function set_main_vars(condition_id) {
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
     total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
 }
-
+function saveBonus(filedata) {
+    var filename = "./data/bonus.json";
+    $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
+}
 function calculate_bonus() {
     // bonus continuous reproduction
     const bonus_cr_max = 2.35
@@ -810,10 +807,17 @@ function calculate_bonus() {
         var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
         bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
     }
-    console.log("bonus_cat is: " + bonus_cat)
 
     var bonus_total = Math.round((bonus_cr + bonus_cat) * 100) / 100;
-    console.log("bonus_total is: " + bonus_total);
+
+
+    var bonus_store = {
+        participant_id: participant_id,
+        bonus_cr: bonus_cr,
+        bonus_cat: bonus_cat,
+        bonus_total: bonus_total
+    }
+    saveBonus(JSON.stringify(bonus_store));
 
     (() => {
         document.getElementById("total_bonus").innerHTML = bonus_total;
@@ -826,3 +830,5 @@ function calculate_bonus() {
 function redirect_to_prolific() {
     window.location.href = "https://app.prolific.co/submissions/complete?cc=240D34C0";
 }
+
+
