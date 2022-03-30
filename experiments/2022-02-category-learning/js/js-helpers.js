@@ -704,7 +704,7 @@ function set_category_instruction(n_categories) {
     After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
     
     <b>Responding:</b><br>
-    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
@@ -718,7 +718,7 @@ function set_category_instruction(n_categories) {
     After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
     
     <b>Responding:</b><br>
-    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
