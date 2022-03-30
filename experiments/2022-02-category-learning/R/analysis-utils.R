@@ -17,7 +17,7 @@ fix_data_types <- function(tbl, fs, ns) {
 }
 txt_ex <- "this is a bad example }how can you add something? Especially, when there is several examples of the thing } to be replaced?"
 str_replace_all(txt_ex, "\\}", "\\},")
-load_data <- function() {
+load_data <- function(path_data) {
   #' load continuous reproduction ("cr") and category learning ("cat") data
   #' 
   #' @description loads data and declares factor and numeric columns in the two tibbles
@@ -25,21 +25,24 @@ load_data <- function() {
   #' @return a list with the two tibbles
   #' 
   # read individual performance
-  js_cr_txt <- read_file("experiments/2022-02-category-learning/data/pilot-alex-cr-participant-60.json")
-  js_cr_txt <-str_c("[", str_replace_all(js_cr_txt, "\\}", "\\},"), "]")
-  js_cr_txt <- str_replace(js_cr_txt, ",\n]", "]")
-  tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble() %>% filter(session %in% c(1, 2))
+  files_dir <- dir(path_data)
+  paths_cat <- str_c(path_data, files_dir[startsWith(files_dir, "cat")])
+  paths_cr <- str_c(path_data, files_dir[startsWith(files_dir, "cr")])
+  
+  json_to_tibble <- function(path_file) {
+    js_txt <- read_file(path_file)
+    js_txt <-str_c("[", str_replace_all(js_txt, "\\}", "\\},"), "]")
+    js_txt <- str_replace(js_txt, ",\n]", "]")
+    tbl_cr <- jsonlite::fromJSON(js_txt) %>% as_tibble()
+    return(tbl_cr)
+  }
+  tbl_cr <- reduce(map(paths_cr, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
+  tbl_cat <- reduce(map(paths_cat, json_to_tibble), rbind)
   
   
   # only pilot data have to be corrected currently...
   tbl_cr$session <- as.numeric(tbl_cr$session)
   #tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
-  
-  
-  js_cat_txt <- read_file("experiments/2022-02-category-learning/data/pilot-mirko-cat-participant-51.json")
-  js_cat_txt <-str_c("[", str_replace_all(js_cat_txt, "\\}", "\\},"), "]")
-  js_cat_txt <- str_replace(js_cat_txt, ",\n]", "]")
-  tbl_cat <- jsonlite::fromJSON(js_cat_txt) %>% as_tibble()
   
   factors <- c("participant_id", "session", "cat_true")
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
@@ -47,7 +50,7 @@ load_data <- function() {
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
   # add stim_id
   tbl_cr <- tbl_cr %>% group_by(participant_id) %>% arrange(x1_true, x2_true) %>% 
-    mutate(stim_id = rep(seq(1, 144, by = 1), each = 2)) %>% ungroup()
+    mutate(stim_id = rep(seq(1, 100, by = 1), each = 2*length(unique(tbl_cr$participant_id)))) %>% ungroup()
   
   l_data <- list(tbl_cr, tbl_cat)
   return(l_data)
