@@ -3,13 +3,24 @@ if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
 else {
-    var participant_id = Math.floor(Math.random() * 100);
+    var participant_id = Math.floor(Math.random() * 1000);
 }
 // STUDY ID
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
 // get subject ID
+function getQueryVariable(variable) {
+    var query = window.location.search.substring(1);
+    var vars = query.split("&");
+    for (var i = 0; i < vars.length; i++) {
+        var pair = vars[i].split("=");
+        if (pair[0] == variable) { return pair[1]; }
+    }
+    return (false);
+}
+
+console.log("participant_id = " + participant_id)
 
 
 function setup_experiment(condition_id) {
@@ -20,17 +31,18 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 100, //5, //100, // 100
+        n_trials_reproduction_1: 100, //2, //5, //100, // 100
         n_trials_reproduction_2: 100, //2, //100, // 100
-        n_trials_categorization_train_target: 40,
-        n_trials_categorization: 400, //500, // 380
-        n_trials_categorization_total: 40 + 400,
+        n_trials_categorization_train_target: 40, //2, //
+        n_trials_categorization: 400, //4, //500, // 380
+        n_trials_categorization_total: 40 + 400, //2 + 4, // 
         condition_id: condition_id,
         n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
+    console.log("n_categories = " + n_categories)
     // stim_ids of cat2 and cat3
     // randomize these ids
     // select first n_only_target_cat or n_only_target_cat/2 and append them to category_id, category_name, category_stimulus_id
@@ -39,19 +51,22 @@ function setup_experiment(condition_id) {
     const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
+    var cat1_stim_ids_cat1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
     var cat2_stim_ids_cat2 = [22, 23, 24, 32, 33, 34, 35, 42, 43, 44, 45, 46, 53, 54, 55, 56, 57, 64, 65, 66, 67, 75, 76, 77]
     var cat3_stim_ids_cat2 = [14, 15, 16, 24, 25, 26, 27, 34, 35, 36, 37, 38, 45, 46, 47, 48, 56, 57, 58]
     var cat3_stim_ids_cat3 = [41, 42, 43, 51, 52, 53, 54, 61, 62, 63, 64, 65, 72, 73, 74, 75, 83, 84, 85]
     var stim_ids_cats_tt = []
     var stim_ids_cat_nt = []
     var cat3_stim_ids_all = []
-    cat2_stim_ids_cat2 = append_randomized_arrays(cat2_stim_ids_cat2, 1)
+    cat2_stim_ids_cat2 = append_randomized_arrays(cat2_stim_ids_cat2, 2)
     cat2_stim_ids_cat2.length = experiment_info["n_trials_categorization_train_target"]
-    cat3_stim_ids_cat2 = append_randomized_arrays(cat3_stim_ids_cat2, 1)
-    cat3_stim_ids_cat3 = append_randomized_arrays(cat3_stim_ids_cat3, 1)
+    cat3_stim_ids_cat2 = append_randomized_arrays(cat3_stim_ids_cat2, 2)
+    cat3_stim_ids_cat3 = append_randomized_arrays(cat3_stim_ids_cat3, 2)
     cat3_stim_ids_all = cat3_stim_ids_cat2.concat(cat3_stim_ids_cat3)
     cat3_stim_ids_all = append_randomized_arrays(cat3_stim_ids_all, 1)
     cat3_stim_ids_all.length = experiment_info["n_trials_categorization_train_target"]
+    cat1_stim_ids_cat1 = append_randomized_arrays(cat1_stim_ids_cat1, 1)
+    cat1_stim_ids_cat1.length = experiment_info["n_trials_categorization_train_target"]
 
 
     // display info
@@ -93,7 +108,7 @@ function setup_experiment(condition_id) {
         //set_category_instruction()
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
-        stim_ids_cats_tt = []
+        stim_ids_cats_tt = append_randomized_arrays(cat1_stim_ids_cat1, 1)
     }
 
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
@@ -136,7 +151,7 @@ function setup_experiment(condition_id) {
     stim_ids_cats_tt_cr2 = append_randomized_arrays(stim_ids_cats_tt, 1)
     stim_ids_cat_nt_cr2 = append_randomized_arrays(stim_ids_cat_nt_cr1, 1)
     trial_info["stimulus_id_r2"] = stim_ids_cats_tt_cr2.concat(stim_ids_cat_nt_cr2)
-
+    
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"] */
@@ -324,6 +339,7 @@ async function log_response(rt, i, part, stimulus_ids) {
     var x2_response = parseFloat(document.getElementById("myRange2").value)
     var data_store = {
         participant_id: participant_id,
+        n_categories: n_categories,
         session: part,
         trial_id: i,
         x1_true: x1_true,
@@ -502,7 +518,7 @@ async function handle_response(e) {
             str_countdown = "#time" + break_idx
             str_frame = "timeframe" + break_idx
             document.getElementById(str_frame).style.display = "block"
-            var seconds = 5;
+            var seconds = 60;
             var display = document.querySelector(str_countdown);
             startTimer(seconds, display);
 
@@ -513,7 +529,7 @@ async function handle_response(e) {
                     document.getElementById("cat_continued").innerHTML = 1
                     document.getElementById(str_frame).style.display = "none"
                 }
-            }, 6000);
+            }, 61000);
         } else {
             next_item_cat('page9');
 
@@ -553,14 +569,14 @@ function keycode_to_integer(kc) {
 
 function write_cat_results(i, r) {
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
-    if (condition_id == 1) {
-        accuracy = 9
-    } else if (condition_id == 2 | condition_id == 3) {
+    if (condition_id == 3) {
+        accuracy = 9999
+    } else if (condition_id == 2 | condition_id == 1) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
     var data_store = {
         participant_id: participant_id,
-        condition_id: condition_id,
+        n_categories: n_categories,
         trial_id: i,
         x1_true: setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][i]][0],
         x2_true: setup_expt["stimulus_info"]["x1_x2"][setup_expt["trial_info"]["stimulus_id_c"][i]][1],
@@ -688,7 +704,7 @@ function set_category_instruction(n_categories) {
     After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
     
     <b>Responding:</b><br>
-    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
@@ -702,7 +718,7 @@ function set_category_instruction(n_categories) {
     After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
     
     <b>Responding:</b><br>
-    <b>Please try to respond within 3 seconds.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
@@ -721,7 +737,10 @@ function set_category_instruction(n_categories) {
 function load_csv() {
     var txt = d3.json("rotate-conditions.json", function (data) {
         var condition_counts;
-        condition_counts = Object.values(data);
+        //condition_counts = Object.values(data);
+        condition_counts = Object.keys(data).map(function (e) {
+            return data[e]
+        })
         var max_counts = 9999999999;
         for (var i = 0; i < condition_counts.length; i++) {
             var obj = condition_counts[i]
@@ -737,6 +756,17 @@ function load_csv() {
         document.getElementById("n_categories").innerHTML = n_categories
         saveConditions(JSON.stringify(data));
     });
+    clickStart('page0', 'page1')
+}
+
+function condition_and_ncategories() {
+    const condition_id = Math.ceil(Math.random() * 3);
+    console.log("randomly set condition_id to: " + condition_id)
+    //const condition_id = [1, 2, 3][participant_id % 3]
+    const n_categories = [1, 2, 3][(condition_id % 3)]
+    console.log()
+    document.getElementById("condition_id").innerHTML = condition_id
+    document.getElementById("n_categories").innerHTML = n_categories
     clickStart('page0', 'page1')
 }
 

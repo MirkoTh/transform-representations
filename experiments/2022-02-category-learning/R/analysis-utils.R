@@ -15,9 +15,8 @@ fix_data_types <- function(tbl, fs, ns) {
   tbl[, ns_available] <- map(tbl[, ns_available], as.numeric)
   return(tbl)
 }
-txt_ex <- "this is a bad example }how can you add something? Especially, when there is several examples of the thing } to be replaced?"
-str_replace_all(txt_ex, "\\}", "\\},")
-load_data <- function() {
+
+load_data <- function(path_data) {
   #' load continuous reproduction ("cr") and category learning ("cat") data
   #' 
   #' @description loads data and declares factor and numeric columns in the two tibbles
@@ -25,32 +24,57 @@ load_data <- function() {
   #' @return a list with the two tibbles
   #' 
   # read individual performance
-  js_cr_txt <- read_file("experiments/2022-02-category-learning/data/pilot-alex-cr-participant-60.json")
-  js_cr_txt <-str_c("[", str_replace_all(js_cr_txt, "\\}", "\\},"), "]")
-  js_cr_txt <- str_replace(js_cr_txt, ",\n]", "]")
-  tbl_cr <- jsonlite::fromJSON(js_cr_txt) %>% as_tibble() %>% filter(session %in% c(1, 2))
+  files_dir <- dir(path_data)
+  paths_cat <- str_c(path_data, files_dir[startsWith(files_dir, "cat")])
+  paths_cr <- str_c(path_data, files_dir[startsWith(files_dir, "cr")])
   
+  json_to_tibble <- function(path_file) {
+    js_txt <- read_file(path_file)
+    js_txt <-str_c("[", str_replace_all(js_txt, "\\}", "\\},"), "]")
+    js_txt <- str_replace(js_txt, ",\n]", "]")
+    tbl_cr <- jsonlite::fromJSON(js_txt) %>% as_tibble()
+    return(tbl_cr)
+  }
+  tbl_cr <- reduce(map(paths_cr, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
+  tbl_cat <- reduce(map(paths_cat, json_to_tibble), rbind)
+  # add stim_id
+  tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   
-  # only pilot data have to be corrected currently...
+    # only pilot data have to be corrected currently...
   tbl_cr$session <- as.numeric(tbl_cr$session)
   #tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
-  
-  
-  js_cat_txt <- read_file("experiments/2022-02-category-learning/data/pilot-mirko-cat-participant-51.json")
-  js_cat_txt <-str_c("[", str_replace_all(js_cat_txt, "\\}", "\\},"), "]")
-  js_cat_txt <- str_replace(js_cat_txt, ",\n]", "]")
-  tbl_cat <- jsonlite::fromJSON(js_cat_txt) %>% as_tibble()
   
   factors <- c("participant_id", "session", "cat_true")
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
   tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
-  # add stim_id
-  tbl_cr <- tbl_cr %>% group_by(participant_id) %>% arrange(x1_true, x2_true) %>% 
-    mutate(stim_id = rep(seq(1, 144, by = 1), each = 2)) %>% ungroup()
   
   l_data <- list(tbl_cr, tbl_cat)
   return(l_data)
+}
+
+exclude_incomplete_datasets <- function(l_tbl) {
+  #' exclude incomplete data
+  #' 
+  #' @description exclude incomplete data from continuous reproduction ("cr")
+  #' and category learning ("cat") data
+  #' 
+  #' @return a list with the two tibbles
+  #' 
+  tbl_cr <- l_tbl[[1]]
+  tbl_cat <- l_tbl[[2]]
+  tbl_cr_n <- tbl_cr %>% 
+    group_by(participant_id) %>% summarize(n_resp = n()) %>%
+    ungroup() %>% arrange(n_resp) %>% filter(n_resp > 194)
+  
+  tbl_cat_n <- tbl_cat %>% 
+    group_by(participant_id) %>% summarise(n_resp = n()) %>% 
+    ungroup() %>% arrange(n_resp) %>% filter(n_resp > 435)
+  
+  tbl_cr <- tbl_cr %>% inner_join(tbl_cr_n, by = "participant_id")
+  tbl_cat <- tbl_cat %>% inner_join(tbl_cat_n, by = "participant_id")
+  
+  return(list(tbl_cr, tbl_cat))
 }
 
 
@@ -69,24 +93,34 @@ plot_marginals_one_session <- function(idx_session, tbl) {
   title <- c("Before Category Learning", "After Category Learning")[idx_color]
   col <- c("#3399FF", "#990099")[idx_color]
   tbl_plot <- tbl %>% filter(session == idx_session)
-  pl <- ggplot(tbl_plot, aes(x1_deviation, x2_deviation)) +
-    geom_point(color = col, shape = 1, size = 2) +
-    geom_density2d() +
-    theme_bw() +
-    theme(plot.title = element_text(size=20)) +
-    scale_color_brewer(palette = "Set1") +
-    # somehow ggMarginal does not like coord_cartesian...
-    # the following excludes some of the responses, though
-    scale_x_continuous(limits = c(-50, 50)) +
-    scale_y_continuous(limits = c(-50, 50)) +
-    labs(
-      x = bquote(x[1]),
-      y = bquote(x[2]),
-      title = title
-    )# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
   
-  pl_marginals <- ggMarginal(pl, fill = col, type = "histogram", bins = 15)
-  return(pl_marginals)
+  
+  plot_2d_points_marginal <- function(tbl, participant) {
+    tbl <- tbl %>% filter(participant_id == participant)
+    pl <- ggplot(tbl, aes(x1_deviation, x2_deviation)) +
+      geom_point(color = col, shape = 1, size = 2) +
+      geom_density2d() +
+      theme_bw() +
+      theme(plot.title = element_text(size = 10)) +
+      scale_color_brewer(palette = "Set1") +
+      # somehow ggMarginal does not like coord_cartesian...
+      # the following excludes some of the responses, though
+      scale_x_continuous(limits = c(-84, 84)) +
+      scale_y_continuous(limits = c(-84, 84)) +
+      labs(
+        x = "Head Spikiness",
+        y = "Belly Size",
+        title = substr(participant, 1, 6)
+      )# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
+    
+    pl_marginals <- ggMarginal(pl, fill = col, type = "histogram", bins = 15)
+    return(pl_marginals)
+  }
+  participants <- unique(tbl_cr$participant_id)
+  l_pl <- map(participants, plot_2d_points_marginal, tbl = tbl_plot)
+
+  pages_plots <- marrangeGrob(l_pl, ncol = 4, nrow = 4)  
+  return(pages_plots)
 }
 
 
@@ -106,20 +140,30 @@ plot_2d_binned_heatmaps <- function(tbl, n_agg_x) {
     as_vector()
   cutpoints <- seq(lims[1], lims[2], length.out = n_agg_x + 1)
   tbl_cr_agg <- tbl %>%
-    filter(session %in% c(1, 3)) %>%
+    filter(session %in% c(1, 2)) %>%
     mutate(
       x1_true_binned = cut(x1_true, cutpoints, labels = FALSE),
-      x2_true_binned = cut(x2_true, cutpoints, labels = FALSE)
-    ) %>% group_by(participant_id, session, x1_true_binned, x2_true_binned) %>%
+      x2_true_binned = cut(x2_true, cutpoints, labels = FALSE),
+      participant_id = substr(participant_id, 1, 6)
+    ) %>% group_by(participant_id, x1_true_binned, x2_true_binned) %>%
     summarise(avg_deviation_x1x2 = mean(sqrt(x1_deviation^2 + x2_deviation^2))) %>%
+    group_by(participant_id) %>%
+    mutate(avg_deviation = mean(avg_deviation_x1x2)) %>%
+    ungroup() %>% 
+    arrange(avg_deviation) %>%
+    mutate(participant_id = fct_inorder(participant_id, ordered = TRUE))
+  tbl_cr_agg_2 <- tbl_cr_agg %>%
+    group_by(participant_id) %>%
+    mutate(rwn = row_number(x1_true_binned)) %>% filter(rwn == 1) %>%
     ungroup()
-  pl <- ggplot(tbl_cr_agg, aes(x1_true_binned, x2_true_binned)) +
+  pl <- ggplot(data = tbl_cr_agg, aes(x1_true_binned, x2_true_binned)) +
     geom_tile(aes(fill = avg_deviation_x1x2)) +
-    scale_fill_gradient(name = "Avg. Deviation", low = "#009966", high = "#FF6666") +
+    scale_fill_gradient2(name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5) +
+    geom_label(data = tbl_cr_agg_2, aes(2, 2, label = str_c("Avg. Dev. = ", round(avg_deviation, 0)))) +
     labs(
       x = "Spikiness of Head (Binned)",
       y = "Fill of Belly (Binned)"
-    ) + facet_wrap(~ session) + theme_bw()
+    ) + facet_wrap(~ participant_id) + theme_bw()
   
   return(pl)
 }
@@ -164,13 +208,13 @@ category_centers <- function() {
   #' @return the list with the centers of the 2 and 4 category conditions
   #' 
   # read individual performance
-  x1 <- seq(0, 11, by = 1)
-  x2 <- seq(0, 11, by = 1)
+  x1 <- seq(0, 9, by = 1)
+  x2 <- seq(0, 9, by = 1)
   tbl_tmp <- crossing(x1, x2)
-  tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 144, by = 1))
+  tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
-  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
-  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
+  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 9 + 1, y_rotated = (y_rotated + 1) * 9 + 1)
+  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 9 + 1, y_rotated = (y_rotated + 1) * 9 + 1)
   
   category_means <- function(tbl) {
     tbl %>% group_by(category) %>%
@@ -207,10 +251,10 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
   # uncomment only when data from category 2 condition is available
   # as only one category center, can directly compute distance from response to that center
-  # tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>% 
-  #   unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
-  # l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
-  # colnames(tbl_d2) <- c("dmin")
+  tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
+    unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d2) <- c("d_closest")
+  l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
   # here, we first have to compute what the closest center of a given stimulus is and then index using that id
   tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
@@ -227,6 +271,28 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
     left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
-  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]])
+  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]]) %>%
   return(tbl_cr)
 }
+
+chance_performance_cat <- function(tbl_cat) {
+  #' chance performance with 2 and 3 categories
+  #' 
+  #' @description make a tbl with chance performance over aggregated blocks
+  #' for 2 and 3 categories
+  #' @param tbl_cat the tibble with the by-trial responses
+  #' 
+  #' @return the chance peformance tibble
+  #' 
+  n_categories <- c("Nr. Categories = 2", "Nr. Categories = 3")
+  block <- sort(unique(tbl_cat$trial_id_binned))
+  
+  tbl_chance <- crossing(
+    n_categories, block
+  )
+  tbl_chance$prop_chance <- 0
+  tbl_chance$prop_chance[tbl_chance$n_categories == "Nr. Categories = 2"] <- .5
+  tbl_chance$prop_chance[tbl_chance$n_categories == "Nr. Categories = 3"] <- .333
+  return(tbl_chance)
+}
+
