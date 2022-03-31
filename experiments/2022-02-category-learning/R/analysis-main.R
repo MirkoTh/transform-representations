@@ -13,7 +13,10 @@ library(rutils)
 # Import Home-Grown Modules -----------------------------------------------
 files <- c(
   "R/utils.R",
-  "experiments/2022-02-category-learning/R/analysis-utils.R"
+  "experiments/2022-02-category-learning/R/analysis-utils.R",
+  "experiments/2022-02-category-learning/R/summarySEwithin.R",
+  "experiments/2022-02-category-learning/R/summarySE.R",
+  "experiments/2022-02-category-learning/R/normDataWithin.R"
 )
 walk(files, source)
 
@@ -87,29 +90,29 @@ tbl_cat <- tbl_cat_sim %>%
 tbl_cat_agg <- tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
   summarize(
     accuracy_mn_participant = mean(accuracy)
-  ) %>%
-  group_by(n_categories, cat_true, trial_id_binned) %>%
-  summarize(
-    accuracy_avg = mean(accuracy_mn_participant),
-    accuracy_se = sd(accuracy_mn_participant) / length(unique(tbl_cat$participant_id))
-  ) %>% ungroup()
+  ) %>%  ungroup()
 
+tbl_cat_agg_ci <- summarySEwithin(
+  tbl_cat_agg, "accuracy_mn_participant", c("n_categories"), 
+  c("cat_true", "trial_id_binned"), "participant_id"
+) %>% as_tibble()
+tbl_cat_agg_ci$trial_id_binned <- as.factor(as.character(tbl_cat_agg_ci$trial_id_binned))
 
 tbl_chance <- chance_performance_cat(tbl_cat)
 
 ggplot() + 
-  geom_errorbar(data = tbl_cat_agg, aes(
-    trial_id_binned, ymin = accuracy_avg - 1.96 * accuracy_se, 
-    ymax = accuracy_avg + 1.96 * accuracy_se, color = cat_true
+  geom_errorbar(data = tbl_cat_agg_ci, aes(
+    trial_id_binned, ymin = accuracy_mn_participant - ci, 
+    ymax = accuracy_mn_participant + ci, color = cat_true
   ), width = .25, position = dg) +
-  geom_line(data = tbl_cat_agg, aes(
-    trial_id_binned, accuracy_avg, group = cat_true, color = cat_true
+  geom_line(data = tbl_cat_agg_ci, aes(
+    trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
   ), position = dg) +
-  geom_point(data = tbl_cat_agg, aes(
-    trial_id_binned, accuracy_avg, group = cat_true
+  geom_point(data = tbl_cat_agg_ci, aes(
+    trial_id_binned, accuracy_mn_participant, group = cat_true
   ), position = dg, color = "white", size = 3) +
-  geom_point(data = tbl_cat_agg, aes(
-    trial_id_binned, accuracy_avg, group = cat_true, color = cat_true
+  geom_point(data = tbl_cat_agg_ci, aes(
+    trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
   ), position = dg) +
   geom_line(
     data = tbl_chance, aes(block, prop_chance, group = 1), 
@@ -119,10 +122,8 @@ ggplot() +
   scale_color_brewer(name = "Category", palette = "Set1") +
   labs(
     x = "Block of 20 Trials",
-    y = "Accuracy"
+    y = "Categorization Accuracy"
   ) + theme_bw()
-
-
 
 # Similarity Judgments ----------------------------------------------------
 
@@ -140,16 +141,26 @@ tbl_sim$distance_binned %>% unique()
 
 tbl_sim_agg <- tbl_sim %>% 
   rutils::grouped_agg(c(distance_binned), c(response, rt))
+tbl_sim_ci <- summarySEwithin(
+  tbl_sim, "response", "n_categories", "distance_binned", "participant_id", TRUE
+) %>% as_tibble()
+tbl_sim_ci$distance_binned <- as.numeric(as.character(tbl_sim_ci$distance_binned))
 
-ggplot(tbl_sim_agg %>% filter((distance_binned %in% c(1, 13))), aes(distance_binned, mean_response)) +
-  geom_errorbar(aes(
+ggplot() +
+  geom_errorbar(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))), aes(
     distance_binned, 
-    ymin = mean_response - 1.96 * se_response, 
-    ymax = mean_response + 1.96 * se_response
+    ymin = response - ci, 
+    ymax = response + ci
   )) + geom_point(size = 3, color = "white") +
-  geom_point() +
-  geom_smooth() + 
+  geom_point(
+    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))), 
+    aes(distance_binned, response)) +
+  geom_smooth(
+    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))), 
+    aes(distance_binned, response), color = "purple"
+  ) + 
   theme_bw() +
+  coord_cartesian(ylim = c(1, 4)) +
   labs(
     x = "Distance Binned",
     y = "Average Similarity (Range: 1 - 4)"
