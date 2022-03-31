@@ -208,13 +208,13 @@ category_centers <- function() {
   #' @return the list with the centers of the 2 and 4 category conditions
   #' 
   # read individual performance
-  x1 <- seq(0, 11, by = 1)
-  x2 <- seq(0, 11, by = 1)
+  x1 <- seq(0, 9, by = 1)
+  x2 <- seq(0, 9, by = 1)
   tbl_tmp <- crossing(x1, x2)
-  tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 144, by = 1))
+  tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
-  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
-  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 8 - 2, y_rotated = (y_rotated + 1) * 8 - 2)
+  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 9 + 1, y_rotated = (y_rotated + 1) * 9 + 1)
+  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 9 + 1, y_rotated = (y_rotated + 1) * 9 + 1)
   
   category_means <- function(tbl) {
     tbl %>% group_by(category) %>%
@@ -251,10 +251,10 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
   # uncomment only when data from category 2 condition is available
   # as only one category center, can directly compute distance from response to that center
-  # tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>% 
-  #   unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
-  # l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
-  # colnames(tbl_d2) <- c("dmin")
+  tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
+    unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d2) <- c("d_closest")
+  l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
   # here, we first have to compute what the closest center of a given stimulus is and then index using that id
   tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
@@ -271,6 +271,28 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
     left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
-  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]])
+  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]]) %>%
   return(tbl_cr)
 }
+
+chance_performance_cat <- function(tbl_cat) {
+  #' chance performance with 2 and 3 categories
+  #' 
+  #' @description make a tbl with chance performance over aggregated blocks
+  #' for 2 and 3 categories
+  #' @param tbl_cat the tibble with the by-trial responses
+  #' 
+  #' @return the chance peformance tibble
+  #' 
+  n_categories <- c("Nr. Categories = 2", "Nr. Categories = 3")
+  block <- sort(unique(tbl_cat$trial_id_binned))
+  
+  tbl_chance <- crossing(
+    n_categories, block
+  )
+  tbl_chance$prop_chance <- 0
+  tbl_chance$prop_chance[tbl_chance$n_categories == "Nr. Categories = 2"] <- .5
+  tbl_chance$prop_chance[tbl_chance$n_categories == "Nr. Categories = 3"] <- .333
+  return(tbl_chance)
+}
+
