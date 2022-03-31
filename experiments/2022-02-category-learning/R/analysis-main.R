@@ -87,6 +87,30 @@ tbl_cat <- tbl_cat_sim %>%
     trial_id_binned = as.factor(ceiling((trial_id_by_condition) / 20)),
     n_categories = factor(n_categories, labels = c("Nr. Categories = 2", "Nr. Categories = 3"))
   )
+
+
+tbl_cat_overview <- tbl_cat %>% grouped_agg(c(n_categories, participant_id), accuracy) %>%
+  arrange(mean_accuracy)
+tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
+  summarize(dummy = mean(mean_accuracy)) %>%
+  mutate(p_chance = 1/as.numeric(str_extract(n_categories, "[2-3]$")))
+
+ggplot() + 
+  geom_histogram(
+    data = tbl_cat_overview, aes(mean_accuracy, group = participant_id), fill = "black", color = "white"
+    ) +
+  geom_segment(
+    data = tbl_chance2, aes(
+      x = p_chance, xend = p_chance, y = 0, yend = 3, group = n_categories
+    ), linetype = "dotdash", color = "red") +
+  facet_wrap(~ n_categories) +
+  theme_dark() +
+  labs(
+    x = "Overall Accuracy",
+    y = "Participant Counts"
+  )
+
+
 tbl_cat_agg <- tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
   summarize(
     accuracy_mn_participant = mean(accuracy)
@@ -96,9 +120,10 @@ tbl_cat_agg_ci <- summarySEwithin(
   tbl_cat_agg, "accuracy_mn_participant", c("n_categories"), 
   c("cat_true", "trial_id_binned"), "participant_id"
 ) %>% as_tibble()
-tbl_cat_agg_ci$trial_id_binned <- as.factor(as.character(tbl_cat_agg_ci$trial_id_binned))
+tbl_cat_agg_ci$trial_id_binned <- as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
 
 tbl_chance <- chance_performance_cat(tbl_cat)
+tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
 
 ggplot() + 
   geom_errorbar(data = tbl_cat_agg_ci, aes(
@@ -120,6 +145,7 @@ ggplot() +
   facet_wrap(~ n_categories) +
   coord_cartesian(ylim = c(0, 1)) +
   scale_color_brewer(name = "Category", palette = "Set1") +
+  scale_x_continuous(breaks = seq(2, 10, by = 2)) +
   labs(
     x = "Block of 20 Trials",
     y = "Categorization Accuracy"
