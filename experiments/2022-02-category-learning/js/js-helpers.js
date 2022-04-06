@@ -31,11 +31,11 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 100, //2, //5, //100, // 100
-        n_trials_reproduction_2: 100, //2, //100, // 100
-        n_trials_categorization_train_target: 40, //2, //
-        n_trials_categorization: 400, //4, //500, // 380
-        n_trials_categorization_total: 40 + 400, //2 + 4, // 
+        n_trials_reproduction_1: 100, //2, //5, // 100
+        n_trials_reproduction_2: 100, //2, //2, // 100
+        n_trials_categorization_train_target: 40,
+        n_trials_categorization: 400, //500, // 380
+        n_trials_categorization_total: 40 + 400,
         condition_id: condition_id,
         n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
@@ -51,7 +51,6 @@ function setup_experiment(condition_id) {
     const cat2map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat3map_val = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 3, 3, 3, 3, 1, 2, 2, 2, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     const cat0map_val = Array(experiment_info["n_stimuli"]).fill(1)
-    var cat1_stim_ids_cat1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
     var cat2_stim_ids_cat2 = [22, 23, 24, 32, 33, 34, 35, 42, 43, 44, 45, 46, 53, 54, 55, 56, 57, 64, 65, 66, 67, 75, 76, 77]
     var cat3_stim_ids_cat2 = [14, 15, 16, 24, 25, 26, 27, 34, 35, 36, 37, 38, 45, 46, 47, 48, 56, 57, 58]
     var cat3_stim_ids_cat3 = [41, 42, 43, 51, 52, 53, 54, 61, 62, 63, 64, 65, 72, 73, 74, 75, 83, 84, 85]
@@ -65,8 +64,6 @@ function setup_experiment(condition_id) {
     cat3_stim_ids_all = cat3_stim_ids_cat2.concat(cat3_stim_ids_cat3)
     cat3_stim_ids_all = append_randomized_arrays(cat3_stim_ids_all, 1)
     cat3_stim_ids_all.length = experiment_info["n_trials_categorization_train_target"]
-    cat1_stim_ids_cat1 = append_randomized_arrays(cat1_stim_ids_cat1, 1)
-    cat1_stim_ids_cat1.length = experiment_info["n_trials_categorization_train_target"]
 
 
     // display info
@@ -108,7 +105,9 @@ function setup_experiment(condition_id) {
         //set_category_instruction()
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
-        stim_ids_cats_tt = append_randomized_arrays(cat1_stim_ids_cat1, 1)
+        stim_ids_cats_tt = Array(experiment_info["n_stimuli"]).fill().map((element, index) => index + 1)
+        stim_ids_cats_tt = append_randomized_arrays(stim_ids_cats_tt, 1)
+        stim_ids_cats_tt.length = experiment_info["n_trials_categorization_train_target"]
     }
 
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
@@ -187,6 +186,9 @@ function setup_experiment(condition_id) {
     // add target training in the beginning
 
     trial_info["stimulus_id_c"] = stim_ids_cats_tt.concat(trial_info["stimulus_id_c"])
+    console.log(stim_ids_cats_tt)
+    console.log(trial_info["stimulus_id_c"])
+
 
     // ellipse categories
     for (let i = 0; i < (experiment_info["n_trials_categorization_train_target"] + experiment_info["n_trials_categorization"]); i++) {
@@ -436,7 +438,8 @@ async function next_item_cat(old, i) {
     clickStart(old, 'page9')
 
     document.getElementById("trial_nr_cat").innerHTML = i
-
+    console.log("stimulus_cat_trial = " + stimulus_cat_trial)
+    console.log("i = " + i)
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
@@ -475,6 +478,7 @@ async function handle_response(e) {
         cat_id_response = keycode_to_integer(keyCode)
         write_cat_results(i, cat_id_response)
 
+        // responses within deadlinetime
         if (condition_id == 3 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
             var str = new String("Your response was: " + cat_id_response);
             document.getElementById("feedback_cat_true").innerHTML = str
@@ -492,27 +496,39 @@ async function handle_response(e) {
                 document.getElementById("feedback_cat_wrong").innerHTML = ""
             }
         }
+        // responses given after deadlinetime
         if (rt > setup_expt["display_info"]["categorization"]["deadlinetime"]) {
             document.getElementById("feedback_cat_wrong").innerHTML = "Too slow, please respond faster!"
             await sleep(1000)
             document.getElementById("feedback_cat_wrong").innerHTML = ""
         }
-        //await sleep(setup_expt["display_info"]["categorization"]["feedbacktime"])
-        if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 2) {
+        // reset cat_continued to 0 at a point > 60 secs after a break
+        if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 40) {
             document.getElementById("cat_continued").innerHTML = 0
         }
-
+        // update trial counter
         document.getElementById("trial_nr_cat").innerHTML = i + 1
+
+        // handle special timepoint in the experiment
+        // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
             document.getElementById("part_reproduction").innerHTML = 2;
+            document.getElementById("cat_continued").innerHTML = 1
             clickStart("page9", "page11")
+            // end of train-target trials
         } else if (condition_id != 3 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
             clickStart("page9", "page10b")
-        } else if ((i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0) {
+
+        } else if (
+            // breaks after each quarter of the categorization trials
+            (i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0 &
+            (i + 1) != setup_expt["experiment_info"]["n_trials_categorization_total"]
+        ) {
+            console.log("trial nr = " + (i + 1))
             document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
             var break_idx = document.getElementById("break_idx").innerHTML
             trial_nr = i + 1
-            document.getElementById("progress").innerHTML = "Your Categorization Progress: " + trial_nr +
+            document.getElementById("progress").innerHTML = "Your progress in the second part: " + trial_nr +
                 " / " + setup_expt["experiment_info"]["n_trials_categorization_total"]
             clickStart("page9", "page10")
             str_countdown = "#time" + break_idx
@@ -530,9 +546,10 @@ async function handle_response(e) {
                     document.getElementById(str_frame).style.display = "none"
                 }
             }, 61000);
-        } else {
-            next_item_cat('page9');
 
+        } else {
+            // default case continuing with next trial
+            next_item_cat('page9');
             document.getElementById(str_frame).style.display = "none"
         }
 
@@ -568,6 +585,8 @@ function keycode_to_integer(kc) {
 }
 
 function write_cat_results(i, r) {
+    console.log("i = " + i)
+
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (condition_id == 3) {
         accuracy = 9999
