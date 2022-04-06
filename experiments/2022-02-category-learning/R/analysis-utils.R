@@ -124,17 +124,40 @@ plot_marginals_one_session <- function(idx_session, tbl) {
   return(pages_plots)
 }
 
-
-plot_2d_binned_heatmaps <- function(tbl, n_agg_x) {
-  #' 2D heat maps of average deviation (L2 norm) from true values
+exclude_reproduction_outliers <- function(tbl_cr, n_sds) {
+  #' exclude outliers in reproduction task
   #' 
-  #' @description plots heat maps of avg deviation before and after the categorization task
+  #' @description average deviations > n_sds above mean deviation are excluded
+  #' @param tbl_cr the tibble with the by-trial responses
+  #' @param n_sds how many sds above the mean is the cutoff?
+  #' 
+  #' @return a tbl with the included participants
+  #'
+  tbl_cr_participant <- tbl_cr %>% group_by(participant_id) %>% 
+    summarize(avg_deviation = mean(eucl_deviation)) %>% ungroup() 
+  tbl_excl <- tbl_cr_participant %>%
+    summarize(
+      deviation_mean = mean(avg_deviation),
+      deviation_sd = sd(avg_deviation)
+    ) %>% ungroup() %>% 
+    mutate(thx_hi = deviation_mean + n_sds * deviation_sd)
+  tbl_cr_participant$thx_hi <- tbl_excl$thx_hi
+  tbl_cr_participant %>% arrange(avg_deviation)
+  tbl_cr_participant$exclude <- FALSE
+  tbl_cr_participant$exclude[tbl_cr_participant$avg_deviation > tbl_cr_participant$thx_hi] <- TRUE
+  return(tbl_cr_participant %>% filter(exclude == FALSE))
+}
+
+checkerboard_deviation <- function(tbl, n_agg_x) {
+  #' deviation from true cr values in several bins of x1 and x2
+  #' 
+  #' @description average deviation from true value in reproduction task
+  #' categorizing head spikiness and fill of belly into n_agg_x bins
   #' @param tbl the tibble with the by-trial responses
   #' @param n_agg_x into how many bins should x1 and x2 be cut?
   #' 
-  #' @return the plot
+  #' @return the aggregated tbl
   #' 
-  # read individual performance
   lims <- tbl %>% 
     summarise(min_x = min(x1_true), max_x = max(x2_true)) %>%
     mutate(min_x = min_x - 1, max_x = max_x + 1) %>%
@@ -157,10 +180,24 @@ plot_2d_binned_heatmaps <- function(tbl, n_agg_x) {
     group_by(participant_id) %>%
     mutate(rwn = row_number(x1_true_binned)) %>% filter(rwn == 1) %>%
     ungroup()
-  pl <- ggplot(data = tbl_cr_agg, aes(x1_true_binned, x2_true_binned)) +
+  return(list(tbl_cr_agg, tbl_cr_agg_2))
+}
+
+
+
+plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
+  #' 2D heat maps of average deviation (L2 norm) from true values
+  #' 
+  #' @description plots heat maps of avg deviation before and after the categorization task
+  #' @param tbl_checker the already aggregated checkerboard tibble
+  #' @param tbl_avg tbl with the average deviation in tbl_checker
+  #' 
+  #' @return the plot
+  #' 
+  pl <- ggplot(data = tbl_checker, aes(x1_true_binned, x2_true_binned)) +
     geom_tile(aes(fill = avg_deviation_x1x2)) +
     scale_fill_gradient2(name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5) +
-    geom_label(data = tbl_cr_agg_2, aes(2, 2, label = str_c("Avg. Dev. = ", round(avg_deviation, 0)))) +
+    geom_label(data = tbl_avg, aes(2, 2, label = str_c("Avg. Dev. = ", round(avg_deviation, 0)))) +
     labs(
       x = "Spikiness of Head (Binned)",
       y = "Fill of Belly (Binned)"
