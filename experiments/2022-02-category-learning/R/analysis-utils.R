@@ -79,6 +79,7 @@ exclude_incomplete_datasets <- function(l_tbl) {
 
 
 
+
 plot_marginals_one_session <- function(idx_session, tbl) {
   #' scatter plot of 2D deviations with marginals
   #' 
@@ -249,8 +250,12 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   }
   # split by nr of categories
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
-  # uncomment only when data from category 2 condition is available
   # as only one category center, can directly compute distance from response to that center
+  # for the baseline condition the midpoint of the grid is used as the "category center"
+  tbl_d1 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["1"]], is_response = TRUE) %>%
+    unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
+  colnames(tbl_d1) <- c("d_closest")
+  l_tbl_cr[["1"]] <- l_tbl_cr[["1"]] %>% cbind(tbl_d1) %>% mutate(category = 1)
   tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
     unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   colnames(tbl_d2) <- c("d_closest")
@@ -271,7 +276,7 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
     left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
-  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]]) %>%
+  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]], l_tbl_cr[["1"]]) %>% as_tibble()
   return(tbl_cr)
 }
 

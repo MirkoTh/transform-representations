@@ -23,71 +23,32 @@ walk(files, source)
 path_data <- "experiments/2022-02-category-learning/data/2022-03-30-pilot-1/"
 l_tbl_data <- load_data(path_data)
 l_tbl_data <- exclude_incomplete_datasets(l_tbl_data)
+
 tbl_cr <- l_tbl_data[[1]] %>% filter(session %in% c(1, 2))
 tbl_cat_sim <- l_tbl_data[[2]]
 # add deviation variables
 tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
 tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
-
-
-# Overview Plots ----------------------------------------------------------
-# 2d marginals
-pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
-pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
-
-# heat map of errors over 2d space
-pl_heamaps <- plot_2d_binned_heatmaps(tbl_cr, 4)
-
-# 1d marginal histograms & freq polys of deviations x1 and x2 before vs. after
-pl_1d_marginals <- plot_1d_marginals(tbl_cr)
-
+tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
 tbl_cr <- add_distance_to_nearest_center(tbl_cr)
-
-tbl_cr_agg <- tbl_cr %>% group_by(n_categories, participant_id, session, category) %>%
-  summarize(dmin_mn_participant = mean(d_closest)) %>%
-  group_by(n_categories, session, category) %>%
-  summarize(dmin_mn = mean(dmin_mn_participant),
-            dmin_se = sd(dmin_mn_participant)/sqrt(length(unique(tbl_cr$participant_id)))) %>%
-  ungroup() %>%
-  mutate(session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")))
-
-dg <- position_dodge(width = .8)
-ggplot() +
-  geom_col(data = tbl_cr_agg, aes(
-    category, dmin_mn, group = session, fill = session
-  ), position = dg, alpha = .5) +
-  geom_point(data = tbl_cr_agg, aes(
-    category, dmin_mn, color = session
-  ), position = dg, show.legend = FALSE) +
-  geom_errorbar(data = tbl_cr_agg, aes(
-    category, ymin = dmin_mn - 1.96 * dmin_se, 
-    ymax = dmin_mn + 1.96 * dmin_se, color = session
-  ), position = dg, width = .25, show.legend = FALSE) +
-  facet_wrap(~ n_categories) +
-  theme_bw() +
-  scale_fill_brewer(name = "Session", palette = "Set1") +
-  scale_color_brewer(palette = "Set1") +
-  labs(
-    x = "Category",
-    y = "Distance to Closest Category Center"
-  )
-
 
 
 # Categorization ----------------------------------------------------------
 
 
-tbl_cat <- tbl_cat_sim %>%
-  filter(trial_id >= 40, n_categories %in% c(2, 3)) %>%
+tbl_cat_sim <- tbl_cat_sim %>%
+  filter(trial_id >= 40) %>%
   group_by(participant_id, cat_true) %>%
   arrange(n_categories, participant_id, trial_id) %>%
   mutate(
     trial_id_by_condition = row_number(trial_id)
   ) %>% ungroup() %>% mutate(
     trial_id_binned = as.factor(ceiling((trial_id_by_condition) / 20)),
-    n_categories = factor(n_categories, labels = c("Nr. Categories = 2", "Nr. Categories = 3"))
+    n_categories = factor(n_categories, labels = c(
+      "Nr. Categories = 1", "Nr. Categories = 2", "Nr. Categories = 3")
+      )
   )
-
+tbl_cat <- tbl_cat_sim %>% filter(n_categories %in% c(2, 3))
 
 tbl_cat_overview <- tbl_cat %>% grouped_agg(c(n_categories, participant_id), accuracy) %>%
   arrange(mean_accuracy)
@@ -95,10 +56,13 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
   summarize(dummy = mean(mean_accuracy)) %>%
   mutate(p_chance = 1/as.numeric(str_extract(n_categories, "[2-3]$")))
 
+
+dg <- position_dodge(width = .8)
+
 ggplot() + 
   geom_histogram(
     data = tbl_cat_overview, aes(mean_accuracy, group = participant_id), fill = "black", color = "white"
-    ) +
+  ) +
   geom_segment(
     data = tbl_chance2, aes(
       x = p_chance, xend = p_chance, y = 0, yend = 3, group = n_categories
@@ -151,6 +115,42 @@ ggplot() +
     y = "Categorization Accuracy"
   ) + theme_bw()
 
+
+
+
+tbl_cat_last <- tbl_cat_sim %>% 
+  mutate(category = cat_true) %>%
+  group_by(participant_id) %>%
+  filter(trial_id_binned == max(as.numeric(as.character(trial_id_binned)))) %>%
+  grouped_agg(c(participant_id, n_categories, category), accuracy)
+# similarity condition gets a dummy accuracy of .5
+tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == "Nr. Categories = 1"] <- .5
+tbl_movement <- grouped_agg(tbl_cr, c(participant_id, n_categories, session, category), d_closest) %>%
+  select(participant_id, n_categories, session, category, mean_d_closest) %>%
+  left_join(tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], by = c("participant_id", "category")) %>%
+  ungroup() %>% arrange(participant_id, category, session) %>%
+  group_by(participant_id, category) %>%
+  mutate(
+    mean_d_closest_before = lag(mean_d_closest),
+    movement = mean_d_closest_before - mean_d_closest,
+    category = fct_relabel(category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))),
+    n_categories = fct_relabel(n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x)))
+  ) %>%
+  filter(!is.na(mean_d_closest_before))
+
+ggplot(tbl_movement, aes(mean_accuracy, movement, group = category)) + 
+  geom_point(aes(color = category)) +
+  geom_smooth(method = "lm", aes(color = category)) +
+  facet_grid(n_categories ~ category) +
+  scale_color_brewer(palette = "Set1", name = "Category") +
+  theme_bw() +
+  labs(
+    x = "Categorization Accuracy",
+    y = "Movement (Euclidian Distance)"
+  )
+
+
+
 # Similarity Judgments ----------------------------------------------------
 
 tbl_sim <- tbl_cat_sim %>%
@@ -191,3 +191,48 @@ ggplot() +
     x = "Distance Binned",
     y = "Average Similarity (Range: 1 - 4)"
   )
+
+
+# Continuous Reproduction ----------------------------------------------------------
+# 2d marginals
+pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
+pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
+
+# heat map of errors over 2d space
+pl_heamaps <- plot_2d_binned_heatmaps(tbl_cr, 4)
+
+# 1d marginal histograms & freq polys of deviations x1 and x2 before vs. after
+pl_1d_marginals <- plot_1d_marginals(tbl_cr)
+
+
+
+tbl_cr_agg <- tbl_cr %>% group_by(n_categories, participant_id, session, category) %>%
+  summarize(dmin_mn_participant = mean(d_closest)) %>%
+  group_by(n_categories, session, category) %>%
+  summarize(dmin_mn = mean(dmin_mn_participant),
+            dmin_se = sd(dmin_mn_participant)/sqrt(length(unique(tbl_cr$participant_id)))) %>%
+  ungroup() %>%
+  mutate(session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")))
+
+ggplot() +
+  geom_col(data = tbl_cr_agg, aes(
+    category, dmin_mn, group = session, fill = session
+  ), position = dg, alpha = .5) +
+  geom_point(data = tbl_cr_agg, aes(
+    category, dmin_mn, color = session
+  ), position = dg, show.legend = FALSE) +
+  geom_errorbar(data = tbl_cr_agg, aes(
+    category, ymin = dmin_mn - 1.96 * dmin_se, 
+    ymax = dmin_mn + 1.96 * dmin_se, color = session
+  ), position = dg, width = .25, show.legend = FALSE) +
+  facet_wrap(~ n_categories) +
+  theme_bw() +
+  scale_fill_brewer(name = "Session", palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    x = "Category",
+    y = "Distance to Closest Category Center"
+  )
+
+
+
