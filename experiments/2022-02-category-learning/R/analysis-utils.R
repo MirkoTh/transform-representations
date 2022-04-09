@@ -338,3 +338,34 @@ chance_performance_cat <- function(tbl_cat) {
   return(tbl_chance)
 }
 
+
+add_deviations <- function(tbl_cr) {
+  #' by-trial, binned, and average deviations of reproduction responses
+  #' 
+  #' @description calculate deviations from true coordinates to 
+  #' response coordinates by-trial, averaged into bins, and
+  #' further averaged over bins
+  #' @param tbl_cr the tibble with the by-trial responses
+  #' 
+  #' @return a list with three tbls
+  #' 
+  # add deviation variables
+  tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
+  tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
+  tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr)
+  
+  # average deviation in binned x1-x2 grid
+  l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
+  tbl_checker <- l_checkerboard[[1]]
+  # and average over bins
+  tbl_checker_avg <- l_checkerboard[[2]]
+  
+  l_deviations <- list(
+    tbl_cr = tbl_cr,
+    tbl_checker = tbl_checker,
+    tbl_checker_avg = tbl_checker_avg
+  )
+  
+  return(l_deviations)
+}

@@ -27,21 +27,17 @@ l_tbl_data <- exclude_incomplete_datasets(l_tbl_data)
 tbl_cr <- l_tbl_data[[1]] %>% filter(session %in% c(1, 2))
 tbl_cat_sim <- l_tbl_data[[2]]
 
-# add deviation variables
-tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
-tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
-tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
-tbl_cr <- add_distance_to_nearest_center(tbl_cr)
-
-# average deviation in binned x1-x2 grid
-l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
-tbl_checker <- l_checkerboard[[1]]
-tbl_checker_avg <- l_checkerboard[[2]]
-
+l_deviations <- add_deviations(tbl_cr)
+env <- rlang::current_env()
+list2env(l_deviations, env)
 
 participants_included <- exclude_reproduction_outliers(tbl_cr, 1)
-tbl_cr <- inner_join(participants_included[, "participant_id"], tbl_cr, by = "participant_id")
-tbl_cat_sim <- inner_join(participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id")
+tbl_cr <- inner_join(
+  participants_included[, "participant_id"], tbl_cr, by = "participant_id"
+)
+tbl_cat_sim <- inner_join(
+  participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
+)
 
 # Categorization ----------------------------------------------------------
 
