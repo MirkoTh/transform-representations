@@ -9,7 +9,6 @@ library(docstring)
 library(rutils)
 
 
-
 # Import Home-Grown Modules -----------------------------------------------
 files <- c(
   "R/utils.R",
@@ -19,6 +18,9 @@ files <- c(
   "experiments/2022-02-category-learning/R/normDataWithin.R"
 )
 walk(files, source)
+
+
+# Load Data and Preprocess Data -------------------------------------------
 
 path_data <- "experiments/2022-02-category-learning/data/2022-03-30-pilot-1/"
 l_tbl_data <- load_data(path_data)
@@ -31,13 +33,9 @@ l_deviations <- add_deviations(tbl_cr)
 env <- rlang::current_env()
 list2env(l_deviations, env)
 
-participants_included <- exclude_reproduction_outliers(tbl_cr, 1)
-tbl_cr <- inner_join(
-  participants_included[, "participant_id"], tbl_cr, by = "participant_id"
-)
-tbl_cat_sim <- inner_join(
-  participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
-)
+l_outliers_excluded <- exclude_outliers(tbl_cr, tbl_cat_sim, 1)
+list2env(l_outliers_excluded, env)
+
 
 # Categorization ----------------------------------------------------------
 

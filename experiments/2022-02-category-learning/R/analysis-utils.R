@@ -369,3 +369,30 @@ add_deviations <- function(tbl_cr) {
   
   return(l_deviations)
 }
+
+
+exclude_outliers <- function(tbl_cr, tbl_cat_sim, n_sds) {
+  #' exclude outliers from reproduction and categorization tbls
+  #' 
+  #' @description participant is excluded if average deviation
+  #' exceeds mean + n_sds standard deviations
+  #' @param tbl_cr the tibble with the by-trial reproduction responses
+  #' @param tbl_cat_sim the tibble with the by-trial categorization responses
+  #' @param n_sds nr of standard deviations to calculate thx
+  #' 
+  #' @return a list with two tbls
+  #' 
+  # add deviation variables
+  participants_included <- exclude_reproduction_outliers(tbl_cr, n_sds)
+  tbl_cr <- inner_join(
+    participants_included[, "participant_id"], tbl_cr, by = "participant_id"
+  )
+  tbl_cat_sim <- inner_join(
+    participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
+  )
+  l_outliers_excluded <- list(
+    tbl_cr = tbl_cr,
+    tbl_cat_sim = tbl_cat_sim
+  )
+  return(l_outliers_excluded)
+}
