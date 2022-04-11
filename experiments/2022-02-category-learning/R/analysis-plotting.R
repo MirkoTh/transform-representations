@@ -1,3 +1,100 @@
+plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
+  #' 2D heat maps of average deviation (L2 norm) from true values
+  #' 
+  #' @description plots heat maps of avg deviation before and after the categorization task
+  #' @param tbl_checker the already aggregated checkerboard tibble
+  #' @param tbl_avg tbl with the average deviation in tbl_checker
+  #' 
+  #' @return the plot
+  #' 
+  pl <- ggplot(data = tbl_checker, aes(x1_true_binned, x2_true_binned)) +
+    geom_tile(aes(fill = avg_deviation_x1x2)) +
+    scale_fill_gradient2(name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5) +
+    geom_label(data = tbl_avg, aes(2, 2, label = str_c("Avg. Dev. = ", round(avg_deviation, 0)))) +
+    labs(
+      x = "Spikiness of Head (Binned)",
+      y = "Fill of Belly (Binned)"
+    ) + facet_wrap(~ participant_id) + theme_bw()
+  
+  return(pl)
+}
+
+
+plot_1d_marginals <- function(tbl) {
+  #' histograms with freq polys overlaid of 1D deviation (i.e., distance) from true values
+  #' 
+  #' @description plots histograms and freq polys of 1D distance from true values
+  #' facets for x1/x2 and before/after category learning are teased apart
+  #' @param tbl the tibble with the by-trial responses
+  #' 
+  #' @return the plot
+  #' 
+  # read individual performance
+  tbl %>% filter(session %in% c(1, 2)) %>%
+    pivot_longer(c(x1_deviation, x2_deviation), names_to = "var_deviation", values_to = "val_deviation") %>%
+    mutate(
+      var_deviation = factor(var_deviation, labels = c("Head Spikiness", "Belly Fill")),
+      session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning"))
+    ) %>%
+    ggplot(aes(val_deviation, group = session)) +
+    geom_histogram(aes(fill = session), bins = 10, alpha = .5, color = "black") +
+    geom_freqpoly(aes(color = session), bins = 10) +
+    facet_wrap(~ var_deviation + session) +
+    theme_bw() +
+    scale_color_brewer(name = "Timepoint", palette = "Set1") +
+    scale_fill_brewer(name = "Timepoint", palette = "Set1") +
+    labs(
+      x = "Deviation from True Value",
+      y = "Nr. Responses"
+    )
+}
+
+
+plot_marginals_one_session <- function(idx_session, tbl) {
+  #' scatter plot of 2D deviations with marginals
+  #' 
+  #' @description makes a scatter plot of deviation of responses and adds marginal distributions
+  #' @param idx_session which session should be plotted (i.e. before or after categorization task)
+  #' @param tbl the tibble with the by-trial responses
+  #' 
+  #' @return the complete ggMarginal plot object
+  #' 
+  # read individual performance
+  idx_color <- ifelse(idx_session == 1, 1, 2)
+  title <- c("Before Category Learning", "After Category Learning")[idx_color]
+  col <- c("#3399FF", "#990099")[idx_color]
+  tbl_plot <- tbl %>% filter(session == idx_session)
+  
+  
+  plot_2d_points_marginal <- function(tbl, participant) {
+    tbl <- tbl %>% filter(participant_id == participant)
+    pl <- ggplot(tbl, aes(x1_deviation, x2_deviation)) +
+      geom_point(color = col, shape = 1, size = 2) +
+      geom_density2d() +
+      theme_bw() +
+      theme(plot.title = element_text(size = 10)) +
+      scale_color_brewer(palette = "Set1") +
+      # somehow ggMarginal does not like coord_cartesian...
+      # the following excludes some of the responses, though
+      scale_x_continuous(limits = c(-84, 84)) +
+      scale_y_continuous(limits = c(-84, 84)) +
+      labs(
+        x = "Head Spikiness",
+        y = "Belly Size",
+        title = substr(participant, 1, 6)
+      )# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
+    
+    pl_marginals <- ggMarginal(pl, fill = col, type = "histogram", bins = 15)
+    return(pl_marginals)
+  }
+  participants <- unique(tbl_cr$participant_id)
+  l_pl <- map(participants, plot_2d_points_marginal, tbl = tbl_plot)
+  
+  pages_plots <- marrangeGrob(l_pl, ncol = 4, nrow = 4)  
+  return(pages_plots)
+}
+
+
 plot_categorization_heatmaps <- function(tbl, n_cat) {
   #' means and modes of category responses in 2D heat map 
   #' 
