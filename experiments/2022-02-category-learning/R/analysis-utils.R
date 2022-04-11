@@ -315,7 +315,6 @@ add_binned_trial_id <- function(tbl_cat_sim, binsize, trial_start_incl) {
   #' 
   #' @return the same tbl with the binned trial ids
   #' 
-
   tbl_cat_sim <- tbl_cat_sim %>%
     filter(trial_id >= trial_start_incl) %>%
     group_by(participant_id, cat_true) %>%
@@ -326,4 +325,41 @@ add_binned_trial_id <- function(tbl_cat_sim, binsize, trial_start_incl) {
       trial_id_binned = as.factor(ceiling((trial_id_by_condition) / binsize))
     )
   return(tbl_cat_sim)
+}
+
+
+aggregate_category_responses_by_x1x2 <- function(tbl_cat, trial_id_start_incl) {
+  #' aggregate category responses per x1-x2 grid cell
+  #' 
+  #' @description calculate mean and mode responses per x1-x2 grid cell
+  #' @param tbl_cat_sim the tibble with the by-trial categorization responses
+  #' @param trial_id_start_incl first trial to be considered
+  #' 
+  #' @return the aggregated tbl
+  #' 
+  tbl_cat_grid <- tbl_cat %>% 
+    filter(trial_id >= trial_id_start_incl) %>%
+    group_by(participant_id, n_categories, x1_true, x2_true, response) %>%
+    count() %>% arrange(participant_id, x1_true, x2_true) %>%
+    group_by(participant_id, n_categories, x1_true, x2_true) %>%
+    mutate(response_mean = mean(response)) %>%
+    filter(n == max(n)) %>% ungroup() %>%
+    mutate(
+      val_random = runif(nrow(.))
+    ) %>% group_by(participant_id, n_categories, x1_true, x2_true) %>%
+    mutate(rank_random = rank(val_random)) %>%
+    arrange(n_categories) %>%
+    ungroup() %>% filter(rank_random == 1) %>%
+    pivot_longer(c(response_mean, response))
+  
+  
+  tbl_cat_grid <- tbl_cat_grid %>% left_join(
+    tbl_cat_overview[, c("participant_id", "mean_accuracy")], by = "participant_id"
+  ) %>% mutate(
+    name = fct_inorder(name),
+    name = fct_relabel(name, function(x) return(c("Mean", "Mode")))
+  )
+  
+  return(tbl_cat_grid)
+  
 }
