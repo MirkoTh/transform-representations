@@ -338,3 +338,61 @@ chance_performance_cat <- function(tbl_cat) {
   return(tbl_chance)
 }
 
+
+add_deviations <- function(tbl_cr) {
+  #' by-trial, binned, and average deviations of reproduction responses
+  #' 
+  #' @description calculate deviations from true coordinates to 
+  #' response coordinates by-trial, averaged into bins, and
+  #' further averaged over bins
+  #' @param tbl_cr the tibble with the by-trial responses
+  #' 
+  #' @return a list with three tbls
+  #' 
+  # add deviation variables
+  tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
+  tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
+  tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr)
+  
+  # average deviation in binned x1-x2 grid
+  l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
+  tbl_checker <- l_checkerboard[[1]]
+  # and average over bins
+  tbl_checker_avg <- l_checkerboard[[2]]
+  
+  l_deviations <- list(
+    tbl_cr = tbl_cr,
+    tbl_checker = tbl_checker,
+    tbl_checker_avg = tbl_checker_avg
+  )
+  
+  return(l_deviations)
+}
+
+
+exclude_outliers <- function(tbl_cr, tbl_cat_sim, n_sds) {
+  #' exclude outliers from reproduction and categorization tbls
+  #' 
+  #' @description participant is excluded if average deviation
+  #' exceeds mean + n_sds standard deviations
+  #' @param tbl_cr the tibble with the by-trial reproduction responses
+  #' @param tbl_cat_sim the tibble with the by-trial categorization responses
+  #' @param n_sds nr of standard deviations to calculate thx
+  #' 
+  #' @return a list with two tbls
+  #' 
+  # add deviation variables
+  participants_included <- exclude_reproduction_outliers(tbl_cr, n_sds)
+  tbl_cr <- inner_join(
+    participants_included[, "participant_id"], tbl_cr, by = "participant_id"
+  )
+  tbl_cat_sim <- inner_join(
+    participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
+  )
+  l_outliers_excluded <- list(
+    tbl_cr = tbl_cr,
+    tbl_cat_sim = tbl_cat_sim
+  )
+  return(l_outliers_excluded)
+}
