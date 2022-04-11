@@ -129,6 +129,8 @@ plot_categorization_heatmaps <- function(tbl, n_cat) {
 
 
 histograms_overall_accuracy <- function(tbl_cat_overview, tbl_chance2) {
+  #' histogram of by-participant overall categorization accuracy
+  #' 
   ggplot() + 
     geom_histogram(
       data = tbl_cat_overview, aes(mean_accuracy, group = participant_id), 
@@ -148,6 +150,15 @@ histograms_overall_accuracy <- function(tbl_cat_overview, tbl_chance2) {
 
 
 plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
+  #' 
+  #' 
+  #' @description overall categorization accuracy against blocks with 95% ci and
+  #' individual categorization accuracies against blocks
+  #' @param tbl_cat the tbl with by-trial category learning responses
+  #' 
+  #' @return a list with two plots
+  #' 
+  
   tbl_cat_agg <- tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
     summarize(
       accuracy_mn_participant = mean(accuracy)
@@ -162,7 +173,7 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
   tbl_chance <- chance_performance_cat(tbl_cat)
   tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
   
-  ggplot() + 
+  pl_agg <- ggplot() + 
     geom_errorbar(data = tbl_cat_agg_ci, aes(
       trial_id_binned, ymin = accuracy_mn_participant - ci, 
       ymax = accuracy_mn_participant + ci, color = cat_true
@@ -187,4 +198,74 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
       x = "Block of 20 Trials",
       y = "Categorization Accuracy"
     ) + theme_bw()
+  
+  pl_indiv <- ggplot(tbl_cat_agg, aes(
+    trial_id_binned, accuracy_mn_participant, group = as.numeric(participant_id)
+  )) + geom_line(aes(color = as.numeric(participant_id))) +
+    geom_point(color = "white", size = 3) +
+    geom_point(aes(color = as.numeric(participant_id))) +
+    facet_grid(n_categories ~ cat_true) +
+    theme_bw() +
+    scale_color_viridis_c(guide = "none") +
+    labs(
+      x = "Block of 20 Trials",
+      y = "Categorization Accuracy",
+      title = "By Participant Categorization Trajectories"
+    )
+  
+  return(list(pl_agg, pl_indiv))
+}
+
+
+movement_towards_category_center <- function(tbl_cat_sim, tbl_cr) {
+  #' 
+  #' @description calculate and plot average movement of reproduction
+  #' responses towards category center
+  #' @param tbl_cat_sim the tbl with by-trial category learning and 
+  #' similarity judgment responses
+  #' @param tbl_cr the tbl with by-trial reproduction responses
+  #' 
+  #' @return a list containing [[1]] a tbl with the average deviation and
+  #' [[2]] a plot showing movement towards center against task2 (cat/sim) accuracy
+  #' 
+  
+  tbl_cat_last <- tbl_cat_sim %>% 
+    mutate(category = cat_true) %>%
+    group_by(participant_id) %>%
+    filter(trial_id_binned == max(as.numeric(as.character(trial_id_binned)))) %>%
+    grouped_agg(c(participant_id, n_categories, category), accuracy)
+  # similarity condition gets a dummy accuracy of .5
+  tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
+  tbl_movement <- grouped_agg(
+    tbl_cr, c(participant_id, n_categories, session, category), d_closest
+  ) %>% select(participant_id, n_categories, session, category, mean_d_closest) %>%
+    left_join(
+      tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], 
+      by = c("participant_id", "category")
+    ) %>% ungroup() %>% arrange(participant_id, category, session) %>%
+    group_by(participant_id, category) %>%
+    mutate(
+      mean_d_closest_before = lag(mean_d_closest),
+      movement = mean_d_closest_before - mean_d_closest,
+      category = fct_relabel(
+        category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))
+      ),
+      n_categories = fct_relabel(
+        n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
+      )
+    ) %>%
+    filter(!is.na(mean_d_closest_before))
+  
+  pl <- ggplot(tbl_movement, aes(mean_accuracy, movement, group = category)) + 
+    geom_point(aes(color = category)) +
+    geom_smooth(method = "lm", aes(color = category)) +
+    facet_grid(n_categories ~ category) +
+    scale_color_brewer(palette = "Set1", name = "Category") +
+    theme_bw() +
+    labs(
+      x = "Categorization Accuracy",
+      y = "Movement (Euclidian Distance)"
+    )
+  
+  return(list(tbl_movement, pl))
 }
