@@ -123,3 +123,22 @@ plot_categorization_heatmaps <- function(tbl, n_cat) {
       y = "Belly Fill"
     )
 }
+
+
+histograms_overall_accuracy <- function(tbl_cat_overview, tbl_chance2) {
+  ggplot() + 
+    geom_histogram(
+      data = tbl_cat_overview, aes(mean_accuracy, group = participant_id), 
+      fill = "black", color = "white"
+    ) +
+    geom_segment(
+      data = tbl_chance2, aes(
+        x = p_chance, xend = p_chance, y = 0, yend = 3, group = n_categories
+      ), linetype = "dotdash", color = "red") +
+    facet_wrap(~ n_categories) +
+    theme_dark() +
+    labs(
+      x = "Overall Accuracy",
+      y = "Participant Counts"
+    )
+}
