@@ -363,3 +363,41 @@ aggregate_category_responses_by_x1x2 <- function(tbl_cat, trial_id_start_incl) {
   return(tbl_cat_grid)
   
 }
+
+
+fit_predict_nb <- function(participant_id, tbl) {
+  #' fit and predict by-participant category responses using true x1-x2 values as predictors
+  #' 
+  #' @description fits a naive Bayes classifier to the data in tbl for the given participant_id
+  #' additionally, creates a tbl with the posterior densities for an evenly space grid over x1 and x2
+  #' only for category 2 (i.e., the target category)
+  #' @param participant_id the participant to fit and predict
+  #' @param tbl tbl with the category-learning data
+  #' 
+  #' @return a list with the fitted model and with the predicted probabilities
+  #'
+
+  # helper function calculating densities for grid 
+  nb_cat2_densities <- function(params) {
+    # evenly space grid
+    x1 <- seq(0, 100, by = 2.5)
+    x2 <- x1
+    grid_eval <- crossing(x1, x2)
+    grid_eval$density <- pmap_dbl(
+      grid_eval, function(x1, x2) {
+        dmvnorm(x = c(x1, x2), 
+                mean = c(params[["m1"]], params[["m2"]]), 
+                sigma = matrix(c(params[["sd1"]], 0, 0, params[["sd2"]]), nrow = 2))
+      })
+    return(grid_eval)
+  }
+  
+  tbl <- tbl[tbl$participant_id == participant_id, ]
+  m_nb <- naive_bayes(tbl[, c("x1_true", "x2_true")], as.character(tbl$response))
+  params <- c(m_nb$tables[["x1_true"]][, 2], m_nb$tables[["x2_true"]][, 2]) %>% as.list()
+  names(params) <- c("m1", "sd1", "m2", "sd2")
+  tbl_densities <- nb_cat2_densities(params)
+  tbl_densities$participant_id <- participant_id
+  l_nb <- list(m = m_nb, tbl_densities = tbl_densities)
+  return(l_nb)
+}
