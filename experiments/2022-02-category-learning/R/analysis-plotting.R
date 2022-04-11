@@ -1,3 +1,6 @@
+dg <- position_dodge(width = .8)
+
+
 plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
   #' 2D heat maps of average deviation (L2 norm) from true values
   #' 
@@ -141,4 +144,47 @@ histograms_overall_accuracy <- function(tbl_cat_overview, tbl_chance2) {
       x = "Overall Accuracy",
       y = "Participant Counts"
     )
+}
+
+
+plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
+  tbl_cat_agg <- tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
+    summarize(
+      accuracy_mn_participant = mean(accuracy)
+    ) %>%  ungroup()
+  
+  tbl_cat_agg_ci <- summarySEwithin(
+    tbl_cat_agg, "accuracy_mn_participant", c("n_categories"), 
+    c("cat_true", "trial_id_binned"), "participant_id"
+  ) %>% as_tibble()
+  tbl_cat_agg_ci$trial_id_binned <- as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
+  
+  tbl_chance <- chance_performance_cat(tbl_cat)
+  tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
+  
+  ggplot() + 
+    geom_errorbar(data = tbl_cat_agg_ci, aes(
+      trial_id_binned, ymin = accuracy_mn_participant - ci, 
+      ymax = accuracy_mn_participant + ci, color = cat_true
+    ), width = .25, position = dg) +
+    geom_line(data = tbl_cat_agg_ci, aes(
+      trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
+    ), position = dg) +
+    geom_point(data = tbl_cat_agg_ci, aes(
+      trial_id_binned, accuracy_mn_participant, group = cat_true
+    ), position = dg, color = "white", size = 3) +
+    geom_point(data = tbl_cat_agg_ci, aes(
+      trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
+    ), position = dg) +
+    geom_line(
+      data = tbl_chance, aes(block, prop_chance, group = 1), 
+      linetype = "dotdash", size = .5) +
+    facet_wrap(~ n_categories) +
+    coord_cartesian(ylim = c(0, 1)) +
+    scale_color_brewer(name = "Category", palette = "Set1") +
+    scale_x_continuous(breaks = seq(2, 10, by = 2)) +
+    labs(
+      x = "Block of 20 Trials",
+      y = "Categorization Accuracy"
+    ) + theme_bw()
 }
