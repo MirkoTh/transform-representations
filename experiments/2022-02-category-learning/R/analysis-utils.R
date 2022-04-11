@@ -41,7 +41,7 @@ load_data <- function(path_data) {
   # add stim_id
   tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   
-    # only pilot data have to be corrected currently...
+  # only pilot data have to be corrected currently...
   tbl_cr$session <- as.numeric(tbl_cr$session)
   #tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
   
@@ -168,6 +168,37 @@ category_centers <- function() {
 }
 
 
+euclidian_distance_to_center <- function(x_mn, y_mn, tbl, is_response) {
+  #' helper function calculating Euclidean distance
+  if(is_response) {
+    sqrt((tbl$x1_response - x_mn)^2 + (tbl$x2_response - y_mn)^2)
+  } else {
+    sqrt((tbl$x1_true - x_mn)^2 + (tbl$x2_true - y_mn)^2)
+  }
+}
+
+
+add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
+  # this has to be calculated for each participant compared to theoretical mean
+  distance_to_individual_center <- function(p_id) {
+    l_mn <- list(x_mn = l_m_nb_pds[[p_id]][["x1_true"]][1, 2],
+                 y_mn = l_m_nb_pds[[p_id]][["x2_true"]][1, 2])
+    tbl_tmp <- tbl_cr %>% filter(substr(p_id, 1, 6) == p_id)
+    tbl_tmp$d_rep_center <- euclidian_distance_to_center(
+      l_mn[["x_mn"]], l_mn[["y_mn"]], tbl_tmp, is_response = TRUE
+    )
+    return(tbl_tmp)
+  }
+  p_ids_2_cats <- substr(
+    unique(as.character(tbl_cr$participant_id[tbl_cr$n_categories == 2])), 1, 6
+  )
+
+  l_ds <- map(p_ids_2_cats, distance_to_individual_center)
+  tbl_cr <- reduce(l_ds, rbind)
+  return(tbl_cr)
+}
+
+
 add_distance_to_nearest_center <- function(tbl_cr) {
   #' add distance to closest category centroid
   #' 
@@ -180,14 +211,7 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   l_tmp <- category_centers()
   l_cat_mns <- l_tmp[[1]]
   l_ellipses <- l_tmp[[2]]
-  euclidian_distance_to_center <- function(x_mn, y_mn, tbl, is_response) {
-    if(is_response) {
-      sqrt((tbl$x1_response - x_mn)^2 + (tbl$x2_response - y_mn)^2)
-    } else {
-      sqrt((tbl$x1_true - x_mn)^2 + (tbl$x2_true - y_mn)^2)
-    }
-    
-  }
+  
   # split by nr of categories
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
   # as only one category center, can directly compute distance from response to that center
@@ -240,9 +264,9 @@ chance_performance_cat <- function(tbl_cat) {
   for (nc in n_categories) {
     val <- as.numeric(as.character(nc))
     tbl_chance$prop_chance[tbl_chance$n_categories == nc] <- 1/val
-
+    
   }
-   return(tbl_chance)
+  return(tbl_chance)
 }
 
 
@@ -362,4 +386,42 @@ aggregate_category_responses_by_x1x2 <- function(tbl_cat, trial_id_start_incl) {
   
   return(tbl_cat_grid)
   
+}
+
+
+fit_predict_nb <- function(participant_id, tbl) {
+  #' fit and predict by-participant category responses using true x1-x2 values as predictors
+  #' 
+  #' @description fits a naive Bayes classifier to the data in tbl for the given participant_id
+  #' additionally, creates a tbl with the posterior densities for an evenly space grid over x1 and x2
+  #' only for category 2 (i.e., the target category)
+  #' @param participant_id the participant to fit and predict
+  #' @param tbl tbl with the category-learning data
+  #' 
+  #' @return a list with the fitted model and with the predicted probabilities
+  #'
+  
+  # helper function calculating densities for grid 
+  nb_cat2_densities <- function(params) {
+    # evenly space grid
+    x1 <- seq(0, 100, by = 2.5)
+    x2 <- x1
+    grid_eval <- crossing(x1, x2)
+    grid_eval$density <- pmap_dbl(
+      grid_eval, function(x1, x2) {
+        dmvnorm(x = c(x1, x2), 
+                mean = c(params[["m1"]], params[["m2"]]), 
+                sigma = matrix(c(params[["sd1"]], 0, 0, params[["sd2"]]), nrow = 2))
+      })
+    return(grid_eval)
+  }
+  
+  tbl <- tbl[tbl$participant_id == participant_id, ]
+  m_nb <- naive_bayes(tbl[, c("x1_true", "x2_true")], as.character(tbl$response))
+  params <- c(m_nb$tables[["x1_true"]][, 2], m_nb$tables[["x2_true"]][, 2]) %>% as.list()
+  names(params) <- c("m1", "sd1", "m2", "sd2")
+  tbl_densities <- nb_cat2_densities(params)
+  tbl_densities$participant_id <- participant_id
+  l_nb <- list(m = m_nb, tbl_densities = tbl_densities)
+  return(l_nb)
 }

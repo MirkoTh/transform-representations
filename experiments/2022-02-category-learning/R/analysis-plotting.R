@@ -98,7 +98,7 @@ plot_marginals_one_session <- function(idx_session, tbl) {
 }
 
 
-plot_categorization_heatmaps <- function(tbl, n_cat) {
+plot_categorization_heatmaps <- function(tbl, n_cat, f_agg = "Mode") {
   #' means and modes of category responses in 2D heat map 
   #' 
   #' @description plots heat maps of by-participant avg and modal category responses
@@ -111,14 +111,14 @@ plot_categorization_heatmaps <- function(tbl, n_cat) {
   # order participants in order of decreasing accuracy
   tbl <- tbl %>% arrange(desc(mean_accuracy)) %>%
     mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE)) %>% 
-    filter(n_categories == n_cat)
+    filter(n_categories == n_cat, name == f_agg)
   
-  ggplot(tbl, aes(x1_true, x2_true, group = value)) +
-    geom_raster(aes(fill = value)) +
-    geom_label(aes(
-      10, 8, label = str_c(round(mean_accuracy, 2))
-    ), size = 3) +
-    facet_wrap(participant_id ~  name) +
+  ggplot() +
+    geom_raster(data = tbl, aes(x1_true, x2_true, group = value, fill = value)) +
+    geom_label(data = tbl, aes(
+      10, 8, label = str_c(round(mean_accuracy, 2)), group = value
+      ), size = 3) +
+    facet_wrap(~ participant_id, ncol = 4) +
     scale_fill_viridis_c(name = "Category\nResponse") +
     theme_bw() +
     labs(
@@ -217,7 +217,7 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
 }
 
 
-movement_towards_category_center <- function(tbl_cat_sim, tbl_cr) {
+movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   #' 
   #' @description calculate and plot average movement of reproduction
   #' responses towards category center
@@ -237,16 +237,17 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr) {
   # similarity condition gets a dummy accuracy of .5
   tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
   tbl_movement <- grouped_agg(
-    tbl_cr, c(participant_id, n_categories, session, category), d_closest
-  ) %>% select(participant_id, n_categories, session, category, mean_d_closest) %>%
+    tbl_cr, c(participant_id, n_categories, session, category), d_measure
+  ) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
+    select(participant_id, n_categories, session, category, mean_distance) %>%
     left_join(
       tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], 
       by = c("participant_id", "category")
     ) %>% ungroup() %>% arrange(participant_id, category, session) %>%
     group_by(participant_id, category) %>%
     mutate(
-      mean_d_closest_before = lag(mean_d_closest),
-      movement = mean_d_closest_before - mean_d_closest,
+      mean_distance_before = lag(mean_distance),
+      movement = mean_distance_before - mean_distance,
       category = fct_relabel(
         category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))
       ),
@@ -254,7 +255,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr) {
         n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
       )
     ) %>%
-    filter(!is.na(mean_d_closest_before))
+    filter(!is.na(mean_distance_before))
   
   pl <- ggplot(tbl_movement, aes(mean_accuracy, movement, group = category)) + 
     geom_point(aes(color = category)) +
