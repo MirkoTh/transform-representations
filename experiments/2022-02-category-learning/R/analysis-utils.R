@@ -16,6 +16,7 @@ fix_data_types <- function(tbl, fs, ns) {
   return(tbl)
 }
 
+
 load_data <- function(path_data) {
   #' load continuous reproduction ("cr") and category learning ("cat") data
   #' 
@@ -53,6 +54,7 @@ load_data <- function(path_data) {
   return(l_data)
 }
 
+
 exclude_incomplete_datasets <- function(l_tbl) {
   #' exclude incomplete data
   #' 
@@ -78,52 +80,6 @@ exclude_incomplete_datasets <- function(l_tbl) {
 }
 
 
-
-
-plot_marginals_one_session <- function(idx_session, tbl) {
-  #' scatter plot of 2D deviations with marginals
-  #' 
-  #' @description makes a scatter plot of deviation of responses and adds marginal distributions
-  #' @param idx_session which session should be plotted (i.e. before or after categorization task)
-  #' @param tbl the tibble with the by-trial responses
-  #' 
-  #' @return the complete ggMarginal plot object
-  #' 
-  # read individual performance
-  idx_color <- ifelse(idx_session == 1, 1, 2)
-  title <- c("Before Category Learning", "After Category Learning")[idx_color]
-  col <- c("#3399FF", "#990099")[idx_color]
-  tbl_plot <- tbl %>% filter(session == idx_session)
-  
-  
-  plot_2d_points_marginal <- function(tbl, participant) {
-    tbl <- tbl %>% filter(participant_id == participant)
-    pl <- ggplot(tbl, aes(x1_deviation, x2_deviation)) +
-      geom_point(color = col, shape = 1, size = 2) +
-      geom_density2d() +
-      theme_bw() +
-      theme(plot.title = element_text(size = 10)) +
-      scale_color_brewer(palette = "Set1") +
-      # somehow ggMarginal does not like coord_cartesian...
-      # the following excludes some of the responses, though
-      scale_x_continuous(limits = c(-84, 84)) +
-      scale_y_continuous(limits = c(-84, 84)) +
-      labs(
-        x = "Head Spikiness",
-        y = "Belly Size",
-        title = substr(participant, 1, 6)
-      )# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
-    
-    pl_marginals <- ggMarginal(pl, fill = col, type = "histogram", bins = 15)
-    return(pl_marginals)
-  }
-  participants <- unique(tbl_cr$participant_id)
-  l_pl <- map(participants, plot_2d_points_marginal, tbl = tbl_plot)
-
-  pages_plots <- marrangeGrob(l_pl, ncol = 4, nrow = 4)  
-  return(pages_plots)
-}
-
 exclude_reproduction_outliers <- function(tbl_cr, n_sds) {
   #' exclude outliers in reproduction task
   #' 
@@ -147,6 +103,7 @@ exclude_reproduction_outliers <- function(tbl_cr, n_sds) {
   tbl_cr_participant$exclude[tbl_cr_participant$avg_deviation > tbl_cr_participant$thx_hi] <- TRUE
   return(tbl_cr_participant %>% filter(exclude == FALSE))
 }
+
 
 checkerboard_deviation <- function(tbl, n_agg_x) {
   #' deviation from true cr values in several bins of x1 and x2
@@ -181,60 +138,6 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
     mutate(rwn = row_number(x1_true_binned)) %>% filter(rwn == 1) %>%
     ungroup()
   return(list(tbl_cr_agg, tbl_cr_agg_2))
-}
-
-
-
-plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
-  #' 2D heat maps of average deviation (L2 norm) from true values
-  #' 
-  #' @description plots heat maps of avg deviation before and after the categorization task
-  #' @param tbl_checker the already aggregated checkerboard tibble
-  #' @param tbl_avg tbl with the average deviation in tbl_checker
-  #' 
-  #' @return the plot
-  #' 
-  pl <- ggplot(data = tbl_checker, aes(x1_true_binned, x2_true_binned)) +
-    geom_tile(aes(fill = avg_deviation_x1x2)) +
-    scale_fill_gradient2(name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5) +
-    geom_label(data = tbl_avg, aes(2, 2, label = str_c("Avg. Dev. = ", round(avg_deviation, 0)))) +
-    labs(
-      x = "Spikiness of Head (Binned)",
-      y = "Fill of Belly (Binned)"
-    ) + facet_wrap(~ participant_id) + theme_bw()
-  
-  return(pl)
-}
-
-
-
-plot_1d_marginals <- function(tbl) {
-  #' histograms with freq polys overlaid of 1D deviation (i.e., distance) from true values
-  #' 
-  #' @description plots histograms and freq polys of 1D distance from true values
-  #' facets for x1/x2 and before/after category learning are teased apart
-  #' @param tbl the tibble with the by-trial responses
-  #' 
-  #' @return the plot
-  #' 
-  # read individual performance
-  tbl %>% filter(session %in% c(1, 2)) %>%
-    pivot_longer(c(x1_deviation, x2_deviation), names_to = "var_deviation", values_to = "val_deviation") %>%
-    mutate(
-      var_deviation = factor(var_deviation, labels = c("Head Spikiness", "Belly Fill")),
-      session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning"))
-    ) %>%
-    ggplot(aes(val_deviation, group = session)) +
-    geom_histogram(aes(fill = session), bins = 10, alpha = .5, color = "black") +
-    geom_freqpoly(aes(color = session), bins = 10) +
-    facet_wrap(~ var_deviation + session) +
-    theme_bw() +
-    scale_color_brewer(name = "Timepoint", palette = "Set1") +
-    scale_fill_brewer(name = "Timepoint", palette = "Set1") +
-    labs(
-      x = "Deviation from True Value",
-      y = "Nr. Responses"
-    )
 }
 
 
@@ -317,6 +220,7 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   return(tbl_cr)
 }
 
+
 chance_performance_cat <- function(tbl_cat) {
   #' chance performance with 2 and 3 categories
   #' 
@@ -326,16 +230,19 @@ chance_performance_cat <- function(tbl_cat) {
   #' 
   #' @return the chance peformance tibble
   #' 
-  n_categories <- c("Nr. Categories = 2", "Nr. Categories = 3")
-  block <- sort(unique(tbl_cat$trial_id_binned))
+  n_categories <- unique(tbl_cat$n_categories)
+  block <- factor(sort(unique(tbl_cat$trial_id_binned)))
   
   tbl_chance <- crossing(
     n_categories, block
   )
   tbl_chance$prop_chance <- 0
-  tbl_chance$prop_chance[tbl_chance$n_categories == "Nr. Categories = 2"] <- .5
-  tbl_chance$prop_chance[tbl_chance$n_categories == "Nr. Categories = 3"] <- .333
-  return(tbl_chance)
+  for (nc in n_categories) {
+    val <- as.numeric(as.character(nc))
+    tbl_chance$prop_chance[tbl_chance$n_categories == nc] <- 1/val
+
+  }
+   return(tbl_chance)
 }
 
 
@@ -395,4 +302,64 @@ exclude_outliers <- function(tbl_cr, tbl_cat_sim, n_sds) {
     tbl_cat_sim = tbl_cat_sim
   )
   return(l_outliers_excluded)
+}
+
+
+add_binned_trial_id <- function(tbl_cat_sim, binsize, trial_start_incl) {
+  #' add block variable
+  #' 
+  #' @description add blocks of binsize = n trials including trial_id >= trial_start_incl
+  #' @param tbl_cat_sim the tibble with the by-trial categorization responses
+  #' @param binsize nr of trials that go into one bin
+  #' @param trial_start_incl first trial to be considered
+  #' 
+  #' @return the same tbl with the binned trial ids
+  #' 
+  tbl_cat_sim <- tbl_cat_sim %>%
+    filter(trial_id >= trial_start_incl) %>%
+    group_by(participant_id, cat_true) %>%
+    arrange(n_categories, participant_id, trial_id) %>%
+    mutate(
+      trial_id_by_condition = row_number(trial_id)
+    ) %>% ungroup() %>% mutate(
+      trial_id_binned = as.factor(ceiling((trial_id_by_condition) / binsize))
+    )
+  return(tbl_cat_sim)
+}
+
+
+aggregate_category_responses_by_x1x2 <- function(tbl_cat, trial_id_start_incl) {
+  #' aggregate category responses per x1-x2 grid cell
+  #' 
+  #' @description calculate mean and mode responses per x1-x2 grid cell
+  #' @param tbl_cat_sim the tibble with the by-trial categorization responses
+  #' @param trial_id_start_incl first trial to be considered
+  #' 
+  #' @return the aggregated tbl
+  #' 
+  tbl_cat_grid <- tbl_cat %>% 
+    filter(trial_id >= trial_id_start_incl) %>%
+    group_by(participant_id, n_categories, x1_true, x2_true, response) %>%
+    count() %>% arrange(participant_id, x1_true, x2_true) %>%
+    group_by(participant_id, n_categories, x1_true, x2_true) %>%
+    mutate(response_mean = mean(response)) %>%
+    filter(n == max(n)) %>% ungroup() %>%
+    mutate(
+      val_random = runif(nrow(.))
+    ) %>% group_by(participant_id, n_categories, x1_true, x2_true) %>%
+    mutate(rank_random = rank(val_random)) %>%
+    arrange(n_categories) %>%
+    ungroup() %>% filter(rank_random == 1) %>%
+    pivot_longer(c(response_mean, response))
+  
+  
+  tbl_cat_grid <- tbl_cat_grid %>% left_join(
+    tbl_cat_overview[, c("participant_id", "mean_accuracy")], by = "participant_id"
+  ) %>% mutate(
+    name = fct_inorder(name),
+    name = fct_relabel(name, function(x) return(c("Mean", "Mode")))
+  )
+  
+  return(tbl_cat_grid)
+  
 }

@@ -47,10 +47,7 @@ tbl_cat_sim <- tbl_cat_sim %>%
   mutate(
     trial_id_by_condition = row_number(trial_id)
   ) %>% ungroup() %>% mutate(
-    trial_id_binned = as.factor(ceiling((trial_id_by_condition) / 20)),
-    n_categories = factor(n_categories, labels = c(
-      "Nr. Categories = 1", "Nr. Categories = 2", "Nr. Categories = 3")
-    )
+    trial_id_binned = as.factor(ceiling((trial_id_by_condition) / 20))
   )
 tbl_cat <- tbl_cat_sim %>% filter(n_categories %in% c(2, 3))
 
@@ -119,7 +116,19 @@ ggplot() +
     y = "Categorization Accuracy"
   ) + theme_bw()
 
-
+ggplot(tbl_cat_agg, aes(
+  trial_id_binned, accuracy_mn_participant, group = as.numeric(participant_id)
+)) + geom_line(aes(color = as.numeric(participant_id))) +
+  geom_point(color = "white", size = 3) +
+  geom_point(aes(color = as.numeric(participant_id))) +
+  facet_grid(n_categories ~ cat_true) +
+  theme_bw() +
+  scale_color_viridis_c(guide = "none") +
+  labs(
+    x = "Block of 20 Trials",
+    y = "Categorization Accuracy",
+    title = "By Participant Categorization Trajectories"
+  )
 
 
 tbl_cat_last <- tbl_cat_sim %>% 
@@ -128,17 +137,26 @@ tbl_cat_last <- tbl_cat_sim %>%
   filter(trial_id_binned == max(as.numeric(as.character(trial_id_binned)))) %>%
   grouped_agg(c(participant_id, n_categories, category), accuracy)
 # similarity condition gets a dummy accuracy of .5
-tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == "Nr. Categories = 1"] <- .5
-tbl_movement <- grouped_agg(tbl_cr, c(participant_id, n_categories, session, category), d_closest) %>%
+tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
+tbl_movement <- grouped_agg(
+  tbl_cr, c(participant_id, n_categories, session, category), d_closest
+) %>%
   select(participant_id, n_categories, session, category, mean_d_closest) %>%
-  left_join(tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], by = c("participant_id", "category")) %>%
+  left_join(
+    tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], 
+    by = c("participant_id", "category")
+  ) %>%
   ungroup() %>% arrange(participant_id, category, session) %>%
   group_by(participant_id, category) %>%
   mutate(
     mean_d_closest_before = lag(mean_d_closest),
     movement = mean_d_closest_before - mean_d_closest,
-    category = fct_relabel(category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))),
-    n_categories = fct_relabel(n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x)))
+    category = fct_relabel(
+      category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))
+    ),
+    n_categories = fct_relabel(
+      n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
+    )
   ) %>%
   filter(!is.na(mean_d_closest_before))
 
@@ -153,7 +171,53 @@ ggplot(tbl_movement, aes(mean_accuracy, movement, group = category)) +
     y = "Movement (Euclidian Distance)"
   )
 
+tbl_cat_grid <- tbl_cat %>% 
+  filter(trial_id >= 241) %>%
+  group_by(participant_id, n_categories, x1_true, x2_true, response) %>%
+  count() %>% arrange(participant_id, x1_true, x2_true) %>%
+  group_by(participant_id, n_categories, x1_true, x2_true) %>%
+  mutate(response_mean = mean(response)) %>%
+  filter(n == max(n)) %>% ungroup() %>%
+  mutate(
+    val_random = runif(nrow(.))
+  ) %>% group_by(participant_id, n_categories, x1_true, x2_true) %>%
+  mutate(rank_random = rank(val_random)) %>%
+  arrange(n_categories) %>%
+  ungroup() %>% filter(rank_random == 1) %>%
+  pivot_longer(c(response_mean, response))
 
+
+tbl_cat_grid <- tbl_cat_grid %>% left_join(
+  tbl_cat_overview[, c("participant_id", "mean_accuracy")], by = "participant_id"
+) %>% mutate(
+  name = fct_inorder(name),
+  name = fct_relabel(name, function(x) return(c("Mean", "Mode")))
+)
+
+
+plot_categorization_heatmaps <- function(tbl, n_cat) {
+  # order participants in order of decreasing accuracy
+  tbl <- tbl %>% arrange(desc(mean_accuracy)) %>%
+    mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE)) %>% 
+    filter(n_categories == n_cat)
+  
+  ggplot(tbl, aes(x1_true, x2_true, group = value)) +
+    geom_raster(aes(fill = value)) +
+    geom_label(aes(
+      10, 8, label = str_c(round(mean_accuracy, 2))
+    ), size = 3) +
+    facet_wrap(participant_id ~  name) +
+    scale_fill_viridis_c(name = "Category\nResponse") +
+    theme_bw() +
+    labs(
+      x = "Head Spikiness",
+      y = "Belly Fill"
+    )
+}
+
+
+plot_categorization_heatmaps(tbl_cat_grid, 2)
+plot_categorization_heatmaps(tbl_cat_grid, 3)
 
 # Similarity Judgments ----------------------------------------------------
 
