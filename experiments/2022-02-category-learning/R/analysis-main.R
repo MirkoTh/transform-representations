@@ -7,12 +7,14 @@ library(gridExtra)
 library(ggExtra)
 library(docstring)
 library(rutils)
+library(catlearn)
 
 
 # Import Home-Grown Modules -----------------------------------------------
 files <- c(
   "R/utils.R",
   "experiments/2022-02-category-learning/R/analysis-utils.R",
+  "experiments/2022-02-category-learning/R/analysis-plotting.R",
   "experiments/2022-02-category-learning/R/summarySEwithin.R",
   "experiments/2022-02-category-learning/R/summarySE.R",
   "experiments/2022-02-category-learning/R/normDataWithin.R"
@@ -39,185 +41,81 @@ list2env(l_outliers_excluded, env)
 
 # Categorization ----------------------------------------------------------
 
-
-tbl_cat_sim <- tbl_cat_sim %>%
-  filter(trial_id >= 40) %>%
-  group_by(participant_id, cat_true) %>%
-  arrange(n_categories, participant_id, trial_id) %>%
-  mutate(
-    trial_id_by_condition = row_number(trial_id)
-  ) %>% ungroup() %>% mutate(
-    trial_id_binned = as.factor(ceiling((trial_id_by_condition) / 20))
-  )
+tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
 tbl_cat <- tbl_cat_sim %>% filter(n_categories %in% c(2, 3))
 
-tbl_cat_overview <- tbl_cat %>% grouped_agg(c(n_categories, participant_id), accuracy) %>%
+tbl_cat_overview <- tbl_cat %>% 
+  grouped_agg(c(n_categories, participant_id), accuracy) %>%
   arrange(mean_accuracy)
 tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
   summarize(dummy = mean(mean_accuracy)) %>%
   mutate(p_chance = 1/as.numeric(str_extract(n_categories, "[2-3]$")))
 
+# categorization accuracy overview
+histograms_overall_accuracy(tbl_cat_overview, tbl_chance2)
+l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
+# overall trajectory
+l_pl[[1]]
+# by-participant trajectories
+l_pl[[2]]
 
-dg <- position_dodge(width = .8)
+l_movement <- movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest")
+tbl_movement <- l_movement[[1]]
+# plot movement towards category center against task2 accuracy
+l_movement[[2]]
 
-ggplot() + 
-  geom_histogram(
-    data = tbl_cat_overview, aes(mean_accuracy, group = participant_id), fill = "black", color = "white"
-  ) +
-  geom_segment(
-    data = tbl_chance2, aes(
-      x = p_chance, xend = p_chance, y = 0, yend = 3, group = n_categories
-    ), linetype = "dotdash", color = "red") +
-  facet_wrap(~ n_categories) +
-  theme_dark() +
-  labs(
-    x = "Overall Accuracy",
-    y = "Participant Counts"
-  )
-
-
-tbl_cat_agg <- tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
-  summarize(
-    accuracy_mn_participant = mean(accuracy)
-  ) %>%  ungroup()
-
-tbl_cat_agg_ci <- summarySEwithin(
-  tbl_cat_agg, "accuracy_mn_participant", c("n_categories"), 
-  c("cat_true", "trial_id_binned"), "participant_id"
-) %>% as_tibble()
-tbl_cat_agg_ci$trial_id_binned <- as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
-
-tbl_chance <- chance_performance_cat(tbl_cat)
-tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
-
-ggplot() + 
-  geom_errorbar(data = tbl_cat_agg_ci, aes(
-    trial_id_binned, ymin = accuracy_mn_participant - ci, 
-    ymax = accuracy_mn_participant + ci, color = cat_true
-  ), width = .25, position = dg) +
-  geom_line(data = tbl_cat_agg_ci, aes(
-    trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
-  ), position = dg) +
-  geom_point(data = tbl_cat_agg_ci, aes(
-    trial_id_binned, accuracy_mn_participant, group = cat_true
-  ), position = dg, color = "white", size = 3) +
-  geom_point(data = tbl_cat_agg_ci, aes(
-    trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
-  ), position = dg) +
-  geom_line(
-    data = tbl_chance, aes(block, prop_chance, group = 1), 
-    linetype = "dotdash", size = .5) +
-  facet_wrap(~ n_categories) +
-  coord_cartesian(ylim = c(0, 1)) +
-  scale_color_brewer(name = "Category", palette = "Set1") +
-  scale_x_continuous(breaks = seq(2, 10, by = 2)) +
-  labs(
-    x = "Block of 20 Trials",
-    y = "Categorization Accuracy"
-  ) + theme_bw()
-
-ggplot(tbl_cat_agg, aes(
-  trial_id_binned, accuracy_mn_participant, group = as.numeric(participant_id)
-)) + geom_line(aes(color = as.numeric(participant_id))) +
-  geom_point(color = "white", size = 3) +
-  geom_point(aes(color = as.numeric(participant_id))) +
-  facet_grid(n_categories ~ cat_true) +
-  theme_bw() +
-  scale_color_viridis_c(guide = "none") +
-  labs(
-    x = "Block of 20 Trials",
-    y = "Categorization Accuracy",
-    title = "By Participant Categorization Trajectories"
-  )
-
-
-tbl_cat_last <- tbl_cat_sim %>% 
-  mutate(category = cat_true) %>%
-  group_by(participant_id) %>%
-  filter(trial_id_binned == max(as.numeric(as.character(trial_id_binned)))) %>%
-  grouped_agg(c(participant_id, n_categories, category), accuracy)
-# similarity condition gets a dummy accuracy of .5
-tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
-tbl_movement <- grouped_agg(
-  tbl_cr, c(participant_id, n_categories, session, category), d_closest
-) %>%
-  select(participant_id, n_categories, session, category, mean_d_closest) %>%
-  left_join(
-    tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], 
-    by = c("participant_id", "category")
-  ) %>%
-  ungroup() %>% arrange(participant_id, category, session) %>%
-  group_by(participant_id, category) %>%
-  mutate(
-    mean_d_closest_before = lag(mean_d_closest),
-    movement = mean_d_closest_before - mean_d_closest,
-    category = fct_relabel(
-      category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))
-    ),
-    n_categories = fct_relabel(
-      n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
-    )
-  ) %>%
-  filter(!is.na(mean_d_closest_before))
-
-ggplot(tbl_movement, aes(mean_accuracy, movement, group = category)) + 
-  geom_point(aes(color = category)) +
-  geom_smooth(method = "lm", aes(color = category)) +
-  facet_grid(n_categories ~ category) +
-  scale_color_brewer(palette = "Set1", name = "Category") +
-  theme_bw() +
-  labs(
-    x = "Categorization Accuracy",
-    y = "Movement (Euclidian Distance)"
-  )
-
-tbl_cat_grid <- tbl_cat %>% 
-  filter(trial_id >= 241) %>%
-  group_by(participant_id, n_categories, x1_true, x2_true, response) %>%
-  count() %>% arrange(participant_id, x1_true, x2_true) %>%
-  group_by(participant_id, n_categories, x1_true, x2_true) %>%
-  mutate(response_mean = mean(response)) %>%
-  filter(n == max(n)) %>% ungroup() %>%
-  mutate(
-    val_random = runif(nrow(.))
-  ) %>% group_by(participant_id, n_categories, x1_true, x2_true) %>%
-  mutate(rank_random = rank(val_random)) %>%
-  arrange(n_categories) %>%
-  ungroup() %>% filter(rank_random == 1) %>%
-  pivot_longer(c(response_mean, response))
-
-
-tbl_cat_grid <- tbl_cat_grid %>% left_join(
-  tbl_cat_overview[, c("participant_id", "mean_accuracy")], by = "participant_id"
-) %>% mutate(
-  name = fct_inorder(name),
-  name = fct_relabel(name, function(x) return(c("Mean", "Mode")))
-)
-
-
-plot_categorization_heatmaps <- function(tbl, n_cat) {
-  # order participants in order of decreasing accuracy
-  tbl <- tbl %>% arrange(desc(mean_accuracy)) %>%
-    mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE)) %>% 
-    filter(n_categories == n_cat)
-  
-  ggplot(tbl, aes(x1_true, x2_true, group = value)) +
-    geom_raster(aes(fill = value)) +
-    geom_label(aes(
-      10, 8, label = str_c(round(mean_accuracy, 2))
-    ), size = 3) +
-    facet_wrap(participant_id ~  name) +
-    scale_fill_viridis_c(name = "Category\nResponse") +
-    theme_bw() +
-    labs(
-      x = "Head Spikiness",
-      y = "Belly Fill"
-    )
-}
-
+tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 241)
 
 plot_categorization_heatmaps(tbl_cat_grid, 2)
 plot_categorization_heatmaps(tbl_cat_grid, 3)
+
+# model fits
+## prototype model
+
+participant_ids_2_cat <- unique(tbl_cat$participant_id[tbl_cat$n_categories == 2]) %>% as.character()
+l_nb <- map(participant_ids_2_cat, fit_predict_nb, tbl = tbl_cat %>% filter(n_categories == 2))
+tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>% 
+  mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
+l_m_nb_pds <- map(l_nb, 1) %>% map("tables")
+names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
+
+tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
+l_movement <- movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_rep_center")
+tbl_movement <- l_movement[[1]]
+l_movement[[2]]
+
+# can we also include variability in the representations
+# i.e. people with preciser category representations
+# should experience stronger pull/push towards/away the center
+
+plot_categorization_heatmaps(tbl_cat_grid, 2, "Mode") + 
+  geom_contour(data = tbl_preds_nb, aes(x1, x2, z = density, alpha = density), color = "black") +
+  geom_point(data = tibble(x=50, y=50), aes(x, y), color = "#FF3333", size = 3.5)
+
+
+
+## exemplar model
+
+tbl_gcm <- tbl_tmp[, c("x1_true", "x2_true", "response")] %>%
+  mutate(cat1 = 0, cat2 = 0) %>%
+  rename(category = response) %>%
+  mutate(category = fct_inorder(as.factor(category)))
+
+tbl_gcm$cat1[tbl_gcm$category == 1] <- 1
+tbl_gcm$cat2[tbl_gcm$category == 2] <- 1
+
+l_info <- list(
+  feature_names = c("x1_true", "x2_true"),
+  categories = levels(tbl_gcm$category),
+  n_categories = 2,
+  sens = 1,
+  wgh = .5
+)
+
+fit_gcm <- optim(
+  f = ll_gcm, c(8, .52), lower = c(0, 0), upper = c(10, 1),
+  l_info = l_info, tbl_stim = tbl_gcm, method = "L-BFGS-B"
+)
 
 # Similarity Judgments ----------------------------------------------------
 
