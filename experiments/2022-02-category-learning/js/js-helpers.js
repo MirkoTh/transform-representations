@@ -1,4 +1,4 @@
-if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+/* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
@@ -9,6 +9,9 @@ else {
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
+ */
+
+var participant_id = "603f6e643234e512fc197ae1";
 // get subject ID
 function getQueryVariable(variable) {
     var query = window.location.search.substring(1);
@@ -186,9 +189,7 @@ function setup_experiment(condition_id) {
     // add target training in the beginning
 
     trial_info["stimulus_id_c"] = stim_ids_cats_tt.concat(trial_info["stimulus_id_c"])
-    console.log(stim_ids_cats_tt)
-    console.log(trial_info["stimulus_id_c"])
-
+    console.log("train target stimuli are: " + stim_ids_cats_tt)
 
     // ellipse categories
     for (let i = 0; i < (experiment_info["n_trials_categorization_train_target"] + experiment_info["n_trials_categorization"]); i++) {
@@ -438,8 +439,6 @@ async function next_item_cat(old, i) {
     clickStart(old, 'page9')
 
     document.getElementById("trial_nr_cat").innerHTML = i
-    console.log("stimulus_cat_trial = " + stimulus_cat_trial)
-    console.log("i = " + i)
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
@@ -524,7 +523,6 @@ async function handle_response(e) {
             (i + 1) % Math.ceil(setup_expt["experiment_info"]["n_trials_categorization_total"] / 4) == 0 &
             (i + 1) != setup_expt["experiment_info"]["n_trials_categorization_total"]
         ) {
-            console.log("trial nr = " + (i + 1))
             document.getElementById("break_idx").innerHTML = parseInt(document.getElementById("break_idx").innerHTML) + 1
             var break_idx = document.getElementById("break_idx").innerHTML
             trial_nr = i + 1
@@ -585,8 +583,6 @@ function keycode_to_integer(kc) {
 }
 
 function write_cat_results(i, r) {
-    console.log("i = " + i)
-
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (condition_id == 3) {
         accuracy = 9999
@@ -779,11 +775,9 @@ function load_csv() {
 }
 
 function condition_and_ncategories() {
-    const condition_id = Math.ceil(Math.random() * 3);
-    console.log("randomly set condition_id to: " + condition_id)
+    const condition_id = 3//Math.ceil(Math.random() * 3);
     //const condition_id = [1, 2, 3][participant_id % 3]
     const n_categories = [1, 2, 3][(condition_id % 3)]
-    console.log()
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     clickStart('page0', 'page1')
@@ -825,9 +819,13 @@ function set_main_vars(condition_id) {
     stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
     stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
     stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
+    console.log("all categorization/similarity stimuli: " + stimulus_cat_trial)
     category_id = setup_expt["trial_info"]["category_id"]
+    console.log("all category ids are: " + category_id)
     category_name = setup_expt["stimulus_info"]["category_name"]
+    console.log("all category names are: " + category_name)
     stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
+    console.log("all stimuli vals 1-100: " + stimulus_vals)
     total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
     total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
