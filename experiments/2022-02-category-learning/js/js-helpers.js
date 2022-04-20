@@ -154,10 +154,11 @@ function setup_experiment(condition_id) {
     stim_ids_cat_nt_cr2 = append_randomized_arrays(stim_ids_cat_nt_cr1, 1)
     trial_info["stimulus_id_r2"] = stim_ids_cats_tt_cr2.concat(stim_ids_cat_nt_cr2)
     
+ */
+
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
-    trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"] */
-
+    trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
     // stimulus information
     // create an equal proportion of items from the categories
     const proportion_categories = 1 / experiment_info["n_categories"]
@@ -301,25 +302,18 @@ function sleep(ms) {
 async function next_item_cr(old, i) {
     part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
-        i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         current_stim_id = stimulus_crp_trial[i]
-        current_stim = stimulus_vals[current_stim_id]
     }
     if (part == 1) {
-        i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
         current_stim_id = stimulus_cr1_trial[i]
-        current_stim = stimulus_vals[current_stim_id]
     } else if (part == 2) {
-        i = parseInt(document.getElementById("trial_nr_cr2").innerHTML)
         current_stim_id = stimulus_cr2_trial[i]
-        current_stim = stimulus_vals[current_stim_id]
     }
-    clickStart(old, 'page5')
-
-
+    current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
     stim_path_mask = "stimuli/mask.png"
 
+    clickStart(old, 'page5')
     // present stimuli and mask
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
@@ -391,23 +385,22 @@ async function my_link() {
         clickStart("page4", "page13");
     } else {
         log_response(rt, i, part, stimulus_ids);
-        update_trial_counter(part, i)
-        next_item_cr('page4');
+        var i_new = update_trial_counter(part, i)
+        next_item_cr('page4', i_new);
     }
 }
 
 function update_trial_counter(part, i) {
+    var i_new = i + 1
     switch (part) {
         case 0:
-            document.getElementById("trial_nr_cr_practice").innerHTML = i + 1
-            break;
+            document.getElementById("trial_nr_cr_practice").innerHTML = i_new
         case 1:
-            document.getElementById("trial_nr_cr1").innerHTML = i + 1
-            break;
+            document.getElementById("trial_nr_cr1").innerHTML = i_new
         case 2:
-            document.getElementById("trial_nr_cr2").innerHTML = i + 1
-            break;
+            document.getElementById("trial_nr_cr2").innerHTML = i_new
     }
+    return (i_new)
 }
 
 function saveData(filedata, task) {
@@ -435,10 +428,7 @@ function wrap_categorization(old, i) {
 }
 
 async function next_item_cat(old, i) {
-    i = parseInt(document.getElementById("trial_nr_cat").innerHTML)
     clickStart(old, 'page9')
-
-    document.getElementById("trial_nr_cat").innerHTML = i
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
@@ -514,8 +504,8 @@ async function handle_response(e) {
             document.getElementById("part_reproduction").innerHTML = 2;
             document.getElementById("cat_continued").innerHTML = 1
             clickStart("page9", "page11")
-            // end of train-target trials
-        } else if (condition_id != 3 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
+        } // end of train-target trials
+        else if (condition_id != 3 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
             clickStart("page9", "page10b")
 
         } else if (
@@ -547,7 +537,7 @@ async function handle_response(e) {
 
         } else {
             // default case continuing with next trial
-            next_item_cat('page9');
+            next_item_cat('page9', i + 1);
             document.getElementById(str_frame).style.display = "none"
         }
 
