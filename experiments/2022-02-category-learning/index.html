@@ -517,9 +517,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 These trials are not going to be used to calculate you bonus payment.
             </p>
             <script>
-                var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
+                var i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
             </script>
-            <button type="button" name="button" ; onclick="next_item_cr('page3')" ;> Start
+            <button type="button" name="button" ; onclick="next_item_cr('page3', i)" ;> Start
                 Practice Trials </button>
         </div>
 
@@ -530,7 +530,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <script>
                 var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
             </script>
-            <button type="button" name="button" ; onclick="next_item_cr('page3.1')" ;> Start
+            <button type="button" name="button" ; onclick="next_item_cr('page3.1', i)" ;> Start
                 Memory Task </button>
 
         </div>
@@ -647,7 +647,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <!--let the participants adjust the two sliders and show them what monster results-->
             <script>
                 let x = slide_adjust();
-                var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
+                //var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
             </script>
             <button type="button" name="button" class="cr_button" ; onclick="my_link()" ;> Submit
                 Response</button>
@@ -700,9 +700,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 In the beginning, it won't be an easy task, but no worries, you will get better with practice!
             </p>
             <script>
-                    (() => {
-                        document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
-                    })();
+                (() => {
+                    document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
+                })();
             </script>
             <button type="button" name="button" ; onclick="clickStart('page7', 'page8')" ;> Start
                 Categorization</button>
@@ -765,7 +765,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <h2 id="progress"></h2>
             <div id="cat_continued" style="display:none">0</div>
             <div id="break_idx" style="display:none">0</div>
-            <button type="button" name="button" id="cat_button" ; onclick="next_item_cat('page10')" ;> Continue
+            <button type="button" name="button" id="cat_button" ;
+                onclick="next_item_cat('page10', parseInt(document.getElementById('trial_nr_cat').innerHTML))" ;>
+                Continue
             </button>
             <script>
                 const element = document.getElementById("cat_button");
