@@ -30,9 +30,9 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 100, //2, //5, // 100
-        n_trials_reproduction_2: 100, //2, //2, // 100
-        n_trials_categorization_train_target: 40, //3, //
+        n_trials_reproduction_1: 100, //2, //5, //
+        n_trials_reproduction_2: 100, //2, //5, //
+        n_trials_categorization_train_target: 40, //3, // 
         n_trials_categorization: 600, //5, // 380, //
         n_trials_categorization_total: 40 + 600, // 3 + 5, //
         condition_id: condition_id,
@@ -825,7 +825,7 @@ function saveBonus(filedata) {
 }
 function calculate_bonus() {
     // bonus continuous reproduction
-    const bonus_cr_max = 2.35
+    const bonus_cr_max = 2.60
     var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
     var avg_deviation = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) / n_trials_reproduction
     var coef_bonus = Math.min(51, avg_deviation)
@@ -835,10 +835,10 @@ function calculate_bonus() {
 
     // bonus categorization
     var bonus_cat;
-    if (setup_expt["experiment_info"]["condition_id"] == 3) {
-        bonus_cat = 1.20
+    if (setup_expt["experiment_info"]["n_categories"] == 1) {
+        bonus_cat = 1.30
     } else {
-        const bonus_cat_max = 2.35
+        const bonus_cat_max = 2.60
         var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
         var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
         bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
