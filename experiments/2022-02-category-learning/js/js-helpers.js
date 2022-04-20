@@ -23,8 +23,6 @@ function getQueryVariable(variable) {
     return (false);
 }
 
-console.log("participant_id = " + participant_id)
-
 
 function setup_experiment(condition_id) {
 
@@ -45,7 +43,6 @@ function setup_experiment(condition_id) {
         file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
         file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
-    console.log("n_categories = " + n_categories)
     // stim_ids of cat2 and cat3
     // randomize these ids
     // select first n_only_target_cat or n_only_target_cat/2 and append them to category_id, category_name, category_stimulus_id
@@ -108,7 +105,7 @@ function setup_experiment(condition_id) {
         //set_category_instruction()
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
-        stim_ids_cats_tt = Array(experiment_info["n_stimuli"]).fill().map((element, index) => index + 1)
+        stim_ids_cats_tt = Array(experiment_info["n_stimuli"]).fill().map((element, index) => index)
         stim_ids_cats_tt = append_randomized_arrays(stim_ids_cats_tt, 1)
         stim_ids_cats_tt.length = experiment_info["n_trials_categorization_train_target"]
     }
@@ -190,7 +187,6 @@ function setup_experiment(condition_id) {
     // add target training in the beginning
 
     trial_info["stimulus_id_c"] = stim_ids_cats_tt.concat(trial_info["stimulus_id_c"])
-    console.log("train target stimuli are: " + stim_ids_cats_tt)
 
     // ellipse categories
     for (let i = 0; i < (experiment_info["n_trials_categorization_train_target"] + experiment_info["n_trials_categorization"]); i++) {
@@ -446,12 +442,12 @@ async function next_item_cat(old, i) {
 async function handle_response(e) {
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (
-        condition_id == 3 & (e.keyCode >= 49 && e.keyCode <= 52) ||
-        condition_id == 3 & (e.keyCode >= 97 && e.keyCode <= 100) ||
-        condition_id == 2 & (e.keyCode >= 49 && e.keyCode <= 51) ||
-        condition_id == 2 & (e.keyCode >= 97 && e.keyCode <= 99) ||
-        condition_id == 1 & (e.keyCode >= 49 && e.keyCode <= 50) ||
-        condition_id == 1 & (e.keyCode >= 97 && e.keyCode <= 98)
+        n_conditions == 1 & (e.keyCode >= 49 && e.keyCode <= 52) ||
+        n_conditions == 1 & (e.keyCode >= 97 && e.keyCode <= 100) ||
+        n_conditions == 3 & (e.keyCode >= 49 && e.keyCode <= 51) ||
+        n_conditions == 3 & (e.keyCode >= 97 && e.keyCode <= 99) ||
+        n_conditions == 2 & (e.keyCode >= 49 && e.keyCode <= 50) ||
+        n_conditions == 2 & (e.keyCode >= 97 && e.keyCode <= 98)
     ) {
         var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
         var str_frame = "timeframe" + Math.max(break_idx, 1)
@@ -468,12 +464,12 @@ async function handle_response(e) {
         write_cat_results(i, cat_id_response)
 
         // responses within deadlinetime
-        if (condition_id == 3 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
+        if (n_conditions == 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
             var str = new String("Your response was: " + cat_id_response);
             document.getElementById("feedback_cat_true").innerHTML = str
             await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
             document.getElementById("feedback_cat_true").innerHTML = ""
-        } else if (condition_id == 1 | condition_id == 2 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
+        } else if (n_conditions > 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
             if (cat_id_response == category_id[i]) {
                 document.getElementById("feedback_cat_true").innerHTML = "Well Done: " + category_name[category_id[i] - 1] + "!"
                 await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
@@ -574,9 +570,9 @@ function keycode_to_integer(kc) {
 
 function write_cat_results(i, r) {
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
-    if (condition_id == 3) {
+    if (n_conditions == 1) {
         accuracy = 9999
-    } else if (condition_id == 2 | condition_id == 1) {
+    } else if (n_conditions > 1) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
     var data_store = {
@@ -765,9 +761,9 @@ function load_csv() {
 }
 
 function condition_and_ncategories() {
-    const condition_id = 3//Math.ceil(Math.random() * 3);
+    const condition_id = Math.ceil(Math.random() * 2);
     //const condition_id = [1, 2, 3][participant_id % 3]
-    const n_categories = [1, 2, 3][(condition_id % 3)]
+    const n_categories = [1, 2][(condition_id % 2)]
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     clickStart('page0', 'page1')
@@ -809,13 +805,8 @@ function set_main_vars(condition_id) {
     stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
     stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
     stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
-    console.log("all categorization/similarity stimuli: " + stimulus_cat_trial)
     category_id = setup_expt["trial_info"]["category_id"]
-    console.log("all category ids are: " + category_id)
-    category_name = setup_expt["stimulus_info"]["category_name"]
-    console.log("all category names are: " + category_name)
     stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
-    console.log("all stimuli vals 1-100: " + stimulus_vals)
     total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
     total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
