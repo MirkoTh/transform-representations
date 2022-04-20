@@ -516,10 +516,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 You are given three practice trials to get used to the procedure. <br>
                 These trials are not going to be used to calculate you bonus payment.
             </p>
-            <script>
-                var i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
-            </script>
-            <button type="button" name="button" ; onclick="next_item_cr('page3', i)" ;> Start
+
+            <button type="button" name="button" ; onclick="next_item_cr('page3')" ;>
+                Start
                 Practice Trials </button>
         </div>
 
@@ -527,10 +526,8 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <h1>Practice is Over</h1>
             <p>The practice trials are now over. Press the button below to start with the Memory Task.
             </p>
-            <script>
-                var i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-            </script>
-            <button type="button" name="button" ; onclick="next_item_cr('page3.1', i)" ;> Start
+
+            <button type="button" name="button" ; onclick="next_item_cr('page3.1')" ;> Start
                 Memory Task </button>
 
         </div>
@@ -794,7 +791,9 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
             <p>The initial block with target category examples is now over.<br>
                 In the following, your task is to categorize monsters from all categories, including the
                 non-target category.</p>
-            <button type="button" name="button" ; onclick="next_item_cat('page10b')" ;> Continue with all categories
+            <button type="button" name="button" ;
+                onclick="next_item_cat('page10b', parseInt(document.getElementById('trial_nr_cat').innerHTML))" ;>
+                Continue with all categories
             </button>
 
         </div>
@@ -824,10 +823,7 @@ inside of the Max Planck Society and affiliated research institutes, or at partn
                 precisely as possible.<br>
                 By clicking on the button below, you start the third and last part of that study.
             </p>
-            <script>
-                var i = parseInt(document.getElementById("trial_nr_cr2").innerHTML);
-            </script>
-            <button type="button" name="button" ; onclick="next_item_cr('page12', i)" ;> Start
+            <button type="button" name="button" ; onclick="next_item_cr('page12')" ;> Start
                 Memory Task </button>
         </div>
 

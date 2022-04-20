@@ -1,4 +1,4 @@
-/* if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
 // If no ID is present, generate one using random numbers - this is useful for testing
@@ -9,9 +9,8 @@ else {
 if (window.location.search.indexOf('STUDY_ID') > -1) {
     var studyID = getQueryVariable('STUDY_ID');
 }
- */
 
-var participant_id = "603f6e643234e512fc197ae1";
+
 // get subject ID
 function getQueryVariable(variable) {
     var query = window.location.search.substring(1);
@@ -25,7 +24,6 @@ function getQueryVariable(variable) {
 
 
 function setup_experiment(condition_id) {
-
     // experiment information
     const experiment_info = {
         n_stimuli: 100,
@@ -34,9 +32,9 @@ function setup_experiment(condition_id) {
         n_practice_reproduction: 3,
         n_trials_reproduction_1: 100, //2, //5, // 100
         n_trials_reproduction_2: 100, //2, //2, // 100
-        n_trials_categorization_train_target: 40,
-        n_trials_categorization: 400, //500, // 380
-        n_trials_categorization_total: 40 + 400,
+        n_trials_categorization_train_target: 40, //3, //
+        n_trials_categorization: 600, //5, // 380, //
+        n_trials_categorization_total: 40 + 600, // 3 + 5, //
         condition_id: condition_id,
         n_categories: n_categories,
         file_path_stimuli: "/stimuli/",
@@ -257,14 +255,14 @@ function route_instructions(condition) {
     condition_id = document.getElementById("condition_id").innerHTML
     n_categories = document.getElementById("n_categories").innerHTML
     set_main_vars(condition)
-    if (condition == 3) { // control
+    if (n_categories == 1) { // control
         clickStart('page1', 'page2b')
     } else { clickStart('page1', 'page2') }
     var obj = { participant_id: participant_id, condition_id: setup_expt["experiment_info"]["condition_id"] };
 }
 
 function route_categorization(condition) {
-    if (condition == 3) { // control
+    if (n_categories == 1) { // control
         clickStart('page6', 'page7b')
     } else { clickStart('page6', 'page7') }
 }
@@ -298,18 +296,25 @@ function sleep(ms) {
 async function next_item_cr(old, i) {
     part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
+        i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
         current_stim_id = stimulus_crp_trial[i]
+        current_stim = stimulus_vals[current_stim_id]
     }
     if (part == 1) {
+        i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
         current_stim_id = stimulus_cr1_trial[i]
+        current_stim = stimulus_vals[current_stim_id]
     } else if (part == 2) {
+        i = parseInt(document.getElementById("trial_nr_cr2").innerHTML)
         current_stim_id = stimulus_cr2_trial[i]
+        current_stim = stimulus_vals[current_stim_id]
     }
-    current_stim = stimulus_vals[current_stim_id]
+    clickStart(old, 'page5')
+
+
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
     stim_path_mask = "stimuli/mask.png"
 
-    clickStart(old, 'page5')
     // present stimuli and mask
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
@@ -354,7 +359,7 @@ async function log_response(rt, i, part, stimulus_ids) {
 
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
-
+    var i;
     part = parseInt(document.getElementById("part_reproduction").innerHTML)
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
@@ -381,8 +386,8 @@ async function my_link() {
         clickStart("page4", "page13");
     } else {
         log_response(rt, i, part, stimulus_ids);
-        var i_new = update_trial_counter(part, i)
-        next_item_cr('page4', i_new);
+        update_trial_counter(part, i)
+        next_item_cr('page4');
     }
 }
 
@@ -391,12 +396,14 @@ function update_trial_counter(part, i) {
     switch (part) {
         case 0:
             document.getElementById("trial_nr_cr_practice").innerHTML = i_new
+            break;
         case 1:
             document.getElementById("trial_nr_cr1").innerHTML = i_new
+            break;
         case 2:
             document.getElementById("trial_nr_cr2").innerHTML = i_new
+            break;
     }
-    return (i_new)
 }
 
 function saveData(filedata, task) {
@@ -442,12 +449,12 @@ async function next_item_cat(old, i) {
 async function handle_response(e) {
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (
-        n_conditions == 1 & (e.keyCode >= 49 && e.keyCode <= 52) ||
-        n_conditions == 1 & (e.keyCode >= 97 && e.keyCode <= 100) ||
-        n_conditions == 3 & (e.keyCode >= 49 && e.keyCode <= 51) ||
-        n_conditions == 3 & (e.keyCode >= 97 && e.keyCode <= 99) ||
-        n_conditions == 2 & (e.keyCode >= 49 && e.keyCode <= 50) ||
-        n_conditions == 2 & (e.keyCode >= 97 && e.keyCode <= 98)
+        n_categories == 1 & (e.keyCode >= 49 && e.keyCode <= 52) ||
+        n_categories == 1 & (e.keyCode >= 97 && e.keyCode <= 100) ||
+        n_categories == 3 & (e.keyCode >= 49 && e.keyCode <= 51) ||
+        n_categories == 3 & (e.keyCode >= 97 && e.keyCode <= 99) ||
+        n_categories == 2 & (e.keyCode >= 49 && e.keyCode <= 50) ||
+        n_categories == 2 & (e.keyCode >= 97 && e.keyCode <= 98)
     ) {
         var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
         var str_frame = "timeframe" + Math.max(break_idx, 1)
@@ -464,12 +471,12 @@ async function handle_response(e) {
         write_cat_results(i, cat_id_response)
 
         // responses within deadlinetime
-        if (n_conditions == 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
+        if (n_categories == 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) { // control
             var str = new String("Your response was: " + cat_id_response);
             document.getElementById("feedback_cat_true").innerHTML = str
             await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
             document.getElementById("feedback_cat_true").innerHTML = ""
-        } else if (n_conditions > 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
+        } else if (n_categories > 1 & rt <= setup_expt["display_info"]["categorization"]["deadlinetime"]) {
             if (cat_id_response == category_id[i]) {
                 document.getElementById("feedback_cat_true").innerHTML = "Well Done: " + category_name[category_id[i] - 1] + "!"
                 await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
@@ -501,7 +508,7 @@ async function handle_response(e) {
             document.getElementById("cat_continued").innerHTML = 1
             clickStart("page9", "page11")
         } // end of train-target trials
-        else if (condition_id != 3 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
+        else if (n_categories != 1 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
             clickStart("page9", "page10b")
 
         } else if (
@@ -570,9 +577,9 @@ function keycode_to_integer(kc) {
 
 function write_cat_results(i, r) {
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
-    if (n_conditions == 1) {
+    if (n_categories == 1) {
         accuracy = 9999
-    } else if (n_conditions > 1) {
+    } else if (n_categories > 1) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
     }
     var data_store = {
@@ -806,6 +813,7 @@ function set_main_vars(condition_id) {
     stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
     stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
     category_id = setup_expt["trial_info"]["category_id"]
+    category_name = setup_expt["stimulus_info"]["category_name"]
     stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
     total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
