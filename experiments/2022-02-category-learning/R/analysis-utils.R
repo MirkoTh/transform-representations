@@ -65,18 +65,30 @@ exclude_incomplete_datasets <- function(l_tbl) {
   #' 
   tbl_cr <- l_tbl[[1]]
   tbl_cat <- l_tbl[[2]]
+  participants_before <- unique(tbl_cr$participant_id)
+  
   tbl_cr_n <- tbl_cr %>% 
     group_by(participant_id) %>% summarize(n_resp = n()) %>%
-    ungroup() %>% arrange(n_resp) %>% filter(n_resp > 194)
+    ungroup() %>% arrange(n_resp) %>% filter(n_resp >= 192)
   
   tbl_cat_n <- tbl_cat %>% 
     group_by(participant_id) %>% summarise(n_resp = n()) %>% 
-    ungroup() %>% arrange(n_resp) %>% filter(n_resp > 435)
+    ungroup() %>% arrange(n_resp) %>% filter(n_resp == 640)
   
-  tbl_cr <- tbl_cr %>% inner_join(tbl_cr_n, by = "participant_id")
-  tbl_cat <- tbl_cat %>% inner_join(tbl_cat_n, by = "participant_id")
+  participants_after <- intersect(unique(tbl_cr_n$participant_id), unique(tbl_cat_n$participant_id))
   
-  return(list(tbl_cr, tbl_cat))
+  tbl_cr_incl <- tbl_cr %>% filter(participant_id %in% participants_after)
+  tbl_cat_incl <- tbl_cat %>% filter(participant_id %in% participants_after)
+  
+  
+  tbl_cr_excl <- tbl_cr %>% 
+    filter(participant_id %in% participants_before[!(participants_before %in% participants_after)])
+  tbl_cat_excl <- tbl_cat %>% 
+    filter(participant_id %in% participants_before[!(participants_before %in% participants_after)])
+  
+  cat(str_c(length(participants_before) - length(participants_after), " incomplete datasets"))
+  
+  return(list(list(tbl_cr_incl, tbl_cat_incl), list(tbl_cr_excl, tbl_cat_excl)))
 }
 
 
@@ -316,18 +328,25 @@ exclude_outliers <- function(tbl_cr, tbl_cat_sim, n_sds) {
   #' @return a list with two tbls
   #' 
   # add deviation variables
+  participants_before <- unique(tbl_cr$participant_id)
   participants_included <- exclude_reproduction_outliers(tbl_cr, n_sds)
-  tbl_cr <- inner_join(
+  participants_excluded <- participants_before[!(participants_before %in% participants_included$participant_id)]
+  tbl_cr_incl <- inner_join(
     participants_included[, "participant_id"], tbl_cr, by = "participant_id"
   )
-  tbl_cat_sim <- inner_join(
+  cat(str_c("excluded ", length(participants_excluded), " participants"))
+  tbl_cat_sim_incl <- inner_join(
     participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
   )
-  l_outliers_excluded <- list(
-    tbl_cr = tbl_cr,
-    tbl_cat_sim = tbl_cat_sim
+  l_keep <- list(
+    tbl_cr = tbl_cr_incl,
+    tbl_cat_sim = tbl_cat_sim_incl
   )
-  return(l_outliers_excluded)
+  l_drop <- list(
+    tbl_cr = tbl_cr %>% filter(participant_id %in% participants_excluded),
+    tbl_cat_sim = tbl_cat_sim %>% filter(participant_id %in% participants_excluded)
+  )
+  return(list(l_keep, l_drop))
 }
 
 
