@@ -192,7 +192,7 @@ add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
   p_ids_2_cats <- substr(
     unique(as.character(tbl_cr$participant_id[tbl_cr$n_categories == 2])), 1, 6
   )
-
+  
   l_ds <- map(p_ids_2_cats, distance_to_individual_center)
   tbl_cr <- reduce(l_ds, rbind)
   return(tbl_cr)
@@ -207,7 +207,7 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   #' 
   #' @return the tibble with the min distance as added column
   #' 
-  # read individual performance
+  v_categories <- unique(tbl_cr$n_categories)
   l_tmp <- category_centers()
   l_cat_mns <- l_tmp[[1]]
   l_ellipses <- l_tmp[[2]]
@@ -225,22 +225,24 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   colnames(tbl_d2) <- c("d_closest")
   l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
-  # here, we first have to compute what the closest center of a given stimulus is and then index using that id
-  tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
-    unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
-  colnames(tbl_d3_true) <- c("d1", "d2")
-  tbl_d3_response <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = TRUE) %>% 
-    unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
-  colnames(tbl_d3_response) <- seq(1:2)
-  col_idx_closest <- apply(tbl_d3_true, 1, function(x) which(x == min(x)))
-  tbl_d3_response$col_idx_closest <- col_idx_closest
-  tbl_d3_response$d_closest <- apply(tbl_d3_response, 1, function(x) x[1:2][x[3]])
-  d_closest <- as_vector(tbl_d3_response$d_closest) %>% unname()
+  if ("3" %in% v_categories) {
+    # for three categories, we first have to compute what the closest center of a given stimulus is and then index using that id
+    tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
+      unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d3_true) <- c("d1", "d2")
+    tbl_d3_response <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = TRUE) %>% 
+      unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d3_response) <- seq(1:2)
+    col_idx_closest <- apply(tbl_d3_true, 1, function(x) which(x == min(x)))
+    tbl_d3_response$col_idx_closest <- col_idx_closest
+    tbl_d3_response$d_closest <- apply(tbl_d3_response, 1, function(x) x[1:2][x[3]])
+    d_closest <- as_vector(tbl_d3_response$d_closest) %>% unname()
+    l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
+      left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+  }
   
-  l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
-    left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
-  
-  tbl_cr <- rbind(l_tbl_cr[["3"]], l_tbl_cr[["2"]], l_tbl_cr[["1"]]) %>% as_tibble()
+  idxs <- names(l_tbl_cr) %in% v_categories
+  tbl_cr <- rbind(reduce(l_tbl_cr[idxs], rbind)) %>% as_tibble()
   return(tbl_cr)
 }
 
