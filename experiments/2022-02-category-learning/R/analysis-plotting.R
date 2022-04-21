@@ -193,7 +193,7 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
     facet_wrap(~ n_categories) +
     coord_cartesian(ylim = c(0, 1)) +
     scale_color_brewer(name = "Category", palette = "Set1") +
-    scale_x_continuous(breaks = seq(2, 10, by = 2)) +
+    scale_x_continuous(breaks = seq(2, 14, by = 2)) +
     labs(
       x = "Block of 20 Trials",
       y = "Categorization Accuracy"
@@ -236,12 +236,23 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     grouped_agg(c(participant_id, n_categories, category), accuracy)
   # similarity condition gets a dummy accuracy of .5
   tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
+  
+  
+  # this has to be moved to exclusion functions
+  participants_guess <- tbl_cat_last %>% filter(n_categories != "1") %>%
+    group_by(participant_id) %>%
+    summarize(min_acc = min(mean_accuracy)) %>% ungroup() %>%
+    arrange(min_acc) %>% filter(min_acc <= .5) %>%
+    select(participant_id) %>% unique()
+  tbl_cr_excl <- tbl_cr %>% filter(!(participant_id %in% participants_guess$participant_id))
+  tbl_cat_last_excl <- tbl_cat_last %>% filter(!(participant_id %in% participants_guess$participant_id))
+    
   tbl_movement <- grouped_agg(
-    tbl_cr, c(participant_id, n_categories, session, category), d_measure
+    tbl_cr_excl, c(participant_id, n_categories, session, category), d_measure
   ) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
     select(participant_id, n_categories, session, category, mean_distance) %>%
     left_join(
-      tbl_cat_last[, c("participant_id", "category", "mean_accuracy")], 
+      tbl_cat_last_excl[, c("participant_id", "category", "mean_accuracy")], 
       by = c("participant_id", "category")
     ) %>% ungroup() %>% arrange(participant_id, category, session) %>%
     group_by(participant_id, category) %>%

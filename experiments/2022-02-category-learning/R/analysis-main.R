@@ -24,9 +24,16 @@ walk(files, source)
 
 # Load Data and Preprocess Data -------------------------------------------
 
-path_data <- "experiments/2022-02-category-learning/data/2022-03-30-pilot-1/"
-l_tbl_data <- load_data(path_data)
-l_tbl_data <- exclude_incomplete_datasets(l_tbl_data)
+path_data <- c(
+  "experiments/2022-02-category-learning/data/2022-03-30-pilot-1/",
+  "experiments/2022-02-category-learning/data/2022-04-20-pilot-2/",
+  "experiments/2022-02-category-learning/data/2022-04-21-experiment/"
+)
+l_tbls_data <- map(path_data[2:3], load_data)
+l_tbl_data <- list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+l_tbl_data_all <- exclude_incomplete_datasets(l_tbl_data)
+l_tbl_data <- l_tbl_data_all[[1]]
+l_tbl_data_all[[2]]
 
 tbl_cr <- l_tbl_data[[1]] %>% filter(session %in% c(1, 2))
 tbl_cat_sim <- l_tbl_data[[2]]
@@ -35,14 +42,15 @@ l_deviations <- add_deviations(tbl_cr)
 env <- rlang::current_env()
 list2env(l_deviations, env)
 
-l_outliers_excluded <- exclude_outliers(tbl_cr, tbl_cat_sim, 1)
-list2env(l_outliers_excluded, env)
+l_outliers_excluded <- exclude_outliers(tbl_cr, tbl_cat_sim, 3)
+list2env(l_outliers_excluded[[1]], env)
 
 
 # Categorization ----------------------------------------------------------
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
-tbl_cat <- tbl_cat_sim %>% filter(n_categories %in% c(2, 3))
+tbl_cat <- tbl_cat_sim %>% filter(n_categories %in% c(2, 3), as.numeric(as.character(trial_id_binned)) <= 15)
+
 
 tbl_cat_overview <- tbl_cat %>% 
   grouped_agg(c(n_categories, participant_id), accuracy) %>%
@@ -80,7 +88,7 @@ l_m_nb_pds <- map(l_nb, 1) %>% map("tables")
 names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
 tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
-l_movement <- movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_rep_center")
+l_movement <- movement_towards_category_center(tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1])
 tbl_movement <- l_movement[[1]]
 l_movement[[2]]
 
@@ -137,6 +145,12 @@ tbl_sim_ci <- summarySEwithin(
   tbl_sim, "response", "n_categories", "distance_binned", "participant_id", TRUE
 ) %>% as_tibble()
 tbl_sim_ci$distance_binned <- as.numeric(as.character(tbl_sim_ci$distance_binned))
+
+
+tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
+  summarize(response_mn = mean(response)) %>%
+  ggplot(aes(distance_binned, response_mn, group = participant_id)) +
+  geom_line(aes(color = participant_id))
 
 ggplot() +
   geom_errorbar(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))), aes(
