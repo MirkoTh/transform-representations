@@ -117,7 +117,7 @@ plot_categorization_heatmaps <- function(tbl, n_cat, f_agg = "Mode") {
     geom_raster(data = tbl, aes(x1_true, x2_true, group = value, fill = value)) +
     geom_label(data = tbl, aes(
       10, 8, label = str_c(round(mean_accuracy, 2)), group = value
-      ), size = 3) +
+    ), size = 3) +
     facet_wrap(~ participant_id, ncol = 4) +
     scale_fill_viridis_c(name = "Category\nResponse") +
     theme_bw() +
@@ -128,19 +128,21 @@ plot_categorization_heatmaps <- function(tbl, n_cat, f_agg = "Mode") {
 }
 
 
-histograms_overall_accuracy <- function(tbl_cat_overview, tbl_chance2) {
-  #' histogram of by-participant overall categorization accuracy
+histograms_accuracies_rts <- function(tbl_cat_overview) {
+  #' histogram of by-participant categorization accuracy and
+  #' categorization rts
   #' 
-  ggplot() + 
-    geom_histogram(
-      data = tbl_cat_overview, aes(mean_accuracy, group = participant_id), 
-      fill = "black", color = "white"
-    ) +
-    geom_segment(
-      data = tbl_chance2, aes(
-        x = p_chance, xend = p_chance, y = 0, yend = 3, group = n_categories
-      ), linetype = "dotdash", color = "red") +
-    facet_wrap(~ n_categories) +
+  tbl_cat_overview %>% arrange(mean_accuracy) %>%
+    mutate(participant_id = fct_inorder(factor(substr(participant_id, 1, 6)))) %>%
+    pivot_longer(c(mean_accuracy, mean_rt)) %>%
+    mutate(
+      name = factor(name),
+      name = fct_relabel(name, ~ c("Mean Accuracy", "Mean RT (s)"))
+    ) %>%
+    ggplot(aes(value, group = participant_id)) +
+    geom_histogram(aes(group = participant_id, fill = participant_id), color = "white") +
+    facet_wrap(~ name, scale = "free_x") +
+    scale_fill_viridis_d(name = "Participant ID")  +
     theme_dark() +
     labs(
       x = "Overall Accuracy",
@@ -226,24 +228,37 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   #' @param tbl_cr the tbl with by-trial reproduction responses
   #' 
   #' @return a list containing [[1]] a tbl with the average deviation and
-  #' [[2]] a plot showing movement towards center against task2 (cat/sim) accuracy
+  #' [[2]] a list of plots showing movement towards center against 
+  #' (a) task2 (cat/sim) accuracy in last block
+  #' (b) task2 improvement aka delta from first block to last block
+  #' (c) histograms of (a) and (b)
   #' 
   
-  tbl_cat_last <- tbl_cat_sim %>% 
+  # note. do not use by category accuracy to average over potential response biases
+  tbl_cat_sim_last <- tbl_cat_sim %>% 
     mutate(category = cat_true) %>%
     group_by(participant_id) %>%
-    filter(trial_id_binned == max(as.numeric(as.character(trial_id_binned)))) %>%
-    grouped_agg(c(participant_id, n_categories, category), accuracy)
+    filter(trial_id_binned %in% c(
+      max(as.numeric(as.character(trial_id_binned))),
+      min(as.numeric(as.character(trial_id_binned)))
+    )) %>%
+    grouped_agg(c(participant_id, n_categories, trial_id_binned), accuracy) %>%
+    mutate(
+      mean_accuracy_before = lag(mean_accuracy, 1),
+      mean_delta_accuracy = mean_accuracy - mean_accuracy_before
+      ) %>% filter(
+        trial_id_binned == max(as.numeric(as.character(trial_id_binned)))
+      )
   # similarity condition gets a dummy accuracy of .5
-  tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
-    
+  tbl_cat_sim_last$mean_accuracy[tbl_cat_sim_last$n_categories == 1] <- .5
+  
   tbl_movement <- grouped_agg(
-    tbl_cr_excl, c(participant_id, n_categories, session, category), d_measure
+    tbl_cr, c(participant_id, n_categories, session, category), d_measure
   ) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
     select(participant_id, n_categories, session, category, mean_distance) %>%
     left_join(
-      tbl_cat_last_excl[, c("participant_id", "category", "mean_accuracy")], 
-      by = c("participant_id", "category")
+      tbl_cat_sim_last[, c("participant_id", "mean_accuracy", "mean_delta_accuracy")], 
+      by = c("participant_id")
     ) %>% ungroup() %>% arrange(participant_id, category, session) %>%
     group_by(participant_id, category) %>%
     mutate(
@@ -258,16 +273,38 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     ) %>%
     filter(!is.na(mean_distance_before))
   
-  pl <- ggplot(tbl_movement, aes(mean_accuracy, movement, group = category)) + 
-    geom_point(aes(color = category)) +
-    geom_smooth(method = "lm", aes(color = category)) +
+    pl_last <- ggplot() + 
+      geom_point(data = tbl_movement, aes(mean_accuracy, movement, group = category, color = category), shape = 1) +
+      geom_smooth(data = tbl_movement, method = "lm", aes(mean_accuracy, movement, color = category), size = .5) +
+      facet_grid(n_categories ~ category) +
+      scale_color_brewer(palette = "Set1", name = "Category") +
+      theme_bw() +
+      labs(
+        x = "Categorization Accuracy Last Block",
+        y = "Movement (Euclidian Distance)"
+      )
+    
+    pl_delta <- ggplot() + 
+    geom_point(data = tbl_movement, aes(mean_delta_accuracy, movement, group = category, color = category), shape = 1) +
+    geom_smooth(data = tbl_movement, method = "lm", aes(mean_delta_accuracy, movement, color = category), size = .5) +
     facet_grid(n_categories ~ category) +
     scale_color_brewer(palette = "Set1", name = "Category") +
     theme_bw() +
     labs(
-      x = "Categorization Accuracy",
+      x = "Delta Categorization Accuracy",
       y = "Movement (Euclidian Distance)"
     )
+    
+    hist_delta_last <- tbl_movement %>% 
+      pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
+      mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block"))) %>%
+      ggplot(aes(value, group = name)) +
+      geom_histogram(aes(fill = name), alpha = .5, color = "black") +
+      facet_grid(n_categories ~ category) +
+      theme_bw() +
+      scale_fill_brewer(name = "Variable", palette = "Set1")
+    
+    l_pl <- list(pl_last = pl_last, pl_delta = pl_delta, hist_delta_last = hist_delta_last)
   
-  return(list(tbl_movement, pl))
+  return(list(tbl_movement, l_pl))
 }

@@ -1,9 +1,6 @@
 # TODOs
 ## - some participants seem to have restarted the experiment
-## - move exclusion of people responding randomly in categorization task to exclusion function
 ## - plot change in categorization accuracy against movement towards center
-
-
 
 
 # Import Packages ---------------------------------------------------------
@@ -47,7 +44,7 @@ l_tbl_data[[1]] <- l_deviations$tbl_cr
 
 l_cases <- preprocess_data(l_tbl_data)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
-tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat
+tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
 # Categorization ----------------------------------------------------------
 
@@ -56,14 +53,14 @@ tbl_cat <- tbl_cat_sim %>% filter(n_categories %in% c(2, 3), as.numeric(as.chara
 
 
 tbl_cat_overview <- tbl_cat %>% 
-  grouped_agg(c(n_categories, participant_id), accuracy) %>%
-  arrange(mean_accuracy)
+  grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
+  arrange(mean_rt)
 tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
   summarize(dummy = mean(mean_accuracy)) %>%
   mutate(p_chance = 1/as.numeric(str_extract(n_categories, "[2-3]$")))
 
 # categorization accuracy overview
-histograms_overall_accuracy(tbl_cat_overview, tbl_chance2)
+histograms_accuracies_rts(tbl_cat_overview)
 l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
 l_pl[[1]]

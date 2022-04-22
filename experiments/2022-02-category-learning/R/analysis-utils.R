@@ -462,7 +462,7 @@ exclude_guessing_participants <- function(l_tbl) {
   #' of binomial distribution with prob = .5
   #' @param l_tbl list with tbl_cr and tbl_cat
   #'
-  
+  tbl_sim <- l_tbl[[2]] %>% filter(n_categories == "1")
   tbl_cat <- l_tbl[[2]] %>% filter(n_categories != "1")
   tbl_cr <- l_tbl[[1]]
   
@@ -473,13 +473,14 @@ exclude_guessing_participants <- function(l_tbl) {
     arrange(count_true) %>% filter(count_true <= thx_guessing_excl) %>%
     select(participant_id) %>% unique()
   tbl_cr_keep <- tbl_cr %>% filter(!(participant_id %in% participants_guess$participant_id))
-  tbl_cat_keep <- tbl_cat %>% filter(!(participant_id %in% participants_guess$participant_id))
+  tbl_cat_sim_keep <- tbl_cat %>% filter(!(participant_id %in% participants_guess$participant_id)) %>%
+    rbind(tbl_sim)
   tbl_cr_drop <- tbl_cr %>% filter((participant_id %in% participants_guess$participant_id))
   tbl_cat_drop <- tbl_cat %>% filter((participant_id %in% participants_guess$participant_id))
-  cat(str_c("excluded ", nrow(participants_guess), " participants guessing in categorization task"))
+  cat(str_c("excluded ", nrow(participants_guess), " participants guessing in categorization task\n"))
   
   return(list(
-    keep = list(tbl_cr = tbl_cr_keep, tbl_cat = tbl_cat_keep), 
+    keep = list(tbl_cr = tbl_cr_keep, tbl_cat_sim = tbl_cat_sim_keep), 
     drop = list(tbl_cr = tbl_cr_drop, tbl_cat = tbl_cat_drop)
   ))
 }
