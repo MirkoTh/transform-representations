@@ -295,14 +295,22 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       y = "Movement (Euclidian Distance)"
     )
     
-    hist_delta_last <- tbl_movement %>% 
+    tbl_data <- tbl_movement %>% 
       pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
-      mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block"))) %>%
-      ggplot(aes(value, group = name)) +
-      geom_histogram(aes(fill = name), alpha = .5, color = "black") +
+      mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block")))
+    tbl_label <- tbl_data %>%
+      filter(name == "Delta Mean Accuracy\nFirst vs. Last Block" & category == "Background Category") %>%
+      group_by(n_categories, category) %>% 
+      summarize(no_improvement = str_c(sum(value < 0), "/", length(value)))
+    
+    hist_delta_last <- ggplot() +
+      geom_histogram(data = tbl_data, aes(value, group = name, fill = name), alpha = .5, color = "black") +
+      geom_label(data = tbl_label, aes(.55, 25, label = str_c(no_improvement, " Participants\nWithout Improvement"))) +
       facet_grid(n_categories ~ category) +
       theme_bw() +
-      scale_fill_brewer(name = "Variable", palette = "Set1")
+      scale_fill_brewer(name = "Variable", palette = "Set1") +
+      labs(x = "Proportion Correct / Proportion Change", 
+           y = "Nr. Participants")
     
     l_pl <- list(pl_last = pl_last, pl_delta = pl_delta, hist_delta_last = hist_delta_last)
   
