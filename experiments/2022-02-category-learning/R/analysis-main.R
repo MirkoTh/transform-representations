@@ -1,3 +1,11 @@
+# TODOs
+## - some participants seem to have restarted the experiment
+## - move exclusion of people responding randomly in categorization task to exclusion function
+## - plot change in categorization accuracy against movement towards center
+
+
+
+
 # Import Packages ---------------------------------------------------------
 
 library(jsonlite)
@@ -31,20 +39,15 @@ path_data <- c(
 )
 l_tbls_data <- map(path_data[2:3], load_data)
 l_tbl_data <- list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-l_tbl_data_all <- exclude_incomplete_datasets(l_tbl_data)
-l_tbl_data <- l_tbl_data_all[[1]]
-l_tbl_data_all[[2]]
 
-tbl_cr <- l_tbl_data[[1]] %>% filter(session %in% c(1, 2))
-tbl_cat_sim <- l_tbl_data[[2]]
 
-l_deviations <- add_deviations(tbl_cr)
-env <- rlang::current_env()
-list2env(l_deviations, env)
+# add deviation from response to stimulus
+l_deviations <- add_deviations(l_tbl_data)
+l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_outliers_excluded <- exclude_outliers(tbl_cr, tbl_cat_sim, 3)
-list2env(l_outliers_excluded[[1]], env)
-
+l_cases <- preprocess_data(l_tbl_data)
+tbl_cr <- l_cases$l_guessing$keep$tbl_cr
+tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat
 
 # Categorization ----------------------------------------------------------
 
@@ -180,7 +183,7 @@ pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
 
 # heat map of errors over 2d space
 
-pl_heamaps <- plot_2d_binned_heatmaps(tbl_checker, tbl_checker_avg)
+pl_heamaps <- plot_2d_binned_heatmaps(l_deviations$tbl_checker, l_deviations$tbl_checker_avg)
 
 # 1d marginal histograms & freq polys of deviations x1 and x2 before vs. after
 pl_1d_marginals <- plot_1d_marginals(tbl_cr)

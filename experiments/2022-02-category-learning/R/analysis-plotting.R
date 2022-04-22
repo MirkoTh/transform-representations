@@ -236,16 +236,6 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     grouped_agg(c(participant_id, n_categories, category), accuracy)
   # similarity condition gets a dummy accuracy of .5
   tbl_cat_last$mean_accuracy[tbl_cat_last$n_categories == 1] <- .5
-  
-  
-  # this has to be moved to exclusion functions
-  participants_guess <- tbl_cat_last %>% filter(n_categories != "1") %>%
-    group_by(participant_id) %>%
-    summarize(min_acc = min(mean_accuracy)) %>% ungroup() %>%
-    arrange(min_acc) %>% filter(min_acc <= .5) %>%
-    select(participant_id) %>% unique()
-  tbl_cr_excl <- tbl_cr %>% filter(!(participant_id %in% participants_guess$participant_id))
-  tbl_cat_last_excl <- tbl_cat_last %>% filter(!(participant_id %in% participants_guess$participant_id))
     
   tbl_movement <- grouped_agg(
     tbl_cr_excl, c(participant_id, n_categories, session, category), d_measure

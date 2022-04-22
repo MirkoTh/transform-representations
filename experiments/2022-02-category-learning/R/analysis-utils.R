@@ -67,13 +67,15 @@ exclude_incomplete_datasets <- function(l_tbl) {
   tbl_cat <- l_tbl[[2]]
   participants_before <- unique(tbl_cr$participant_id)
   
+  # some participants seem to have restarted the experiment: > 200 cr responses
   tbl_cr_n <- tbl_cr %>% 
     group_by(participant_id) %>% summarize(n_resp = n()) %>%
     ungroup() %>% arrange(n_resp) %>% filter(n_resp >= 192)
   
+  # some participants seem to have restarted the experiment: > 640 cat responses
   tbl_cat_n <- tbl_cat %>% 
     group_by(participant_id) %>% summarise(n_resp = n()) %>% 
-    ungroup() %>% arrange(n_resp) %>% filter(n_resp == 640)
+    ungroup() %>% arrange(n_resp) %>% filter(n_resp >= 640)
   
   participants_after <- intersect(unique(tbl_cr_n$participant_id), unique(tbl_cat_n$participant_id))
   
@@ -86,9 +88,9 @@ exclude_incomplete_datasets <- function(l_tbl) {
   tbl_cat_excl <- tbl_cat %>% 
     filter(participant_id %in% participants_before[!(participants_before %in% participants_after)])
   
-  cat(str_c(length(participants_before) - length(participants_after), " incomplete datasets"))
+  cat(str_c(length(participants_before) - length(participants_after), " incomplete datasets\n"))
   
-  return(list(list(tbl_cr_incl, tbl_cat_incl), list(tbl_cr_excl, tbl_cat_excl)))
+  return(list(keep = list(tbl_cr_incl, tbl_cat_incl), drop = list(tbl_cr_excl, tbl_cat_excl)))
 }
 
 
@@ -284,16 +286,18 @@ chance_performance_cat <- function(tbl_cat) {
 }
 
 
-add_deviations <- function(tbl_cr) {
+add_deviations <- function(l_tbl) {
   #' by-trial, binned, and average deviations of reproduction responses
   #' 
   #' @description calculate deviations from true coordinates to 
   #' response coordinates by-trial, averaged into bins, and
   #' further averaged over bins
-  #' @param tbl_cr the tibble with the by-trial responses
+  #' @param l_tbl a list containing the tibble with the by-trial cr 
+  #' and sim/cat responses
   #' 
   #' @return a list with three tbls
   #' 
+  tbl_cr <- l_tbl[[1]]
   # add deviation variables
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
@@ -316,25 +320,29 @@ add_deviations <- function(tbl_cr) {
 }
 
 
-exclude_outliers <- function(tbl_cr, tbl_cat_sim, n_sds) {
+exclude_cr_outliers <- function(l_tbl, n_sds) {
   #' exclude outliers from reproduction and categorization tbls
   #' 
-  #' @description participant is excluded if average deviation
+  #' @description participant is excluded if average reproduction deviation
   #' exceeds mean + n_sds standard deviations
-  #' @param tbl_cr the tibble with the by-trial reproduction responses
-  #' @param tbl_cat_sim the tibble with the by-trial categorization responses
+  #' @param l_tbl list containing tbl_cr the tibble with the by-trial reproduction responses and 
+  #' tbl_cat_sim the tibble with the by-trial similarity/categorization responses
   #' @param n_sds nr of standard deviations to calculate thx
   #' 
   #' @return a list with two tbls
   #' 
-  # add deviation variables
+  tbl_cr <- l_tbl[[1]]
+  tbl_cat_sim <- l_tbl[[2]]
   participants_before <- unique(tbl_cr$participant_id)
   participants_included <- exclude_reproduction_outliers(tbl_cr, n_sds)
   participants_excluded <- participants_before[!(participants_before %in% participants_included$participant_id)]
   tbl_cr_incl <- inner_join(
     participants_included[, "participant_id"], tbl_cr, by = "participant_id"
   )
-  cat(str_c("excluded ", length(participants_excluded), " participants"))
+  cat(str_c(
+    "excluded ", length(participants_excluded), " participants worse than ",
+    n_sds, " sds below the mean reproduction error\n"
+    ))
   tbl_cat_sim_incl <- inner_join(
     participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
   )
@@ -346,7 +354,7 @@ exclude_outliers <- function(tbl_cr, tbl_cat_sim, n_sds) {
     tbl_cr = tbl_cr %>% filter(participant_id %in% participants_excluded),
     tbl_cat_sim = tbl_cat_sim %>% filter(participant_id %in% participants_excluded)
   )
-  return(list(l_keep, l_drop))
+  return(list(keep = l_keep, drop = l_drop))
 }
 
 
@@ -445,4 +453,65 @@ fit_predict_nb <- function(participant_id, tbl) {
   tbl_densities$participant_id <- participant_id
   l_nb <- list(m = m_nb, tbl_densities = tbl_densities)
   return(l_nb)
+}
+
+exclude_guessing_participants <- function(l_tbl) {
+  #' exclude participants guessing in categorization task
+  #' 
+  #' @description exclude participants below 99.9% percentile
+  #' of binomial distribution with prob = .5
+  #' @param l_tbl list with tbl_cr and tbl_cat
+  #'
+  
+  tbl_cat <- l_tbl[[2]] %>% filter(n_categories != "1")
+  tbl_cr <- l_tbl[[1]]
+  
+  thx_guessing_excl <- qbinom(.999, 640, .5)
+  # this has to be moved to exclusion functions
+  participants_guess <- tbl_cat %>% group_by(participant_id) %>%
+    summarize(count_true = sum(accuracy)) %>% ungroup() %>%
+    arrange(count_true) %>% filter(count_true <= thx_guessing_excl) %>%
+    select(participant_id) %>% unique()
+  tbl_cr_keep <- tbl_cr %>% filter(!(participant_id %in% participants_guess$participant_id))
+  tbl_cat_keep <- tbl_cat %>% filter(!(participant_id %in% participants_guess$participant_id))
+  tbl_cr_drop <- tbl_cr %>% filter((participant_id %in% participants_guess$participant_id))
+  tbl_cat_drop <- tbl_cat %>% filter((participant_id %in% participants_guess$participant_id))
+  cat(str_c("excluded ", nrow(participants_guess), " participants guessing in categorization task"))
+  
+  return(list(
+    keep = list(tbl_cr = tbl_cr_keep, tbl_cat = tbl_cat_keep), 
+    drop = list(tbl_cr = tbl_cr_drop, tbl_cat = tbl_cat_drop)
+  ))
+}
+
+preprocess_data <- function(l_tbl_data) {
+  #' data preprocessing pipeline
+  #' 
+  #' @description excludes incomplete data sets, outliers in 
+  #' reproduction task, and participants guessing in 
+  #' categorization task
+  #' @param l_tbl_data list with tbl_cr and tbl_cat as entries
+  #' 
+  #' @return a list containing the included and excluded data
+  #' after each preprocessing step
+  #'
+  
+  # data case handling
+  ## people with incomplete data
+  l_incomplete <- exclude_incomplete_datasets(l_tbl_data)
+  
+  ## reproduction outliers
+  l_outliers <- exclude_cr_outliers(l_incomplete$keep, 3)
+  
+  ## people guessing in categorization task
+  l_guessing <- exclude_guessing_participants(l_outliers$keep)
+  
+  ## exclude practice trials in reproduction task
+  l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% filter(session %in% c(1, 2))
+  
+  return(list(
+    l_incomplete = l_incomplete,
+    l_outliers = l_outliers,
+    l_guessing = l_guessing
+  ))
 }
