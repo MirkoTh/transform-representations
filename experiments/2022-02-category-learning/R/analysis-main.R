@@ -77,6 +77,10 @@ tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 241)
 plot_categorization_heatmaps(tbl_cat_grid, 2)
 plot_categorization_heatmaps(tbl_cat_grid, 3)
 
+ggplot(tbl_movement, aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ n_categories)
 # model fits
 ## prototype model
 
@@ -217,3 +221,50 @@ ggplot() +
 
 
 
+tbl_cr_agg <- grouped_agg(tbl_cr, c(participant_id, session, n_categories), eucl_deviation)
+
+ggplot(tbl_cr_agg, aes(mean_eucl_deviation, group = session)) +
+  geom_density(aes(color = session))
+
+summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", withinvars = "session") %>%
+  mutate(session = factor(session, labels = c("Before\nCategory Learning", "After\nCategory Learning"))) %>%
+  ggplot(aes(session, mean_eucl_deviation)) +
+  geom_col(aes(fill = session), alpha = .5, show.legend = FALSE) +
+  geom_point(aes(
+    color = session
+  ), show.legend = FALSE) +
+  geom_errorbar(aes(
+    ymin = mean_eucl_deviation - 1.96 * se, 
+    ymax = mean_eucl_deviation + 1.96 * se, color = session
+  ), width = .25, show.legend = FALSE) +
+  scale_fill_brewer(name = "", palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  labs(
+    x = "",
+    y = "Mean Euclidean Deviation"
+  )
+
+tbl_cr_agg %>% 
+  left_join(
+    tbl_movement[, c("participant_id", "mean_accuracy", "mean_delta_accuracy")], 
+    by = "participant_id"
+    ) %>% select(
+      participant_id, session, n_categories, 
+      mean_eucl_deviation, mean_accuracy, mean_delta_accuracy
+      ) %>% filter(n_categories == 2) %>%
+  pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
+  mutate(name = factor(
+    name, labels = c(
+      "Final Categorization Accuracy", "Delta Categorization Accuracy"
+      ))) %>%
+  ggplot(aes(mean_eucl_deviation, value, group = name)) +
+  facet_wrap(~ name) +
+  geom_point(aes(color = name), show.legend = FALSE) +
+  geom_smooth(method = "lm", aes(color = name), show.legend = FALSE) +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  labs(
+    x = "Euclidean Deviation Reproduction",
+    y = "(Delta) Categorization Accuracy"
+  )
