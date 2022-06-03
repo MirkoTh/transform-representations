@@ -240,6 +240,17 @@ diagnostic_plots <- function(l_categorization) {
     mutate(
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
+  
+  # add some fields that function from analysis script can be re-used
+  l_results$tbl_posterior$n_categories <- max(as.numeric(as.character(l_results$tbl_posterior$category)))
+  l_results$tbl_posterior$x1_response <- l_results$tbl_posterior$x1_data
+  l_results$tbl_posterior$x2_response <- l_results$tbl_posterior$x2_data
+  l_results$tbl_posterior <- add_distance_to_nearest_center(l_results$tbl_posterior, is_simulation = TRUE)
+  l_results$tbl_posterior$participant_id <- 1
+  l_results$tbl_posterior$session <- l_results$tbl_posterior$timepoint
+  
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior)
+  
   # movement of stimulus representations before vs. after
   pl_centers <- plot_moves(l_results$tbl_posterior, l_info)
   # histograms of posterior category probabilities before vs. after

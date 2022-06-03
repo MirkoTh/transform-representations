@@ -316,3 +316,35 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   
   return(list(tbl_movement, l_pl))
 }
+
+
+plot_distance_to_category_center <- function(tbl_cr) {
+  tbl_cr_agg <- tbl_cr %>% group_by(n_categories, participant_id, session, category) %>%
+    summarize(dmin_mn_participant = mean(d_closest)) %>%
+    group_by(n_categories, session, category) %>%
+    summarize(dmin_mn = mean(dmin_mn_participant),
+              dmin_se = sd(dmin_mn_participant)/sqrt(length(unique(tbl_cr$participant_id)))) %>%
+    ungroup() %>%
+    mutate(session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")))
+  
+  ggplot() +
+    geom_col(data = tbl_cr_agg, aes(
+      category, dmin_mn, group = session, fill = session
+    ), position = dg, alpha = .5) +
+    geom_point(data = tbl_cr_agg, aes(
+      category, dmin_mn, color = session
+    ), position = dg, show.legend = FALSE) +
+    geom_errorbar(data = tbl_cr_agg, aes(
+      category, ymin = dmin_mn - 1.96 * dmin_se, 
+      ymax = dmin_mn + 1.96 * dmin_se, color = session
+    ), position = dg, width = .25, show.legend = FALSE) +
+    facet_wrap(~ n_categories) +
+    theme_bw() +
+    scale_fill_brewer(name = "Session", palette = "Set1") +
+    scale_color_brewer(palette = "Set1") +
+    labs(
+      x = "Category",
+      y = "Distance to Closest Category Center"
+    )
+  
+}
