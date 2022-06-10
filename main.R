@@ -14,8 +14,8 @@ walk(files, source)
 
 # Simulation Parameters ---------------------------------------------------
 
-n_stimuli <- 144L
-nruns <- 10000
+n_stimuli <- 100L
+nruns <- 100
 
 # constant
 l_info_prep <- list(
@@ -25,9 +25,10 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- crossing(
-  n_categories = c(2L, 4L), cat_type = c("prototype", "exemplar"), # "rule", 
+  n_categories = c(2L), cat_type = c("prototype", "exemplar"), # "rule", 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
-  constrain_space = c(TRUE, FALSE), category_shape = c("ellipses") 
+  constrain_space = c(TRUE), category_shape = c("ellipses"),
+  is_reward = FALSE
 )
 l_info <- pmap(
   tbl_vary, ~ append(
@@ -35,7 +36,7 @@ l_info <- pmap(
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5,
-      category_shape = ..6
+      category_shape = ..6, is_reward = ..7
     )
   )
 )
@@ -111,7 +112,7 @@ l_category_results <- map(l_category_results, add_shape)
 # look at simulation conditions
 map(l_category_results, function(x) c(x$l_info$sampling, x$l_info$cat_type, x$l_info$prior_sd))
 
-tbl_test <- l_category_results[[9]]$tbl_new %>% arrange(stim_id)
+tbl_test <- l_category_results[[35]]$tbl_new %>% arrange(stim_id)
 
 ggplot(tbl_test, aes(x1, x2, group = stim_id)) +
   geom_point(aes(color = stim_id)) +

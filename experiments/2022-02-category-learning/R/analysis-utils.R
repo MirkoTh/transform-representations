@@ -155,10 +155,12 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
 }
 
 
-category_centers <- function() {
+category_centers <- function(f_stretch, f_shift) {
   #' helper function to define category centers
   #' 
   #' @description returns x1 and x2 means of the ellipse categories (n_categories - 1)
+  #' @param f_stretch stretches ellipses, which are drawn from 0-9
+  #' @param f_shift shifts ellipses according to the value
   #' 
   #' @return the list with the centers of the 2 and 4 category conditions
   #' 
@@ -168,8 +170,11 @@ category_centers <- function() {
   tbl_tmp <- crossing(x1, x2)
   tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
-  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 9 + 1, y_rotated = (y_rotated + 1) * 9 + 1)
-  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * 9 + 1, y_rotated = (y_rotated + 1) * 9 + 1)
+  cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
+  cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
+  l_ellipses[[1]][[2]] <- cat_boundaries_2
+  l_ellipses[[2]][[2]] <- cat_boundaries_3
+  
   
   category_means <- function(tbl) {
     tbl %>% group_by(category) %>%
@@ -213,7 +218,7 @@ add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
 }
 
 
-add_distance_to_nearest_center <- function(tbl_cr) {
+add_distance_to_nearest_center <- function(tbl_cr, is_simulation) {
   #' add distance to closest category centroid
   #' 
   #' @description calculates distances to all possible category centroids and returns min of those
@@ -221,8 +226,15 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   #' 
   #' @return the tibble with the min distance as added column
   #' 
+  if (is_simulation) {
+    f_stretch <- 1
+    f_shift <- 0
+  } else {
+    f_stretch <- 9
+    f_shift <- 1
+  }
   v_categories <- unique(tbl_cr$n_categories)
-  l_tmp <- category_centers()
+  l_tmp <- category_centers(f_stretch = f_stretch, f_shift = f_shift)
   l_cat_mns <- l_tmp[[1]]
   l_ellipses <- l_tmp[[2]]
   
@@ -237,8 +249,14 @@ add_distance_to_nearest_center <- function(tbl_cr) {
   tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
     unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   colnames(tbl_d2) <- c("d_closest")
-  l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   
+  # the following is not very clean, because it is not implemented for three categories a couple of lines below
+  if (is_simulation) {
+    l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2)
+  } else {
+    l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+  }
+
   if ("3" %in% v_categories) {
     # for three categories, we first have to compute what the closest center of a given stimulus is and then index using that id
     tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
@@ -302,7 +320,7 @@ add_deviations <- function(l_tbl) {
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
-  tbl_cr <- add_distance_to_nearest_center(tbl_cr)
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr, is_simulation = FALSE)
   
   # average deviation in binned x1-x2 grid
   l_checkerboard <- checkerboard_deviation(tbl_cr, 4)

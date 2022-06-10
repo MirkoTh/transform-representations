@@ -409,18 +409,19 @@ perceive_stimulus <- function(tbl_new, l_info, is_reward = FALSE) {
   #' @return three different X tbls (before, after, together)
   #' 
   # randomly move random observation
-  idx <- sample(l_info$n_train, 1)
+  idx <- sample(l_info$n_stimuli, 1)
   cat_cur <- tbl_new$category[idx]
   stim_id_cur <- tbl_new$stim_id[idx]
-  prior_sd <- as_vector(tbl_new[idx, "prior_sd"])
   reward_magnitude <- 1
   if (is_reward) {
+    prior_sd <- as_vector(tbl_new[idx, "prior_sd"])
     reward_magnitude <- tbl_new[idx, "reward"]
     X_new <-  tibble(
       tbl_new[idx, "x1"] + rnorm(1, 0, prior_sd), 
       tbl_new[idx, "x2"] + rnorm(1, 0, prior_sd)
     )
   } else {
+    prior_sd <- l_info$prior_sd
     X_new <-  tibble(
       tbl_new[idx, "x1"] + rnorm(1, 0, l_info$prior_sd), 
       tbl_new[idx, "x2"] + rnorm(1, 0, l_info$prior_sd)
@@ -545,6 +546,7 @@ center_of_category <- function(l_info, l_m, timepoint_str, tbl_new){
       ) 
   } else {
     tbl_new %>% 
+      filter(timepoint == timepoint_str)
       group_by(category, timepoint) %>%
       summarize(
         x1 = mean(x1),
