@@ -168,7 +168,14 @@ plot_marginals <- function(tbl_new, l_info) {
   #' @param l_info parameter list
   #' @return the plot
   #' 
-  nice_showcase <- round(max(tbl_new$x1[1:l_info$n_stimuli]) / 2 + 1)
+  if (nrow(tbl_new) == l_info$n_stimuli){
+    nice_showcase <- round(max(tbl_new$x1[1:l_info$n_stimuli]) / 2 + 1)
+  } else {
+    tmp <- round(max(tbl_new$x1[1:l_info$n_stimuli]) / 2 + 1)
+    nice_showcase <- sort(tbl_new$stim_id[tbl_new$stim_id >= tmp])[1]
+  }
+  
+  
   n_accept_stimuli <- tbl_new %>% arrange(stim_id) %>%
     group_by(stim_id) %>% mutate(rwn = row_number(x1)) %>% 
     ungroup() %>% arrange(desc(rwn))
