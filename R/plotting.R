@@ -248,33 +248,9 @@ diagnostic_plots <- function(l_categorization) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   
-  # add some fields that function from analysis script can be re-used
-  l_results$tbl_posterior$n_categories <- max(as.numeric(as.character(l_results$tbl_posterior$category)))
-  l_results$tbl_posterior$x1_response <- l_results$tbl_posterior$x1_data
-  l_results$tbl_posterior$x2_response <- l_results$tbl_posterior$x2_data
-  l_results$tbl_posterior <- add_distance_to_nearest_center(l_results$tbl_posterior, is_simulation = TRUE)
-  l_results$tbl_posterior$participant_id <- 1
-  l_results$tbl_posterior$session <- l_results$tbl_posterior$timepoint
-  
+  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior)
   # add prior to stimulus_ids, which have not been sampled, as posterior = prior for these stimuli
-  tbl_bef_aft <- l_results$tbl_posterior %>%
-    filter(timepoint == "Before Training") %>%
-    left_join(
-      l_results$tbl_posterior %>% 
-        filter(timepoint == "After Training") %>%
-        select(stim_id, x1_data, x2_data), by = "stim_id", suffix = c("_bef", "_aft")) %>%
-    filter(!is.na(x1_data_aft))
-  samples_posterior_stim_id <- unique(tbl_bef_aft$stim_id)
-  tbl_after_complete <- l_results$tbl_posterior %>% 
-    filter(timepoint == "Before Training" & !(stim_id %in% samples_posterior_stim_id)) %>%
-    rbind(l_results$tbl_posterior %>% 
-            filter(timepoint == "After Training") %>% 
-            group_by(across(-c(x1_data, x2_data))) %>%
-            summarize(x1_data = mean(x1_data), x2_data = mean(x2_data))) %>% ungroup() %>%
-    mutate(timepoint = "After Training") %>% arrange(stim_id)
-  l_results$tbl_posterior <- rbind(
-    l_results$tbl_posterior %>% filter(timepoint == "Before Training"),
-    tbl_after_complete)
+  l_results$tbl_posterior <- adapt_posterior_to_empirical_analysis(l_results$tbl_posterior)
   
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior)
   
@@ -302,7 +278,7 @@ save_results_plots <- function(tbl_info, l_results_plot, p_sd, n_cat) {
   #' and the variable 'constrain space' in the rows
   #' two different pages are printed for the two sampling algorithms
   #' 
-
+  
   # select prior means vs. posterior means plots
   select_nested_plot <- function(l, idx) {
     l[[idx]][[2]][[1]]
