@@ -49,6 +49,8 @@ plot_moves <- function(tbl_results, l_info) {
     tbl_results2 <- tbl_results
   }
   space_edges <- l_info$space_edges
+  xy_breaks <- seq(space_edges[1], space_edges[2], by = 2)
+  
   ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
     geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
@@ -66,16 +68,19 @@ plot_moves <- function(tbl_results, l_info) {
       xlim = c(space_edges[1] - 1, space_edges[2] + 1), 
       ylim = c(space_edges[1] - 1, space_edges[2] + 1)
     ) +
-    scale_color_viridis_c(name = "Category") +
+    scale_color_viridis_c(name = "Category", guide = "none") +
+    scale_x_continuous(breaks = xy_breaks) +
+    scale_y_continuous(breaks = xy_breaks) +
     labs(
-      x = bquote(x[1]),
-      y = bquote(x[2]),
-      title = str_c(
-        "Prior SD = ", l_info$prior_sd, ", ",
-        "Sampling = ", l_info$sampling, "\n",
-        "Constrain Space = ", l_info$constrain_space, ", ",
-        "Model = ", l_info$cat_type
-      )
+      x = "Spikiness of Head",
+      y = "Fill of Belly",
+      # title = str_c(
+      #   "Prior SD = ", l_info$prior_sd, ", ",
+      #   "Sampling = ", l_info$sampling, "\n",
+      #   "Constrain Space = ", l_info$constrain_space, ", ",
+      #   "Model = ", l_info$cat_type
+      # )
+      title = str_c(l_info$cat_type, ", ", l_info$sampling)
     )
 }
 
@@ -253,7 +258,7 @@ diagnostic_plots <- function(l_categorization) {
 
   l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior)
     
-  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior)
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, l_info)
   
   # movement of stimulus representations before vs. after
   pl_centers <- plot_moves(l_results$tbl_posterior, l_info)
