@@ -192,7 +192,7 @@ create_ellipse_categories <- function(tbl, n_categories) {
   thxs <- c(0, apply(tbl[, c("x1")], 2, function(x) (min(x) + max(x))/2))
   theta_deg <- 45
   fctr_mid <- list(
-    "squash_all" = .9, "squash_y" = 1, "squash_x" = .395, 
+    "squash_all" = .9, "squash_y" = 1, "squash_x" = .45, 
     "move_x" = 0, "move_y" = 0, "category" = 2
   )
   fctr_hi <- list(
@@ -204,12 +204,12 @@ create_ellipse_categories <- function(tbl, n_categories) {
     "move_x" = -3, "move_y" = 3, "category" = 4
   )
   fctr_mid_hi <- list(
-    "squash_all" = .9, "squash_y" = .6, "squash_x" = .395, 
-    "move_x" = -1, "move_y" = 2, "category" = 2
+    "squash_all" = .9, "squash_y" = .75, "squash_x" = .45, 
+    "move_x" = -1.5, "move_y" = 1.5, "category" = 2
   )
   fctr_mid_lo <- list(
-    "squash_all" = .9, "squash_y" = .6, "squash_x" = .395, 
-    "move_x" = 1, "move_y" = -2, "category" = 3 
+    "squash_all" = .9, "squash_y" = .75, "squash_x" = .45, 
+    "move_x" = 1.5, "move_y" = -1.5, "category" = 3 
   )
   if (n_categories == 4) {
     l_map <- list(fctr_mid, fctr_hi, fctr_lo)
