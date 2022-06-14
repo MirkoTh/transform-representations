@@ -248,10 +248,11 @@ diagnostic_plots <- function(l_categorization) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   
-  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior)
   # add prior to stimulus_ids, which have not been sampled, as posterior = prior for these stimuli
   l_results$tbl_posterior <- adapt_posterior_to_empirical_analysis(l_results$tbl_posterior)
-  
+
+  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior)
+    
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior)
   
   # movement of stimulus representations before vs. after
