@@ -256,6 +256,26 @@ diagnostic_plots <- function(l_categorization) {
   l_results$tbl_posterior$participant_id <- 1
   l_results$tbl_posterior$session <- l_results$tbl_posterior$timepoint
   
+  # add prior to stimulus_ids, which have not been sampled, as posterior = prior for these stimuli
+  tbl_bef_aft <- l_results$tbl_posterior %>%
+    filter(timepoint == "Before Training") %>%
+    left_join(
+      l_results$tbl_posterior %>% 
+        filter(timepoint == "After Training") %>%
+        select(stim_id, x1_data, x2_data), by = "stim_id", suffix = c("_bef", "_aft")) %>%
+    filter(!is.na(x1_data_aft))
+  samples_posterior_stim_id <- unique(tbl_bef_aft$stim_id)
+  tbl_after_complete <- l_results$tbl_posterior %>% 
+    filter(timepoint == "Before Training" & !(stim_id %in% samples_posterior_stim_id)) %>%
+    rbind(l_results$tbl_posterior %>% 
+            filter(timepoint == "After Training") %>% 
+            group_by(across(-c(x1_data, x2_data))) %>%
+            summarize(x1_data = mean(x1_data), x2_data = mean(x2_data))) %>% ungroup() %>%
+    mutate(timepoint = "After Training") %>% arrange(stim_id)
+  l_results$tbl_posterior <- rbind(
+    l_results$tbl_posterior %>% filter(timepoint == "Before Training"),
+    tbl_after_complete)
+  
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior)
   
   # movement of stimulus representations before vs. after
@@ -266,7 +286,7 @@ diagnostic_plots <- function(l_categorization) {
   pl_marginals <- plot_marginals(tbl_new, l_info)
   # plotting list
   l_plots <- list(
-    pl_centers, pl_post, pl_marginals
+    pl_centers, pl_post, pl_marginals, pl_avg_move
   )
   # list with results and plots
   l_out <- list(
