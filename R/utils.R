@@ -546,7 +546,7 @@ center_of_category <- function(l_info, l_m, timepoint_str, tbl_new){
       ) 
   } else {
     tbl_new %>% 
-      filter(timepoint == timepoint_str)
+      filter(timepoint == timepoint_str) %>%
       group_by(category, timepoint) %>%
       summarize(
         x1 = mean(x1),
@@ -990,3 +990,52 @@ reward_categorization <- function(l_info) {
   )
   return(l_out)
 }
+
+
+adapt_posterior_to_empirical_analysis <- function(tbl) {
+  #' fill up not sampled stim_ids with prior
+  #' 
+  #' @description adds prior to posterior for those stimuli that have not been sampled in simulation
+  #' 
+  #' @param tbl tibble with prior and posterior samples
+  #' @return the same tbl but with prior added to posterior where necessary
+  #' 
+  tbl_bef_aft <- tbl %>%
+    filter(timepoint == "Before Training") %>%
+    left_join(
+      tbl %>% 
+        filter(timepoint == "After Training") %>%
+        select(stim_id, x1_data, x2_data), by = "stim_id", suffix = c("_bef", "_aft")) %>%
+    filter(!is.na(x1_data_aft))
+  samples_posterior_stim_id <- unique(tbl_bef_aft$stim_id)
+  tbl_after_complete <- tbl %>% 
+    filter(timepoint == "Before Training" & !(stim_id %in% samples_posterior_stim_id)) %>%
+    rbind(tbl %>% 
+            filter(timepoint == "After Training") %>% 
+            group_by(across(-c(x1_data, x2_data))) %>%
+            summarize(x1_data = mean(x1_data), x2_data = mean(x2_data))) %>% ungroup() %>%
+    mutate(timepoint = "After Training") %>% arrange(stim_id)
+  tbl <- rbind(
+    tbl %>% filter(timepoint == "Before Training"),
+    tbl_after_complete)
+  return(tbl)
+}
+
+distance_to_closest_center_simulation <- function(tbl) {
+  #' add distance to closest center for sampled representations
+  #' 
+  #' @description maps simulation results to empirical results and computes distance to closest category center
+  #' 
+  #' @param tbl tibble with prior and posterior samples
+  #' @return the same tbl with distance column added
+  #' 
+  tbl$n_categories <- max(as.numeric(as.character(tbl$category)))
+  tbl$x1_response <- tbl$x1_data
+  tbl$x2_response <- tbl$x2_data
+  tbl <- add_distance_to_nearest_center(tbl, is_simulation = TRUE)
+  tbl$participant_id <- 1
+  tbl$session <- tbl$timepoint 
+  return(tbl)
+}
+
+

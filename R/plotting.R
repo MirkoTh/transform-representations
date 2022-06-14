@@ -248,13 +248,9 @@ diagnostic_plots <- function(l_categorization) {
       timepoint = fct_relevel(timepoint, "Before Training", "After Training")
     )
   
-  # add some fields that function from analysis script can be re-used
-  l_results$tbl_posterior$n_categories <- max(as.numeric(as.character(l_results$tbl_posterior$category)))
-  l_results$tbl_posterior$x1_response <- l_results$tbl_posterior$x1_data
-  l_results$tbl_posterior$x2_response <- l_results$tbl_posterior$x2_data
-  l_results$tbl_posterior <- add_distance_to_nearest_center(l_results$tbl_posterior, is_simulation = TRUE)
-  l_results$tbl_posterior$participant_id <- 1
-  l_results$tbl_posterior$session <- l_results$tbl_posterior$timepoint
+  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior)
+  # add prior to stimulus_ids, which have not been sampled, as posterior = prior for these stimuli
+  l_results$tbl_posterior <- adapt_posterior_to_empirical_analysis(l_results$tbl_posterior)
   
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior)
   
@@ -266,7 +262,7 @@ diagnostic_plots <- function(l_categorization) {
   pl_marginals <- plot_marginals(tbl_new, l_info)
   # plotting list
   l_plots <- list(
-    pl_centers, pl_post, pl_marginals
+    pl_centers, pl_post, pl_marginals, pl_avg_move
   )
   # list with results and plots
   l_out <- list(
@@ -282,7 +278,7 @@ save_results_plots <- function(tbl_info, l_results_plot, p_sd, n_cat) {
   #' and the variable 'constrain space' in the rows
   #' two different pages are printed for the two sampling algorithms
   #' 
-
+  
   # select prior means vs. posterior means plots
   select_nested_plot <- function(l, idx) {
     l[[idx]][[2]][[1]]
