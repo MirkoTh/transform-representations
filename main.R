@@ -8,14 +8,18 @@ library(ggExtra)
 library(furrr)
 library(catlearn)
 
-files <- c("R/utils.R", "R/plotting.R")
+files <- c(
+  "R/utils.R", "R/plotting.R", 
+  "experiments/2022-02-category-learning/R/analysis-utils.R",
+  "experiments/2022-02-category-learning/R/analysis-plotting.R"
+  )
 walk(files, source)
 
 
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 100
+nruns <- 5000
 
 # constant
 l_info_prep <- list(
@@ -27,7 +31,7 @@ l_info_prep <- list(
 tbl_vary <- crossing(
   n_categories = c(2L), cat_type = c("prototype", "exemplar"), # "rule", 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
-  constrain_space = c(TRUE), category_shape = c("ellipses"),
+  constrain_space = c(TRUE, FALSE), category_shape = c("ellipses"),
   is_reward = FALSE
 )
 l_info <- pmap(
@@ -60,13 +64,31 @@ l_category_results <- future_map(
 
 td <- lubridate::today()
 
-saveRDS(l_category_results, file = str_c("data/", td, "-grid-search.rds"))
-# l_category_results <- readRDS(file = "data/2021-11-05-grid-search.rds")
+saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
+l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds")
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
 # Post Processing & Plotting ----------------------------------------------
 
 l_results_plots <- map(l_category_results, diagnostic_plots)
+
+
+tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
+tbl_bef_aft$x2_aft[is.na(tbl_bef_aft$x2_aft)] <- tbl_bef_aft$x2_bef[is.na(tbl_bef_aft$x2_aft)]
+
+ggplot(tbl_bef_aft, aes(x1_aft, x2_aft, group = category)) + geom_point(aes(color = category))
+
+marrangeGrob(
+  list(l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]], l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]]),
+  nrow = 2, ncol = 2, layout_matrix = matrix(c(1,2,3,4), byrow = TRUE, nrow = 2, ncol = 2)
+)
+
 # Plot Prior Means & Posterior Means --------------------------------------
+
+# todo for presentation:
+# add points not moved during sampling from prior to get an overall average
+# stat analyses for data
+# 
+
 
 l_tmp <- save_results_plots(tbl_info, l_results_plots, .75, 2)
 ggsave(l_tmp[[2]], l_tmp[[1]], width = 15, height = 7, units = "in")
