@@ -171,6 +171,8 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
     c("cat_true", "trial_id_binned"), "participant_id"
   ) %>% as_tibble()
   tbl_cat_agg_ci$trial_id_binned <- as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
+  tbl_cat_agg_ci <- tbl_cat_agg_ci %>%
+    mutate(cat_true = factor(cat_true, labels = c("Non-Target", "Target")))
   
   tbl_chance <- chance_performance_cat(tbl_cat)
   tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
@@ -192,8 +194,8 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
     geom_line(
       data = tbl_chance, aes(block, prop_chance, group = 1), 
       linetype = "dotdash", size = .5) +
-    facet_wrap(~ n_categories) +
-    coord_cartesian(ylim = c(0, 1)) +
+    #facet_wrap(~ n_categories) +
+    coord_cartesian(ylim = c(.5, 1)) +
     scale_color_brewer(name = "Category", palette = "Set1") +
     scale_x_continuous(breaks = seq(2, 14, by = 2)) +
     labs(
@@ -246,9 +248,9 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     mutate(
       mean_accuracy_before = lag(mean_accuracy, 1),
       mean_delta_accuracy = mean_accuracy - mean_accuracy_before
-      ) %>% filter(
-        trial_id_binned == max(as.numeric(as.character(trial_id_binned)))
-      )
+    ) %>% filter(
+      trial_id_binned == max(as.numeric(as.character(trial_id_binned)))
+    )
   # similarity condition gets a dummy accuracy of .5
   tbl_cat_sim_last$mean_accuracy[tbl_cat_sim_last$n_categories == 1] <- .5
   
@@ -265,7 +267,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       mean_distance_before = lag(mean_distance),
       movement = mean_distance_before - mean_distance,
       category = fct_relabel(
-        category, ~ ifelse(.x == 1, "Background Category", str_c("Category = ", .x))
+        category, ~ ifelse(.x == 1, "Non-Target Category", "Target Category")
       ),
       n_categories = fct_relabel(
         n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
@@ -273,18 +275,18 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     ) %>%
     filter(!is.na(mean_distance_before))
   
-    pl_last <- ggplot() + 
-      geom_point(data = tbl_movement, aes(mean_accuracy, movement, group = category, color = category), shape = 1) +
-      geom_smooth(data = tbl_movement, method = "lm", aes(mean_accuracy, movement, color = category), size = .5) +
-      facet_grid(n_categories ~ category) +
-      scale_color_brewer(palette = "Set1", name = "Category") +
-      theme_bw() +
-      labs(
-        x = "Categorization Accuracy Last Block",
-        y = "Movement (Euclidian Distance)"
-      )
-    
-    pl_delta <- ggplot() + 
+  pl_last <- ggplot() + 
+    geom_point(data = tbl_movement, aes(mean_accuracy, movement, group = category, color = category), shape = 1) +
+    geom_smooth(data = tbl_movement, method = "lm", aes(mean_accuracy, movement, color = category), size = .5) +
+    facet_grid(n_categories ~ category) +
+    scale_color_brewer(palette = "Set1", name = "Category") +
+    theme_bw() +
+    labs(
+      x = "Categorization Accuracy Last Block",
+      y = "Movement (Euclidian Distance)"
+    )
+  
+  pl_delta <- ggplot() + 
     geom_point(data = tbl_movement, aes(mean_delta_accuracy, movement, group = category, color = category), shape = 1) +
     geom_smooth(data = tbl_movement, method = "lm", aes(mean_delta_accuracy, movement, color = category), size = .5) +
     facet_grid(n_categories ~ category) +
@@ -294,40 +296,45 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       x = "Delta Categorization Accuracy",
       y = "Movement (Euclidian Distance)"
     )
-    
-    tbl_data <- tbl_movement %>% 
-      pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
-      mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block")))
-    tbl_label <- tbl_data %>%
-      filter(name == "Delta Mean Accuracy\nFirst vs. Last Block" & category == "Background Category") %>%
-      group_by(n_categories, category) %>% 
-      summarize(no_improvement = str_c(sum(value < 0), "/", length(value)))
-    
-    hist_delta_last <- ggplot() +
-      geom_histogram(data = tbl_data, aes(value, group = name, fill = name), alpha = .5, color = "black") +
-      geom_label(data = tbl_label, aes(.55, 25, label = str_c(no_improvement, " Participants\nWithout Improvement"))) +
-      facet_grid(n_categories ~ category) +
-      theme_bw() +
-      scale_fill_brewer(name = "Variable", palette = "Set1") +
-      labs(x = "Proportion Correct / Proportion Change", 
-           y = "Nr. Participants")
-    
-    l_pl <- list(pl_last = pl_last, pl_delta = pl_delta, hist_delta_last = hist_delta_last)
+  
+  tbl_data <- tbl_movement %>% 
+    filter(n_categories != "Control (Similarity)" & category == "Target Category") %>%
+    pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
+    mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block")))
+  tbl_label <- tbl_data %>%
+    filter(name == "Delta Mean Accuracy\nFirst vs. Last Block") %>%
+    group_by(n_categories, category) %>% 
+    summarize(no_improvement = str_c(sum(value < 0), "/", length(value)))
+  
+  hist_delta_last <- ggplot() +
+    geom_histogram(data = tbl_data, aes(value, group = name, fill = name), alpha = .5, color = "black") +
+    geom_label(data = tbl_label, aes(.425, 10, label = str_c(no_improvement, " Participants\nWithout Improvement"))) +
+    #facet_grid(n_categories ~ category) +
+    theme_bw() +
+    coord_cartesian(ylim = c(0, 13)) +
+    scale_fill_brewer(name = "Variable", palette = "Set1") +
+    labs(x = "Proportion Correct / Proportion Change", 
+         y = "Nr. Participants")
+  
+  l_pl <- list(pl_last = pl_last, pl_delta = pl_delta, hist_delta_last = hist_delta_last)
   
   return(list(tbl_movement, l_pl))
 }
 
 
-plot_distance_to_category_center <- function(tbl_cr) {
+plot_distance_to_category_center <- function(tbl_cr, l_info = NULL) {
   tbl_cr_agg <- tbl_cr %>% group_by(n_categories, participant_id, session, category) %>%
     summarize(dmin_mn_participant = mean(d_closest)) %>%
     group_by(n_categories, session, category) %>%
     summarize(dmin_mn = mean(dmin_mn_participant),
               dmin_se = sd(dmin_mn_participant)/sqrt(length(unique(tbl_cr$participant_id)))) %>%
     ungroup() %>%
-    mutate(session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")))
+    mutate(
+      session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")),
+      category = factor(category, labels = c("Non-Target", "Target"))
+    )
   
-  ggplot() +
+  pl <- ggplot() +
     geom_col(data = tbl_cr_agg, aes(
       category, dmin_mn, group = session, fill = session
     ), position = dg, alpha = .5) +
@@ -345,6 +352,17 @@ plot_distance_to_category_center <- function(tbl_cr) {
     labs(
       x = "Category",
       y = "Distance to Closest Category Center"
-    )
+    ) +
+    theme(plot.title = element_text(size=14, face = "bold"))
   
+  if(!is.null(l_info)) {
+    pl <- pl  +
+      theme(legend.position = c(.7, .7))
+    labs(
+      title = str_c(l_info$cat_type, ", ", l_info$sampling)
+    ) +
+    theme(plot.title = element_text(size=14, face = "bold"))
+  }
+  
+  return(pl)
 }

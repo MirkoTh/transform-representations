@@ -256,7 +256,7 @@ add_distance_to_nearest_center <- function(tbl_cr, is_simulation) {
   } else {
     l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
   }
-
+  
   if ("3" %in% v_categories) {
     # for three categories, we first have to compute what the closest center of a given stimulus is and then index using that id
     tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
@@ -360,7 +360,7 @@ exclude_cr_outliers <- function(l_tbl, n_sds) {
   cat(str_c(
     "excluded ", length(participants_excluded), " participants worse than ",
     n_sds, " sds below the mean reproduction error\n"
-    ))
+  ))
   tbl_cat_sim_incl <- inner_join(
     participants_included[, "participant_id"], tbl_cat_sim, by = "participant_id"
   )
@@ -534,3 +534,167 @@ preprocess_data <- function(l_tbl_data) {
     l_guessing = l_guessing
   ))
 }
+
+library(brms)
+calc_bf_posterior <- function(tbl_cat) {
+  options(mc.cores = parallel::detectCores() - 2)
+  
+  scales <- c(.353)
+  prior <- paste0("cauchy(0, ", as.character(scales[1]), ")")
+  fixefPrior <- c(set_prior(prior, class="b"))
+  ranefPrior <- set_prior("gamma(1,0.04)", class="sd")
+  
+  tbl_cat_agg <- tbl_cat %>% group_by(participant_id, cat_true, trial_id_binned) %>%
+    summarize(accuracy_mn = mean(accuracy)) %>% ungroup() %>%
+    mutate(
+      trial_id_binned = as.numeric(as.character(trial_id_binned)),
+      trial_id_binned = scale(trial_id_binned)[,1]
+    ) %>% group_by(cat_true, trial_id_binned) %>%
+    mutate(
+      participant_id_num = row_number(participant_id)
+    )
+  
+  formula <- bf(
+    accuracy ~ 1 + trial_id_binned * cat_true +
+      (1 + trial_id_binned*cat_true | participant_id)
+  )
+  
+  fit_cat_learn <- brm(
+    formula, data = tbl_cat,
+    family = bernoulli(link = "logit"),
+    #family = gaussian(link = "identity"),
+    iter = 2000, warmup = 1000, 
+    chains = 3, 
+    #cores = 4, 
+    #control = list(max_treedepth = 15, adapt_delta = 0.99),       
+    prior=c(fixefPrior, ranefPrior),
+    save_pars = save_pars(group = FALSE),
+    save_model = "experiments/2022-02-category-learning/R/brms-rs.txt"
+  )
+  #saveRDS(fit_cat_learn, file = "experiments/2022-02-category-learning/R/brms-rs.Rds")
+  tbl_posterior <- pivot_chains(fit_cat_learn$fit)
+  params_bf <- c("b_Intercept", "b_trial_id_binned", "b_cat_true2")
+  l <- sd_bfs(tbl_posterior, params_bf, sqrt(2)/4)
+  bfs <- l[[1]]
+  tbl_thx <- l[[2]]
+  
+  # plot the posteriors and the bfs
+  map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+  
+  
+  tbl_posterior <- tbl_draws %>% 
+    select(starts_with("mu"), .chain) %>% 
+    rename(chain = .chain) %>%
+    pivot_longer(starts_with("mu"), names_to = "parameter", values_to = "value")
+  params_bf <- c("mu[1]")
+  l <- sd_bfs(tbl_posterior, params_bf, sqrt(2)/4)
+  #l[[2]]$value[l[[2]]$variable == "thxhi_x"] <- 1
+  rutils::plot_posterior("mu[1]", tbl_posterior, l[[2]])
+}
+
+
+stan_model <- function() {
+  # work in progress using stan model
+  
+  stan_hlm <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  array[n_data] int subj;
+  vector[n_data] accuracy; // n trials
+  matrix[n_data, 4] x; // ic, trial, category, trial:category
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = 1.0/2;
+}
+
+parameters {
+  real <lower=0> sigma;
+  matrix[n_subj, 4] b;
+  vector[4] mu;
+  vector <lower=0>[4] sigma_subject;
+}
+
+transformed parameters {
+  array[4] real mu_tf;
+  mu_tf[1] = mu[1];
+  mu_tf[2] = scale_cont * mu[2];
+  mu_tf[3] = scale_cat * mu[3];
+  mu_tf[4] = scale_cat * mu[4];
+}
+
+model {
+  for (n in 1:n_data) {
+    accuracy[n] ~ normal(
+    b[subj[n], 1] + b[subj[n], 2] * x[n, 2] + b[subj[n], 3] * x[n, 3] +
+    b[subj[n], 4] * x[n, 4], sigma
+    );
+  }
+
+  for (s in 1:n_subj) {
+    b[s, 1] ~ normal(mu_tf[1], sigma_subject[1]);
+    b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
+    b[s, 3] ~ normal(mu_tf[3], sigma_subject[3]);
+    b[s, 4] ~ normal(mu_tf[4], sigma_subject[4]);
+  }
+  
+  sigma ~ uniform(0.001, 10);
+  sigma_subject[1] ~ uniform(0.001, 10);
+  sigma_subject[2] ~ uniform(0.001, 10);
+  sigma_subject[3] ~ uniform(0.001, 10);
+  sigma_subject[4] ~ uniform(0.001, 10);
+  mu[1] ~ normal(0, 1);
+  mu[2] ~ student_t(1, 0, 1);
+  mu[3] ~ student_t(1, 0, 1);
+  mu[4] ~ student_t(1, 0, 1);
+}
+
+")
+  
+  mod <- cmdstan_model(stan_hlm)
+  vars <- mod$variables()
+  names(vars$data)
+  mod$exe_file()
+  
+  
+  mm <- model.matrix(accuracy_mn ~ trial_id_binned*cat_true, data = tbl_cat_agg) %>% as_tibble()
+  mm$cat_true2 <- mm$cat_true2 - .5
+  mm$`trial_id_binned:cat_true2` <- mm$trial_id_binned * mm$cat_true2
+  
+  
+  l_data <- list(
+    n_data = nrow(tbl_cat_agg), n_subj = length(unique(tbl_cat_agg$participant_id_num)), 
+    subj = tbl_cat_agg$participant_id_num,
+    accuracy = tbl_cat_agg$accuracy_mn,
+    x = as.matrix(mm)
+  )
+  
+  
+  fit <- mod$sample(
+    data = l_data, iter_sampling = 20000, iter_warmup = 1000,
+    seed = 4321, max_treedepth = 15, adapt_delta = .99 
+    )
+  
+  saveRDS(fit, file = "experiments/2022-02-category-learning/R/cmdstanr-full-rs.Rds")
+  
+  
+  tbl_summary <- fit$summary()
+  tbl_draws <- fit$draws(variables = c("mu_tf", "b"), format = "df")
+  tbl_posterior <- tbl_draws %>% 
+    select(starts_with("mu"), .chain) %>% 
+    rename(chain = .chain) %>%
+    pivot_longer(starts_with("mu"), names_to = "parameter", values_to = "value")
+  params_bf <- c("mu_tf[1]", "mu_tf[2]", "mu_tf[3]", "mu_tf[4]")
+  l <- sd_bfs(tbl_posterior, params_bf, sqrt(2)/4)
+  #l[[2]]$value[l[[2]]$variable == "thxhi_x"] <- 1
+  plot_posterior("mu_tf[1]", tbl_posterior, l[[2]], l[[1]])
+  plot_posterior("mu_tf[2]", tbl_posterior, l[[2]], l[[1]])
+  plot_posterior("mu_tf[3]", tbl_posterior, l[[2]], l[[1]])
+  plot_posterior("mu_tf[4]", tbl_posterior, l[[2]], l[[1]])
+  
+  
+}
+
+

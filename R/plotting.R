@@ -63,7 +63,7 @@ plot_moves <- function(tbl_results, l_info) {
     ) +
     facet_wrap(~ timepoint, scales = "free") +
     theme_bw() +
-    theme(plot.title = element_text(size=10)) +
+    theme(plot.title = element_text(size=14, face = "bold")) +
     coord_cartesian(
       xlim = c(space_edges[1] - 1, space_edges[2] + 1), 
       ylim = c(space_edges[1] - 1, space_edges[2] + 1)
