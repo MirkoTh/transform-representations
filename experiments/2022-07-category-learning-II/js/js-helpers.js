@@ -69,8 +69,8 @@ function setup_experiment(condition_id) {
         reproduction: {
             iti: 500,
             fixcross: 500,
-            presentation: 750,
-            ri: 2000
+            presentation: 250,
+            ri: 6000
         },
         categorization: {
             iti: 500,
@@ -327,6 +327,8 @@ async function log_response(rt, i, part, stimulus_ids) {
     var x2_true = parseFloat(setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][1])
     var x1_response = parseFloat(document.getElementById("myRange1").value)
     var x2_response = parseFloat(document.getElementById("myRange2").value)
+    var x1_start = parseFloat(document.getElementById("myRange1_start").value)
+    var x2_start = parseFloat(document.getElementById("myRange2_start").value)
     var data_store = {
         participant_id: participant_id,
         n_categories: n_categories,
@@ -336,14 +338,19 @@ async function log_response(rt, i, part, stimulus_ids) {
         x2_true: x2_true,
         x1_response: x1_response,
         x2_response: x2_response,
+        x1_start: x1_start,
+        x2_start: x2_start,
         rt: rt
     }
     var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response), 2))
     document.getElementById("cr_deviation_cum").innerHTML = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) + deviation
-    document.getElementById("myRange1").value = 50;
-    document.getElementById("myRange2").value = 50;
-    document.getElementById("selected_monster").src = "stimuli/stimulus[50,50].png"
-    saveData(JSON.stringify(data_store), "cr")
+
+    var val1 = Math.floor(Math.random() * 100);
+    var val2 = Math.floor(Math.random() * 100);
+    document.getElementById("myRange1").value = val1;
+    document.getElementById("myRange2").value = val2;
+    document.getElementById("selected_monster").src = "stimuli/stimulus[" + val1 + "," + val2 + "].png"
+    saveData(JSON.stringify(data_store), "cr");
 }
 
 async function my_link() {

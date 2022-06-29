@@ -61,6 +61,8 @@
     <div id="time_var" style="display:none"></div>
     <div id="cr_deviation_cum" style="display:none">0</div>
     <div id="cat_accuracy_cum" style="display:none">0</div>
+    <div id="myRange1_start" style="display:none">-1</div>
+    <div id="myRange2_start" style="display:none">-1</div>
 
     <div class='centeredtext'>
 
@@ -148,9 +150,7 @@
                 <br>
 
                 <body onload="myDataProtection()"></body>
-                <textarea id="DataProtection" rows="15" cols="100" style="font-size: 100%;" readonly>
-
-			</textarea>
+                <textarea id="DataProtection" rows="15" cols="100" style="font-size: 100%;" readonly></textarea>
 
                 <br>
                 <br>
@@ -366,21 +366,28 @@
                 <img id="background_displayed_1" src="stimuli/mask.png" height="300px">
             </div><br>
             <div class="present_stimulus">
-                <img src="./stimuli/stimulus[50,50].png" height="300px" id="selected_monster">
+                <img height="300px" id="selected_monster">
             </div></br>
 
             <div class="slidecontainer1">
-                <input type="range" min="1" max="100" value="50" class="slider" id="myRange1">
+                <input type="range" min="1" max="100" class="slider" id="myRange1" value=50>
                 <p style="text-align: center">Head <span id="demo1"></span></p>
             </div>
 
             <div class="slidecontainer2">
-                <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
+                <input type="range" min="1" max="100" class="slider" id="myRange2" value=50>
                 <p style="text-align: center">Belly<span id="demo2"></span></p>
             </div>
 
             <script>
+                // randomly select a starting stimulus on each trial
                 let x = slide_adjust();
+                var val1 = Math.ceil(Math.random() * 100);
+                var val2 = Math.ceil(Math.random() * 100);
+                let stimulus_id = "./stimuli/stimulus[" + val1 + "," + val2 + "].png";
+                document.getElementById("selected_monster").src = stimulus_id;
+                document.getElementById("myRange1_start").value = val1;
+                document.getElementById("myRange2_start").value = val2;
             </script>
             <button type="button" name="button" class="cr_button" ; onclick="my_link()" ;> Submit Response</button>
         </div>
