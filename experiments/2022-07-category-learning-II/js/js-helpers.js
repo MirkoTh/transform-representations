@@ -33,12 +33,15 @@ function setup_experiment(condition_id) {
         n_trials_reproduction_1: 2, //100, //5, //
         n_trials_reproduction_2: 2, //100, //5, //
         n_trials_categorization_train_target: 0, //3, // 
-        n_trials_categorization: 40, //5, // 380, //
-        n_trials_categorization_total: 0 + 11, // 3 + 5, //
+        n_trials_categorization: 4, //5, // 380, //
+        n_trials_categorization_total: 0 + 4, // 3 + 5, //
         n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
+        thx_cat_overall: .8,
+        thx_cat_lag: .85
     }
+    document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
     // randomize these ids
     // select first n_only_target_cat or n_only_target_cat/2 and append them to category_id, category_name, category_stimulus_id
@@ -68,7 +71,7 @@ function setup_experiment(condition_id) {
             iti: 500,
             fixcross: 500,
             presentation: 250,
-            ri: 200//6000
+            ri: 200//5000
         },
         categorization: {
             iti: 500,
@@ -275,7 +278,7 @@ function route_instructions(condition) {
     n_categories = document.getElementById("n_categories").innerHTML
     set_main_vars(condition)
     if (n_categories == 1) { // control
-        clickStart('page1', 'page2b')
+        clickStart('page1', 'page2')
     } else { clickStart('page1', 'page2') }
     var obj = { participant_id: participant_id, condition_id: setup_expt["experiment_info"]["condition_id"] };
 }
@@ -391,16 +394,16 @@ async function my_link() {
         stimulus_ids = setup_expt["trial_info"]["stimulus_id_r2"]
     }
 
-    if (i == total_trials0 & part == 0) {
+    if (i == total_trials0 & part == 0) { //practice
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page3.1")
         document.getElementById("part_reproduction").innerHTML = 1
-    } else if (i == total_trials1 & part == 1) { //0
+    } else if (i == total_trials1 & part == 1) { //part 1 reproduction
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page6");
-    } else if (i == total_trials2 & part == 2) { //0
+    } else if (i == total_trials2 & part == 2) { //part 2 reproduction
         log_response(rt, i, part, stimulus_ids);
-        calculate_bonus()
+        calculate_bonus("succeed")
         clickStart("page4", "page13");
     } else {
         log_response(rt, i, part, stimulus_ids);
@@ -529,8 +532,20 @@ async function handle_response(e) {
             document.getElementById("part_reproduction").innerHTML = 2;
             document.getElementById("cat_continued").innerHTML = 1;
             cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"])
+            document.getElementById("cat_accuracy_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%";
+            document.getElementById("cat_accuracy_lag").innerHTML = Math.round(100 * cat_accuracies[1]) + "%";
             console.log("categorization accuracies are: " + cat_accuracies)
-            clickStart("page9", "page11")
+            if (
+                cat_accuracies[0] >= setup_expt["experiment_info"]["thx_cat_overall"] ||
+                cat_accuracies[1] >= setup_expt["experiment_info"]["thx_cat_lag"] ||
+                setup_expt["experiment_info"]["n_categories"] == 1
+            ) {
+                clickStart("page9", "page11")
+            } else {
+                calculate_bonus("dropout")
+                clickStart("page9", "page14")
+            }
+
         } // end of train-target trials
         else if (n_categories != 1 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
             clickStart("page9", "page10b")
@@ -802,6 +817,23 @@ function condition_and_ncategories() {
     console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
+    if (n_categories == 1) {
+        textCond = `<b>Similarity:</b> Your task in the second part will be somewhat different.<br>
+                                You are asked to judge how similar the monster presented on the current trial is to the monster presented on the previous trial.<br>
+                                To do so, use the numbers from 1-4 on the keyboard.<br>
+                                When the monster is exactly the same as on the previous trial, press 4.<br>
+                                When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
+                                <b> --> Takes approx. 45 min</b><br>
+                                There will be breaks in between these 45 mins.`
+    } else {
+        textCond = `<b>Categorization:</b> The monsters all look somewhat similar, but they come from different tribes.<br>
+                                Use the information about the spikiness of their head and the fill of their belly to gauge what tribes they are from.<br>
+                                Give your response on a trial using the digit keys on your keyboard.For example, digit key "1" relates to category nr. 1.<br>
+                                You are going to get a feedback after every trial, which may help getting you started.<br>
+                                <b> --> Takes approx. 45 min</b><br>
+                                There will be breaks in between these 45 mins.`
+    }
+    document.getElementById("taskTextCondition").innerHTML = textCond;
     clickStart('page0', 'page1')
 }
 
@@ -859,36 +891,48 @@ function saveBonus(filedata) {
 }
 
 
-function calculate_bonus() {
-    // bonus continuous reproduction
-    const bonus_cr_max = 2.60
-    var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
-    var avg_deviation = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) / n_trials_reproduction
-    var coef_bonus = Math.min(51, avg_deviation)
-    var above_chance = 51 - coef_bonus
-    var prop_bonus = above_chance / 46 // anything closer than 5 from the target counts as "perfect"
-    var bonus_cr = Math.round((prop_bonus * bonus_cr_max * 100)) / 100
+function calculate_bonus(flag_performance) {
+    if (flag_performance == "dropout") {
+        var bonus_store = {
+            participant_id: participant_id,
+            bonus_cr: 0,
+            bonus_cat: 0,
+            bonus_total: 0
+        }
+    } else if (flag_performance == "succeed") {
+        // bonus continuous reproduction
+        const bonus_cr_max = 3.60
+        var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
+        var avg_deviation = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) / n_trials_reproduction
+        var coef_bonus = Math.min(51, avg_deviation)
+        var above_chance = 51 - coef_bonus
+        var prop_bonus = above_chance / 46 // anything closer than 5 from the target counts as "perfect"
+        var bonus_cr = Math.round((prop_bonus * bonus_cr_max * 100)) / 100
 
-    // bonus categorization
-    var bonus_cat;
-    if (setup_expt["experiment_info"]["n_categories"] == 1) {
-        bonus_cat = 1.30
-    } else {
-        const bonus_cat_max = 2.60
-        var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
-        var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
-        bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
+        // bonus categorization
+        var bonus_cat;
+        if (setup_expt["experiment_info"]["n_categories"] == 1) {
+            bonus_cat = 1.80
+        } else {
+            const bonus_cat_max = 3.60
+            var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
+            var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
+            bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
+        }
+        if (bonus_cat < 1.8) { bonus_cat = 1.8 }
+        if (bonus_cr < 1.8) { bonus_cr = 1.8 }
+
+        var bonus_total = Math.round((bonus_cr + bonus_cat) * 100) / 100;
+
+
+        var bonus_store = {
+            participant_id: participant_id,
+            bonus_cr: bonus_cr,
+            bonus_cat: bonus_cat,
+            bonus_total: bonus_total
+        }
     }
 
-    var bonus_total = Math.round((bonus_cr + bonus_cat) * 100) / 100;
-
-
-    var bonus_store = {
-        participant_id: participant_id,
-        bonus_cr: bonus_cr,
-        bonus_cat: bonus_cat,
-        bonus_total: bonus_total
-    }
     saveBonus(JSON.stringify(bonus_store));
 
     (() => {

@@ -63,6 +63,7 @@
     <div id="cat_accuracy_cum" style="display:none">0</div>
     <div id="myRange1_start" style="display:none">-1</div>
     <div id="myRange2_start" style="display:none">-1</div>
+    <div id="n_trials_cat_lag" style="display:none">-1</div>
 
     <div class='centeredtext'>
 
@@ -118,7 +119,15 @@
                     Please do not accept this task if you are using a touch screen device, it will not work!</b><br>
 
                 <h4>How much time will it take and how much can you earn?</h4>
-                The study will take <b>approx 90 minutes</b>.<br>
+                The study duration depends on your performance in the first two parts of the experiment.<br>
+                If your performance is above pre-defined thresholds, you can make it to the bonus part of the experiment
+                (i.e., the third part).<br>
+                The first two parts of the study will take <b>approx. 60 minutes</b>.<br>
+                If you make it to the bonus round, the total duration will be <b></b>approx. 80 minutes</b>.<br>
+                In any case, you will be paid a base payment of <b>£6.00</b> pounds for your participation.
+                In the bonus round, you can receive a bonus of up to <b>£7.20</b>, but it will be at least <b>£3.60</b>.
+
+
                 You will be paid <b>£9.80</b> pounds for participation plus a bonus of up to <b>£5.20</b> pounds
                 depending on your performance.<br>
                 Please note that this is going to be a <b>long and challenging </b>study!</b><br>
@@ -210,31 +219,10 @@
             </ol>
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
-            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page2b')" ;>
+            <!-- page2b -->
+            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page8')" ;>
                 Check Comprehension
             </button>
-            <script>
-                if (document.getElementById("n_categories").innerHTML == 1) {
-                    textCond = `<b>Similarity:</b> Your task in the second part will be somewhat different.<br>
-                                You are asked to judge how similar the monster presented on the current trial is to the monster presented on the previous trial.<br>
-                                To do so, use the numbers from 1-4 on the keyboard.<br>
-                                When the monster is exactly the same as on the previous trial, press 4.<br>
-                                When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
-                                <b> --> Takes approx. 45 min</b><br>
-                                There will be breaks in between these 45 mins.`
-                } else {
-                    textCond = `<b>Categorization:</b> The monsters all look somewhat similar, but they come from different tribes.<br>
-                                Use the information about the spikiness of their head and the fill of their belly to gauge what tribes they are from.<br>
-                                Give your response on a trial using the digit keys on your keyboard.For example, digit key "1" relates to category nr. 1.<br>
-                                You are going to get a feedback after every trial, which may help getting you started.<br>
-                                <b> --> Takes approx. 45 min</b><br>
-                                There will be breaks in between these 45 mins.`
-                }
-                (() => {
-                    document.getElementById("taskTextCondition").innerHTML = textCond;
-                })();
-            </script>
-
         </div>
 
         <div id="page2b" style="display:none">
@@ -536,7 +524,8 @@
         </div>
         <div id="page11" style="display:none">
             <h1>
-                Very well done! That was it for part 2!
+                Very well done - That was it for part 2!<br>
+                You performed well enough and made it to part 3 of the study!
             </h1>
             <p>
                 By clicking on the button below, you get to part 3.
@@ -569,17 +558,42 @@
             </h1>
 
             <p>
-                In addition to the base payment of £9.80 you earn a bonus of £<span id="total_bonus"></span>
+                In addition to the base payment of £7.00 you earn a bonus of £<span id="total_bonus"></span>
                 .<br>
                 Your bonus in the memory task is £<span id="cr_bonus"></span>.<br>
                 Your bonus in the second task is £<span id="cat_bonus"></span><br><br>
-                The base payment for your participation will be paid as soon as possible.<br>
-                The rest will be paid within the next few days.
+                Please be patient! The payments for your participation will be paid within the next few days.<br>
             </p>
 
             <br>
             <h2>Please do not forget to click the button below to get re-directed
                 to the prolific webpage</h2>
+            <p>Your successful completion of the study is only registered on your prolific account
+                after you have been redirected to the prolific webpage</p>
+
+            <button type="button" name="button" class="default_button" ; onclick="redirect_to_prolific()" ;> Return to
+                Prolific </button>
+
+        </div>
+
+        <div id="page14" style="display:none">
+            <h1>Base Payment<br></h1>
+
+            <h2>Thanks for your participation in our study!</h2>
+
+            <p>
+                You receive the base payment of £7.00.
+                You did not make it to the third part of the study because your performance was below the predefined
+                thresholds.
+                Your overall categorization accuracy is <span id="cat_accuracy_overall"></span>.<br>
+                Your categorization accuracy over the last <span id="n_trials_cat_lag"></span> trials is <span
+                    id="cat_accuracy_lag"></span>.<br>
+                Please be patient! The base payment for your participation will be paid within the next few days.
+            </p>
+
+            <br>
+            <h2>Please do not forget to click the button below to get re-directed
+                to the prolific webpage.</h2>
             <p>Your successful completion of the study is only registered on your prolific account
                 after you have been redirected to the prolific webpage</p>
 
