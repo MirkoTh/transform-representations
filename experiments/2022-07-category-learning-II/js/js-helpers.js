@@ -33,8 +33,9 @@ function setup_experiment(condition_id) {
         n_trials_reproduction_1: 2, //100, //5, //
         n_trials_reproduction_2: 2, //100, //5, //
         n_trials_categorization_train_target: 0, //3, // 
-        n_trials_categorization: 600, //5, // 380, //
-        n_trials_categorization_total: 0 + 600, // 3 + 5, //
+        n_trials_categorization: 40, //5, // 380, //
+        n_trials_categorization_total: 0 + 11, // 3 + 5, //
+        n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
     }
@@ -447,6 +448,7 @@ function wrap_categorization(old, i) {
     }
 }
 
+
 async function next_item_cat(old, i) {
     clickStart(old, 'page9')
     current_stim_id = stimulus_cat_trial[i]
@@ -463,6 +465,7 @@ async function next_item_cat(old, i) {
     document.addEventListener("keydown", handle_response, false);
 }
 
+
 async function handle_response(e) {
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (
@@ -471,7 +474,9 @@ async function handle_response(e) {
         n_categories == 3 & (e.keyCode >= 49 && e.keyCode <= 51) ||
         n_categories == 3 & (e.keyCode >= 97 && e.keyCode <= 99) ||
         n_categories == 2 & (e.keyCode >= 49 && e.keyCode <= 50) ||
-        n_categories == 2 & (e.keyCode >= 97 && e.keyCode <= 98)
+        n_categories == 2 & (e.keyCode >= 97 && e.keyCode <= 98) ||
+        n_categories == 4 & (e.keyCode >= 49 && e.keyCode <= 52) ||
+        n_categories == 4 & (e.keyCode >= 97 && e.keyCode <= 100)
     ) {
         var break_idx = parseInt(document.getElementById("break_idx").innerHTML)
         var str_frame = "timeframe" + Math.max(break_idx, 1)
@@ -522,11 +527,12 @@ async function handle_response(e) {
         // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
             document.getElementById("part_reproduction").innerHTML = 2;
-            document.getElementById("cat_continued").innerHTML = 1
+            document.getElementById("cat_continued").innerHTML = 1;
+            cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"])
+            console.log("categorization accuracies are: " + cat_accuracies)
             clickStart("page9", "page11")
         } // end of train-target trials
         else if (n_categories != 1 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
-            calculate_categorization_accuracy()
             clickStart("page9", "page10b")
 
         } else if (
@@ -561,14 +567,21 @@ async function handle_response(e) {
             next_item_cat('page9', i + 1);
             document.getElementById(str_frame).style.display = "none"
         }
-
     }
-
 }
 
-/* function calculate_categorization_accuracy() {
-    responses_cat_trial[]
-} */
+
+function calculate_categorization_accuracy(responses_cat_trial, lag) {
+    n_responses = responses_cat_trial.length
+    sum_correct = responses_cat_trial.reduce((a, b) => a + b, 0)
+    prop_correct_overall = ((parseFloat(sum_correct) / parseFloat(n_responses)))
+    sum_correct_lag = responses_cat_trial.slice(n_responses - lag, n_responses).reduce((a, b) => a + b, 0)
+    prop_correct_lag = ((parseFloat(sum_correct_lag) / parseFloat(lag)))
+    console.log("calculated average is: " + prop_correct_overall)
+    console.log("calculated average 'lag' is: " + prop_correct_lag)
+    cat_accuracies = [prop_correct_overall, prop_correct_lag]
+    return cat_accuracies
+}
 
 function startTimer(duration, display) {
     var timer = duration, minutes, seconds;
@@ -712,6 +725,8 @@ function instructioncheck(pg, pg_prev) {
     }
 
 }
+
+
 function set_category_instruction(n_categories) {
     var text;
     const text_3 = `There are two target categories and one non-target category.<br>One target category is called <b>Bukil</b>, the other target category is called <b>Venak</b>.<br>
@@ -751,6 +766,7 @@ function set_category_instruction(n_categories) {
     return (text)
 }
 
+
 function load_csv() {
     var txt = d3.json("rotate-conditions.json", function (data) {
         var condition_counts;
@@ -776,6 +792,7 @@ function load_csv() {
     clickStart('page0', 'page1')
 }
 
+
 function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
@@ -787,6 +804,7 @@ function condition_and_ncategories() {
     document.getElementById("n_categories").innerHTML = n_categories
     clickStart('page0', 'page1')
 }
+
 
 function saveConditions(filedata) {
     var filename = "rotate-conditions.json";
