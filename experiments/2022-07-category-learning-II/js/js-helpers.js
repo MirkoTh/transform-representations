@@ -30,16 +30,13 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 4 categories, 9 categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 100, //2, //5, //
-        n_trials_reproduction_2: 100, //2, //5, //
-        n_trials_categorization_train_target: 40, //3, // 
+        n_trials_reproduction_1: 2, //100, //5, //
+        n_trials_reproduction_2: 2, //100, //5, //
+        n_trials_categorization_train_target: 0, //3, // 
         n_trials_categorization: 600, //5, // 380, //
-        n_trials_categorization_total: 40 + 600, // 3 + 5, //
+        n_trials_categorization_total: 0 + 600, // 3 + 5, //
         condition_id: condition_id,
         n_categories: n_categories,
-        file_path_stimuli: "/stimuli/",
-        file_path_reproduction: "transform-reps-cat-1-reproduction.txt",
-        file_path_categorization: "transform-reps-cat-1-categorization.txt",
     }
     // stim_ids of cat2 and cat3
     // randomize these ids
@@ -70,7 +67,7 @@ function setup_experiment(condition_id) {
             iti: 500,
             fixcross: 500,
             presentation: 250,
-            ri: 6000
+            ri: 200//6000
         },
         categorization: {
             iti: 500,
@@ -81,26 +78,22 @@ function setup_experiment(condition_id) {
         }
     }
 
-
-
     const n_x_steps = 10;
     var stimulus_info = {
         x1: Array(n_x_steps).fill().map((element, index) => index),
         x2: Array(n_x_steps).fill().map((element, index) => index),
         x1_x2: Array(n_x_steps * n_x_steps),
         stimulus_id: Array(n_x_steps * n_x_steps),
-        category_name: ["No Target Category", "Bukil", "Venak"],
+        category_name: ["Bukil", "Venak", "Monus", "Ladiv"],
         category_id: []
     }
 
     if (experiment_info["n_categories"] == 2) {
         stimulus_info["category_id"] = cat2map_val
         stim_ids_cats_tt = append_randomized_arrays(cat2_stim_ids_cat2, 1)
-        //set_category_instruction(experiment_info["n_categories"])
     } else if (experiment_info["n_categories"] == 3) {
         stimulus_info["category_id"] = cat3map_val
         stim_ids_cats_tt = append_randomized_arrays(cat3_stim_ids_all, 1)
-        //set_category_instruction()
     } else if (experiment_info["n_categories"] == 1) {
         stimulus_info["category_id"] = cat0map_val
         stim_ids_cats_tt = Array(experiment_info["n_stimuli"]).fill().map((element, index) => index)
@@ -113,7 +106,7 @@ function setup_experiment(condition_id) {
     for (let x1 of stimulus_info["x1"]) {
         for (let x2 of stimulus_info["x2"]) {
             // 10x10 grid of stimuli placed within finer grid of 100x100
-            // edge space of 6 units is 
+            // with some space from each edge
             stimulus_info["x1_x2"][i] = [(x1 + 1) * 9 + 1, (x2 + 1) * 9 + 1]
             stimulus_info["stimulus_id"][i] = i
             i += 1
@@ -125,13 +118,14 @@ function setup_experiment(condition_id) {
     stim_ids_cat_nt = append_randomized_arrays(stim_ids_cat_nt, 1)
 
     // trial info
-    const trial_info = {}
+    var trial_info = {}
     trial_info["stimulus_id_rp"] = [...stimulus_info["stimulus_id"]]
     trial_info["stimulus_id_r1"] = [...stimulus_info["stimulus_id"]]
     trial_info["stimulus_id_r2"] = [...stimulus_info["stimulus_id"]]
     trial_info["stimulus_id_c"] = []
     trial_info["category_id"] = []
     trial_info["category_name"] = []
+    trial_info["response_c"] = []
 
     const n_reps_practice = 1
     const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
@@ -148,81 +142,23 @@ function setup_experiment(condition_id) {
     stim_ids_cats_tt_cr2 = append_randomized_arrays(stim_ids_cats_tt, 1)
     stim_ids_cat_nt_cr2 = append_randomized_arrays(stim_ids_cat_nt_cr1, 1)
     trial_info["stimulus_id_r2"] = stim_ids_cats_tt_cr2.concat(stim_ids_cat_nt_cr2)
-    
- */
+    */
 
     trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
     trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
     trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
-    // stimulus information
-    // create an equal proportion of items from the categories
-    const proportion_categories = 1 / experiment_info["n_categories"]
-    const items_per_category_required = Math.ceil(experiment_info["n_trials_categorization"] * proportion_categories)
-    const items_per_category_repeats = {}
-    const items_per_category_gridpoints = {}
-    var stimulus_ids_per_category = {}
-    var n_items_per_cat, prop_available, repeats;
-    // https://www.w3resource.com/javascript-exercises/fundamental/javascript-fundamental-exercise-70.php
-    const countOccurrences = (arr, val) => arr.reduce((a, v) => (v === val ? a + 1 : a), 0);
-    for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
-        n_items_per_cat = countOccurrences(stimulus_info["category_id"], idx + 1)
-        items_per_category_gridpoints[idx + 1] = n_items_per_cat
-        prop_available = n_items_per_cat / items_per_category_required
-        repeats = Math.ceil(1 / prop_available)
-        items_per_category_repeats[idx + 1] = repeats
-        stimulus_ids_per_category[idx + 1] = []
+
+    if (n_categories <= 3) {
+        // similarity judgement and ellipse categories
+        trial_info = assign_items_to_categories_ellipse(experiment_info, trial_info, stimulus_info)
+    } else if (n_categories == 4) {
+        // square categories (aka grid)
+        trial_info = assign_items_to_categories_squares(n_x_steps, experiment_info, trial_info, stimulus_info)
     }
-    for (let idx = 0; idx < experiment_info["n_stimuli"]; idx++) {
-        stimulus_ids_per_category[stimulus_info["category_id"][idx]].push(stimulus_info["stimulus_id"][idx])
-    }
-    for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
-        stimulus_ids_per_category[idx + 1] = append_randomized_arrays(stimulus_ids_per_category[idx + 1], items_per_category_repeats[idx + 1])
-        stimulus_ids_per_category[idx + 1].length = items_per_category_required
-        trial_info["stimulus_id_c"] = trial_info["stimulus_id_c"].concat(stimulus_ids_per_category[idx + 1])
-    }
-
-    trial_info["stimulus_id_c"] = append_randomized_arrays(trial_info["stimulus_id_c"], 1)
-    // add target training in the beginning
-
-    trial_info["stimulus_id_c"] = stim_ids_cats_tt.concat(trial_info["stimulus_id_c"])
-
-    // ellipse categories
-    for (let i = 0; i < (experiment_info["n_trials_categorization_train_target"] + experiment_info["n_trials_categorization"]); i++) {
-        trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
-        trial_info["category_name"][i] = stimulus_info["category_name"][trial_info["category_id"][i] - 1]
-    }
-
-    // square categories
-    /* segments_per_dim = Math.sqrt(experiment_info["n_categories"])
-    category_step = Math.max(...stimulus_info["x1"]) / segments_per_dim
-    x1_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
-    x2_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
-    var cat_assign_x1 = Array(segments_per_dim)
-    var cat_assign_x2 = Array(segments_per_dim)
-    for (let i = 0; i < experiment_info["n_trials_categorization"]; i++) {
-        cat_assign_x1 = trial_info["stimulus_id_c"][i] % n_x_steps
-        cat_assign_x2 = Math.ceil(trial_info["stimulus_id_c"][i] / Math.max(...stimulus_info["x1"]))
-        //x1_tmp = x1_boundaries.some(function (x) { return cat_assign_x1 > x; })
-        var x2_tmp = x2_boundaries.map(function (x) { return x < cat_assign_x2 })
-        var x1_tmp = x1_boundaries.map(function (x) { return x < cat_assign_x1 });
-        var x1_level = 0;
-        var x2_level = 0;
-        for (var j = 0; j < x1_tmp.length; j++) {
-            x1_level += x1_tmp[j]
-            x2_level += x2_tmp[j]
-        }
-        trial_info["category_id"][i] = x2_level * segments_per_dim + (x1_level + 1)
-    } */
-
-    function append_randomized_arrays(set, n) {
-        var sets_randomized = [];
-        for (let i = 0; i < n; i++) {
-            var set_permuted = permute(set)
-            sets_randomized = sets_randomized.concat(set_permuted);
-        }
-        return sets_randomized
-    }
-
+    console.log("printing now the stimulus ids and the associated categories for the first 50 trials:")
+    console.log(trial_info["stimulus_id_c"].slice(0, 50))
+    console.log(trial_info["category_id"].slice(0, 50))
+    console.log(trial_info["category_name"].slice(0, 50))
 
     var obj_setup_expt;
     obj_setup_expt = {
@@ -235,11 +171,96 @@ function setup_experiment(condition_id) {
     return obj_setup_expt
 }
 
+
+function append_randomized_arrays(set, n) {
+    var sets_randomized = [];
+    for (let i = 0; i < n; i++) {
+        var set_permuted = permute(set)
+        sets_randomized = sets_randomized.concat(set_permuted);
+    }
+    return sets_randomized
+}
+
 //permute a list
 function permute(o) {
     for (var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
     return o;
 };
+
+
+function assign_items_to_categories_squares(n_x_steps, experiment_info, trial_info, stimulus_info) {
+    const n_stim_repeats = Math.ceil(experiment_info["n_trials_categorization_total"] / experiment_info["n_stimuli"])
+    trial_info["stimulus_id_c"] = append_randomized_arrays(stimulus_info["stimulus_id"], n_stim_repeats)
+    segments_per_dim = Math.sqrt(experiment_info["n_categories"])
+    console.log("segments per dim is: " + segments_per_dim)
+    category_step = Math.max(...stimulus_info["x1"]) / segments_per_dim
+    x1_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
+    x2_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
+    console.log("x1_boundaries are: " + x1_boundaries)
+    console.log("x2_boundaries are: " + x2_boundaries)
+    var cat_assign_x1 = Array(segments_per_dim)
+    var cat_assign_x2 = Array(segments_per_dim)
+    for (let i = 0; i < experiment_info["n_trials_categorization_total"]; i++) {
+        cat_assign_x1 = trial_info["stimulus_id_c"][i] % n_x_steps
+        cat_assign_x2 = Math.floor(trial_info["stimulus_id_c"][i] / n_x_steps)
+        var x2_tmp = x2_boundaries.map(function (x) { return x < cat_assign_x2 })
+        var x1_tmp = x1_boundaries.map(function (x) { return x < cat_assign_x1 });
+        var x1_level = 0;
+        var x2_level = 0;
+        for (var j = 0; j < x1_tmp.length; j++) {
+            x1_level += x1_tmp[j]
+            x2_level += x2_tmp[j]
+        }
+        trial_info["category_id"][i] = x2_level * segments_per_dim + (x1_level + 1)
+        trial_info["category_name"][i] = stimulus_info["category_name"][trial_info["category_id"][i] - 1]
+    }
+    return trial_info
+}
+
+
+function assign_items_to_categories_ellipse(experiment_info, trial_info, stimulus_info) {
+    if (experiment_info["n_categories"] <= 3) {
+        // equal proportion of items from the categories; this is only necessary for ellipse categories
+        // but can also be used for similarity judgement, as all items "in the same category"
+        const proportion_categories = 1 / experiment_info["n_categories"]
+        const items_per_category_required = Math.ceil(experiment_info["n_trials_categorization"] * proportion_categories)
+        const items_per_category_repeats = {}
+        const items_per_category_gridpoints = {}
+        var stimulus_ids_per_category = {}
+        var n_items_per_cat, prop_available, repeats;
+        // https://www.w3resource.com/javascript-exercises/fundamental/javascript-fundamental-exercise-70.php
+        const countOccurrences = (arr, val) => arr.reduce((a, v) => (v === val ? a + 1 : a), 0);
+        for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
+            n_items_per_cat = countOccurrences(stimulus_info["category_id"], idx + 1)
+            items_per_category_gridpoints[idx + 1] = n_items_per_cat
+            prop_available = n_items_per_cat / items_per_category_required
+            repeats = Math.ceil(1 / prop_available)
+            items_per_category_repeats[idx + 1] = repeats
+            stimulus_ids_per_category[idx + 1] = []
+        }
+        for (let idx = 0; idx < experiment_info["n_stimuli"]; idx++) {
+            stimulus_ids_per_category[stimulus_info["category_id"][idx]].push(stimulus_info["stimulus_id"][idx])
+        }
+        for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
+            stimulus_ids_per_category[idx + 1] = append_randomized_arrays(stimulus_ids_per_category[idx + 1], items_per_category_repeats[idx + 1])
+            stimulus_ids_per_category[idx + 1].length = items_per_category_required
+            trial_info["stimulus_id_c"] = trial_info["stimulus_id_c"].concat(stimulus_ids_per_category[idx + 1])
+        }
+
+        trial_info["stimulus_id_c"] = append_randomized_arrays(trial_info["stimulus_id_c"], 1)
+        // add target training in the beginning
+
+        // initial phase of train "target" category is omitted in the second experiment
+        //trial_info["stimulus_id_c"] = stim_ids_cats_tt.concat(trial_info["stimulus_id_c"])
+
+        // ellipse categories
+        for (let i = 0; i < (experiment_info["n_trials_categorization_total"]); i++) {
+            trial_info["category_id"][i] = stimulus_info["category_id"][trial_info["stimulus_id_c"][i]]
+            trial_info["category_name"][i] = stimulus_info["category_name"][trial_info["category_id"][i] - 1]
+        }
+    }
+    return trial_info
+}
 
 //function to hide one html div and show another
 function clickStart(hide, show) {
@@ -505,6 +526,7 @@ async function handle_response(e) {
             clickStart("page9", "page11")
         } // end of train-target trials
         else if (n_categories != 1 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
+            calculate_categorization_accuracy()
             clickStart("page9", "page10b")
 
         } else if (
@@ -544,6 +566,9 @@ async function handle_response(e) {
 
 }
 
+/* function calculate_categorization_accuracy() {
+    responses_cat_trial[]
+} */
 
 function startTimer(duration, display) {
     var timer = duration, minutes, seconds;
@@ -578,6 +603,8 @@ function write_cat_results(i, r) {
         accuracy = 9999
     } else if (n_categories > 1) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
+        var accuracy_int = accuracy | 0
+        responses_cat_trial.push(accuracy_int)
     }
     var data_store = {
         participant_id: participant_id,
@@ -750,8 +777,11 @@ function load_csv() {
 }
 
 function condition_and_ncategories() {
-    const condition_id = Math.ceil(Math.random() * 2);
-    const n_categories = [1, 2][(condition_id % 2)]
+    n_different_categories = 3;
+    var condition_id = Math.ceil(Math.random() * n_different_categories);
+    var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
+    condition_id = 3
+    n_categories = 4
     console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
@@ -795,6 +825,7 @@ function set_main_vars(condition_id) {
     stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
     stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
     stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
+    responses_cat_trial = setup_expt["trial_info"]["response_c"]
     category_id = setup_expt["trial_info"]["category_id"]
     category_name = setup_expt["stimulus_info"]["category_name"]
     stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
