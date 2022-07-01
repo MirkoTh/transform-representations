@@ -319,6 +319,10 @@ tbl_cr$n_categories <-
   factor(tbl_cr$n_categories,
          labels = c("Control Group", "Experimental Group"))
 pl_empirical <- plot_distance_to_category_center(tbl_cr)
+plot_distance_from_decision_boundary(tbl_cr, 10)
+
+
+
 
 marrangeGrob(list(pl_avg_move, pl_empirical),
              nrow = 1,

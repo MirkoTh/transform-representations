@@ -401,3 +401,32 @@ by_participant_coefs <- function(tbl_df, iv_str, dv_str, title_str) {
     theme_bw() +
     labs(title = title_str, x = "Intercept", y = "Slope per Bin")
 }
+
+
+plot_distance_from_decision_boundary <- function(tbl_cr, nbins) {
+  #' 
+  #' @description scatter plot of distance from category center and
+  #' distance from decision boundary before and after category learning
+  #' @param tbl_cr the tbl with by-trial cr responses
+  #' @param nbins nr of bins to cut the distances from decision boundary into
+  #' 
+  #' @return the scatter plot
+  #' 
+  tbl_cr$d2boundary_stim_cut <- cut(tbl_cr$d2boundary_stim, nbins, labels = FALSE)
+  tbl_cr <- tbl_cr %>% mutate(
+    session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")),
+    category = factor(category, labels = c("Non-Target", "Target"))
+  )
+  dg <- position_dodge(width = .2)
+  ggplot(
+    grouped_agg(tbl_cr, c(session, category, d2boundary_stim_cut), d_closest), 
+    aes(d2boundary_stim_cut, mean_d_closest, group = session)) +
+    geom_point(aes(color = category, shape = session), position = dg) +
+    theme_bw() +
+    scale_color_brewer(palette = "Set1", name = "") +
+    scale_shape_discrete(name = "") +
+    labs(
+      x = "Distance from Decision Boundary",
+      y = "Distance from Category Center"
+    )
+}

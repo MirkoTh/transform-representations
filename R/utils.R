@@ -1033,7 +1033,7 @@ distance_to_closest_center_simulation <- function(tbl) {
   tbl$x1_response <- tbl$x1_data
   tbl$x2_response <- tbl$x2_data
   l_centers_ellipses <- category_centers(f_stretch = 1, f_shift = 0)
-  tbl <- add_distance_to_nearest_center(tbl, l_centers_ellipses)
+  tbl <- add_distance_to_nearest_center(tbl, l_centers_ellipses, is_simulation = TRUE)
   tbl$participant_id <- 1
   tbl$session <- tbl$timepoint 
   return(tbl)

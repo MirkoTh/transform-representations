@@ -217,12 +217,13 @@ add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
   return(tbl_cr)
 }
 
-add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses) {
+add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simulation) {
   #' add distance to closest category centroid
   #' 
-  #' @description calculates distances to all possible category centroids and returns min of those
+  #' @description calculates distances to all possible category centroids 
+  #' and returns min of those
   #' @param tbl_cr the tibble with the by-trial responses
-  #' @param l_centers_ellipses a list with two tbl_dfs containing the coordinates
+  #' @param l_centers_ellipses a nested list with two tbl_dfs containing the coordinates
   #' of the category centers and the coordinates of a large number of samples
   #' from the ellipse
   #' 
@@ -317,7 +318,7 @@ add_deviations <- function(l_tbl) {
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
   l_centers_ellipses <- category_centers(f_stretch = 9, f_shift = 1)
-  tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses)
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses, is_simulation = FALSE)
   tbl_cr$d2boundary_stim <- add_distance_to_nearest_boundary(tbl_cr, l_centers_ellipses)
   
   # average deviation in binned x1-x2 grid
