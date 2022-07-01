@@ -318,6 +318,7 @@ add_deviations <- function(l_tbl) {
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
   l_centers_ellipses <- category_centers(f_stretch = 9, f_shift = 1)
   tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses)
+  tbl_cr$d2boundary_stim <- add_distance_to_nearest_boundary(tbl_cr, l_centers_ellipses)
   
   # average deviation in binned x1-x2 grid
   l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
@@ -695,3 +696,20 @@ model {
 }
 
 
+add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
+  #' euclidean distance to closest category boundary
+  #' 
+  #' @description calculates the distance to the closest point on a
+  #' category boundary
+  #' @param tbl_df tbl_df with with stimulus positions
+  #' 
+  #' @return a vector with distances
+  #'
+  x1_data <- as_vector(tbl_df$x1_true)
+  x2_data <- as_vector(tbl_df$x2_true)
+  ell <- l_centers_ellipses[[2]][[1]][[2]]
+  map2_dbl(
+    x1_data, x2_data, 
+    ~ min(sqrt((.x - ell$x_rotated)^2 + (.y - ell$y_rotated)^2))
+  )
+}
