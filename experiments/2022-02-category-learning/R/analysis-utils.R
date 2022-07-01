@@ -217,26 +217,23 @@ add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
   return(tbl_cr)
 }
 
-
-add_distance_to_nearest_center <- function(tbl_cr, is_simulation) {
+add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simulation) {
   #' add distance to closest category centroid
   #' 
-  #' @description calculates distances to all possible category centroids and returns min of those
+  #' @description calculates distances to all possible category centroids 
+  #' and returns min of those
   #' @param tbl_cr the tibble with the by-trial responses
+  #' @param l_centers_ellipses a nested list with two tbl_dfs containing the coordinates
+  #' of the category centers and the coordinates of a large number of samples
+  #' from the ellipse
   #' 
   #' @return the tibble with the min distance as added column
   #' 
-  if (is_simulation) {
-    f_stretch <- 1
-    f_shift <- 0
-  } else {
-    f_stretch <- 9
-    f_shift <- 1
-  }
+  
+  l_cat_mns <- l_centers_ellipses[[1]]
+  l_ellipses <- l_centers_ellipses[[2]]
+  
   v_categories <- unique(tbl_cr$n_categories)
-  l_tmp <- category_centers(f_stretch = f_stretch, f_shift = f_shift)
-  l_cat_mns <- l_tmp[[1]]
-  l_ellipses <- l_tmp[[2]]
   
   # split by nr of categories
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
@@ -320,7 +317,9 @@ add_deviations <- function(l_tbl) {
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
-  tbl_cr <- add_distance_to_nearest_center(tbl_cr, is_simulation = FALSE)
+  l_centers_ellipses <- category_centers(f_stretch = 9, f_shift = 1)
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses, is_simulation = FALSE)
+  tbl_cr$d2boundary_stim <- add_distance_to_nearest_boundary(tbl_cr, l_centers_ellipses)
   
   # average deviation in binned x1-x2 grid
   l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
@@ -675,7 +674,7 @@ model {
   fit <- mod$sample(
     data = l_data, iter_sampling = 20000, iter_warmup = 1000,
     seed = 4321, max_treedepth = 15, adapt_delta = .99 
-    )
+  )
   
   saveRDS(fit, file = "experiments/2022-02-category-learning/R/cmdstanr-full-rs.Rds")
   
@@ -698,3 +697,20 @@ model {
 }
 
 
+add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
+  #' euclidean distance to closest category boundary
+  #' 
+  #' @description calculates the distance to the closest point on a
+  #' category boundary
+  #' @param tbl_df tbl_df with with stimulus positions
+  #' 
+  #' @return a vector with distances
+  #'
+  x1_data <- as_vector(tbl_df$x1_true)
+  x2_data <- as_vector(tbl_df$x2_true)
+  ell <- l_centers_ellipses[[2]][[1]][[2]]
+  map2_dbl(
+    x1_data, x2_data, 
+    ~ min(sqrt((.x - ell$x_rotated)^2 + (.y - ell$y_rotated)^2))
+  )
+}

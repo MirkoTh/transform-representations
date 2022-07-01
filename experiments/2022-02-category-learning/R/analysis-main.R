@@ -1,6 +1,8 @@
-# TODOs
-## - some participants seem to have restarted the experiment
-## - plot change in categorization accuracy against movement towards center
+# Some Notes
+
+# for simulation f_stretch <- 1, f_shift <- 0
+# for empirical data f_stretch <- 9 f_shift <- 1
+# as in empirical data x1 and x2 ranged from 1-100 and the ellipses are scaled 
 
 # Import Packages ---------------------------------------------------------
 
@@ -128,9 +130,6 @@ m_rs <-
 summary(m_rs)
 anova(m_rs)
 tbl_cat_agg$preds <- predict(m_rs, tbl_cat_agg)
-
-
-
 
 l_movement <-
   movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest")
@@ -320,6 +319,10 @@ tbl_cr$n_categories <-
   factor(tbl_cr$n_categories,
          labels = c("Control Group", "Experimental Group"))
 pl_empirical <- plot_distance_to_category_center(tbl_cr)
+plot_distance_from_decision_boundary(tbl_cr, 10)
+
+
+
 
 marrangeGrob(list(pl_avg_move, pl_empirical),
              nrow = 1,
