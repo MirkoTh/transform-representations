@@ -217,7 +217,7 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
       title = "By Participant Categorization Trajectories"
     )
   
-  return(list(pl_agg, pl_indiv))
+  return(list(pl_agg, pl_indiv, tbl_cat_agg))
 }
 
 
@@ -365,4 +365,39 @@ plot_distance_to_category_center <- function(tbl_cr, l_info = NULL) {
   }
   
   return(pl)
+}
+
+by_participant_coefs <- function(tbl_df, iv_str, dv_str, title_str) {
+  #' 
+  #' @description scatterplot of by-participant intercepts and slopes
+  #' @param tbl_df the tbl with aggregated responses by participant and
+  #' by iv_str
+  #' @param iv_str the independent variable as a string
+  #' @param dv_str the dependent variable as a string
+  #' @param title_str the title of the plot as a string
+  #' 
+  
+  tbl_df_nested <- tbl_df %>% group_by(participant_id) %>% nest()
+  lm_participant <- function(tbl_df) {
+    lm(str_c(dv_str, " ~ ", iv_str), data = tbl_df)
+  }
+  tbl_df_nested <- tbl_df_nested %>%
+    mutate(
+      model = map(data, lm_participant),
+      bs = map(model, coefficients),
+      bi = unlist(map(bs, 1)),
+      btime = unlist(map(bs, 2))
+    )
+  x_label <- min(tbl_df_nested$bi) + .5*sd(tbl_df_nested$bi)
+  y_label <- max(tbl_df_nested$btime) - .5*sd(tbl_df_nested$btime)
+  tbl_corr <- tibble(corr = cor(tbl_df_nested$bi, tbl_df_nested$btime))
+  ggplot(tbl_df_nested, aes(bi, btime)) +
+    geom_hline(yintercept = 0,
+               color = "tomato",
+               size = 1) +
+    geom_point(shape = 1) +
+    geom_smooth(method = "lm", color = "lavender") +
+    geom_label(data = tbl_corr, aes(x_label, y_label, label = str_c("r = ", round(corr, 2)))) +
+    theme_bw() +
+    labs(title = title_str, x = "Intercept", y = "Slope per Bin")
 }
