@@ -714,3 +714,35 @@ add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
     ~ min(sqrt((.x - ell$x_rotated)^2 + (.y - ell$y_rotated)^2))
   )
 }
+
+
+representational_distances <- function(timepoint, participant_id) {
+  #' pairwise distances between representations
+  #' 
+  #' @description calculates the matrix of pairwise distances
+  #' between all stimuli for one session of continuous reproduction responses
+  #' @param timepoint either "1" or "2" for before and after category
+  #' learning, respectively
+  #' @param participant_id the participant id to calculate the matrix for
+  #' 
+  #' @return a vector with distances
+  #'
+  
+  tmp1 <- tbl_cr %>% 
+    filter(participant_id == "5dfe7de0bf3d4eb1cc979a7a") %>% 
+    select(stim_id, session, x1_response, x2_response)
+  tbl_design <- crossing(l = tmp1$stim_id, r = tmp1$stim_id)
+  tbl_pre <- tbl_design %>% 
+    left_join(
+      tmp1 %>% filter(session == "1") %>% select(-session), 
+      by = c("l" = "stim_id"), suffix = c("_l", "_r")
+    ) %>% left_join(
+      tmp1 %>% filter(session == "1") %>% select(-session), 
+      by = c("r" = "stim_id"), suffix = c("_l", "_r")
+    )
+  tbl_pre$d_euclidean <- sqrt(
+    (tbl_pre$x1_response_l - tbl_pre$x1_response_r)^2 +
+      (tbl_pre$x2_response_l - tbl_pre$x2_response_r)^2
+  )
+  return(tbl_pre)
+}
