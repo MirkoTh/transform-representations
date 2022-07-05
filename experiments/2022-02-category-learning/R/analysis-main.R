@@ -415,13 +415,11 @@ summary(m_rs_cr_control)
 
 
 p_id <- unique(tbl_cr$participant_id)
-timepoint <- c("1", "2")
-tbl_map <- crossing(p_id, timepoint)
-l_rsa <- pmap(tbl_map, representational_distances)
-ggplot(l_rsa[[1]], aes(l, r)) +
-  geom_raster(aes(fill = d_euclidean_response)) +
+l_rsa_delta <- map(p_id, delta_representational_distance, tbl_cr = tbl_cr)
+ggplot(l_rsa_delta[[8]], aes(l, r)) +
+  geom_raster(aes(fill = d_euclidean_delta)) +
   theme_bw() +
-  scale_fill_viridis_c(name = "Euclidean Distance") +
+  scale_fill_viridis_c(name = "Euclidean Distance Delta") +
   scale_x_continuous(breaks = seq(0, 100, by = 10)) +
   scale_y_continuous(breaks = seq(0, 100, by = 10)) +
   labs(x = "Stimulus ID 1", y = "Stimulus ID 2")

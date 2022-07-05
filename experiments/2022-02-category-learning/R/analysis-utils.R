@@ -716,29 +716,28 @@ add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
 }
 
 
-representational_distances <- function(timepoint, p_id, tbl_cr) {
+representational_distances <- function(p_id, timepoint, tbl_cr) {
   #' pairwise distances between representations
   #' 
   #' @description calculates the matrix of pairwise distances
   #' between all stimuli for one session of continuous reproduction responses
+  #' @param p_id the participant id to calculate the matrix for
   #' @param timepoint either "1" or "2" for before and after category
   #' learning, respectively
-  #' @param participant_id the participant id to calculate the matrix for
   #' @param tbl_cr tbl_df with by-trial continuous reproduction responses before and after category learning
   #' 
-  #' @return a vector with distances
+  #' @return a tbl_df with the pairwise distances
   #'
-  
   tmp1 <- tbl_cr %>% 
     filter(participant_id == p_id) %>% 
     select(stim_id, session, x1_response, x2_response, x1_true, x2_true)
   tbl_design <- crossing(l = tmp1$stim_id, r = tmp1$stim_id)
   tbl_pre <- tbl_design %>% 
     left_join(
-      tmp1 %>% filter(session == "1") %>% select(-session), 
+      tmp1 %>% filter(session == timepoint) %>% select(-session), 
       by = c("l" = "stim_id"), suffix = c("_l", "_r")
     ) %>% left_join(
-      tmp1 %>% filter(session == "1") %>% select(-session), 
+      tmp1 %>% filter(session == timepoint) %>% select(-session), 
       by = c("r" = "stim_id"), suffix = c("_l", "_r")
     )
   tbl_pre$d_euclidean_response <- sqrt(
@@ -753,5 +752,30 @@ representational_distances <- function(timepoint, p_id, tbl_cr) {
 }
 
 
-delta_representational_distance(p_id)
+delta_representational_distance <- function(p_id, tbl_cr) {
+  #' delta of representational distances after - before
+  #' 
+  #' @description calculates the delta of pairwise distances
+  #' between all stimuli of continuous reproduction responses after vs. before
+  #' the category learning task
+  #' @param p_id the participant id to calculate the matrix for
+  #' @param tbl_cr tbl_df with by-trial continuous reproduction responses before and after category learning
+  #' 
+  #' @return a tbl_df with the deltas after vs. before
+  #'
+  timepoints <- sort(unique(tbl_cr$session))
+  tbl_rsa_before <- representational_distances(p_id, timepoints[1], tbl_cr)
+  tbl_rsa_after <- representational_distances(p_id, timepoints[2], tbl_cr)
+  tbl_rsa_delta <- tbl_rsa_before %>% 
+    select(l, r, x1_true_l, x2_true_l, x1_true_r, x2_true_r, d_euclidean_response) %>%
+    left_join(
+      tbl_rsa_after %>% select(l, r, d_euclidean_response), by = c("l", "r"),
+      suffix = c("_before", "_after")
+      ) %>% mutate(
+        d_euclidean_delta = d_euclidean_response_after - d_euclidean_response_before,
+        participant_id = p_id
+        ) %>% relocate(participant_id, .before = l)
+  return(tbl_rsa_delta)
+  
+}
 
