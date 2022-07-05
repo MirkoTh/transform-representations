@@ -407,11 +407,28 @@ m_rs_cr_control <-
   )
 summary(m_rs_cr_control)
 
-participant_ids <- unique(tbl_cr$participant_id)
-timpoints <- c("1", "2")
-representational_distances(timepoints[1], participant_ids[1])
 
 
+
+
+# Behavioral Representational Similarity Analysis -------------------------
+
+
+p_id <- unique(tbl_cr$participant_id)
+timepoint <- c("1", "2")
+tbl_map <- crossing(p_id, timepoint)
+l_rsa <- pmap(tbl_map, representational_distances)
+ggplot(l_rsa[[1]], aes(l, r)) +
+  geom_raster(aes(fill = d_euclidean_response)) +
+  theme_bw() +
+  scale_fill_viridis_c(name = "Euclidean Distance") +
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  labs(x = "Stimulus ID 1", y = "Stimulus ID 2")
+
+ggplot(l_rsa[[23]], aes(d_euclidean_true, d_euclidean_response)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1)
 
 
 

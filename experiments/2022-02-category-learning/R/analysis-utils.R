@@ -716,7 +716,7 @@ add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
 }
 
 
-representational_distances <- function(timepoint, participant_id) {
+representational_distances <- function(timepoint, p_id, tbl_cr) {
   #' pairwise distances between representations
   #' 
   #' @description calculates the matrix of pairwise distances
@@ -724,13 +724,14 @@ representational_distances <- function(timepoint, participant_id) {
   #' @param timepoint either "1" or "2" for before and after category
   #' learning, respectively
   #' @param participant_id the participant id to calculate the matrix for
+  #' @param tbl_cr tbl_df with by-trial continuous reproduction responses before and after category learning
   #' 
   #' @return a vector with distances
   #'
   
   tmp1 <- tbl_cr %>% 
-    filter(participant_id == "5dfe7de0bf3d4eb1cc979a7a") %>% 
-    select(stim_id, session, x1_response, x2_response)
+    filter(participant_id == p_id) %>% 
+    select(stim_id, session, x1_response, x2_response, x1_true, x2_true)
   tbl_design <- crossing(l = tmp1$stim_id, r = tmp1$stim_id)
   tbl_pre <- tbl_design %>% 
     left_join(
@@ -740,9 +741,17 @@ representational_distances <- function(timepoint, participant_id) {
       tmp1 %>% filter(session == "1") %>% select(-session), 
       by = c("r" = "stim_id"), suffix = c("_l", "_r")
     )
-  tbl_pre$d_euclidean <- sqrt(
+  tbl_pre$d_euclidean_response <- sqrt(
     (tbl_pre$x1_response_l - tbl_pre$x1_response_r)^2 +
       (tbl_pre$x2_response_l - tbl_pre$x2_response_r)^2
   )
+  tbl_pre$d_euclidean_true <- sqrt(
+    (tbl_pre$x1_true_l - tbl_pre$x1_true_r)^2 +
+      (tbl_pre$x2_true_l - tbl_pre$x2_true_r)^2
+  )
   return(tbl_pre)
 }
+
+
+delta_representational_distance(p_id)
+
