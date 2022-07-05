@@ -406,3 +406,20 @@ m_rs_cr_control <-
     data = tbl_cr %>% filter(n_categories == "Control Group")
   )
 summary(m_rs_cr_control)
+
+participant_ids <- unique(tbl_cr$participant_id)
+timpoints <- c("1", "2")
+representational_distances(timepoints[1], participant_ids[1])
+
+
+
+
+
+
+
+
+
+
+
+
+
