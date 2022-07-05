@@ -413,6 +413,7 @@ summary(m_rs_cr_control)
 
 # Behavioral Representational Similarity Analysis -------------------------
 
+# calculate delta of pairwise distances for empirical data by participant
 
 p_id <- unique(tbl_cr$participant_id)
 l_rsa_delta <- map(p_id, delta_representational_distance, tbl_cr = tbl_cr)
@@ -428,13 +429,43 @@ ggplot(l_rsa[[23]], aes(d_euclidean_true, d_euclidean_response)) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1)
 
+# calculate delta of pairwise distances for model predictions aka model matrix
+l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds")
+l_results_plots <- map(l_category_results, diagnostic_plots)
+tbl_design <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+  select(stim_id, x1_data, x2_data) %>%
+  rename("x1_true" = "x1_data", "x2_true" = "x2_data")
+tmp_before <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+  select(stim_id, x1_response, x2_response)
+tmp_after <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
+  select(stim_id, x1_response, x2_response)
+
+tbl_before <- tbl_design %>% left_join(tmp_before, on = "stim_id") %>% mutate(session = "before")
+tbl_after <- tbl_design %>% left_join(tmp_after, on = "stim_id") %>% mutate(session = "after")
+tbl_both <- rbind(tbl_before, tbl_after)  %>% 
+  mutate(
+    participant_id = "prediction", 
+    x1_true = (x1_true + 1) * 9 + 1,
+    x2_true = (x2_true + 1) * 9 + 1,
+    x1_response = (x1_response + 1) * 9 + 1,
+    x2_response = (x2_response + 1) * 9 + 1
+  )
 
 
+tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
+ggplot(tbl_rsa_delta_prediction, aes(l, r)) +
+  geom_raster(aes(fill = d_euclidean_delta)) +
+  theme_bw() +
+  scale_fill_viridis_c(name = "Euclidean Distance Delta") +
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  labs(x = "Stimulus ID 1", y = "Stimulus ID 2")
 
-
-
-
-
+tbl_rsa_delta_prediction %>% select(l, r, d_euclidean_delta) %>%
+  left_join(
+    l_rsa_delta[[1]] %>% select(l, r, d_euclidean_delta),
+    by = c("l", "r"), suffix = c("_pred", "_empirical")
+    ) %>% summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
 

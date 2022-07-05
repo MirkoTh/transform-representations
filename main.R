@@ -84,12 +84,6 @@ marrangeGrob(
 
 # Plot Prior Means & Posterior Means --------------------------------------
 
-# todo for presentation:
-# add points not moved during sampling from prior to get an overall average
-# stat analyses for data
-# 
-
-
 l_tmp <- save_results_plots(tbl_info, l_results_plots, .75, 2)
 ggsave(l_tmp[[2]], l_tmp[[1]], width = 15, height = 7, units = "in")
 l_tmp <- save_results_plots(tbl_info, l_results_plots, .75, 4)
