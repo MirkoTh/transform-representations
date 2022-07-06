@@ -764,6 +764,7 @@ delta_representational_distance <- function(p_id, tbl_cr) {
   #' @return a tbl_df with the deltas after vs. before
   #'
   timepoints <- sort(unique(tbl_cr$session))
+  tbl_rsa_before <- representational_distances(p_id, timepoints[1], tbl_cr)
   tbl_rsa_after <- representational_distances(p_id, timepoints[2], tbl_cr)
   tbl_rsa_delta <- tbl_rsa_before %>% 
     select(l, r, x1_true_l, x2_true_l, x1_true_r, x2_true_r, d_euclidean_response, d_euclidean_true) %>%
@@ -775,7 +776,6 @@ delta_representational_distance <- function(p_id, tbl_cr) {
       participant_id = p_id
     ) %>% relocate(participant_id, .before = l)
   return(tbl_rsa_delta)
-  
 }
 
 
@@ -880,4 +880,41 @@ plot_true_ds_vs_response_ds <- function(tbl_rsa) {
       x = "Euclidean Distance True",
       y = "Euclidean Distance Response"
     )
+}
+
+
+load_predictions <- function(f_name){
+  #' load predictions from simulation study using some arbitrary 
+  #' parameter combinations
+  #' 
+  #' @description loads data from simulation run for the given file name
+  #' with prior and posterior means of stimuli
+  #' @param f_name the name of the data for a saved simulation run to be loaded
+  #' 
+  #' @return a tbl_df with all stimuli and the associated predictions 
+  #' from the model before and after category learning
+  #'
+  
+  # calculate delta of pairwise distances for model predictions aka model matrix
+  l_category_results <- readRDS(file = f_name)
+  l_results_plots <- map(l_category_results, diagnostic_plots)
+  tbl_design <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+    select(stim_id, x1_data, x2_data) %>%
+    rename("x1_true" = "x1_data", "x2_true" = "x2_data")
+  tmp_before <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+    select(stim_id, x1_response, x2_response)
+  tmp_after <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
+    select(stim_id, x1_response, x2_response)
+  
+  tbl_before <- tbl_design %>% left_join(tmp_before, on = "stim_id") %>% mutate(session = "before")
+  tbl_after <- tbl_design %>% left_join(tmp_after, on = "stim_id") %>% mutate(session = "after")
+  tbl_both <- rbind(tbl_before, tbl_after)  %>% 
+    mutate(
+      participant_id = "prediction", 
+      x1_true = (x1_true + 1) * 9 + 1,
+      x2_true = (x2_true + 1) * 9 + 1,
+      x1_response = (x1_response + 1) * 9 + 1,
+      x2_response = (x2_response + 1) * 9 + 1
+    )
+  return(tbl_both)
 }

@@ -422,85 +422,21 @@ m_rs_cr_control <-
 summary(m_rs_cr_control)
 
 
-
-
-
 # Behavioral Representational Similarity Analysis -------------------------
 
 # calculate delta of pairwise distances for empirical data by participant
-
-
 l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
-
-plot_true_ds_vs_response_ds <- function(tbl_rsa) {
-  tbl_rsa_agg <- tbl_rsa %>% 
-    grouped_agg(
-      c(participant_id, n_categories, d_euclidean_true), 
-      c(d_euclidean_response_before, d_euclidean_response_after)
-    ) %>% grouped_agg(
-      c(n_categories, d_euclidean_true),
-      c(mean_d_euclidean_response_before, mean_d_euclidean_response_after)
-    ) %>% ungroup() %>% 
-    pivot_longer(c(mean_mean_d_euclidean_response_before, mean_mean_d_euclidean_response_after))
-  tbl_rsa_agg$name <- fct_inorder(tbl_rsa_agg$name)
-  levels(tbl_rsa_agg$name) <- c("Before", "After")
-  
-  tbl_rsa_agg %>% 
-    ggplot(aes(d_euclidean_true, value, group = name)) +
-    geom_point(aes(color = name), shape = 1) +
-    geom_smooth(method = "lm", aes(color = name)) +
-    geom_abline(intercept = 0, slope = 1) +
-    facet_wrap(~ n_categories) +
-    theme_bw() +
-    scale_color_brewer(name = "", palette = "Set1") +
-    labs(
-      x = "Euclidean Distance True",
-      y = "Euclidean Distance Response"
-    )
-}
-
-
-### plot histogram of correlation coefficients (model matrix vs. empirical distances)
-
-
-# calculate delta of pairwise distances for model predictions aka model matrix
-l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds")
-l_results_plots <- map(l_category_results, diagnostic_plots)
-tbl_design <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
-  select(stim_id, x1_data, x2_data) %>%
-  rename("x1_true" = "x1_data", "x2_true" = "x2_data")
-tmp_before <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
-  select(stim_id, x1_response, x2_response)
-tmp_after <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
-  select(stim_id, x1_response, x2_response)
-
-tbl_before <- tbl_design %>% left_join(tmp_before, on = "stim_id") %>% mutate(session = "before")
-tbl_after <- tbl_design %>% left_join(tmp_after, on = "stim_id") %>% mutate(session = "after")
-tbl_both <- rbind(tbl_before, tbl_after)  %>% 
-  mutate(
-    participant_id = "prediction", 
-    x1_true = (x1_true + 1) * 9 + 1,
-    x2_true = (x2_true + 1) * 9 + 1,
-    x1_response = (x1_response + 1) * 9 + 1,
-    x2_response = (x2_response + 1) * 9 + 1
-  )
-
-
+f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
+tbl_both <- load_predictions(f_name)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
-ggplot(tbl_rsa_delta_prediction, aes(l, r)) +
-  geom_raster(aes(fill = d_euclidean_delta)) +
-  theme_bw() +
-  scale_fill_viridis_c(name = "Euclidean Distance Delta") +
-  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
-  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+plot_distance_matrix(tbl_rsa_delta_prediction) +
   labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
 
+# correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
   filter(l >= r)
-
-
 tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   left_join(
     tbl_rsa %>% select(l, r, n_categories, d_euclidean_delta),
