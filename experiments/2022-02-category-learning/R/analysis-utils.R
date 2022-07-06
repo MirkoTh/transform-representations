@@ -764,18 +764,81 @@ delta_representational_distance <- function(p_id, tbl_cr) {
   #' @return a tbl_df with the deltas after vs. before
   #'
   timepoints <- sort(unique(tbl_cr$session))
-  tbl_rsa_before <- representational_distances(p_id, timepoints[1], tbl_cr)
   tbl_rsa_after <- representational_distances(p_id, timepoints[2], tbl_cr)
   tbl_rsa_delta <- tbl_rsa_before %>% 
-    select(l, r, x1_true_l, x2_true_l, x1_true_r, x2_true_r, d_euclidean_response) %>%
+    select(l, r, x1_true_l, x2_true_l, x1_true_r, x2_true_r, d_euclidean_response, d_euclidean_true) %>%
     left_join(
       tbl_rsa_after %>% select(l, r, d_euclidean_response), by = c("l", "r"),
       suffix = c("_before", "_after")
-      ) %>% mutate(
-        d_euclidean_delta = d_euclidean_response_after - d_euclidean_response_before,
-        participant_id = p_id
-        ) %>% relocate(participant_id, .before = l)
+    ) %>% mutate(
+      d_euclidean_delta = d_euclidean_response_after - d_euclidean_response_before,
+      participant_id = p_id
+    ) %>% relocate(participant_id, .before = l)
   return(tbl_rsa_delta)
   
 }
 
+
+plot_distance_matrix <- function(tbl_df) {
+  #' plot symmetric euclidean distance matrix
+  #' 
+  #' @description plot euclidean distances between all stimuli in in the
+  #' experiment; stimulus id is on both axes integrating x1 and x2 into one variable
+  #' @param tbl_df tbl_df containing all pairs of the stimuli
+  #' 
+  #' @return a ggplot heatmap
+  #'
+  
+  ggplot(tbl_df, aes(l, r)) +
+    geom_raster(aes(fill = d_euclidean_delta)) +
+    theme_bw() +
+    scale_fill_viridis_c(name = "Euclidean Distance Delta") + #, limits = c(0, 75)) +
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+    labs(x = "Stimulus ID 1", y = "Stimulus ID 2") +
+    theme(legend.position = "omit")
+}
+
+
+pairwise_distances <- function(tbl_cr) {
+  #' pairwise distances between responses for all participants
+  #' 
+  #' @description calculates distances between responses for given pair of stimuli
+  #' @param tbl_cr tbl_df with by-trial continuous reproduction responses before and after category learning
+  #' 
+  #' @return a nested list containing a list with all distance matrices, that list
+  #' reduced to a tbl_df, and the distance matrices plotted 
+  #' for a few sample participants in both groups
+  #'
+  
+  # get by-participant distance matrices
+  p_id <- unique(tbl_cr$participant_id)
+  tbl_groups <- tbl_cr %>% group_by(participant_id, n_categories) %>% 
+    count() %>% ungroup() %>% mutate(rwn = row_number(participant_id))
+  l_rsa_delta <- map(tbl_groups$participant_id, delta_representational_distance, tbl_cr = tbl_cr)
+  
+  # plot distance matrices for sample participants
+  list_ids_control <- tbl_groups$rwn[tbl_groups$n_categories == "Control Group"]
+  list_ids_experimental <- tbl_groups$rwn[tbl_groups$n_categories == "Experimental Group"]
+  l_rsa_delta_control <- map(l_rsa_delta, list_ids_control)
+  l_rs_mat_control <- l_rsa_delta[list_ids_control]
+  l_rs_mat_experimental <- l_rsa_delta[list_ids_experimental]
+  l_plot_d_mat_control <- map(l_rs_mat_control, plot_distance_matrix)
+  l_plot_d_mat_experimental <- map(l_rs_mat_experimental, plot_distance_matrix)
+  pl_m_control <- plot_arrangement(l_plot_d_mat_control[sample(1:length(l_plot_d_mat_control), 3, replace = FALSE)], 3, 1)
+  pl_m_experimental <- plot_arrangement(l_plot_d_mat_experimental[sample(1:length(l_plot_d_mat_experimental), 3, replace = FALSE)], 3, 1)
+  
+  # reduce list of by-participant tbl_dfs into one larger tbl_df
+  tbl_rsa <- reduce(l_rsa_delta, rbind) %>% 
+    filter(l >= r) %>% # remove upper triangle from distance matrix
+    left_join(
+      tbl_cr %>% group_by(participant_id, n_categories) %>% 
+        count() %>% ungroup() %>% select(-n),
+      by = "participant_id"
+    ) %>% relocate(n_categories, .after = participant_id)
+  
+  return(list(
+    l_rsa_delta = l_rsa_delta, tbl_rsa = tbl_rsa, 
+    pl_m_control = pl_m_control, pl_m_experimental = pl_m_experimental
+  ))
+}

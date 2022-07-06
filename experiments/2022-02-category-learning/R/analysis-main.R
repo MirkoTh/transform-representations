@@ -21,6 +21,7 @@ library(modelr)
 # Import Home-Grown Modules -----------------------------------------------
 files <- c(
   "R/utils.R",
+  "R/plotting.R",
   "experiments/2022-02-category-learning/R/analysis-utils.R",
   "experiments/2022-02-category-learning/R/analysis-plotting.R",
   "experiments/2022-02-category-learning/R/summarySEwithin.R",
@@ -302,6 +303,19 @@ by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM S
 
 
 # Continuous Reproduction ----------------------------------------------------------
+
+doubles <- tbl_cr %>% count(participant_id) %>% filter(n > 200)
+missings <- tbl_cr %>% count(participant_id) %>% filter(n < 200)
+
+# only use first trial for a session when participants re-started the experiment
+tbl_first_attempt <- tbl_cr %>% filter(participant_id %in% doubles$participant_id) %>% 
+  group_by(participant_id, session, stim_id) %>%
+  mutate(rwn = row_number(stim_id)) %>%
+  filter(rwn == 1)
+tbl_cr <- tbl_cr %>% filter(!(participant_id %in% doubles$participant_id))
+tbl_cr <- tbl_cr %>% filter(!(participant_id %in% missings$participant_id))
+tbl_cr <- rbind(tbl_cr, tbl_first_attempt %>% select(-rwn))
+
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
 pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
@@ -368,7 +382,7 @@ tbl_cr_agg %>%
               mean_eucl_deviation,
               mean_accuracy,
               mean_delta_accuracy
-            ) %>% filter(n_categories == 2) %>%
+            ) %>% filter(n_categories == "Experimental Group") %>%
   pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
   mutate(name = factor(
     name,
@@ -415,19 +429,41 @@ summary(m_rs_cr_control)
 
 # calculate delta of pairwise distances for empirical data by participant
 
-p_id <- unique(tbl_cr$participant_id)
-l_rsa_delta <- map(p_id, delta_representational_distance, tbl_cr = tbl_cr)
-ggplot(l_rsa_delta[[8]], aes(l, r)) +
-  geom_raster(aes(fill = d_euclidean_delta)) +
-  theme_bw() +
-  scale_fill_viridis_c(name = "Euclidean Distance Delta") +
-  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
-  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-  labs(x = "Stimulus ID 1", y = "Stimulus ID 2")
 
-ggplot(l_rsa[[23]], aes(d_euclidean_true, d_euclidean_response)) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1)
+l_rsa_all <- pairwise_distances(tbl_cr)
+plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
+
+
+plot_true_ds_vs_response_ds <- function(tbl_rsa) {
+  tbl_rsa_agg <- tbl_rsa %>% 
+    grouped_agg(
+      c(participant_id, n_categories, d_euclidean_true), 
+      c(d_euclidean_response_before, d_euclidean_response_after)
+    ) %>% grouped_agg(
+      c(n_categories, d_euclidean_true),
+      c(mean_d_euclidean_response_before, mean_d_euclidean_response_after)
+    ) %>% ungroup() %>% 
+    pivot_longer(c(mean_mean_d_euclidean_response_before, mean_mean_d_euclidean_response_after))
+  tbl_rsa_agg$name <- fct_inorder(tbl_rsa_agg$name)
+  levels(tbl_rsa_agg$name) <- c("Before", "After")
+  
+  tbl_rsa_agg %>% 
+    ggplot(aes(d_euclidean_true, value, group = name)) +
+    geom_point(aes(color = name), shape = 1) +
+    geom_smooth(method = "lm", aes(color = name)) +
+    geom_abline(intercept = 0, slope = 1) +
+    facet_wrap(~ n_categories) +
+    theme_bw() +
+    scale_color_brewer(name = "", palette = "Set1") +
+    labs(
+      x = "Euclidean Distance True",
+      y = "Euclidean Distance Response"
+    )
+}
+
+
+### plot histogram of correlation coefficients (model matrix vs. empirical distances)
+
 
 # calculate delta of pairwise distances for model predictions aka model matrix
 l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds")
@@ -459,13 +495,18 @@ ggplot(tbl_rsa_delta_prediction, aes(l, r)) +
   scale_fill_viridis_c(name = "Euclidean Distance Delta") +
   scale_x_continuous(breaks = seq(0, 100, by = 10)) +
   scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-  labs(x = "Stimulus ID 1", y = "Stimulus ID 2")
+  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
 
-tbl_rsa_delta_prediction %>% select(l, r, d_euclidean_delta) %>%
+tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
+  filter(l >= r)
+
+
+tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   left_join(
-    l_rsa_delta[[1]] %>% select(l, r, d_euclidean_delta),
+    tbl_rsa %>% select(l, r, n_categories, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
-    ) %>% summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
+  ) %>% group_by(n_categories) %>%
+  summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
 
