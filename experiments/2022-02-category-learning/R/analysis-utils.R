@@ -809,8 +809,7 @@ pairwise_distances <- function(tbl_cr) {
   #' @return a nested list containing a list with all distance matrices, that list
   #' reduced to a tbl_df, and the distance matrices plotted 
   #' for a few sample participants in both groups
-  #'
-  
+
   # get by-participant distance matrices
   p_id <- unique(tbl_cr$participant_id)
   tbl_groups <- tbl_cr %>% group_by(participant_id, n_categories) %>% 
@@ -841,4 +840,44 @@ pairwise_distances <- function(tbl_cr) {
     l_rsa_delta = l_rsa_delta, tbl_rsa = tbl_rsa, 
     pl_m_control = pl_m_control, pl_m_experimental = pl_m_experimental
   ))
+}
+
+
+plot_true_ds_vs_response_ds <- function(tbl_rsa) {
+  #' plot true distances between stimuli against distances 
+  #' between responses for these stimuli
+  #' 
+  #' @description groups by experimental groups and true distances and 
+  #' calculates average distances of responses
+  #' @param tbl_rsa tbl_df with upper triangle of similarity matrix
+  #' for all participants
+  #' 
+  #' @return a scatterplot and a fitted linear model using the
+  #' aggregated data
+  #'
+  
+  tbl_rsa_agg <- tbl_rsa %>% 
+    grouped_agg(
+      c(participant_id, n_categories, d_euclidean_true), 
+      c(d_euclidean_response_before, d_euclidean_response_after)
+    ) %>% grouped_agg(
+      c(n_categories, d_euclidean_true),
+      c(mean_d_euclidean_response_before, mean_d_euclidean_response_after)
+    ) %>% ungroup() %>% 
+    pivot_longer(c(mean_mean_d_euclidean_response_before, mean_mean_d_euclidean_response_after))
+  tbl_rsa_agg$name <- fct_inorder(tbl_rsa_agg$name)
+  levels(tbl_rsa_agg$name) <- c("Before", "After")
+  
+  tbl_rsa_agg %>% 
+    ggplot(aes(d_euclidean_true, value, group = name)) +
+    geom_point(aes(color = name), shape = 1) +
+    geom_smooth(method = "lm", aes(color = name)) +
+    geom_abline(intercept = 0, slope = 1) +
+    facet_wrap(~ n_categories) +
+    theme_bw() +
+    scale_color_brewer(name = "", palette = "Set1") +
+    labs(
+      x = "Euclidean Distance True",
+      y = "Euclidean Distance Response"
+    )
 }
