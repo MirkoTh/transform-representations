@@ -823,7 +823,7 @@ function set_category_instruction(n_categories) {
         text = text_3
     } else if (n_categories == 1) {
         text = ""
-    } else if (n_catetories == 4) {
+    } else if (n_categories == 4) {
         text = text_4
     }
     return (text)
@@ -860,8 +860,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 2
-    n_categories = 2
+    condition_id = 3
+    n_categories = 4
     console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
