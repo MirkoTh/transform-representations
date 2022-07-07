@@ -33,7 +33,7 @@ function setup_experiment(condition_id) {
         n_trials_reproduction_1: 2, //100, //5, //
         n_trials_reproduction_2: 2, //100, //5, //
         n_trials_categorization_train_target: 0, //3, // 
-        n_trials_categorization: 4, //5, // 380, //
+        n_trials_categorization: 11, //5, // 380, //
         n_trials_categorization_total: 0 + 4, // 3 + 5, //
         n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
@@ -453,6 +453,7 @@ function wrap_categorization(old, i) {
 
 
 async function next_item_cat(old, i) {
+    document.getElementById("cat_accuracy_running_mean").style.display = 'block';
     clickStart(old, 'page9')
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
@@ -529,6 +530,7 @@ async function handle_response(e) {
         // handle special timepoint in the experiment
         // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
+            document.getElementById("cat_accuracy_running_mean").style.display = 'none';
             document.getElementById("part_reproduction").innerHTML = 2;
             document.getElementById("cat_continued").innerHTML = 1;
             cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"])
@@ -648,6 +650,8 @@ function write_cat_results(i, r) {
     if (accuracy === true) {
         document.getElementById("cat_accuracy_cum").innerHTML = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) + 1
     }
+    document.getElementById("cat_accuracy_running_mean").innerHTML = "Average Accuracy = " +
+        parseInt(100 * document.getElementById("cat_accuracy_cum").innerHTML / (i + 1)) + "%"
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cat")
 }
@@ -774,7 +778,8 @@ function set_category_instruction(n_categories) {
     Second, if at least ` +
         parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
     of your categorization responses in the last ` +
-        setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.
+        setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
+    The running average of your categorization accuracy is shown to you in the upper right corner of the screen throughout the categorization task.<br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
@@ -799,7 +804,8 @@ function set_category_instruction(n_categories) {
     Second, if at least ` +
         parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
     of your categorization responses in the last ` +
-        setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.
+        setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
+        The running average of your categorization accuracy is shown to you in the upper right corner of the screen throughout the categorization task.<br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
