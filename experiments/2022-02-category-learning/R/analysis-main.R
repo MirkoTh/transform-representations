@@ -347,26 +347,35 @@ tbl_cr_agg <-
               c(participant_id, session, n_categories),
               eucl_deviation)
 
-ggplot(tbl_cr_agg, aes(mean_eucl_deviation, group = session)) +
-  geom_freqpoly(aes(color = session)) +
-  facet_wrap(~ n_categories)
+ggplot(
+  tbl_cr_agg %>% mutate(session = factor(
+    session, levels = c(1, 2), labels = c("Before\nCategory Learning", "After\nCategory Learning"))
+    ), aes(mean_eucl_deviation, group = session)) +
+  geom_density(aes(color = session)) +
+  facet_wrap(~ n_categories) +
+  theme_bw() +
+  scale_color_brewer(palette = "Set1", name = "") +
+  labs(
+    x = "Mean Euclidean Deviation",
+    y = "Probability Density"
+  )
 
-summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", withinvars = "session") %>%
+pdg <- position_dodge(width = .15)
+summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", betweenvars = "n_categories", withinvars = "session") %>%
   mutate(session = factor(
     session,
     labels = c("Before\nCategory Learning", "After\nCategory Learning")
   )) %>%
-  ggplot(aes(session, mean_eucl_deviation)) +
-  geom_col(aes(fill = session), alpha = .5, show.legend = FALSE) +
-  geom_point(aes(color = session), show.legend = FALSE) +
+  ggplot(aes(session, mean_eucl_deviation, group = n_categories)) +
+  geom_point(aes(color = n_categories), show.legend = FALSE, position = pdg) +
+  geom_line(aes(color = n_categories), show.legend = FALSE, position = pdg) +
   geom_errorbar(
     aes(
       ymin = mean_eucl_deviation - 1.96 * se,
       ymax = mean_eucl_deviation + 1.96 * se,
-      color = session
+      color = n_categories
     ),
-    width = .25,
-    show.legend = FALSE
+    width = .15, show.legend = FALSE, position = pdg
   ) +
   scale_fill_brewer(name = "", palette = "Set1") +
   scale_color_brewer(palette = "Set1") +
