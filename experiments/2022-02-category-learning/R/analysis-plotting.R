@@ -53,15 +53,20 @@ plot_1d_marginals <- function(tbl) {
 }
 
 
-plot_marginals_one_session <- function(idx_session, tbl) {
+plot_marginals_one_session <- function(idx_session, tbl, n_samples = 4) {
   #' scatter plot of 2D deviations with marginals
   #' 
   #' @description makes a scatter plot of deviation of responses and adds marginal distributions
   #' @param idx_session which session should be plotted (i.e. before or after categorization task)
   #' @param tbl the tibble with the by-trial responses
+  #' @param n_samples the number of sampled participants to plot; has to be
+  #' an even integer as half of n_samples participants are plotted per group
   #' 
   #' @return the complete ggMarginal plot object
   #' 
+  if(n_samples %% 2 != 0) {
+    stop("The number of samples to plot n_samples has to be even; please adjust accordingly")
+  }
   # read individual performance
   idx_color <- ifelse(idx_session == 1, 1, 2)
   title <- c("Before Category Learning", "After Category Learning")[idx_color]
@@ -71,6 +76,7 @@ plot_marginals_one_session <- function(idx_session, tbl) {
   
   plot_2d_points_marginal <- function(tbl, participant) {
     tbl <- tbl %>% filter(participant_id == participant)
+    grp <- tbl$n_categories[1]
     pl <- ggplot(tbl, aes(x1_deviation, x2_deviation)) +
       geom_point(color = col, shape = 1, size = 2) +
       geom_density2d() +
@@ -84,16 +90,25 @@ plot_marginals_one_session <- function(idx_session, tbl) {
       labs(
         x = "Head Spikiness",
         y = "Belly Size",
-        title = substr(participant, 1, 6)
+        title = str_c(substr(participant, 1, 6), ", ", grp)
       )# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
     
     pl_marginals <- ggMarginal(pl, fill = col, type = "histogram", bins = 15)
     return(pl_marginals)
   }
-  participants <- unique(tbl_cr$participant_id)
-  l_pl <- map(participants, plot_2d_points_marginal, tbl = tbl_plot)
   
-  pages_plots <- marrangeGrob(l_pl, ncol = 4, nrow = 4)  
+  participant_sample_groups <- tbl_cr %>% group_by(participant_id, n_categories) %>%
+    count() %>% group_by(n_categories) %>% 
+    mutate(
+      id_random = substr(participant_id, sample(1:4, 1), sample(5:8, 1)),
+      rwn = row_number(participant_id)) %>%
+    filter(rwn <= n_samples / 2)
+  
+  l_pl <- map(participant_sample_groups$participant_id, plot_2d_points_marginal, tbl = tbl_plot)
+  
+  n_cols <- 4
+  n_rows <- ceiling(n_samples / n_cols)
+  pages_plots <- marrangeGrob(l_pl, ncol = n_cols, nrow = n_rows, top = title)  
   return(pages_plots)
 }
 

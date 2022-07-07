@@ -348,7 +348,8 @@ tbl_cr_agg <-
               eucl_deviation)
 
 ggplot(tbl_cr_agg, aes(mean_eucl_deviation, group = session)) +
-  geom_density(aes(color = session))
+  geom_freqpoly(aes(color = session)) +
+  facet_wrap(~ n_categories)
 
 summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", withinvars = "session") %>%
   mutate(session = factor(
