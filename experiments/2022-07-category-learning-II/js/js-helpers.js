@@ -756,27 +756,69 @@ function set_category_instruction(n_categories) {
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
     "2" on your keyboard corresponds to the "Bukil" category.<br>
-    "3" corresponds to the "Venak" category.<br>
+    "3" corresponds to the "Venak" category.<br><br>
     The next trial starts immediately after the feedback message has been displayed to you.`
-    const text_2 = `There is one target category and one non-target category. The target category is called <b>Bukil</b>.<br>    
-    In the beginning of the experiment, you are presented with ` + setup_expt["experiment_info"]["n_trials_categorization_train_target"] +
-        ` monsters only from the Bukil category to get familiar with it.<br>
-    After that phase, you are presented with all types of monsters.<br>
-    After every response you are given feedback whether your response was correct or not accompanied by the true category name.<br><br>
-    
-    <b>Responding:</b><br>
+
+    const text_2 = `There are two categories to be learned.<br>
+    The names of the categories are <b>Bukil</b> and <b>Venak</b>.<br>
+    Throughout the experiment you are going to see monsters from both categories.<br>
+    Your goal is to learn to categorize the monsters into the respective category using feedback, which is provided after every response.<br>
+    The feedback tells you whether your response was correct or not accompanied by the true category name.<br><br>
+
+    <b>Important</b><br>
+    Whether you make it to the third part / bonus round of the experiment depends on your performance in the categorization task.<br>
+    You make it to the third part when your performance satisfies at least one of the two evaluation criteria:<br>
+    First, if at least  ` +
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_overall"]) + `
+    of your categorization responses are correct.<br>
+    Second, if at least ` +
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
+    of your categorization responses in the last ` +
+        setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.
+
+    <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
     "1" on your keyboard corresponds to the non-target category.<br>
-    "2" on your keyboard corresponds to the "Bukil" category.<br>
+    "2" on your keyboard corresponds to the "Bukil" category.<br><br>
     The next trial starts immediately after the feedback message has been displayed to you.`
+
+    const text_4 = `There are four categories to be learned.<br>
+    The names of the categories are <b>Bukil</b>, <b>Venak</b>, <b>Monus<b>, and <b>Ladiv<b>.<br>
+    Throughout the experiment you are going to see monsters from all four categories.<br>
+    Your goal is to learn to categorize the monsters into the respective category using feedback, which is provided after every response.<br>
+    The feedback tells you whether your response was correct or not accompanied by the true category name.<br><br>
+
+    <b>Important</b><br>
+    Whether you make it to the third part / bonus round of the experiment depends on your performance in the categorization task.<br>
+    You make it to the third part when your performance satisfies at least one of the two evaluation criteria:<br>
+    First, if at least  ` +
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_overall"]) + `
+    of your categorization responses are correct.<br>
+    Second, if at least ` +
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
+    of your categorization responses in the last ` +
+        setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.
+
+    <b> Responding:</b> <br>
+    <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
+    You can use the number keys on your keyboard to give a response in the task.<br>
+    The numbers correspond to the respective category:<br>
+    "1" on your keyboard corresponds to the "Bukil" category.<br>
+    "2" on your keyboard corresponds to the "Venak" category.<br>
+    "3" on your keyboard corresponds to the "Monus" category.<br>
+    "4" on your keyboard corresponds to the "Ladiv" category.<br><br>
+    The next trial starts immediately after the feedback message has been displayed to you.`
+
     if (n_categories == 2) {
         text = text_2
     } else if (n_categories == 3) {
         text = text_3
     } else if (n_categories == 1) {
         text = ""
+    } else if (n_catetories == 4) {
+        text = text_4
     }
     return (text)
 }
@@ -812,8 +854,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 3
-    n_categories = 4
+    condition_id = 2
+    n_categories = 2
     console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
