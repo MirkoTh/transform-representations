@@ -220,7 +220,7 @@
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
             <!-- page2b -->
-            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page8')" ;>
+            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page2b')" ;>
                 Check Comprehension
             </button>
         </div>
@@ -328,7 +328,7 @@
                 After that, you are required to adjust two sliders to reconstruct
                 the head and the belly of the monster. <br>
                 You are given three practice trials to get used to the procedure. <br>
-                These trials are not going to be used to calculate you bonus payment.
+                These trials are not going to be used to calculate your bonus payment.
             </p>
 
             <button type="button" name="button" class="default_button" ; onclick="next_item_cr('page3')" ;> Start
@@ -366,13 +366,14 @@
 
             <script>
                 // randomly select a starting stimulus on each trial
-                let x = slide_adjust();
                 var val1 = Math.ceil(Math.random() * 100);
                 var val2 = Math.ceil(Math.random() * 100);
                 let stimulus_id = "./stimuli/stimulus[" + val1 + "," + val2 + "].png";
                 document.getElementById("selected_monster").src = stimulus_id;
+                console.log("stimulus id = " + stimulus_id)
                 document.getElementById("myRange1_start").value = val1;
                 document.getElementById("myRange2_start").value = val2;
+                let x = slide_adjust();
             </script>
             <button type="button" name="button" class="cr_button" ; onclick="my_link()" ;> Submit Response</button>
         </div>

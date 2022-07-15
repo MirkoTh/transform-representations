@@ -27,7 +27,7 @@ function setup_experiment(condition_id) {
     // experiment information
     const experiment_info = {
         n_stimuli: 100,
-        n_conditions: 3, // control, 4 categories, 9 categories
+        n_conditions: 3, // control, 2 ellipse categories, 4 square categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
         n_trials_reproduction_1: 2, //100, //5, //
@@ -38,8 +38,8 @@ function setup_experiment(condition_id) {
         n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
-        thx_cat_overall: .8,
-        thx_cat_lag: .85
+        thx_cat_overall: .8,//.2,//
+        thx_cat_lag: .85,//.2,//
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
@@ -779,7 +779,7 @@ function set_category_instruction(n_categories) {
         parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
     of your categorization responses in the last ` +
         setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
-    The running average of your categorization accuracy is shown to you in the upper right corner of the screen throughout the categorization task.<br>
+    The running average of your categorization accuracy is shown to you in the upper left corner of the screen throughout the categorization task.<br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
@@ -790,7 +790,7 @@ function set_category_instruction(n_categories) {
     The next trial starts immediately after the feedback message has been displayed to you.`
 
     const text_4 = `There are four categories to be learned.<br>
-    The names of the categories are <b>Bukil</b>, <b>Venak</b>, <b>Monus<b>, and <b>Ladiv<b>.<br>
+    The names of the categories are <b>Bukil</b>, <b>Venak</b>, <b>Monus</b>, and <b>Ladiv</b>.<br>
     Throughout the experiment you are going to see monsters from all four categories.<br>
     Your goal is to learn to categorize the monsters into the respective category using feedback, which is provided after every response.<br>
     The feedback tells you whether your response was correct or not accompanied by the true category name.<br><br>
@@ -805,7 +805,7 @@ function set_category_instruction(n_categories) {
         parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
     of your categorization responses in the last ` +
         setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
-        The running average of your categorization accuracy is shown to you in the upper right corner of the screen throughout the categorization task.<br>
+        The running average of your categorization accuracy is shown to you in the upper left corner of the screen throughout the categorization task.<br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
@@ -860,8 +860,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 3
-    n_categories = 4
+    condition_id = 1
+    n_categories = 2
     console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
