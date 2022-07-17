@@ -1,3 +1,8 @@
+// make two informed consent pages: one for category learning, one for similarity judgments
+// you made it to part three of the study --> only in category learning conditions
+// align first random positions of xs on picture and sliders
+
+
 if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
@@ -30,16 +35,16 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 2 ellipse categories, 4 square categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 2, //100, //5, //
-        n_trials_reproduction_2: 2, //100, //5, //
+        n_trials_reproduction_1: 3, //100, //5, //
+        n_trials_reproduction_2: 3, //100, //5, //
         n_trials_categorization_train_target: 0, //3, // 
         n_trials_categorization: 11, //5, // 380, //
-        n_trials_categorization_total: 0 + 4, // 3 + 5, //
+        n_trials_categorization_total: 0 + 11, // 3 + 5, //
         n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
-        thx_cat_overall: .8,//.2,//
-        thx_cat_lag: .85,//.2,//
+        thx_cat_overall: .2,//.8,//
+        thx_cat_lag: .2,//.85,//
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
@@ -88,7 +93,7 @@ function setup_experiment(condition_id) {
         x2: Array(n_x_steps).fill().map((element, index) => index),
         x1_x2: Array(n_x_steps * n_x_steps),
         stimulus_id: Array(n_x_steps * n_x_steps),
-        category_name: ["Bukil", "Venak", "Monus", "Ladiv"],
+        category_name: ["1. Bukil", "2. Venak", "3. Monus", "4. Ladiv"],
         category_id: []
     }
 
@@ -860,8 +865,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 1
-    n_categories = 2
+    condition_id = 0
+    n_categories = 1
     console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
