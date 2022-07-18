@@ -225,7 +225,7 @@
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
             <!-- page2b -->
-            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page7b')" ;>
+            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page6')" ;>
                 Check Comprehension
             </button>
         </div>
@@ -368,16 +368,9 @@
                 <input type="range" min="1" max="100" class="slider" id="myRange2" value=50>
                 <p style="text-align: center">Belly<span id="demo2"></span></p>
             </div>
-
             <script>
                 // randomly select a starting stimulus on each trial
-                var val1 = Math.ceil(Math.random() * 100);
-                var val2 = Math.ceil(Math.random() * 100);
-                let stimulus_id = "./stimuli/stimulus[" + val1 + "," + val2 + "].png";
-                document.getElementById("selected_monster").src = stimulus_id;
-                console.log("stimulus id = " + stimulus_id)
-                document.getElementById("myRange1_start").value = val1;
-                document.getElementById("myRange2_start").value = val2;
+
                 let x = slide_adjust();
             </script>
             <button type="button" name="button" class="cr_button" ; onclick="my_link()" ;> Submit Response</button>
@@ -420,16 +413,13 @@
             <p class="category_instruction"></p>
             <p>
                 <br>
-                There will be four blocks of trials after the target-training phase. Between the blocks you can take a
+                There will be four blocks of trials. Between the blocks you can take a
                 break if you want, but the experiment continues after 1 min at the latest.<br>
                 Please leave your hands on the keyboard while responding in a block.<br><br>
                 Try to use the feedack to sharpen your understanding of the categories and the border between them.<br>
                 In the beginning, it won't be an easy task, but no worries, you will get better with practice!<br><br>
                 Remember the different categories and how to respond accordingly.<br>
-                Digit key "1" relates to category nr. 1 called Bukil.<br>
-                Digit key "2" relates to category nr. 2 called Venak.<br>
-                Digit key "3" relates to category nr. 3 called Monus.<br>
-                Digit key "4" relates to category nr. 4 called Ladiv.<br>
+
             </p>
             <script>
                 (() => {
@@ -605,6 +595,31 @@
                 Your overall categorization accuracy is <span id="cat_accuracy_overall"></span>.<br>
                 Your categorization accuracy over the last <span id="n_trials_cat_lag"></span> trials is <span
                     id="cat_accuracy_lag"></span>.<br>
+                Please be patient! The base payment for your participation will be paid within the next few days.
+            </p>
+
+            <br>
+            <h2>Please do not forget to click the button below to get re-directed
+                to the prolific webpage.</h2>
+            <p>Your successful completion of the study is only registered on your prolific account
+                after you have been redirected to the prolific webpage</p>
+
+            <button type="button" name="button" class="default_button" ; onclick="redirect_to_prolific()" ;> Return to
+                Prolific </button>
+
+        </div>
+
+        <div id="page14b" style="display:none">
+            <h1>Base Payment<br></h1>
+
+            <h2>Thanks for your participation in our study!</h2>
+
+            <p>
+                You receive the base payment of £7.00.
+                You did not make it to the third part of the study because your performance was below the predefined
+                threshold.
+                Your overall internal consistency is <span id="sim_consistency_overall"></span>.<br>
+
                 Please be patient! The base payment for your participation will be paid within the next few days.
             </p>
 

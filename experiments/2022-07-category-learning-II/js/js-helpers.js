@@ -1,5 +1,3 @@
-// make two informed consent pages: one for category learning, one for similarity judgments
-// you made it to part three of the study --> only in category learning conditions
 // align first random positions of xs on picture and sliders
 
 
@@ -43,8 +41,8 @@ function setup_experiment(condition_id) {
         n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
-        thx_cat_overall: .2,//.75,//
-        thx_cat_lag: .2,//.8,//
+        thx_cat_overall: .75,//.2,//
+        thx_cat_lag: .8,//.2,//
         thx_sim_corr: 0
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
@@ -298,7 +296,6 @@ async function slide_adjust() {
         replace_monster(slider1, slider2)
     }
     var slider2 = document.getElementById("myRange2");
-
     slider2.oninput = function () {
         replace_monster(slider1, slider2)
     }
@@ -343,6 +340,16 @@ async function next_item_cr(old, i) {
 
     // increase trial nr by 1
     document.getElementById("time_var").innerHTML = Date.now()
+
+    // randomly initialize response sliders and stimulus
+    var val1 = Math.ceil(Math.random() * 100);
+    var val2 = Math.ceil(Math.random() * 100);
+    let stimulus_id = "./stimuli/stimulus[" + val1 + "," + val2 + "].png";
+    document.getElementById("selected_monster").src = stimulus_id;
+    document.getElementById("myRange1_start").value = val1;
+    document.getElementById("myRange2_start").value = val2;
+    document.getElementById("myRange1").value = val1;
+    document.getElementById("myRange2").value = val2;
     clickStart("page5", "page4")
 
 }
@@ -517,7 +524,7 @@ async function handle_response(e) {
                 await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
                 document.getElementById("feedback_cat_true").innerHTML = ""
             } else {
-                var str = new String("Category would have been: " + category_name[category_id[i] - 1]);
+                var str = new String("Do Better: " + category_name[category_id[i] - 1]);
                 document.getElementById("feedback_cat_wrong").innerHTML = str
                 await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_wrong"])
                 document.getElementById("feedback_cat_wrong").innerHTML = ""
@@ -540,10 +547,12 @@ async function handle_response(e) {
         // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
             document.getElementById("cat_accuracy_running_mean").style.display = 'none';
+            document.getElementById("sim_correlation").style.display = 'none';
             document.getElementById("part_reproduction").innerHTML = 2;
             document.getElementById("cat_continued").innerHTML = 1;
-            cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"])
+            cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"]);
             document.getElementById("cat_accuracy_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%";
+            document.getElementById("sim_consistency_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%"; 1
             document.getElementById("cat_accuracy_lag").innerHTML = Math.round(100 * cat_accuracies[1]) + "%";
             if (
                 n_categories > 1 & cat_accuracies[0] >= setup_expt["experiment_info"]["thx_cat_overall"] ||
@@ -553,7 +562,12 @@ async function handle_response(e) {
                 clickStart("page9", "page11")
             } else {
                 calculate_bonus("dropout")
-                clickStart("page9", "page14")
+                if (n_categories > 1) {
+                    clickStart("page9", "page14")
+                } else if (n_categories == 1) {
+                    clickStart("page9", "page14b")
+                }
+
             }
 
         } // end of train-target trials
@@ -597,7 +611,8 @@ async function handle_response(e) {
 
 
 function calculate_categorization_accuracy(responses_cat_trial, lag) {
-    n_responses = responses_cat_trial.length
+    n_responses = responses_cat_trial.length;
+    var cat_accuracies;
     if (n_categories > 1) {
         sum_correct = responses_cat_trial.reduce((a, b) => a + b, 0)
         prop_correct_overall = ((parseFloat(sum_correct) / parseFloat(n_responses)))
@@ -820,14 +835,14 @@ function set_category_instruction(n_categories) {
         parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
     of your categorization responses in the last ` +
         setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
-    The running average of your categorization accuracy is shown to you in the upper left corner of the screen throughout the categorization task.<br>
+    The running average of your categorization accuracy is shown to you in the upper left corner of the screen throughout the categorization task.<br><br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
     You can use the number keys on your keyboard to give a response in the task.<br>
     The numbers correspond to the respective category:<br>
-    "1" on your keyboard corresponds to the non-target category.<br>
-    "2" on your keyboard corresponds to the "Bukil" category.<br><br>
+    "1" on your keyboard corresponds to the "Bukil" category.<br>
+    "2" on your keyboard corresponds to the "Venak" category.<br><br>
     The next trial starts immediately after the feedback message has been displayed to you.`
 
     const text_4 = `There are four categories to be learned.<br>
@@ -901,8 +916,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 0
-    n_categories = 1
+    condition_id = 2
+    n_categories = 4
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
@@ -917,10 +932,6 @@ function condition_and_ncategories() {
         textCond = `<b>Categorization:</b> The monsters all look somewhat similar, but they come from different tribes.<br>
                                 Use the information about the spikiness of their head and the fill of their belly to gauge what tribes they are from.<br>
                                 Give your response on a trial using the digit keys on your keyboard.<br>
-                                Digit key "1" relates to category nr. 1 called Bukil.<br>
-                                Digit key "2" relates to category nr. 2 called Venak.<br>
-                                Digit key "3" relates to category nr. 3 called Monus.<br>
-                                Digit key "4" relates to category nr. 4 called Ladiv.<br>
 
                                 You are going to get a feedback after every trial about category number and name. Use that feedback to improve on the task.<br>
                                 <b> --> Takes approx. 45 min</b><br>
