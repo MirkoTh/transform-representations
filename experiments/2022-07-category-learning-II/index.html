@@ -59,6 +59,8 @@
     <div id="part_reproduction" style="display:none">0</div>
     <div id="show_trial" style="display:none">0</div>
     <div id="time_var" style="display:none"></div>
+    <div id="sim_deviation_trial" style="display:none">0</div>
+    <div id="sim_correlation" style="display:none"></div>
     <div id="cr_deviation_cum" style="display:none">0</div>
     <div id="cat_accuracy_cum" style="display:none">0</div>
     <div id="cat_accuracy_running_mean" style="display:none">Average Accuracy = </div>
@@ -120,15 +122,18 @@
                     Please do not accept this task if you are using a touch screen device, it will not work!</b><br>
 
                 <h4>How much time will it take and how much can you earn?</h4>
-                The study duration depends on your performance in the first two parts of the experiment.<br>
-                If your performance is above pre-defined thresholds, you can make it to the bonus part of the experiment
+                <h5>Study duration</h5>
+                The study duration depends on your performance in the second part of the experiment.<br>
+                If your performance is above a pre-defined threshold, you can make it to the bonus part of the
+                experiment
                 (i.e., the third part).<br>
                 The first two parts of the study will take <b>approx. 60 minutes</b>.<br>
-                If you make it to the bonus round, the total duration will be <b></b>approx. 80 minutes</b>.<br>
+                If you make it to the bonus round, the total duration will be <b>approx. 90 minutes</b>.<br>
+                <h5>Payment</h5>
                 In any case, you will be paid a base payment of <b>£6.00</b> pounds for your participation.
                 In the bonus round, you can receive a bonus of up to <b>£7.20</b>, but it will be at least
                 <b>£3.60</b>.<br>
-                The amount of the bonus depends on your performance in all three parts of the experiment.<br>
+                The amount of the bonus depends on your performance <b>in all three parts</b> of the experiment.<br>
 
                 Please note that this is going to be a <b>long and challenging </b>study!</b><br>
 
@@ -220,7 +225,7 @@
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
             <!-- page2b -->
-            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page2b')" ;>
+            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page7b')" ;>
                 Check Comprehension
             </button>
         </div>
@@ -419,7 +424,12 @@
                 break if you want, but the experiment continues after 1 min at the latest.<br>
                 Please leave your hands on the keyboard while responding in a block.<br><br>
                 Try to use the feedack to sharpen your understanding of the categories and the border between them.<br>
-                In the beginning, it won't be an easy task, but no worries, you will get better with practice!
+                In the beginning, it won't be an easy task, but no worries, you will get better with practice!<br><br>
+                Remember the different categories and how to respond accordingly.<br>
+                Digit key "1" relates to category nr. 1 called Bukil.<br>
+                Digit key "2" relates to category nr. 2 called Venak.<br>
+                Digit key "3" relates to category nr. 3 called Monus.<br>
+                Digit key "4" relates to category nr. 4 called Ladiv.<br>
             </p>
             <script>
                 (() => {
@@ -436,16 +446,22 @@
             </h1>
             <p>
                 In the second part, your task is to judge how similar the current monster is to the monster on the
-                previous trial.<br>
+                previous trial.<br><br>
                 <b>Responding:</b><br>
                 You can use the number keys on your keyboard to give a response in the task.<br>
                 "1" relates to not similar at all to the monster presented on the previous trial<br>
                 "4" relates to very similar to the monster presented on the previous trial<br><br>
                 There is no option to relate the monster on the first trial to a previous monster.<br>
-                You can respond with any key from 1-4 on the first trial.<br><br>
+                Just respond with key number 4 on the first trial.<br><br>
+                The performance in the task is going to be measured in terms of the consistency of your responses.<br>
+                Assume that you have to judge the similarity between two pairs of monsters that are very similar.<br>
+                Your response consistency will be relatively low if you judge them once as similar (i.e., 4), but once
+                as dissimilar (i.e., 1).<br>
+                Vice versa, if you judge them twice as similar (i.e., 4), your response consistency will be relatively
+                high.<br>
+                You make it to the bonus round, if your average average response consistency is positive.<br><br>
                 <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to
-                respond faster if you respond
-                too slowly!<br>
+                respond faster if you respond too slowly!<br>
             </p>
             <button type="button" name="button" class="default_button" ; onclick="clickStart('page7b', 'page8')" ;>
                 Start

@@ -35,16 +35,17 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 2 ellipse categories, 4 square categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 3, //100, //5, //
-        n_trials_reproduction_2: 3, //100, //5, //
+        n_trials_reproduction_1: 2, //100, //5, //
+        n_trials_reproduction_2: 2, //100, //5, //
         n_trials_categorization_train_target: 0, //3, // 
         n_trials_categorization: 11, //5, // 380, //
         n_trials_categorization_total: 0 + 11, // 3 + 5, //
         n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
-        thx_cat_overall: .2,//.8,//
-        thx_cat_lag: .2,//.85,//
+        thx_cat_overall: .2,//.75,//
+        thx_cat_lag: .2,//.8,//
+        thx_sim_corr: 0
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
@@ -135,6 +136,7 @@ function setup_experiment(condition_id) {
     trial_info["category_id"] = []
     trial_info["category_name"] = []
     trial_info["response_c"] = []
+    trial_info["sim_deviation_trial"] = []
 
     const n_reps_practice = 1
     const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
@@ -164,10 +166,6 @@ function setup_experiment(condition_id) {
         // square categories (aka grid)
         trial_info = assign_items_to_categories_squares(n_x_steps, experiment_info, trial_info, stimulus_info)
     }
-    console.log("printing now the stimulus ids and the associated categories for the first 50 trials:")
-    console.log(trial_info["stimulus_id_c"].slice(0, 50))
-    console.log(trial_info["category_id"].slice(0, 50))
-    console.log(trial_info["category_name"].slice(0, 50))
 
     var obj_setup_expt;
     obj_setup_expt = {
@@ -201,12 +199,9 @@ function assign_items_to_categories_squares(n_x_steps, experiment_info, trial_in
     const n_stim_repeats = Math.ceil(experiment_info["n_trials_categorization_total"] / experiment_info["n_stimuli"])
     trial_info["stimulus_id_c"] = append_randomized_arrays(stimulus_info["stimulus_id"], n_stim_repeats)
     segments_per_dim = Math.sqrt(experiment_info["n_categories"])
-    console.log("segments per dim is: " + segments_per_dim)
     category_step = Math.max(...stimulus_info["x1"]) / segments_per_dim
     x1_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
     x2_boundaries = Array(segments_per_dim).fill().map((element, index) => (index + 1) * category_step)
-    console.log("x1_boundaries are: " + x1_boundaries)
-    console.log("x2_boundaries are: " + x2_boundaries)
     var cat_assign_x1 = Array(segments_per_dim)
     var cat_assign_x2 = Array(segments_per_dim)
     for (let i = 0; i < experiment_info["n_trials_categorization_total"]; i++) {
@@ -448,22 +443,31 @@ function download(content, fileName, contentType) {
 // continue with display categorization trial
 // log categorization response
 
-function wrap_categorization(old, i) {
-    if (setup_expt["experiment_info"]["condition_id"] == 1) {//control
-        next_item_control(old, i)
-    } else if (setup_expt["experiment_info"]["condition_id"] == 2 | setup_expt["experiment_info"]["condition_id"] == 3) {
-        next_item_cat(old, i)
-    }
-}
-
-
 async function next_item_cat(old, i) {
-    document.getElementById("cat_accuracy_running_mean").style.display = 'block';
+    if (n_categories > 1) {
+        document.getElementById("cat_accuracy_running_mean").style.display = 'block';
+    } else if (n_categories == 1) {
+        document.getElementById("sim_correlation").style.display = 'block';
+    }
     clickStart(old, 'page9')
     current_stim_id = stimulus_cat_trial[i]
     current_stim = stimulus_vals[current_stim_id]
     stim_path = "stimuli/stimulus[" + current_stim + "].png"
-    mask_path = "stimuli/mask.png"
+    mask_path = "stimuli/mask.png";
+
+    if (i > 0) {
+        var x1_true = setup_expt["stimulus_info"]["x1_x2"][trial_info["stimulus_id_c"][i]][0];
+        var x2_true = setup_expt["stimulus_info"]["x1_x2"][trial_info["stimulus_id_c"][i]][1];
+        var x1_true_prev = setup_expt["stimulus_info"]["x1_x2"][trial_info["stimulus_id_c"][i - 1]][0];
+        var x2_true_prev = setup_expt["stimulus_info"]["x1_x2"][trial_info["stimulus_id_c"][i - 1]][1];
+        var deviation_lag1 = Math.sqrt(Math.pow((x1_true_prev - x1_true), 2) + Math.pow((x2_true_prev - x2_true), 2))
+    } else {
+        var deviation_lag1 = 0
+    }
+
+    document.getElementById("sim_deviation_trial").innerHTML = deviation_lag1;
+    trial_info["sim_deviation_trial"].push(deviation_lag1);
+
     // present stimuli and mask
     document.getElementById("item_displayed_cat").src = mask_path
     await sleep(setup_expt["display_info"]["categorization"]["iti"])
@@ -541,11 +545,10 @@ async function handle_response(e) {
             cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"])
             document.getElementById("cat_accuracy_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%";
             document.getElementById("cat_accuracy_lag").innerHTML = Math.round(100 * cat_accuracies[1]) + "%";
-            console.log("categorization accuracies are: " + cat_accuracies)
             if (
-                cat_accuracies[0] >= setup_expt["experiment_info"]["thx_cat_overall"] ||
-                cat_accuracies[1] >= setup_expt["experiment_info"]["thx_cat_lag"] ||
-                setup_expt["experiment_info"]["n_categories"] == 1
+                n_categories > 1 & cat_accuracies[0] >= setup_expt["experiment_info"]["thx_cat_overall"] ||
+                n_categories > 1 & cat_accuracies[1] >= setup_expt["experiment_info"]["thx_cat_lag"] ||
+                n_categories == 1 & cat_accuracies[0] >= setup_expt["experiment_info"]["thx_sim_corr"]
             ) {
                 clickStart("page9", "page11")
             } else {
@@ -595,15 +598,41 @@ async function handle_response(e) {
 
 function calculate_categorization_accuracy(responses_cat_trial, lag) {
     n_responses = responses_cat_trial.length
-    sum_correct = responses_cat_trial.reduce((a, b) => a + b, 0)
-    prop_correct_overall = ((parseFloat(sum_correct) / parseFloat(n_responses)))
-    sum_correct_lag = responses_cat_trial.slice(n_responses - lag, n_responses).reduce((a, b) => a + b, 0)
-    prop_correct_lag = ((parseFloat(sum_correct_lag) / parseFloat(lag)))
-    console.log("calculated average is: " + prop_correct_overall)
-    console.log("calculated average 'lag' is: " + prop_correct_lag)
-    cat_accuracies = [prop_correct_overall, prop_correct_lag]
+    if (n_categories > 1) {
+        sum_correct = responses_cat_trial.reduce((a, b) => a + b, 0)
+        prop_correct_overall = ((parseFloat(sum_correct) / parseFloat(n_responses)))
+        sum_correct_lag = responses_cat_trial.slice(n_responses - lag, n_responses).reduce((a, b) => a + b, 0)
+        prop_correct_lag = ((parseFloat(sum_correct_lag) / parseFloat(lag)))
+        cat_accuracies = [prop_correct_overall, prop_correct_lag]
+    } else if (n_categories == 1) {
+        var true_distances = trial_info["sim_deviation_trial"].slice(0, n_responses);
+        var sim_corr = -pcorr(true_distances, responses_cat_trial);
+        document.getElementById("cat_accuracy_cum").innerHTML = sim_corr;
+        cat_accuracies = [sim_corr, sim_corr];
+    }
+
     return cat_accuracies
 }
+
+// https://stackoverflow.com/questions/15886527/javascript-library-for-pearson-and-or-spearman-correlations
+const pcorr = (x, y) => {
+    let sumX = 0,
+        sumY = 0,
+        sumXY = 0,
+        sumX2 = 0,
+        sumY2 = 0;
+    const minLength = x.length = y.length = Math.min(x.length, y.length),
+        reduce = (xi, idx) => {
+            const yi = y[idx];
+            sumX += xi;
+            sumY += yi;
+            sumXY += xi * yi;
+            sumX2 += xi * xi;
+            sumY2 += yi * yi;
+        }
+    x.forEach(reduce);
+    return (minLength * sumXY - sumX * sumY) / Math.sqrt((minLength * sumX2 - sumX * sumX) * (minLength * sumY2 - sumY * sumY));
+};
 
 function startTimer(duration, display) {
     var timer = duration, minutes, seconds;
@@ -636,10 +665,21 @@ function write_cat_results(i, r) {
     condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (n_categories == 1) {
         accuracy = 9999
-    } else if (n_categories > 1) {
+        responses_cat_trial.push(r);
+        if (i > 0) {
+            var corr_dev_sim = -Math.round(100 * pcorr(responses_cat_trial, trial_info["sim_deviation_trial"]));
+            document.getElementById("sim_correlation").innerHTML = "Average Consistency = " + corr_dev_sim;
+        }
+    }
+    else if (n_categories > 1) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
         var accuracy_int = accuracy | 0
         responses_cat_trial.push(accuracy_int)
+        if (accuracy === true) {
+            document.getElementById("cat_accuracy_cum").innerHTML = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) + 1
+        }
+        document.getElementById("cat_accuracy_running_mean").innerHTML = "Average Accuracy = " +
+            parseInt(100 * document.getElementById("cat_accuracy_cum").innerHTML / (i + 1)) + "%"
     }
     var data_store = {
         participant_id: participant_id,
@@ -652,11 +692,7 @@ function write_cat_results(i, r) {
         accuracy: accuracy,
         rt: document.getElementById("rt").innerHTML
     }
-    if (accuracy === true) {
-        document.getElementById("cat_accuracy_cum").innerHTML = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) + 1
-    }
-    document.getElementById("cat_accuracy_running_mean").innerHTML = "Average Accuracy = " +
-        parseInt(100 * document.getElementById("cat_accuracy_cum").innerHTML / (i + 1)) + "%"
+
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cat")
 }
@@ -772,7 +808,7 @@ function set_category_instruction(n_categories) {
     The names of the categories are <b>Bukil</b> and <b>Venak</b>.<br>
     Throughout the experiment you are going to see monsters from both categories.<br>
     Your goal is to learn to categorize the monsters into the respective category using feedback, which is provided after every response.<br>
-    The feedback tells you whether your response was correct or not accompanied by the true category name.<br><br>
+    The feedback tells you whether your response was correct or not accompanied by the true category name and the category number.<br><br>
 
     <b>Important</b><br>
     Whether you make it to the third part / bonus round of the experiment depends on your performance in the categorization task.<br>
@@ -798,7 +834,7 @@ function set_category_instruction(n_categories) {
     The names of the categories are <b>Bukil</b>, <b>Venak</b>, <b>Monus</b>, and <b>Ladiv</b>.<br>
     Throughout the experiment you are going to see monsters from all four categories.<br>
     Your goal is to learn to categorize the monsters into the respective category using feedback, which is provided after every response.<br>
-    The feedback tells you whether your response was correct or not accompanied by the true category name.<br><br>
+    The feedback tells you whether your response was correct or not accompanied by the true category name and the category number.<br><br>
 
     <b>Important</b><br>
     Whether you make it to the third part / bonus round of the experiment depends on your performance in the categorization task.<br>
@@ -867,7 +903,6 @@ function condition_and_ncategories() {
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
     condition_id = 0
     n_categories = 1
-    console.log("nr categories = " + n_categories)
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
@@ -881,8 +916,13 @@ function condition_and_ncategories() {
     } else {
         textCond = `<b>Categorization:</b> The monsters all look somewhat similar, but they come from different tribes.<br>
                                 Use the information about the spikiness of their head and the fill of their belly to gauge what tribes they are from.<br>
-                                Give your response on a trial using the digit keys on your keyboard.For example, digit key "1" relates to category nr. 1.<br>
-                                You are going to get a feedback after every trial, which may help getting you started.<br>
+                                Give your response on a trial using the digit keys on your keyboard.<br>
+                                Digit key "1" relates to category nr. 1 called Bukil.<br>
+                                Digit key "2" relates to category nr. 2 called Venak.<br>
+                                Digit key "3" relates to category nr. 3 called Monus.<br>
+                                Digit key "4" relates to category nr. 4 called Ladiv.<br>
+
+                                You are going to get a feedback after every trial about category number and name. Use that feedback to improve on the task.<br>
                                 <b> --> Takes approx. 45 min</b><br>
                                 There will be breaks in between these 45 mins.`
     }
@@ -912,6 +952,7 @@ var stimulus_vals;
 var total_trials0;
 var total_trials1;
 var total_trials2;
+var trial_info;
 
 
 function set_main_vars(condition_id) {
@@ -935,6 +976,7 @@ function set_main_vars(condition_id) {
     total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
     total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
+    trial_info = setup_expt["trial_info"];
 }
 
 
