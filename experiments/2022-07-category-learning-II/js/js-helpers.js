@@ -1007,7 +1007,7 @@ function calculate_bonus(flag_performance) {
         }
     } else if (flag_performance == "succeed") {
         // bonus continuous reproduction
-        const bonus_cr_max = 3.60
+        const bonus_cr_max = 4.25
         var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
         var avg_deviation = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) / n_trials_reproduction
         var coef_bonus = Math.min(51, avg_deviation)
@@ -1018,15 +1018,15 @@ function calculate_bonus(flag_performance) {
         // bonus categorization
         var bonus_cat;
         if (setup_expt["experiment_info"]["n_categories"] == 1) {
-            bonus_cat = 1.80
+            bonus_cat = 1.15
         } else {
-            const bonus_cat_max = 3.60
+            const bonus_cat_max = 4.25
             var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
             var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
             bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
         }
-        if (bonus_cat < 1.8) { bonus_cat = 1.8 }
-        if (bonus_cr < 1.8) { bonus_cr = 1.8 }
+        if (bonus_cat < 2) { bonus_cat = 2 }
+        if (bonus_cr < 2) { bonus_cr = 2 }
 
         var bonus_total = Math.round((bonus_cr + bonus_cat) * 100) / 100;
 
