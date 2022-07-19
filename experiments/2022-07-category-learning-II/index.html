@@ -89,6 +89,8 @@
             <br>
             Please switch off your addblockers during the study. That will allow us to trace back any unexpected errors.
             <br><br>
+            Please do not 'refresh' your browser during the study. You will have to start from the very beginning again
+            and we will not be able to use your data.<br><br>
 
             <button id="consent_button" type="button" name="button" id="buttonConsentForm" class="default_button"
                 onclick="condition_and_ncategories()"> Progress to Informed Consent</button><br>
@@ -125,13 +127,12 @@
                 <h5>Study duration</h5>
                 The study duration depends on your performance in the second part of the experiment.<br>
                 If your performance is above a pre-defined threshold, you can make it to the bonus part of the
-                experiment
-                (i.e., the third part).<br>
+                experiment (i.e., the third part).<br>
                 The first two parts of the study will take <b>approx. 60 minutes</b>.<br>
                 If you make it to the bonus round, the total duration will be <b>approx. 90 minutes</b>.<br>
                 <h5>Payment</h5>
-                In any case, you will be paid a base payment of <b>£6.50</b> pounds for your participation.
-                In the bonus round, you can receive a bonus of up to <b>£8.50</b>, but it will be at least
+                In any case, you will be paid a base payment of <b>£9.00</b> pounds for your participation.
+                In the bonus round, you can receive a bonus of up to <b>£6.50</b>, but it will be at least
                 <b>£4.00</b>.<br>
                 The amount of the bonus depends on your performance <b>in all three parts</b> of the experiment.<br>
 
@@ -183,8 +184,7 @@
             <br>
             Today, you find yourself in <b>Monster World</b>.<br>
             In Monster World, you are introduced to a new species of friendly monsters.<br>
-            All monsters differ from each other. Even though they come from the same planet, they are from different
-            tribes.<br>
+            Even though the monsters come from the same planet, they differ from each other.<br>
             The way the monsters differ from each other can be described according to variation in two dimensions:
             <br>
             <ol>
@@ -208,7 +208,7 @@
                     <b>Memory:</b> Remember the spikiness of the monster's head and
                     the fill of the monster's belly. <br> You are presented
                     with a monster only for a short period of time on every trial. <br>
-                    After that, you are required to adjust two sliders to reconstruct
+                    After a retention period (five seconds), you are required to adjust two sliders to reconstruct
                     the head and the belly of the monster.<br>
                     In the beginning, you will get some practice trials on the memory task. These are not going to be
                     used
@@ -225,7 +225,7 @@
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
             <!-- page2b -->
-            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page6')" ;>
+            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page2b')" ;>
                 Check Comprehension
             </button>
         </div>
@@ -292,31 +292,19 @@
                     <b> How long is the experiment going to last approximately? </b><br>
                     <label for="q5l1" style="font-weight: normal;"><input type="radio" name="q5" id="l1"><span
                             id="q5l1">
-                            Roughly 10 minutes </span></label><br>
+                            Roughly 10/20 minutes depending on my performance</span></label><br>
                     <label for="q5l2" style="font-weight: normal;"><input type="radio" name="q5" id='l2'><span
                             id="q5l2">
                             Roughly 40 minutes </span></label><br>
                     <label for="q5l3" style="font-weight: normal;"><input type="radio" name="q5" id='icheck5'><span
                             id="q5icheck5">
-                            Roughly 90 minutes </span></label><br>
+                            Roughly 60/90 minutes depending on my performance </span></label><br>
                     <label for="q5l4" style="font-weight: normal;"><input type="radio" name="q5" id='l3'><span
                             id="q5l3">
-                            Roughly 200 minutes </span></label><br>
+                            Roughly 180/200 minutes depending on my performance </span></label><br>
                 </fieldset>
             </fieldset>
             <br>
-            <script>
-                if (document.getElementById("n_categories").innerHTML == 1) {
-                    secondTaskName = "similarity";
-                    secondTask = " Compare the monster to the monster on the previous trial.";
-                } else {
-                    secondTaskName = "categorization";
-                    secondTask = " Say what tribe/category a monster is from.";
-                }
-                document.getElementById("secondTaskName1").innerHTML = secondTaskName;
-                document.getElementById("secondTaskName2").innerHTML = secondTaskName;
-                document.getElementById("q3icheck3").innerHTML = secondTask;
-            </script>
             <button type="button" name="button" class="default_button" ; onclick="clickStart('page2b', 'page2')" ;>
                 Back </button>
             <button type="button" name="button" class="default_button" ; onclick="instructioncheck('page2b', 'page3')"
@@ -330,8 +318,9 @@
                 Remember the spikiness of the monster's head and
                 the fill of the monster's belly. Try hard! <br>You are presented
                 with a monster only for a short period of time on every trial. <br>
-                After that, you are required to adjust two sliders to reconstruct
+                After a retention period (five seconds), you are required to adjust two sliders to reconstruct
                 the head and the belly of the monster. <br>
+                The sliders are positioned at new random locations on every trial. <br>
                 You are given three practice trials to get used to the procedure. <br>
                 These trials are not going to be used to calculate your bonus payment.
             </p>
@@ -418,7 +407,7 @@
                 Please leave your hands on the keyboard while responding in a block.<br><br>
                 Try to use the feedack to sharpen your understanding of the categories and the border between them.<br>
                 In the beginning, it won't be an easy task, but no worries, you will get better with practice!<br><br>
-                Remember the different categories and how to respond accordingly.<br>
+                Remember the different categories and how to respond accordingly.<br><br>
 
             </p>
             <script>
@@ -443,13 +432,16 @@
                 "4" relates to very similar to the monster presented on the previous trial<br><br>
                 There is no option to relate the monster on the first trial to a previous monster.<br>
                 Just respond with key number 4 on the first trial.<br><br>
+                <b>Important</b><br>
                 The performance in the task is going to be measured in terms of the consistency of your responses.<br>
                 Assume that you have to judge the similarity between two pairs of monsters that are very similar.<br>
                 Your response consistency will be relatively low if you judge them once as similar (i.e., 4), but once
                 as dissimilar (i.e., 1).<br>
                 Vice versa, if you judge them twice as similar (i.e., 4), your response consistency will be relatively
                 high.<br>
-                You make it to the bonus round, if your average average response consistency is positive.<br><br>
+                You make it to the bonus round, if your average response consistency is positive.<br>
+                The first <span id="n_training_trials_exclude_ii"></span> trials are not used to compute the
+                accuracies. Use them to get an understanding about the possible similarities between monsters.<br><br>
                 <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to
                 respond faster if you respond too slowly!<br>
             </p>
@@ -565,7 +557,7 @@
             </h1>
 
             <p>
-                In addition to the base payment of £7.00 you earn a bonus of £<span id="total_bonus"></span>
+                In addition to the base payment of £9.00 you earn a bonus of £<span id="total_bonus"></span>
                 .<br>
                 Your bonus in the memory task is £<span id="cr_bonus"></span>.<br>
                 Your bonus in the second task is £<span id="cat_bonus"></span><br><br>
@@ -589,7 +581,7 @@
             <h2>Thanks for your participation in our study!</h2>
 
             <p>
-                You receive the base payment of £7.00.
+                You receive the base payment of £9.00.
                 You did not make it to the third part of the study because your performance was below the predefined
                 thresholds.
                 Your overall categorization accuracy is <span id="cat_accuracy_overall"></span>.<br>
@@ -615,7 +607,7 @@
             <h2>Thanks for your participation in our study!</h2>
 
             <p>
-                You receive the base payment of £7.00.
+                You receive the base payment of £9.00.
                 You did not make it to the third part of the study because your performance was below the predefined
                 threshold.
                 Your overall internal consistency is <span id="sim_consistency_overall"></span>.<br>

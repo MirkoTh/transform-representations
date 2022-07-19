@@ -1,6 +1,3 @@
-// align first random positions of xs on picture and sliders
-
-
 if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
     var participant_id = getQueryVariable('PROLIFIC_PID');
 }
@@ -33,17 +30,19 @@ function setup_experiment(condition_id) {
         n_conditions: 3, // control, 2 ellipse categories, 4 square categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 2, //100, //5, //
-        n_trials_reproduction_2: 2, //100, //5, //
-        n_trials_categorization_train_target: 0, //3, // 
-        n_trials_categorization: 11, //5, // 380, //
-        n_trials_categorization_total: 0 + 11, // 3 + 5, //
-        n_trial_categorization_lag: 3, // last n categorization trials to calculate "final" accuracy
+        n_trials_reproduction_1: 100, //5, //
+        n_trials_reproduction_2: 100, //5, //
+        n_trials_categorization_train_target: 0, // 
+        n_trials_categorization: 400, //16, // 
+        n_trials_categorization_total: 0 + 400, // 0 + 16, //
+        n_trial_categorization_lag: 50, //8, //last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
         thx_cat_overall: .75,//.2,//
         thx_cat_lag: .8,//.2,//
-        thx_sim_corr: 0
+        thx_sim_corr: 0,
+        n_training_nocount: 40 //4 // 
+
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
@@ -75,7 +74,7 @@ function setup_experiment(condition_id) {
             iti: 500,
             fixcross: 500,
             presentation: 250,
-            ri: 200//5000
+            ri: 5000//200//
         },
         categorization: {
             iti: 500,
@@ -274,7 +273,7 @@ function clickStart(hide, show) {
 function route_instructions(condition) {
     condition_id = document.getElementById("condition_id").innerHTML
     n_categories = document.getElementById("n_categories").innerHTML
-    set_main_vars(condition)
+    set_main_vars(condition_id)
     if (n_categories == 1) { // control
         clickStart('page1', 'page2')
     } else { clickStart('page1', 'page2') }
@@ -330,6 +329,7 @@ async function next_item_cr(old, i) {
     stim_path_mask = "stimuli/mask.png"
 
     // present stimuli and mask
+    document.getElementById("item_displayed_2").src = stim_path_mask
     await sleep(setup_expt["display_info"]["reproduction"]["iti"])
     document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
     await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
@@ -345,7 +345,7 @@ async function next_item_cr(old, i) {
     var val1 = Math.ceil(Math.random() * 100);
     var val2 = Math.ceil(Math.random() * 100);
     let stimulus_id = "./stimuli/stimulus[" + val1 + "," + val2 + "].png";
-    document.getElementById("selected_monster").src = stimulus_id;
+    document.getElementById("selected_monster").src = "stimuli/mask.png";
     document.getElementById("myRange1_start").value = val1;
     document.getElementById("myRange2_start").value = val2;
     document.getElementById("myRange1").value = val1;
@@ -377,8 +377,8 @@ async function log_response(rt, i, part, stimulus_ids) {
     var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response), 2))
     document.getElementById("cr_deviation_cum").innerHTML = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) + deviation
 
-    var val1 = Math.floor(Math.random() * 100);
-    var val2 = Math.floor(Math.random() * 100);
+    var val1 = Math.ceil(Math.random() * 100);
+    var val2 = Math.ceil(Math.random() * 100);
     document.getElementById("myRange1").value = val1;
     document.getElementById("myRange2").value = val2;
     document.getElementById("selected_monster").src = "stimuli/stimulus[" + val1 + "," + val2 + "].png"
@@ -451,9 +451,9 @@ function download(content, fileName, contentType) {
 // log categorization response
 
 async function next_item_cat(old, i) {
-    if (n_categories > 1) {
+    if (n_categories > 1 & i >= setup_expt["experiment_info"]["n_training_nocount"]) {
         document.getElementById("cat_accuracy_running_mean").style.display = 'block';
-    } else if (n_categories == 1) {
+    } else if (n_categories == 1 & i >= setup_expt["experiment_info"]["n_training_nocount"]) {
         document.getElementById("sim_correlation").style.display = 'block';
     }
     clickStart(old, 'page9')
@@ -524,7 +524,7 @@ async function handle_response(e) {
                 await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
                 document.getElementById("feedback_cat_true").innerHTML = ""
             } else {
-                var str = new String("Do Better: " + category_name[category_id[i] - 1]);
+                var str = new String("Try Harder: " + category_name[category_id[i] - 1]);
                 document.getElementById("feedback_cat_wrong").innerHTML = str
                 await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_wrong"])
                 document.getElementById("feedback_cat_wrong").innerHTML = ""
@@ -550,9 +550,9 @@ async function handle_response(e) {
             document.getElementById("sim_correlation").style.display = 'none';
             document.getElementById("part_reproduction").innerHTML = 2;
             document.getElementById("cat_continued").innerHTML = 1;
-            cat_accuracies = calculate_categorization_accuracy(responses_cat_trial, setup_expt["experiment_info"]["n_trial_categorization_lag"]);
+            cat_accuracies = calculate_categorization_accuracy(responses_cat_trial.slice(setup_expt["experiment_info"]["n_training_nocount"], i + 1), setup_expt["experiment_info"]["n_trial_categorization_lag"]);
             document.getElementById("cat_accuracy_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%";
-            document.getElementById("sim_consistency_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%"; 1
+            document.getElementById("sim_consistency_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%";
             document.getElementById("cat_accuracy_lag").innerHTML = Math.round(100 * cat_accuracies[1]) + "%";
             if (
                 n_categories > 1 & cat_accuracies[0] >= setup_expt["experiment_info"]["thx_cat_overall"] ||
@@ -567,9 +567,7 @@ async function handle_response(e) {
                 } else if (n_categories == 1) {
                     clickStart("page9", "page14b")
                 }
-
             }
-
         } // end of train-target trials
         else if (n_categories != 1 & i == setup_expt["experiment_info"]["n_trials_categorization_train_target"] - 1) {
             clickStart("page9", "page10b")
@@ -595,7 +593,7 @@ async function handle_response(e) {
             var timeout = setTimeout(function () {
                 if (document.getElementById("cat_continued").innerHTML == 0) {
                     clickStart("page10", 'page9');
-                    next_item_cat("page9")
+                    next_item_cat("page9", i + 1)
                     document.getElementById("cat_continued").innerHTML = 1
                     document.getElementById(str_frame).style.display = "none"
                 }
@@ -625,7 +623,6 @@ function calculate_categorization_accuracy(responses_cat_trial, lag) {
         document.getElementById("cat_accuracy_cum").innerHTML = sim_corr;
         cat_accuracies = [sim_corr, sim_corr];
     }
-
     return cat_accuracies
 }
 
@@ -681,8 +678,8 @@ function write_cat_results(i, r) {
     if (n_categories == 1) {
         accuracy = 9999
         responses_cat_trial.push(r);
-        if (i > 0) {
-            var corr_dev_sim = -Math.round(100 * pcorr(responses_cat_trial, trial_info["sim_deviation_trial"]));
+        if (i > setup_expt["experiment_info"]["n_training_nocount"]) {
+            var corr_dev_sim = -Math.round(100 * pcorr(responses_cat_trial.slice(setup_expt["experiment_info"]["n_training_nocount"], i + 1), trial_info["sim_deviation_trial"]));
             document.getElementById("sim_correlation").innerHTML = "Average Consistency = " + corr_dev_sim;
         }
     }
@@ -690,11 +687,14 @@ function write_cat_results(i, r) {
         accuracy = setup_expt["trial_info"]["category_id"][i] == r;
         var accuracy_int = accuracy | 0
         responses_cat_trial.push(accuracy_int)
-        if (accuracy === true) {
+        if (accuracy === true & i >= setup_expt["experiment_info"]["n_training_nocount"]) {
             document.getElementById("cat_accuracy_cum").innerHTML = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) + 1
         }
-        document.getElementById("cat_accuracy_running_mean").innerHTML = "Average Accuracy = " +
-            parseInt(100 * document.getElementById("cat_accuracy_cum").innerHTML / (i + 1)) + "%"
+        if (i >= setup_expt["experiment_info"]["n_training_nocount"]) {
+            document.getElementById("cat_accuracy_running_mean").innerHTML = "Average Accuracy = " +
+                parseInt(100 * parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / (i + 1 - setup_expt["experiment_info"]["n_training_nocount"])) + "%"
+        }
+
     }
     var data_store = {
         participant_id: participant_id,
@@ -829,13 +829,15 @@ function set_category_instruction(n_categories) {
     Whether you make it to the third part / bonus round of the experiment depends on your performance in the categorization task.<br>
     You make it to the third part when your performance satisfies at least one of the two evaluation criteria:<br>
     First, if at least  ` +
-        parseInt(100 * setup_expt["experiment_info"]["thx_cat_overall"]) + `
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_overall"]) + `%
     of your categorization responses are correct.<br>
     Second, if at least ` +
-        parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `%
     of your categorization responses in the last ` +
         setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
-    The running average of your categorization accuracy is shown to you in the upper left corner of the screen throughout the categorization task.<br><br>
+    The running average of your categorization accuracy is shown to you in the upper left corner of the screen.<br>
+    The first ` + setup_expt["experiment_info"]["n_training_nocount"] + ` trials are not used to compute
+    the accuracies. Use them to get an understanding of the different categories.<br><br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
@@ -861,7 +863,9 @@ function set_category_instruction(n_categories) {
         parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
     of your categorization responses in the last ` +
         setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
-        The running average of your categorization accuracy is shown to you in the upper left corner of the screen throughout the categorization task.<br>
+        The running average of your categorization accuracy is shown to you in the upper left corner of the screen.<br>
+        The first ` + setup_expt["experiment_info"]["n_training_nocount"] + ` trials are not used to compute
+        the accuracies. Use them to get an understanding of the different categories.<br><br>
 
     <b> Responding:</b> <br>
     <b>Please try to respond within 3 seconds as accurately as possible.</b> You will get feedback to respond faster if you respond too slowly!<br>
@@ -916,15 +920,26 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 2
-    n_categories = 4
+    //condition_id = 2
+    //n_categories = 4
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
+    if (n_categories == 1) {
+        secondTaskName = "similarity";
+        secondTask = " Compare the monster to the monster on the previous trial.";
+    } else {
+        secondTaskName = "categorization";
+        secondTask = " Say what tribe/category a monster is from.";
+    }
+    document.getElementById("secondTaskName1").innerHTML = secondTaskName;
+    document.getElementById("secondTaskName2").innerHTML = secondTaskName;
+    document.getElementById("q3icheck3").innerHTML = secondTask;
+
     if (n_categories == 1) {
         textCond = `<b>Similarity:</b> Your task in the second part will be somewhat different.<br>
                                 You are asked to judge how similar the monster presented on the current trial is to the monster presented on the previous trial.<br>
                                 To do so, use the numbers from 1-4 on the keyboard.<br>
-                                When the monster is exactly the same as on the previous trial, press 4.<br>
+                                When the monster look very similar to the one on the previous trial, press 4.<br>
                                 When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
                                 <b> --> Takes approx. 45 min</b><br>
                                 There will be breaks in between these 45 mins.`
@@ -965,13 +980,12 @@ var total_trials1;
 var total_trials2;
 var trial_info;
 
-
 function set_main_vars(condition_id) {
     setup_expt = setup_experiment(condition_id);
     instruction_category = set_category_instruction(setup_expt["experiment_info"]["n_categories"])
 
     var x = document.getElementById("page7");
-    x.querySelector(".category_instruction").innerHTML = instruction_category;;
+    x.querySelector(".category_instruction").innerHTML = instruction_category;
 
     (() => {
         document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
@@ -988,6 +1002,7 @@ function set_main_vars(condition_id) {
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
     total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
     trial_info = setup_expt["trial_info"];
+    document.getElementById("n_training_trials_exclude_ii").innerHTML = setup_expt["experiment_info"]["n_training_nocount"];
 }
 
 
@@ -1007,7 +1022,7 @@ function calculate_bonus(flag_performance) {
         }
     } else if (flag_performance == "succeed") {
         // bonus continuous reproduction
-        const bonus_cr_max = 4.25
+        const bonus_cr_max = 3.25
         var n_trials_reproduction = setup_expt["experiment_info"]["n_trials_reproduction_1"] + setup_expt["experiment_info"]["n_trials_reproduction_2"]
         var avg_deviation = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) / n_trials_reproduction
         var coef_bonus = Math.min(51, avg_deviation)
@@ -1018,9 +1033,9 @@ function calculate_bonus(flag_performance) {
         // bonus categorization
         var bonus_cat;
         if (setup_expt["experiment_info"]["n_categories"] == 1) {
-            bonus_cat = 1.15
+            bonus_cat = 2.85
         } else {
-            const bonus_cat_max = 4.25
+            const bonus_cat_max = 3.25
             var n_trials_categorization = setup_expt["experiment_info"]["n_trials_categorization_total"]
             var prop_correct_cat = parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / n_trials_categorization
             bonus_cat = Math.round((prop_correct_cat * bonus_cat_max * 100)) / 100
