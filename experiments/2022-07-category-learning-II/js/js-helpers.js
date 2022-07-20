@@ -42,7 +42,6 @@ function setup_experiment(condition_id) {
         thx_cat_lag: .8,//.2,//
         thx_sim_corr: 0,
         n_training_nocount: 40 //4 // 
-
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
@@ -941,16 +940,16 @@ function condition_and_ncategories() {
                                 To do so, use the numbers from 1-4 on the keyboard.<br>
                                 When the monster look very similar to the one on the previous trial, press 4.<br>
                                 When the monster looks very different (i.e., head and belly differ a lot), press 1.<br>
-                                <b> --> Takes approx. 45 min</b><br>
-                                There will be breaks in between these 45 mins.`
+                                <b> --> Takes approx. 30 min</b><br>
+                                There will be breaks in between these 30 mins.`
     } else {
         textCond = `<b>Categorization:</b> The monsters all look somewhat similar, but they come from different tribes.<br>
                                 Use the information about the spikiness of their head and the fill of their belly to gauge what tribes they are from.<br>
                                 Give your response on a trial using the digit keys on your keyboard.<br>
 
                                 You are going to get a feedback after every trial about category number and name. Use that feedback to improve on the task.<br>
-                                <b> --> Takes approx. 45 min</b><br>
-                                There will be breaks in between these 45 mins.`
+                                <b> --> Takes approx. 30 min</b><br>
+                                There will be breaks in between these 30 mins.`
     }
     document.getElementById("taskTextCondition").innerHTML = textCond;
     clickStart('page0', 'page1')
