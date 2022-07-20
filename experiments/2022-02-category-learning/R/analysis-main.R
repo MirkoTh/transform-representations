@@ -22,11 +22,11 @@ library(modelr)
 files <- c(
   "R/utils.R",
   "R/plotting.R",
-  "experiments/2022-02-category-learning/R/analysis-utils.R",
-  "experiments/2022-02-category-learning/R/analysis-plotting.R",
-  "experiments/2022-02-category-learning/R/summarySEwithin.R",
-  "experiments/2022-02-category-learning/R/summarySE.R",
-  "experiments/2022-02-category-learning/R/normDataWithin.R"
+  "R/analysis-utils.R",
+  "R/analysis-plotting.R",
+  "R/summarySEwithin.R",
+  "R/summarySE.R",
+  "R/normDataWithin.R"
 )
 walk(files, source)
 
@@ -34,9 +34,9 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-02-category-learning/data/2022-03-30-pilot-1/",
-  "experiments/2022-02-category-learning/data/2022-04-20-pilot-2/",
-  "experiments/2022-02-category-learning/data/2022-04-21-experiment/"
+  "experiments/2022-02-category-learning/data/2022-03-30-treps1-pilot-1/",
+  "experiments/2022-02-category-learning/data/2022-04-20-treps1-pilot-2/",
+  "experiments/2022-02-category-learning/data/2022-04-21-treps1-experiment/"
 )
 l_tbls_data <- map(path_data[2:3], load_data)
 l_tbl_data <-
@@ -367,7 +367,7 @@ summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", betweenvars = "n_categories",
     labels = c("Before\nCategory Learning", "After\nCategory Learning")
   )) %>%
   ggplot(aes(session, mean_eucl_deviation, group = n_categories)) +
-  geom_point(aes(color = n_categories), show.legend = FALSE, position = pdg) +
+  geom_point(aes(color = n_categories), position = pdg) +
   geom_line(aes(color = n_categories), show.legend = FALSE, position = pdg) +
   geom_errorbar(
     aes(
@@ -378,7 +378,7 @@ summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", betweenvars = "n_categories",
     width = .15, show.legend = FALSE, position = pdg
   ) +
   scale_fill_brewer(name = "", palette = "Set1") +
-  scale_color_brewer(palette = "Set1") +
+  scale_color_brewer(name = "Group", palette = "Set1") +
   theme_bw() +
   labs(x = "",
        y = "Mean Euclidean Deviation")
