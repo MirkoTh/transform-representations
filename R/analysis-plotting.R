@@ -156,7 +156,7 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
     ) %>%
     ggplot(aes(value, group = participant_id)) +
     geom_histogram(aes(group = participant_id, fill = participant_id), color = "white") +
-    facet_wrap(~ name, scale = "free_x") +
+    facet_grid(n_categories ~ name, scale = "free_x") +
     scale_fill_viridis_d(name = "Participant ID")  +
     theme_dark() +
     labs(
@@ -187,7 +187,7 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
   ) %>% as_tibble()
   tbl_cat_agg_ci$trial_id_binned <- as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
   tbl_cat_agg_ci <- tbl_cat_agg_ci %>%
-    mutate(cat_true = factor(cat_true, labels = c("Non-Target", "Target")))
+    mutate(cat_true = factor(cat_true, labels = c("Bukil", "Venak", "Monus", "Ladiv")))
   
   tbl_chance <- chance_performance_cat(tbl_cat)
   tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
@@ -209,8 +209,8 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
     geom_line(
       data = tbl_chance, aes(block, prop_chance, group = 1), 
       linetype = "dotdash", size = .5) +
-    #facet_wrap(~ n_categories) +
-    coord_cartesian(ylim = c(.5, 1)) +
+    facet_wrap(~ n_categories) +
+    coord_cartesian(ylim = c(.25, 1)) +
     scale_color_brewer(name = "Category", palette = "Set1") +
     scale_x_continuous(breaks = seq(2, 14, by = 2)) +
     labs(
