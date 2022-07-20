@@ -90,7 +90,10 @@ exclude_incomplete_datasets <- function(l_tbl, n_resp_cr, n_resp_cat) {
   
   cat(str_c(length(participants_before) - length(participants_after), " incomplete datasets\n"))
   
-  return(list(keep = list(tbl_cr_incl, tbl_cat_incl), drop = list(tbl_cr_excl, tbl_cat_excl)))
+  return(list(
+    keep = list(tbl_cr = tbl_cr_incl, tbl_cat = tbl_cat_incl), 
+    drop = list(tbl_cr = tbl_cr_excl, tbl_cat = tbl_cat_excl)
+    ))
 }
 
 
@@ -924,4 +927,83 @@ load_predictions <- function(f_name){
       x2_response = (x2_response + 1) * 9 + 1
     )
   return(tbl_both)
+}
+
+
+participant_report <- function(l_cases) {
+  #' by-participant summaries of experimental results
+  #' 
+  #' @description exclusions by reason, nr trials by task, 
+  #' cr heatmaps, categorization accuracy histogram, similarity-distance line plot
+  #' 
+  #' @param l_cases list of tbl_dfs after exclusion preprocessing
+  #' containing keeps and drops
+  #' 
+  #' @return a list with tbl_dfs and ggplot objects
+  #'
+  
+  tbl_exclusions <- rbind(crossing(
+    participant_id = as.character(unique(l_cases$l_guessing$drop$tbl_cr$participant_id)), 
+    reason = "Guessing Categorization"
+  ), crossing(
+    participant_id = as.character(unique(l_cases$l_incomplete$drop$tbl_cr$participant_id)),
+    reason = "Incomplete Data Set"
+  ), crossing(
+    participant_id = as.character(unique(l_cases$l_outliers$drop$tbl_cr$participant_id)),
+    reason = "CR Outlier"
+  ))
+  tbl_cr <- rbind(
+    l_cases$l_guessing$keep$tbl_cr,
+    l_cases$l_guessing$drop$tbl_cr,
+    l_cases$l_incomplete$drop$tbl_cr,
+    l_cases$l_outliers$drop$tbl_cr
+  )
+  tbl_cat_sim <- rbind(
+    l_cases$l_guessing$keep$tbl_cat_sim,
+    l_cases$l_guessing$drop$tbl_cat,
+    l_cases$l_incomplete$drop$tbl_cat,
+    l_cases$l_outliers$drop$tbl_cat_sim
+  )
+  n_trials_cr <- tbl_cr %>% group_by(participant_id) %>%
+    count()
+  n_trials_cat <- tbl_cat_sim %>% group_by(participant_id) %>%
+    count()
+  pl_heatmaps <-
+    plot_2d_binned_heatmaps(l_deviations$tbl_checker, l_deviations$tbl_checker_avg)
+  tbl_cat_overview <- tbl_cat %>%
+    grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
+    arrange(mean_rt)
+  
+  # categorization accuracy overview
+  pl_cat_hist <- histograms_accuracies_rts(tbl_cat_overview)
+  tbl_sim <- tbl_cat_sim %>%
+    filter(n_categories == 1) %>%
+    mutate(
+      x1_prev_true = lag(x1_true, 1),
+      x2_prev_true = lag(x2_true, 1),
+      distance_euclidian = sqrt((x1_true - x1_prev_true) ^ 2 + (x2_true - x2_prev_true) ^
+                                  2)
+    ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
+  n_bins_distance <- 9
+  bins_distance <-
+    c(seq(-1, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
+  tbl_sim$distance_binned <-
+    cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
+  tbl_sim$distance_binned %>% unique()
+  pl_sim_line <- tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
+    filter(participant_id %in% sample_ids) %>%
+    summarize(response_mn = mean(response)) %>%
+    ggplot(aes(distance_binned, response_mn, group = participant_id)) +
+    geom_line(aes(color = participant_id)) +
+    scale_color_brewer(palette = "Set1") +
+    theme_bw()
+  l_screening <- list(
+    tbl_exclusions = tbl_exclusions,
+    n_trials_cr = n_trials_cr,
+    n_trials_cat = n_trials_cat,
+    pl_heatmaps = pl_heatmaps,
+    pl_cat_hist = pl_cat_hist,
+    pl_sim_line = pl_sim_line
+  )
+  
 }

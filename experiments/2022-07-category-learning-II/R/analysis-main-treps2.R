@@ -83,6 +83,7 @@ cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 # distance against similarity ratings
 
 
+l_participant_report <- participant_report(l_cases)
 # Categorization ----------------------------------------------------------
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
