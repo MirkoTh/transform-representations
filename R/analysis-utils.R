@@ -375,7 +375,7 @@ chance_performance_cat <- function(tbl_cat) {
 }
 
 
-add_deviations <- function(l_tbl, sim_center) {
+add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
   #' by-trial, binned, and average deviations of reproduction responses
   #' 
   #' @description calculate deviations from true coordinates to 
@@ -387,6 +387,9 @@ add_deviations <- function(l_tbl, sim_center) {
   #' @return a list with three tbls
   #' 
   tbl_cr <- l_tbl[[1]]
+  if (!is.null(subset_ids)){
+    tbl_cr <- tbl_cr %>% filter(participant_id %in% subset_ids)
+  }
   # add deviation variables
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response

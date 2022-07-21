@@ -130,7 +130,7 @@ plot_categorization_heatmaps <- function(tbl, n_cat, f_agg = "Mode") {
   # order participants in order of decreasing accuracy
   tbl <- tbl %>% arrange(desc(mean_accuracy)) %>%
     mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE)) %>% 
-    filter(n_categories == n_cat, name == f_agg)
+    filter(n_categories %in% n_cat, name == f_agg)
   
   ggplot() +
     geom_raster(data = tbl, aes(x1_true, x2_true, group = value, fill = value)) +
@@ -283,7 +283,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   # because movement should be towards closest category center for all categories
   tbl_cr_no_sq <- tbl_cr %>% filter(n_categories != 4)
   tbl_cr_sq <- tbl_cr %>% filter(n_categories == 4) 
-  tbl_cr_sq$category <- 1
+  tbl_cr_sq$category <- 2
   tbl_cr <- rbind(tbl_cr_no_sq, tbl_cr_sq)
   tbl_movement <- grouped_agg(
     tbl_cr, c(participant_id, n_categories, session, category), d_measure
@@ -298,7 +298,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       mean_distance_before = lag(mean_distance),
       movement = mean_distance_before - mean_distance,
       category = fct_relabel(
-        category, ~ ifelse(.x == 1, "Not Ellipse", "Ellipse")
+        category, ~ ifelse(.x == 1, "Residual Category", "Closed Category")
       ),
       n_categories = fct_relabel(
         n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
@@ -309,6 +309,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   pl_last <- ggplot() + 
     geom_point(data = tbl_movement, aes(mean_accuracy, movement, group = category, color = category), shape = 1) +
     geom_smooth(data = tbl_movement, method = "lm", se = FALSE, aes(mean_accuracy, movement, color = category), size = .5) +
+    geom_hline(yintercept = 0, linetype = "dotdash", alpha = .5) +
     facet_grid(n_categories ~ category) +
     scale_color_brewer(palette = "Set1", name = "Category") +
     theme_bw() +
@@ -320,6 +321,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   pl_delta <- ggplot() + 
     geom_point(data = tbl_movement, aes(mean_delta_accuracy, movement, group = category, color = category), shape = 1) +
     geom_smooth(data = tbl_movement, method = "lm", se = FALSE, aes(mean_delta_accuracy, movement, color = category), size = .5) +
+    geom_hline(yintercept = 0, linetype = "dotdash", alpha = .5) +
     facet_grid(n_categories ~ category) +
     scale_color_brewer(palette = "Set1", name = "Category") +
     theme_bw() +
@@ -329,18 +331,24 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     )
   
   tbl_data <- tbl_movement %>% 
-    filter(n_categories != "Control (Similarity)" & category == "Target Category") %>%
-    pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
+    filter(n_categories != "Control (Similarity)") %>%
+    group_by(participant_id, n_categories, session) %>%
+    summarize(
+      mean_distance = mean(mean_distance),
+      mean_accuracy = mean(mean_accuracy),
+      mean_delta_accuracy = mean(mean_delta_accuracy)
+    ) %>%
+  pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
     mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block")))
   tbl_label <- tbl_data %>%
     filter(name == "Delta Mean Accuracy\nFirst vs. Last Block") %>%
-    group_by(n_categories, category) %>% 
+    group_by(n_categories) %>% 
     summarize(no_improvement = str_c(sum(value < 0), "/", length(value)))
   
   hist_delta_last <- ggplot() +
     geom_histogram(data = tbl_data, aes(value, group = name, fill = name), alpha = .5, color = "black") +
     geom_label(data = tbl_label, aes(.425, 10, label = str_c(no_improvement, " Participants\nWithout Improvement"))) +
-    #facet_grid(n_categories ~ category) +
+    facet_grid(~ n_categories) +
     theme_bw() +
     coord_cartesian(ylim = c(0, 13)) +
     scale_fill_brewer(name = "Variable", palette = "Set1") +

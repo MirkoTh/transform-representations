@@ -69,8 +69,8 @@ l_tbl_data <-
 
 
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data, sim_center = "ellipse")
-l_tbl_data[[1]] <- l_deviations$tbl_cr
+l_deviations_all <- add_deviations(l_tbl_data, sim_center = "ellipse")
+l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
 # Set Exclusion Critera Appropriately -------------------------------------
@@ -104,8 +104,14 @@ same_n <-
   length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
 cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 
+l_tbl_data <-
+  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+l_deviations_incl <- add_deviations(l_tbl_data, sim_center = "ellipse", subset_ids = unique(tbl_cat_sim$participant_id))
+
+
 
 # Categorization ----------------------------------------------------------
+
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
 tbl_cat <-
@@ -171,15 +177,14 @@ marrangeGrob(list(l_pl[[1]], l_movement[[2]]$hist_delta_last),
              nrow = 1,
              ncol = 2)
 
-
-tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 241)
+tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 201)
 sample_ids <- tbl_cat_grid %>% group_by(participant_id) %>%
   summarize(mean_accuracy = max(mean_accuracy)) %>%
   arrange(desc(mean_accuracy))
 select_ids <- round(seq(1, nrow(sample_ids), length.out = 4))
 sample_ids <-
   as.character(sample_ids[select_ids, "participant_id"] %>% as_vector() %>% unname())
-plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), 2)
+plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), c(2, 4))
 
 ggplot(tbl_movement,
        aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
@@ -286,8 +291,12 @@ sample_ids <-
 tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   filter(participant_id %in% sample_ids) %>%
   summarize(response_mn = mean(response)) %>%
-  ggplot(aes(distance_binned, response_mn, group = participant_id)) +
-  geom_line(aes(color = participant_id))
+  ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
+  geom_line(aes(color = as.numeric(participant_id))) +
+  theme_bw() +
+  scale_color_viridis_c(name = "Participant ID") +
+  labs(x = "Euclidean Distance (Binned)",
+       y = "Average Similarity (Range: 1 - 4)")
 
 ggplot() +
   geom_smooth(
@@ -309,7 +318,7 @@ ggplot() +
   theme_bw() +
   scale_x_continuous(breaks = seq(2, 10, by = 2)) +
   coord_cartesian(ylim = c(1, 4)) +
-  labs(x = "Euclidean Distance",
+  labs(x = "Euclidean Distance (Binned)",
        y = "Average Similarity (Range: 1 - 4)")
 
 tbl_sim_agg_subj <- tbl_sim %>%
@@ -352,7 +361,7 @@ pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
 # heat map of errors over 2d space
 
 pl_heamaps <-
-  plot_2d_binned_heatmaps(l_deviations$tbl_checker, l_deviations$tbl_checker_avg)
+  plot_2d_binned_heatmaps(l_deviations_incl$tbl_checker, l_deviations_incl$tbl_checker_avg)
 
 # 1d marginal histograms & freq polys of deviations x1 and x2 before vs. after
 pl_1d_marginals <- plot_1d_marginals(tbl_cr)
