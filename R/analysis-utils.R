@@ -146,7 +146,7 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
       x1_true_binned = cut(x1_true, cutpoints, labels = FALSE),
       x2_true_binned = cut(x2_true, cutpoints, labels = FALSE),
       participant_id = substr(participant_id, 1, 6)
-    ) %>% group_by(participant_id, x1_true_binned, x2_true_binned) %>%
+    ) %>% group_by(participant_id, n_categories, x1_true_binned, x2_true_binned) %>%
     summarise(
       avg_deviation_x1x2 = mean(sqrt(x1_deviation^2 + x2_deviation^2)),
       n_trials = n()
@@ -970,19 +970,53 @@ participant_report <- function(l_cases) {
     l_cases$l_incomplete$drop$tbl_cat,
     l_cases$l_outliers$drop$tbl_cat_sim
   )
-  n_trials_cr <- tbl_cr %>% group_by(participant_id) %>%
+  n_trials_cr <- tbl_cr %>% 
+    mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>%
+             group_by(pidxncat, n_categories) %>%
     count()
-  n_trials_cat <- tbl_cat_sim %>% group_by(participant_id) %>%
+  n_trials_cat <- tbl_cat_sim %>% 
+    mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>% 
+    group_by(pidxncat, n_categories) %>%
     count()
-  pl_heatmaps <-
-    plot_2d_binned_heatmaps(l_deviations$tbl_checker, l_deviations$tbl_checker_avg)
+  
+  hist_cr <- ggplotly(
+    ggplot(n_trials_cr, aes(n)) + 
+    geom_histogram(aes(fill = pidxncat), show.legend = FALSE) +
+      facet_grid(~ n_categories) +
+      labs(
+        title = "Continuous Reproduction",
+        x = "Nr. Trials",
+        y = "Nr. Participants"
+      ) + theme_bw() +
+      theme(legend.position = "none")
+    )
+  
+  hist_cat_sim <- ggplotly(
+    ggplot(n_trials_cat, aes(n)) + 
+      geom_histogram(aes(fill = pidxncat), show.legend = FALSE) +
+      facet_grid(~ n_categories) +
+      labs(
+        title = "Categorization & Similarity",
+        x = "Nr. Trials",
+        y = "Nr. Participants"
+      ) + theme_bw() +
+      theme(legend.position = "none")
+  )
+  
+  pl_heatmaps <- plot_2d_binned_heatmaps(
+    l_deviations$tbl_checker, l_deviations$tbl_checker_avg
+    )
   tbl_cat_overview <- tbl_cat_sim %>%
     filter(n_categories > 1) %>%
     grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
     arrange(mean_rt)
   
   # categorization accuracy overview
-  pl_cat_hist <- histograms_accuracies_rts(tbl_cat_overview)
+  pl_cat_hist <- ggplotly(
+    histograms_accuracies_rts(tbl_cat_overview) + 
+      theme(legend.position = "none")
+    )
+  
   tbl_sim <- tbl_cat_sim %>%
     filter(n_categories == 1) %>%
     mutate(
@@ -1003,10 +1037,13 @@ participant_report <- function(l_cases) {
     geom_line(aes(color = participant_id)) +
     scale_color_brewer(palette = "Set1") +
     theme_bw()
+  
   l_screening <- list(
     tbl_exclusions = tbl_exclusions,
-    n_trials_cr = n_trials_cr,
-    n_trials_cat = n_trials_cat,
+    n_trials_cr = DT::datatable(n_trials_cr),
+    n_trials_cat = DT::datatable(n_trials_cat),
+    hist_cr = hist_cr,
+    hist_cat_sim = hist_cat_sim,
     pl_heatmaps = pl_heatmaps,
     pl_cat_hist = pl_cat_hist,
     pl_sim_line = pl_sim_line

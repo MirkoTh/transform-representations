@@ -16,6 +16,7 @@ library(rutils)
 library(catlearn)
 library(cmdstanr)
 library(modelr)
+library(plotly)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -70,19 +71,6 @@ l_tbl_data <-
 # add deviation from response to stimulus
 l_deviations <- add_deviations(l_tbl_data)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
-
-
-# Screen Participants -----------------------------------------------------
-
-
-l_cases <- preprocess_data(l_tbl_data, 200, 400)
-
-l_participant_report <- participant_report(l_cases)
-DT::datatable(l_participant_report$n_trials_cr)
-DT::datatable(l_participant_report$n_trials_cat)
-l_participant_report$pl_heatmaps
-l_participant_report$pl_cat_hist
-l_participant_report$pl_sim_line
 
 
 # Set Exclusion Critera Appropriately -------------------------------------

@@ -12,10 +12,11 @@ plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
   #' 
   pl <- ggplot(data = tbl_checker, aes(x1_true_binned, x2_true_binned)) +
     geom_tile(aes(fill = avg_deviation_x1x2)) +
-    scale_fill_gradient2(name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5) +
-    geom_label(
-      data = tbl_avg, aes(2, 2, label = str_c(
-        "Avg. Dev. = ", round(avg_deviation, 0), ", n trials = ", n_trials))
+    scale_fill_gradient2(
+      name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5
+      ) + geom_label(size = 3, 
+      data = tbl_avg, aes(2.5, 2, label = str_c(
+        "AvgDev=", round(avg_deviation, 0), ", Tr=", n_trials, " NCat=", n_categories))
       ) +
     labs(
       x = "Spikiness of Head (Binned)",
