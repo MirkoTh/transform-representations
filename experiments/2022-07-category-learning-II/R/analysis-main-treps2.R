@@ -69,7 +69,7 @@ l_tbl_data <-
 
 
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data)
+l_deviations <- add_deviations(l_tbl_data, sim_center = "ellipse")
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
 

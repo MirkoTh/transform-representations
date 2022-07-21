@@ -214,17 +214,27 @@ category_centers_squares <- function(n_cats) {
       tbl_borders$min_x + cumsum(x_widths),
       tbl_borders$max_x
     )
+    # save fine grid of values along decision boundaries
+    x_boundaries_no_edges <- x_boundaries[2:(length(x_boundaries) - 1)]
+    x_draws <- seq(x_boundaries[1], x_boundaries[length(x_boundaries)], by = .01)
+    x_boundaries_draws <- rbind(
+      crossing(x = x_boundaries_no_edges, y = x_draws),
+      crossing(x = x_draws, y = x_boundaries_no_edges)
+    )
+    # calculate means of categories
     x_cat_means <- map2_dbl(
       1:(length(x_boundaries)-1), 2:length(x_boundaries), 
       ~ (x_boundaries[.x] + x_boundaries[.y]) / 2
     )
-    cat_means <- crossing(x1 = x_cat_means, x2 = x_cat_means)
-    return(cat_means)    
+    cat_means <- crossing(x_mn = x_cat_means, y_mn = x_cat_means) %>%
+      mutate(category = seq(1, n_cats, by = 1)) %>%
+      relocate(category, .before = x_mn)
+    return(list(cat_means = cat_means, x_boundaries_draws = x_boundaries_draws))    
   }
   
-  l_centers_conditions <- map(n_cats, category_centers_one_condition)
-  names(l_centers_conditions) <- n_cats
-  return(l_centers_conditions)
+  l_centers_bds_conditions <- map(n_cats, category_centers_one_condition)
+  names(l_centers_bds_conditions) <- n_cats
+  return(l_centers_bds_conditions)
 }
 
 
@@ -258,32 +268,49 @@ add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
   return(tbl_cr)
 }
 
-add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simulation) {
+add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim_center) {
   #' add distance to closest category centroid
   #' 
   #' @description calculates distances to all possible category centroids 
   #' and returns min of those
   #' @param tbl_cr the tibble with the by-trial responses
-  #' @param l_centers_ellipses a nested list with two tbl_dfs containing the coordinates
-  #' of the category centers and the coordinates of a large number of samples
-  #' from the ellipse
+  #' @param l_centers a nested list with three tbl_dfs containing
+  #' @param is_simulation simulation or empirical results
+  #' @param sim_center compute distance to ellipse center or square center in the similarity condition
+  #' (a) the coordinates of the ellipse category centers
+  #' (b) the coordinates of a large number of samples from the ellipse
+  #' (c) the coordinates of the square category centers
   #' 
   #' @return the tibble with the min distance as added column
   #' 
+  closest_distance_given_several_means <- function(n_cat, mns, is_ellipse) {
+    n_cat_str <- as.character(n_cat)
+    if (is_ellipse) {n_cat_idx_max <- n_cat - 1} else {n_cat_idx_max <- n_cat}
+    tbl_d_true <- pmap(mns, euclidian_distance_to_center, tbl = l_tbl_cr[[n_cat_str]], is_response = FALSE) %>% 
+      unlist() %>% matrix(ncol = n_cat) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d_true) <- str_c("d", 1:n_cat_idx_max)
+    tbl_d_response <- pmap(mns, euclidian_distance_to_center, tbl = l_tbl_cr[[n_cat_str]], is_response = TRUE) %>% 
+      unlist() %>% matrix(ncol = n_cat_idx_max) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d_response) <- seq(1, n_cat_idx_max, by = 1)
+    col_idx_closest <- apply(tbl_d_true, 1, function(x) which(x == min(x)))
+    tbl_d_response$col_idx_closest <- col_idx_closest
+    tbl_d_response$d_closest <- apply(tbl_d_response, 1, function(x) x[1:n_cat_idx_max][x[(n_cat_idx_max+1)]])
+    d_closest <- as_vector(tbl_d_response$d_closest) %>% unname()
+    l_tbl_cr[[n_cat_str]] <- l_tbl_cr[[n_cat_str]] %>% cbind(d_closest) %>% cbind(category = col_idx_closest)
+    return(l_tbl_cr[[n_cat_str]])
+  }
   
-  l_cat_mns_ellipses <- l_centers_ellipses[[1]]
-  l_ellipses <- l_centers_ellipses[[2]]
+  l_cat_mns_ellipses <- l_centers[[1]]
+  l_ellipses <- l_centers[[2]]
+  l_cat_mns_squares <- l_centers[[3]]$`4`$cat_means
+  l_cat_bds_squares <- l_centers[[3]]$`4`$x_boundaries_draws
   
   v_categories <- unique(tbl_cr$n_categories)
   
   # split by nr of categories
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
+  
   # as only one category center, can directly compute distance from response to that center
-  # for the baseline condition the midpoint of the grid is used as the "category center"
-  tbl_d1 <- pmap(l_cat_mns_ellipses[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["1"]], is_response = TRUE) %>%
-    unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
-  colnames(tbl_d1) <- c("d_closest")
-  l_tbl_cr[["1"]] <- l_tbl_cr[["1"]] %>% cbind(tbl_d1) %>% mutate(category = 1)
   tbl_d2 <- pmap(l_cat_mns_ellipses[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
     unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   colnames(tbl_d2) <- c("d_closest")
@@ -297,20 +324,26 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simula
   
   if ("3" %in% v_categories) {
     # for three categories, we first have to compute what the closest center of a given stimulus is and then index using that id
-    tbl_d3_true <- pmap(l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
-      unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
-    colnames(tbl_d3_true) <- c("d1", "d2")
-    tbl_d3_response <- pmap(l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = TRUE) %>% 
-      unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
-    colnames(tbl_d3_response) <- seq(1:2)
-    col_idx_closest <- apply(tbl_d3_true, 1, function(x) which(x == min(x)))
-    tbl_d3_response$col_idx_closest <- col_idx_closest
-    tbl_d3_response$d_closest <- apply(tbl_d3_response, 1, function(x) x[1:2][x[3]])
-    d_closest <- as_vector(tbl_d3_response$d_closest) %>% unname()
-    l_tbl_cr[["3"]] <- l_tbl_cr[["3"]] %>% cbind(d_closest) %>%
-      left_join(l_ellipses[[2]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+    l_tbl_cr[["3"]] <- closest_distance_given_several_means(3, l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], is_ellipse = TRUE)
   }
   
+  if ("4" %in% v_categories) {
+    # for four categories, we first have to compute what the closest center of a given stimulus is and then index using that id
+    l_tbl_cr[["4"]] <- closest_distance_given_several_means(4, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
+  }
+  
+  # for the baseline condition either the midpoint of the grid 
+  # can be used as the "category center"; sim_center == "ellipse"
+  if (sim_center == "ellipse") {
+    tbl_d1 <- pmap(l_cat_mns_ellipses[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["1"]], is_response = TRUE) %>%
+      unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d1) <- c("d_closest")
+    l_tbl_cr[["1"]] <- l_tbl_cr[["1"]] %>% cbind(tbl_d1) %>% mutate(category = 1)
+  } else if (sim_center == "squares") {
+  # or the four category centers of the squares
+    l_tbl_cr[["1"]] <- closest_distance_given_several_means(1, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
+  }
+
   idxs <- names(l_tbl_cr) %in% v_categories
   tbl_cr <- rbind(reduce(l_tbl_cr[idxs], rbind)) %>% as_tibble()
   return(tbl_cr)
@@ -342,7 +375,7 @@ chance_performance_cat <- function(tbl_cat) {
 }
 
 
-add_deviations <- function(l_tbl) {
+add_deviations <- function(l_tbl, sim_center) {
   #' by-trial, binned, and average deviations of reproduction responses
   #' 
   #' @description calculate deviations from true coordinates to 
@@ -358,10 +391,12 @@ add_deviations <- function(l_tbl) {
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
-  l_centers_ellipses <- category_centers(f_stretch = 9, f_shift = 1)
-  l_centers_squares <- category_centers_squares(n_categories = c(4))
-  tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses, is_simulation = FALSE)
-  #tbl_cr$d2boundary_stim <- add_distance_to_nearest_boundary(tbl_cr, l_centers_ellipses)
+  l_centers <- category_centers(f_stretch = 9, f_shift = 1)
+  l_centers[[3]] <- category_centers_squares(n_cats = c(4))
+  # todo
+  # variable indicating whether distance in similarity condition is calculated with regards to 2 or 4 category group
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers, is_simulation = FALSE, sim_center = sim_center)
+  tbl_cr <- add_distance_to_nearest_boundary(tbl_cr, l_centers, allocate_sim = sim_center)
   
   # average deviation in binned x1-x2 grid
   l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
@@ -746,7 +781,7 @@ model {
 }
 
 
-add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
+add_distance_to_nearest_boundary <- function(tbl_df, l_centers, allocate_sim) {
   #' euclidean distance to closest category boundary
   #' 
   #' @description calculates the distance to the closest point on a
@@ -755,13 +790,36 @@ add_distance_to_nearest_boundary <- function(tbl_df, l_centers_ellipses) {
   #' 
   #' @return a vector with distances
   #'
-  x1_data <- as_vector(tbl_df$x1_true)
-  x2_data <- as_vector(tbl_df$x2_true)
-  ell <- l_centers_ellipses[[2]][[1]][[2]]
-  map2_dbl(
-    x1_data, x2_data, 
-    ~ min(sqrt((.x - ell$x_rotated)^2 + (.y - ell$y_rotated)^2))
+  l_tbl_df <- split(tbl_df, tbl_df$n_categories)
+  if(allocate_sim == "ellipse") {
+    v_cats_ell <- c("1", "2")
+    v_cats_sq <- c("4")
+  } else if (allocate_sim == "square") {
+    v_cats_ell <- c("2")
+    v_cats_sq <- c("1", "2")
+  }
+  tbl_df_ell <- reduce(l_tbl_df[v_cats_ell], rbind)
+  tbl_df_sq <- reduce(l_tbl_df[v_cats_sq], rbind)
+  # ellipse categories
+  ell_samples <- l_centers[[2]][[1]][[2]]
+  sq_samples <- l_centers[[3]]$`4`$x_boundaries_draws %>%
+    mutate(x_rotated = x, y_rotated = y)
+  
+  min_distance_to_boundary <- function(bd, x1_data, x2_data) {
+    map2_dbl(
+      x1_data, x2_data, 
+      ~ min(sqrt((.x - bd$x_rotated)^2 + (.y - bd$y_rotated)^2))
+    )
+  }
+  tbl_df_ell$d2boundary_stim <- min_distance_to_boundary(
+    ell_samples, as_vector(tbl_df_ell$x1_true), as_vector(tbl_df_ell$x2_true)
   )
+  tbl_df_sq$d2boundary_stim <- min_distance_to_boundary(
+    sq_samples, as_vector(tbl_df_sq$x1_true), as_vector(tbl_df_sq$x2_true)
+  )
+  tbl_df <- rbind(tbl_df_ell, tbl_df_sq)
+  return(tbl_df)
+  
 }
 
 
