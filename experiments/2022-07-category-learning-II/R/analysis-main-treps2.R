@@ -105,18 +105,6 @@ same_n <-
 cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 
 
-# participant summary
-# should contain
-# table with nr. trials per participant and task
-# table with excluded participants and reason
-# by-participant cr heatmaps
-# histogram of overall categorization accuracies
-# distance against similarity ratings
-
-
-
-
-
 # Categorization ----------------------------------------------------------
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
@@ -133,7 +121,7 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 
 # categorization accuracy overview
 histograms_accuracies_rts(tbl_cat_overview)
-l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
+l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat, show_errorbars = FALSE)
 # overall trajectory
 l_pl[[1]]
 # by-participant trajectories
@@ -142,8 +130,8 @@ l_pl[[2]]
 
 
 tbl_cat_agg <-
-  l_pl[[3]] %>% group_by(participant_id, trial_id_binned) %>%
-  summarize(accuracy = mean(accuracy_mn_participant)) %>% ungroup() %>%
+  l_pl[[3]] %>% group_by(participant_id, n_categories, trial_id_binned) %>%
+  summarize(accuracy = mean(accuracy_mn_participant)) %>% group_by(participant_id) %>%
   mutate(
     trial_id_binned = as.numeric(as.character(trial_id_binned)),
     trial_id_binned = trial_id_binned - mean(trial_id_binned)

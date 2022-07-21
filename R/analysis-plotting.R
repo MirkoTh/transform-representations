@@ -14,10 +14,10 @@ plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
     geom_tile(aes(fill = avg_deviation_x1x2)) +
     scale_fill_gradient2(
       name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5
-      ) + geom_label(size = 3, 
-      data = tbl_avg, aes(2.5, 2, label = str_c(
-        "AvgDev=", round(avg_deviation, 0), ", Tr=", n_trials, " NCat=", n_categories))
-      ) +
+    ) + geom_label(size = 3, 
+                   data = tbl_avg, aes(2.5, 2, label = str_c(
+                     "AvgDev=", round(avg_deviation, 0), ", Tr=", n_trials, " NCat=", n_categories))
+    ) +
     labs(
       x = "Spikiness of Head (Binned)",
       y = "Fill of Belly (Binned)"
@@ -170,20 +170,23 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
 }
 
 
-plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
+plot_categorization_accuracy_against_blocks <- function(tbl_cat, show_errorbars = TRUE) {
   #' 
   #' 
   #' @description overall categorization accuracy against blocks with 95% ci and
   #' individual categorization accuracies against blocks
   #' @param tbl_cat the tbl with by-trial category learning responses
+  #' @param show_errorbars shoul 95% cis be displayed
   #' 
   #' @return a list with two plots
   #' 
   
   tbl_cat_agg <- tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
     summarize(
-      accuracy_mn_participant = mean(accuracy)
+      accuracy_mn_participant = mean(accuracy),
+      n_categories = factor(n_categories)
     ) %>%  ungroup()
+  levels(tbl_cat_agg$n_categories) <- str_c(levels(tbl_cat_agg$n_categories), " Categories")
   
   tbl_cat_agg_ci <- summarySEwithin(
     tbl_cat_agg, "accuracy_mn_participant", c("n_categories"), 
@@ -197,10 +200,6 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
   tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
   
   pl_agg <- ggplot() + 
-    geom_errorbar(data = tbl_cat_agg_ci, aes(
-      trial_id_binned, ymin = accuracy_mn_participant - ci, 
-      ymax = accuracy_mn_participant + ci, color = cat_true
-    ), width = .25, position = dg) +
     geom_line(data = tbl_cat_agg_ci, aes(
       trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
     ), position = dg) +
@@ -219,8 +218,16 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
     scale_x_continuous(breaks = seq(2, 14, by = 2)) +
     labs(
       x = "Block of 20 Trials",
-      y = "Categorization Accuracy"
+      y = "Categorization Accuracy",
+      caption = "Note. x-axes differ between panels"
     ) + theme_bw()
+  
+  if(show_errorbars) {
+    pl_agg <- pl_agg + geom_errorbar(data = tbl_cat_agg_ci, aes(
+      trial_id_binned, ymin = accuracy_mn_participant - ci, 
+      ymax = accuracy_mn_participant + ci, color = cat_true
+    ), width = .25, position = dg)
+  }
   
   pl_indiv <- ggplot(tbl_cat_agg, aes(
     trial_id_binned, accuracy_mn_participant, group = as.numeric(participant_id)
@@ -272,7 +279,12 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
     )
   # similarity condition gets a dummy accuracy of .5
   tbl_cat_sim_last$mean_accuracy[tbl_cat_sim_last$n_categories == 1] <- .5
-  
+  # movement across square categories can be collapsed (not as in ellipse condition)
+  # because movement should be towards closest category center for all categories
+  tbl_cr_no_sq <- tbl_cr %>% filter(n_categories != 4)
+  tbl_cr_sq <- tbl_cr %>% filter(n_categories == 4) 
+  tbl_cr_sq$category <- 1
+  tbl_cr <- rbind(tbl_cr_no_sq, tbl_cr_sq)
   tbl_movement <- grouped_agg(
     tbl_cr, c(participant_id, n_categories, session, category), d_measure
   ) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
@@ -286,7 +298,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       mean_distance_before = lag(mean_distance),
       movement = mean_distance_before - mean_distance,
       category = fct_relabel(
-        category, ~ ifelse(.x == 1, "Non-Target Category", "Target Category")
+        category, ~ ifelse(.x == 1, "Not Ellipse", "Ellipse")
       ),
       n_categories = fct_relabel(
         n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
@@ -296,7 +308,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   
   pl_last <- ggplot() + 
     geom_point(data = tbl_movement, aes(mean_accuracy, movement, group = category, color = category), shape = 1) +
-    geom_smooth(data = tbl_movement, method = "lm", aes(mean_accuracy, movement, color = category), size = .5) +
+    geom_smooth(data = tbl_movement, method = "lm", se = FALSE, aes(mean_accuracy, movement, color = category), size = .5) +
     facet_grid(n_categories ~ category) +
     scale_color_brewer(palette = "Set1", name = "Category") +
     theme_bw() +
@@ -307,7 +319,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   
   pl_delta <- ggplot() + 
     geom_point(data = tbl_movement, aes(mean_delta_accuracy, movement, group = category, color = category), shape = 1) +
-    geom_smooth(data = tbl_movement, method = "lm", aes(mean_delta_accuracy, movement, color = category), size = .5) +
+    geom_smooth(data = tbl_movement, method = "lm", se = FALSE, aes(mean_delta_accuracy, movement, color = category), size = .5) +
     facet_grid(n_categories ~ category) +
     scale_color_brewer(palette = "Set1", name = "Category") +
     theme_bw() +
@@ -380,7 +392,7 @@ plot_distance_to_category_center <- function(tbl_cr, l_info = NULL) {
     labs(
       title = str_c(l_info$cat_type, ", ", l_info$sampling)
     ) +
-    theme(plot.title = element_text(size=14, face = "bold"))
+      theme(plot.title = element_text(size=14, face = "bold"))
   }
   
   return(pl)
@@ -396,7 +408,7 @@ by_participant_coefs <- function(tbl_df, iv_str, dv_str, title_str) {
   #' @param title_str the title of the plot as a string
   #' 
   
-  tbl_df_nested <- tbl_df %>% group_by(participant_id) %>% nest()
+  tbl_df_nested <- tbl_df %>% group_by(participant_id, n_categories) %>% nest()
   lm_participant <- function(tbl_df) {
     lm(str_c(dv_str, " ~ ", iv_str), data = tbl_df)
   }
@@ -414,9 +426,10 @@ by_participant_coefs <- function(tbl_df, iv_str, dv_str, title_str) {
     geom_hline(yintercept = 0,
                color = "tomato",
                size = 1) +
-    geom_point(shape = 1) +
-    geom_smooth(method = "lm", color = "lavender") +
+    geom_point(shape = 1, aes(color = n_categories)) +
+    geom_smooth(method = "lm", se = FALSE, aes(color = n_categories)) +
     geom_label(data = tbl_corr, aes(x_label, y_label, label = str_c("r = ", round(corr, 2)))) +
+    scale_color_brewer(palette = "Set1") +
     theme_bw() +
     labs(title = title_str, x = "Intercept", y = "Slope per Bin")
 }
