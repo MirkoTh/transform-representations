@@ -13,7 +13,10 @@ plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
   pl <- ggplot(data = tbl_checker, aes(x1_true_binned, x2_true_binned)) +
     geom_tile(aes(fill = avg_deviation_x1x2)) +
     scale_fill_gradient2(name = "Avg. Deviation", low = "#009966", high = "#FF6666", midpoint = 25.5) +
-    geom_label(data = tbl_avg, aes(2, 2, label = str_c("Avg. Dev. = ", round(avg_deviation, 0)))) +
+    geom_label(
+      data = tbl_avg, aes(2, 2, label = str_c(
+        "Avg. Dev. = ", round(avg_deviation, 0), ", n trials = ", n_trials))
+      ) +
     labs(
       x = "Spikiness of Head (Binned)",
       y = "Fill of Belly (Binned)"
@@ -206,10 +209,10 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat) {
     geom_point(data = tbl_cat_agg_ci, aes(
       trial_id_binned, accuracy_mn_participant, group = cat_true, color = cat_true
     ), position = dg) +
-    geom_line(
-      data = tbl_chance, aes(block, prop_chance, group = 1), 
-      linetype = "dotdash", size = .5) +
-    facet_wrap(~ n_categories) +
+    # geom_line(
+    #   data = tbl_chance, aes(block, prop_chance, group = 1), 
+    #   linetype = "dotdash", size = .5) +
+    facet_wrap(~ n_categories, scales = "free_x") +
     coord_cartesian(ylim = c(.25, 1)) +
     scale_color_brewer(name = "Category", palette = "Set1") +
     scale_x_continuous(breaks = seq(2, 14, by = 2)) +

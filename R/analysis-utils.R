@@ -17,7 +17,7 @@ fix_data_types <- function(tbl, fs, ns) {
 }
 
 
-load_data <- function(path_data) {
+load_data <- function(path_data, participants_returned) {
   #' load continuous reproduction ("cr") and category learning ("cat") data
   #' 
   #' @description loads data and declares factor and numeric columns in the two tibbles
@@ -49,6 +49,9 @@ load_data <- function(path_data) {
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
   tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
+  
+  tbl_cr <- tbl_cr %>% filter(!(participant_id %in% participants_returned))
+  tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
   l_data <- list(tbl_cr, tbl_cat)
   return(l_data)
@@ -144,9 +147,12 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
       x2_true_binned = cut(x2_true, cutpoints, labels = FALSE),
       participant_id = substr(participant_id, 1, 6)
     ) %>% group_by(participant_id, x1_true_binned, x2_true_binned) %>%
-    summarise(avg_deviation_x1x2 = mean(sqrt(x1_deviation^2 + x2_deviation^2))) %>%
+    summarise(
+      avg_deviation_x1x2 = mean(sqrt(x1_deviation^2 + x2_deviation^2)),
+      n_trials = n()
+      ) %>%
     group_by(participant_id) %>%
-    mutate(avg_deviation = mean(avg_deviation_x1x2)) %>%
+    mutate(avg_deviation = mean(avg_deviation_x1x2), n_trials = sum(n_trials)) %>%
     ungroup() %>% 
     arrange(avg_deviation) %>%
     mutate(participant_id = fct_inorder(participant_id, ordered = TRUE))
@@ -970,7 +976,8 @@ participant_report <- function(l_cases) {
     count()
   pl_heatmaps <-
     plot_2d_binned_heatmaps(l_deviations$tbl_checker, l_deviations$tbl_checker_avg)
-  tbl_cat_overview <- tbl_cat %>%
+  tbl_cat_overview <- tbl_cat_sim %>%
+    filter(n_categories > 1) %>%
     grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
     arrange(mean_rt)
   
@@ -991,7 +998,6 @@ participant_report <- function(l_cases) {
     cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
   tbl_sim$distance_binned %>% unique()
   pl_sim_line <- tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
-    filter(participant_id %in% sample_ids) %>%
     summarize(response_mn = mean(response)) %>%
     ggplot(aes(distance_binned, response_mn, group = participant_id)) +
     geom_line(aes(color = participant_id)) +

@@ -34,9 +34,35 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/"
+  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
+  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/"
 )
-l_tbls_data <- map(path_data[1], load_data)
+
+
+
+# Load Data ---------------------------------------------------------------
+
+
+returned_timeout <- c(
+  '62d8108a083717cafb747770',
+  '62d810977a3c6d676074778d',
+  '62d8109a7a9e4810935be338',
+  '62d810a165900cc3096001bd',
+  '62d810a31af42c699187f4dc',
+  '62d810b1167959341fa067bb',
+  '62d810b6a53df36f6c1ddd3c',
+  '62d810bab18f2bfe81c49f1d',
+  '62d810bae2e7a65aad2abcb0',
+  '62d810bc7031b229278b2d57',
+  '62d810ce2827840a9710adc7',
+  '62d810fbc451b68c780d36b6',
+  '62d811eeb4b6869415c51742',
+  '62d8148bd4b1733c1a7c59e6',
+  '62d826c15d3dccc2ffebdca1'
+  
+)
+
+l_tbls_data <- map(path_data[2], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
@@ -45,7 +71,24 @@ l_tbl_data <-
 l_deviations <- add_deviations(l_tbl_data)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_cases <- preprocess_data(l_tbl_data, 100, 400)
+
+# Screen Participants -----------------------------------------------------
+
+
+l_cases <- preprocess_data(l_tbl_data, 200, 400)
+
+l_participant_report <- participant_report(l_cases)
+DT::datatable(l_participant_report$n_trials_cr)
+DT::datatable(l_participant_report$n_trials_cat)
+l_participant_report$pl_heatmaps
+l_participant_report$pl_cat_hist
+l_participant_report$pl_sim_line
+
+
+# Set Exclusion Critera Appropriately -------------------------------------
+
+
+l_cases <- preprocess_data(l_tbl_data, 192, 394)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -83,7 +126,9 @@ cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 # distance against similarity ratings
 
 
-l_participant_report <- participant_report(l_cases)
+
+
+
 # Categorization ----------------------------------------------------------
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
