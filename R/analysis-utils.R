@@ -96,7 +96,7 @@ exclude_incomplete_datasets <- function(l_tbl, n_resp_cr, n_resp_cat) {
   return(list(
     keep = list(tbl_cr = tbl_cr_incl, tbl_cat = tbl_cat_incl), 
     drop = list(tbl_cr = tbl_cr_excl, tbl_cat = tbl_cat_excl)
-    ))
+  ))
 }
 
 
@@ -150,7 +150,7 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
     summarise(
       avg_deviation_x1x2 = mean(sqrt(x1_deviation^2 + x2_deviation^2)),
       n_trials = n()
-      ) %>%
+    ) %>%
     group_by(participant_id) %>%
     mutate(avg_deviation = mean(avg_deviation_x1x2), n_trials = sum(n_trials)) %>%
     ungroup() %>% 
@@ -193,6 +193,38 @@ category_centers <- function(f_stretch, f_shift) {
   cat_3_mns <- category_means(cat_boundaries_3)
   l_cat_mns <- list(cat_2_mns, cat_3_mns)
   return(list(l_cat_mns, l_ellipses))
+}
+
+
+
+category_centers_squares <- function(n_cats) {
+  #' helper function to define square category centers
+  #' 
+  #' @description returns x1 and x2 means of the square categories
+  #' @param n_cats vector with total number of categories for all square conditions
+  #' 
+  #' @return a tbl_df with the two dimensional centers of the categories
+  #'
+  category_centers_one_condition <- function(n_cats) {
+    tbl_borders <- tibble(max_x = 100, min_x = 1)
+    n_segments <- sqrt(n_cats)
+    x_widths <- rep((tbl_borders$max_x - tbl_borders$min_x) / n_segments, n_segments - 1)
+    x_boundaries <- c(
+      tbl_borders$min_x,
+      tbl_borders$min_x + cumsum(x_widths),
+      tbl_borders$max_x
+    )
+    x_cat_means <- map2_dbl(
+      1:(length(x_boundaries)-1), 2:length(x_boundaries), 
+      ~ (x_boundaries[.x] + x_boundaries[.y]) / 2
+    )
+    cat_means <- crossing(x1 = x_cat_means, x2 = x_cat_means)
+    return(cat_means)    
+  }
+  
+  l_centers_conditions <- map(n_cats, category_centers_one_condition)
+  names(l_centers_conditions) <- n_cats
+  return(l_centers_conditions)
 }
 
 
@@ -239,7 +271,7 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simula
   #' @return the tibble with the min distance as added column
   #' 
   
-  l_cat_mns <- l_centers_ellipses[[1]]
+  l_cat_mns_ellipses <- l_centers_ellipses[[1]]
   l_ellipses <- l_centers_ellipses[[2]]
   
   v_categories <- unique(tbl_cr$n_categories)
@@ -248,11 +280,11 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simula
   l_tbl_cr <- split(tbl_cr, tbl_cr$n_categories)
   # as only one category center, can directly compute distance from response to that center
   # for the baseline condition the midpoint of the grid is used as the "category center"
-  tbl_d1 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["1"]], is_response = TRUE) %>%
+  tbl_d1 <- pmap(l_cat_mns_ellipses[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["1"]], is_response = TRUE) %>%
     unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   colnames(tbl_d1) <- c("d_closest")
   l_tbl_cr[["1"]] <- l_tbl_cr[["1"]] %>% cbind(tbl_d1) %>% mutate(category = 1)
-  tbl_d2 <- pmap(l_cat_mns[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
+  tbl_d2 <- pmap(l_cat_mns_ellipses[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["2"]], is_response = TRUE) %>%
     unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   colnames(tbl_d2) <- c("d_closest")
   
@@ -265,10 +297,10 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers_ellipses, is_simula
   
   if ("3" %in% v_categories) {
     # for three categories, we first have to compute what the closest center of a given stimulus is and then index using that id
-    tbl_d3_true <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
+    tbl_d3_true <- pmap(l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = FALSE) %>% 
       unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
     colnames(tbl_d3_true) <- c("d1", "d2")
-    tbl_d3_response <- pmap(l_cat_mns[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = TRUE) %>% 
+    tbl_d3_response <- pmap(l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["3"]], is_response = TRUE) %>% 
       unlist() %>% matrix(ncol = 2) %>% as.data.frame() %>% tibble()
     colnames(tbl_d3_response) <- seq(1:2)
     col_idx_closest <- apply(tbl_d3_true, 1, function(x) which(x == min(x)))
@@ -327,7 +359,8 @@ add_deviations <- function(l_tbl) {
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
   l_centers_ellipses <- category_centers(f_stretch = 9, f_shift = 1)
-  #tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses, is_simulation = FALSE)
+  l_centers_squares <- category_centers_squares(n_categories = c(4))
+  tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers_ellipses, is_simulation = FALSE)
   #tbl_cr$d2boundary_stim <- add_distance_to_nearest_boundary(tbl_cr, l_centers_ellipses)
   
   # average deviation in binned x1-x2 grid
@@ -825,7 +858,7 @@ pairwise_distances <- function(tbl_cr) {
   #' @return a nested list containing a list with all distance matrices, that list
   #' reduced to a tbl_df, and the distance matrices plotted 
   #' for a few sample participants in both groups
-
+  
   # get by-participant distance matrices
   p_id <- unique(tbl_cr$participant_id)
   tbl_groups <- tbl_cr %>% group_by(participant_id, n_categories) %>% 
@@ -972,7 +1005,7 @@ participant_report <- function(l_cases) {
   )
   n_trials_cr <- tbl_cr %>% 
     mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>%
-             group_by(pidxncat, n_categories) %>%
+    group_by(pidxncat, n_categories) %>%
     count()
   n_trials_cat <- tbl_cat_sim %>% 
     mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>% 
@@ -981,7 +1014,7 @@ participant_report <- function(l_cases) {
   
   hist_cr <- ggplotly(
     ggplot(n_trials_cr, aes(n)) + 
-    geom_histogram(aes(fill = pidxncat), show.legend = FALSE) +
+      geom_histogram(aes(fill = pidxncat), show.legend = FALSE) +
       facet_grid(~ n_categories) +
       labs(
         title = "Continuous Reproduction",
@@ -989,7 +1022,7 @@ participant_report <- function(l_cases) {
         y = "Nr. Participants"
       ) + theme_bw() +
       theme(legend.position = "none")
-    )
+  )
   
   hist_cat_sim <- ggplotly(
     ggplot(n_trials_cat, aes(n)) + 
@@ -1005,7 +1038,7 @@ participant_report <- function(l_cases) {
   
   pl_heatmaps <- plot_2d_binned_heatmaps(
     l_deviations$tbl_checker, l_deviations$tbl_checker_avg
-    )
+  )
   tbl_cat_overview <- tbl_cat_sim %>%
     filter(n_categories > 1) %>%
     grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
@@ -1015,7 +1048,7 @@ participant_report <- function(l_cases) {
   pl_cat_hist <- ggplotly(
     histograms_accuracies_rts(tbl_cat_overview) + 
       theme(legend.position = "none")
-    )
+  )
   
   tbl_sim <- tbl_cat_sim %>%
     filter(n_categories == 1) %>%
