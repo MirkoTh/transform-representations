@@ -91,7 +91,7 @@ exclude_incomplete_datasets <- function(l_tbl, n_resp_cr, n_resp_cat) {
   tbl_cat_excl <- tbl_cat %>% 
     filter(participant_id %in% participants_before[!(participants_before %in% participants_after)])
   
-  cat(str_c(length(participants_before) - length(participants_after), " incomplete datasets\n"))
+  cat(str_c("\n", length(participants_before) - length(participants_after), " incomplete data sets (i.e., one data set per participant)\n"))
   
   return(list(
     keep = list(tbl_cr = tbl_cr_incl, tbl_cat = tbl_cat_incl), 
@@ -340,10 +340,10 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
     colnames(tbl_d1) <- c("d_closest")
     l_tbl_cr[["1"]] <- l_tbl_cr[["1"]] %>% cbind(tbl_d1) %>% mutate(category = 1)
   } else if (sim_center == "squares") {
-  # or the four category centers of the squares
+    # or the four category centers of the squares
     l_tbl_cr[["1"]] <- closest_distance_given_several_means(1, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
   }
-
+  
   idxs <- names(l_tbl_cr) %in% v_categories
   tbl_cr <- rbind(reduce(l_tbl_cr[idxs], rbind)) %>% as_tibble()
   return(tbl_cr)
@@ -1058,20 +1058,49 @@ participant_report <- function(l_cases) {
     l_cases$l_incomplete$drop$tbl_cr,
     l_cases$l_outliers$drop$tbl_cr
   )
+  n_participants_unique_after_practice <- tbl_cr %>% 
+    count(participant_id, n_categories) %>% count(n_categories) %>%
+    mutate("Dropout Stage" = "After Practice")
   tbl_cat_sim <- rbind(
     l_cases$l_guessing$keep$tbl_cat_sim,
     l_cases$l_guessing$drop$tbl_cat,
     l_cases$l_incomplete$drop$tbl_cat,
     l_cases$l_outliers$drop$tbl_cat_sim
   )
+  n_participants_unique_after_cr_session1 <- tbl_cat_sim %>% 
+    count(participant_id, n_categories) %>% count(n_categories) %>%
+    mutate("Dropout Stage" = "After CR S1")
   n_trials_cr <- tbl_cr %>% 
     mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>%
-    group_by(pidxncat, n_categories) %>%
-    count()
+    group_by(participant_id, n_categories, pidxncat) %>%
+    count() %>% group_by(participant_id) %>%
+    mutate(attempt_nr = row_number(pidxncat)) %>% ungroup()
   n_trials_cat <- tbl_cat_sim %>% 
     mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>% 
-    group_by(pidxncat, n_categories) %>%
-    count()
+    group_by(participant_id, n_categories, pidxncat) %>%
+    count() %>% group_by(participant_id) %>%
+    mutate(attempt_nr = row_number(pidxncat)) %>% ungroup()
+  # the following thx is hand-adjusted
+  n_participants_unique_after_task2 <- n_trials_cat %>% filter(n >= 394) %>% 
+    count(n_categories) %>%
+    mutate("Dropout Stage" = "After Task 2")
+  n_participants_unique_after_cr_session2 <- n_trials_cr %>% filter(n >= 192) %>%
+    count(n_categories) %>%
+    mutate("Dropout Stage" = "After CR S2")
+  tbl_dropouts <- rbind(
+      n_participants_unique_after_practice,
+      n_participants_unique_after_cr_session1,
+      n_participants_unique_after_task2,
+      n_participants_unique_after_cr_session2
+    )
+  tbl_dropouts$`Dropout Stage` <- fct_inorder(tbl_dropouts$`Dropout Stage`)
+  hist_dropouts <- ggplot(tbl_dropouts, aes(`Dropout Stage`, n)) +
+    geom_col(aes(fill = `Dropout Stage`), show.legend = FALSE) +
+    geom_label(aes(y = n - 1, label = str_c("N = ", n))) +
+    facet_wrap(~ n_categories) +
+    scale_fill_brewer(palette = "Set1") +
+    theme_bw() +
+    labs(x = "Dropout Stage", y = "Nr. Participants Remaining")
   
   hist_cr <- ggplotly(
     ggplot(n_trials_cr, aes(n)) + 
@@ -1136,6 +1165,7 @@ participant_report <- function(l_cases) {
     tbl_exclusions = tbl_exclusions,
     n_trials_cr = DT::datatable(n_trials_cr),
     n_trials_cat = DT::datatable(n_trials_cat),
+    hist_dropouts = hist_dropouts,
     hist_cr = hist_cr,
     hist_cat_sim = hist_cat_sim,
     pl_heatmaps = pl_heatmaps,

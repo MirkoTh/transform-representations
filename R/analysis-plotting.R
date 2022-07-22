@@ -455,13 +455,14 @@ plot_distance_from_decision_boundary <- function(tbl_cr, nbins) {
   tbl_cr$d2boundary_stim_cut <- cut(tbl_cr$d2boundary_stim, nbins, labels = FALSE)
   tbl_cr <- tbl_cr %>% mutate(
     session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")),
-    category = factor(category, labels = c("Non-Target", "Target"))
+    category = factor(category, labels = c("Residual", "Closed 1", "Closed 2", "Closed 3"))
   )
   dg <- position_dodge(width = .2)
   ggplot(
-    grouped_agg(tbl_cr, c(session, category, d2boundary_stim_cut), d_closest), 
+    grouped_agg(tbl_cr, c(session, n_categories, category, d2boundary_stim_cut), d_closest), 
     aes(d2boundary_stim_cut, mean_d_closest, group = session)) +
     geom_point(aes(color = category, shape = session), position = dg) +
+    facet_wrap(~ n_categories) +
     theme_bw() +
     scale_color_brewer(palette = "Set1", name = "") +
     scale_shape_discrete(name = "") +

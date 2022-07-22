@@ -73,10 +73,10 @@ l_deviations_all <- add_deviations(l_tbl_data, sim_center = "ellipse")
 l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
-# Set Exclusion Critera Appropriately -------------------------------------
+# Set Exclusion Criteria Appropriately ------------------------------------
 
 
-l_cases <- preprocess_data(l_tbl_data, 192, 394)
+l_cases <- preprocess_data(l_tbl_data, 1, 1)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -112,8 +112,14 @@ l_deviations_incl <- add_deviations(l_tbl_data, sim_center = "ellipse", subset_i
 
 # Categorization ----------------------------------------------------------
 
+# occasionally, the same trial was saved twice
+tbl_cat_sim <- tbl_cat_sim %>%
+  group_by(participant_id, trial_id) %>%
+  mutate(rwn = row_number(participant_id)) %>%
+  filter(rwn == 1) %>% select(-rwn)
 
-tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
+
+tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 0)
 tbl_cat <-
   tbl_cat_sim %>% filter(n_categories %in% c(2, 4), as.numeric(as.character(trial_id_binned)) <= 15)
 
@@ -127,7 +133,7 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 
 # categorization accuracy overview
 histograms_accuracies_rts(tbl_cat_overview)
-l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat, show_errorbars = FALSE)
+l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat, show_errorbars = TRUE)
 # overall trajectory
 l_pl[[1]]
 # by-participant trajectories

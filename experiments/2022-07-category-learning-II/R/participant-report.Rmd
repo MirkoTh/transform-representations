@@ -17,7 +17,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r }
-getwd()
+
 library(jsonlite)
 library(tidyverse)
 library(grid)
@@ -81,18 +81,20 @@ l_tbl_data <-
 
 
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data)
+l_deviations <- add_deviations(l_tbl_data, sim_center = "ellipse")
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
 
 # Screen Participants -----------------------------------------------------
 
-
-l_cases <- preprocess_data(l_tbl_data, 200, 400)
+suppressMessages(
+  l_cases <- preprocess_data(l_tbl_data, 200, 400)
+)
 
 l_participant_report <- participant_report(l_cases)
 l_participant_report$n_trials_cr
 l_participant_report$n_trials_cat
+l_participant_report$hist_dropouts
 l_participant_report$hist_cr
 l_participant_report$hist_cat_sim
 l_participant_report$pl_heatmaps
