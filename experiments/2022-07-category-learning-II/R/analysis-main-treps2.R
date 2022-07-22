@@ -339,18 +339,18 @@ by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM S
 
 
 # Continuous Reproduction ----------------------------------------------------------
-
-doubles <- tbl_cr %>% count(participant_id) %>% filter(n > 200)
-missings <- tbl_cr %>% count(participant_id) %>% filter(n < 200)
-
-# only use first trial for a session when participants re-started the experiment
-tbl_first_attempt <- tbl_cr %>% filter(participant_id %in% doubles$participant_id) %>% 
-  group_by(participant_id, session, stim_id) %>%
-  mutate(rwn = row_number(stim_id)) %>%
-  filter(rwn == 1)
-tbl_cr <- tbl_cr %>% filter(!(participant_id %in% doubles$participant_id))
-tbl_cr <- tbl_cr %>% filter(!(participant_id %in% missings$participant_id))
-tbl_cr <- rbind(tbl_cr, tbl_first_attempt %>% select(-rwn))
+# 
+# doubles <- tbl_cr %>% count(participant_id) %>% filter(n > 200)
+# missings <- tbl_cr %>% count(participant_id) %>% filter(n < 200)
+# 
+# # only use first trial for a session when participants re-started the experiment
+# tbl_first_attempt <- tbl_cr %>% filter(participant_id %in% doubles$participant_id) %>% 
+#   group_by(participant_id, session, stim_id) %>%
+#   mutate(rwn = row_number(stim_id)) %>%
+#   filter(rwn == 1)
+# tbl_cr <- tbl_cr %>% filter(!(participant_id %in% doubles$participant_id))
+# tbl_cr <- tbl_cr %>% filter(!(participant_id %in% missings$participant_id))
+# tbl_cr <- rbind(tbl_cr, tbl_first_attempt %>% select(-rwn))
 
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
@@ -368,7 +368,7 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
 levels(tbl_cr$n_categories) <- c("Similarity", "2 Categories", "4 Categories")
 pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
-pl_empirical
+pl_empirical + labs(title = str_c("Distance in Similarity Condition = ", sim_center))
 plot_distance_from_decision_boundary(tbl_cr, 10)
 
 

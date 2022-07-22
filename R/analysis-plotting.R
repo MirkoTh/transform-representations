@@ -372,9 +372,9 @@ plot_distance_to_category_center <- function(tbl_cr, sim_center, l_info = NULL) 
   
   if(sim_center == "ellipse") {
     tbl_cr_sq <- tbl_cr %>% filter(n_categories == "4 Categories")
-    tbl_ell <- tbl_cr %>% filter(n_categories != "4 Categories")
+    tbl_ell <- tbl_cr %>% filter(n_categories %in% c("Similarity", "2 Categories"))
   } else if (sim_center == "square") {
-    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c("1 Categories", "4 Categories"))
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c("Similarity", "4 Categories"))
     tbl_ell <- tbl_cr %>% filter(n_categories == "2 Categories")
   }
   tbl_cr_sq$category <- 2
