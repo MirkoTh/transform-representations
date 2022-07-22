@@ -288,8 +288,8 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim
   } else if (sim_center == "square") {
     tbl_cr_no_sq <- tbl_cr %>% filter(n_categories == 2)
     tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c(1, 4))
-    tbl_cr_sq$category <- 2
   }
+  tbl_cr_sq$category <- 2
   tbl_cr <- rbind(tbl_cr_no_sq, tbl_cr_sq)
   tbl_movement <- grouped_agg(
     tbl_cr, c(participant_id, n_categories, session, category), d_measure
@@ -368,7 +368,17 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim
 }
 
 
-plot_distance_to_category_center <- function(tbl_cr, l_info = NULL) {
+plot_distance_to_category_center <- function(tbl_cr, sim_center, l_info = NULL) {
+  
+  if(sim_center == "ellipse") {
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories == "4 Categories")
+    tbl_ell <- tbl_cr %>% filter(n_categories != "4 Categories")
+  } else if (sim_center == "square") {
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c("1 Categories", "4 Categories"))
+    tbl_ell <- tbl_cr %>% filter(n_categories == "2 Categories")
+  }
+  tbl_cr_sq$category <- 2
+  tbl_cr <- rbind(tbl_ell, tbl_cr_sq)
   tbl_cr_agg <- tbl_cr %>% group_by(n_categories, participant_id, session, category) %>%
     summarize(dmin_mn_participant = mean(d_closest)) %>%
     group_by(n_categories, session, category) %>%

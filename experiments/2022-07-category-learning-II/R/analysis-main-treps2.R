@@ -39,7 +39,11 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/"
 )
 
-sim_center <- "square"
+# flag defining whether distance to category center in similarity condition
+# is computed using ellipse center (i.e., middle of feature space) or
+# category centers of four square categories
+
+sim_center <- "ellipse"
 
 # Load Data ---------------------------------------------------------------
 
@@ -60,7 +64,6 @@ returned_timeout <- c(
   '62d811eeb4b6869415c51742',
   '62d8148bd4b1733c1a7c59e6',
   '62d826c15d3dccc2ffebdca1'
-  
 )
 
 l_tbls_data <- map(path_data[1:2], load_data, participants_returned = returned_timeout)
@@ -162,7 +165,7 @@ tbl_cat_agg <-
   mutate(participant_id_num = row_number(participant_id))
 
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest")
+  movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest", sim_center)
 tbl_movement <- l_movement[[1]]
 # plot movement towards category center against task2 accuracy
 l_movement[[2]]
@@ -364,7 +367,8 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
 levels(tbl_cr$n_categories) <- c("Similarity", "2 Categories", "4 Categories")
-pl_empirical <- plot_distance_to_category_center(tbl_cr)
+pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+pl_empirical
 plot_distance_from_decision_boundary(tbl_cr, 10)
 
 
