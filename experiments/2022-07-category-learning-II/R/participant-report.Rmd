@@ -75,7 +75,7 @@ returned_timeout <- c(
   
 )
 
-l_tbls_data <- map(path_data[2], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[1:2], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 

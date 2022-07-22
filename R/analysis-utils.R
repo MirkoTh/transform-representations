@@ -283,18 +283,17 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
   #' 
   #' @return the tibble with the min distance as added column
   #' 
-  closest_distance_given_several_means <- function(n_cat, mns, is_ellipse) {
+  closest_distance_given_several_means <- function(n_cat, n_cat_compare, mns, is_ellipse) {
     n_cat_str <- as.character(n_cat)
-    if (is_ellipse) {n_cat_idx_max <- n_cat - 1} else {n_cat_idx_max <- n_cat}
     tbl_d_true <- pmap(mns, euclidian_distance_to_center, tbl = l_tbl_cr[[n_cat_str]], is_response = FALSE) %>% 
-      unlist() %>% matrix(ncol = n_cat) %>% as.data.frame() %>% tibble()
-    colnames(tbl_d_true) <- str_c("d", 1:n_cat_idx_max)
+      unlist() %>% matrix(ncol = n_cat_compare) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d_true) <- str_c("d", 1:n_cat_compare)
     tbl_d_response <- pmap(mns, euclidian_distance_to_center, tbl = l_tbl_cr[[n_cat_str]], is_response = TRUE) %>% 
-      unlist() %>% matrix(ncol = n_cat_idx_max) %>% as.data.frame() %>% tibble()
-    colnames(tbl_d_response) <- seq(1, n_cat_idx_max, by = 1)
+      unlist() %>% matrix(ncol = n_cat_compare) %>% as.data.frame() %>% tibble()
+    colnames(tbl_d_response) <- seq(1, n_cat_compare, by = 1)
     col_idx_closest <- apply(tbl_d_true, 1, function(x) which(x == min(x)))
     tbl_d_response$col_idx_closest <- col_idx_closest
-    tbl_d_response$d_closest <- apply(tbl_d_response, 1, function(x) x[1:n_cat_idx_max][x[(n_cat_idx_max+1)]])
+    tbl_d_response$d_closest <- apply(tbl_d_response, 1, function(x) x[1:n_cat_compare][x[(n_cat_compare+1)]])
     d_closest <- as_vector(tbl_d_response$d_closest) %>% unname()
     l_tbl_cr[[n_cat_str]] <- l_tbl_cr[[n_cat_str]] %>% cbind(d_closest) %>% cbind(category = col_idx_closest)
     return(l_tbl_cr[[n_cat_str]])
@@ -324,12 +323,12 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
   
   if ("3" %in% v_categories) {
     # for three categories, we first have to compute what the closest center of a given stimulus is and then index using that id
-    l_tbl_cr[["3"]] <- closest_distance_given_several_means(3, l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], is_ellipse = TRUE)
+    l_tbl_cr[["3"]] <- closest_distance_given_several_means(3, 2, l_cat_mns_ellipses[[2]][, c("x_mn", "y_mn")], is_ellipse = TRUE)
   }
   
   if ("4" %in% v_categories) {
     # for four categories, we first have to compute what the closest center of a given stimulus is and then index using that id
-    l_tbl_cr[["4"]] <- closest_distance_given_several_means(4, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
+    l_tbl_cr[["4"]] <- closest_distance_given_several_means(4, 4, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
   }
   
   # for the baseline condition either the midpoint of the grid 
@@ -339,9 +338,9 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
       unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
     colnames(tbl_d1) <- c("d_closest")
     l_tbl_cr[["1"]] <- l_tbl_cr[["1"]] %>% cbind(tbl_d1) %>% mutate(category = 1)
-  } else if (sim_center == "squares") {
+  } else if (sim_center == "square") {
     # or the four category centers of the squares
-    l_tbl_cr[["1"]] <- closest_distance_given_several_means(1, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
+    l_tbl_cr[["1"]] <- closest_distance_given_several_means(1, 4, l_cat_mns_squares[, c("x_mn", "y_mn")], is_ellipse = FALSE)
   }
   
   idxs <- names(l_tbl_cr) %in% v_categories
@@ -383,6 +382,10 @@ add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
   #' further averaged over bins
   #' @param l_tbl a list containing the tibble with the by-trial cr 
   #' and sim/cat responses
+  #' @param sim_center can be either of "ellipse" or "square" to 
+  #' define whether distances in similarity condition are 
+  #' computed with regards to ellipse or square categories
+  #' @param subset_ids a subset of participants to filter
   #' 
   #' @return a list with three tbls
   #' 
@@ -799,7 +802,7 @@ add_distance_to_nearest_boundary <- function(tbl_df, l_centers, allocate_sim) {
     v_cats_sq <- c("4")
   } else if (allocate_sim == "square") {
     v_cats_ell <- c("2")
-    v_cats_sq <- c("1", "2")
+    v_cats_sq <- c("1", "4")
   }
   tbl_df_ell <- reduce(l_tbl_df[v_cats_ell], rbind)
   tbl_df_sq <- reduce(l_tbl_df[v_cats_sq], rbind)
@@ -1094,11 +1097,12 @@ participant_report <- function(l_cases) {
       n_participants_unique_after_cr_session2
     )
   tbl_dropouts$`Dropout Stage` <- fct_inorder(tbl_dropouts$`Dropout Stage`)
+  tbl_dropouts$n_categories <- str_c(tbl_dropouts$n_categories, " Categories")
   hist_dropouts <- ggplot(tbl_dropouts, aes(`Dropout Stage`, n)) +
-    geom_col(aes(fill = `Dropout Stage`), show.legend = FALSE) +
+    geom_col(aes(fill = as.numeric(`Dropout Stage`)), show.legend = FALSE) +
     geom_label(aes(y = n - 1, label = str_c("N = ", n))) +
     facet_wrap(~ n_categories) +
-    scale_fill_brewer(palette = "Set1") +
+    scale_fill_gradient(low = "#FF9999", high = "#339999") +
     theme_bw() +
     labs(x = "Dropout Stage", y = "Nr. Participants Remaining")
   
@@ -1155,11 +1159,15 @@ participant_report <- function(l_cases) {
     cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
   tbl_sim$distance_binned %>% unique()
   pl_sim_line <- tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
-    summarize(response_mn = mean(response)) %>%
-    ggplot(aes(distance_binned, response_mn, group = participant_id)) +
-    geom_line(aes(color = participant_id)) +
-    scale_color_brewer(palette = "Set1") +
-    theme_bw()
+    summarize(response_mn = mean(response), n = n()) %>%
+    ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
+    geom_point(aes(color = as.numeric(participant_id), size = n)) +
+    geom_line(aes(color = as.numeric(participant_id)), show.legend = FALSE) +
+    scale_color_viridis_c(guide = "none") +
+    scale_size_area(max_size = 4, name = "Nr. Trials") +
+    theme_bw() +
+    labs(x = "Euclidean Distance (Binned)",
+         y = "Average Similarity (Range: 1 - 4)")
   
   l_screening <- list(
     tbl_exclusions = tbl_exclusions,

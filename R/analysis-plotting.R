@@ -159,9 +159,9 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
       name = fct_relabel(name, ~ c("Mean Accuracy", "Mean RT (s)"))
     ) %>%
     ggplot(aes(value, group = participant_id)) +
-    geom_histogram(aes(group = participant_id, fill = participant_id), color = "white") +
+    geom_histogram(aes(fill = n), color = "white") +
     facet_grid(n_categories ~ name, scale = "free_x") +
-    scale_fill_viridis_d(name = "Participant ID")  +
+    scale_fill_viridis_c(name = "Nr. Trials")  +
     theme_dark() +
     labs(
       x = "Overall Accuracy",
@@ -247,7 +247,7 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat, show_errorbars 
 }
 
 
-movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
+movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim_center) {
   #' 
   #' @description calculate and plot average movement of reproduction
   #' responses towards category center
@@ -281,9 +281,15 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
   tbl_cat_sim_last$mean_accuracy[tbl_cat_sim_last$n_categories == 1] <- .5
   # movement across square categories can be collapsed (not as in ellipse condition)
   # because movement should be towards closest category center for all categories
-  tbl_cr_no_sq <- tbl_cr %>% filter(n_categories != 4)
-  tbl_cr_sq <- tbl_cr %>% filter(n_categories == 4) 
-  tbl_cr_sq$category <- 2
+  if (sim_center == "ellipse") {
+    tbl_cr_no_sq <- tbl_cr %>% filter(n_categories != 4)
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories == 4) 
+    
+  } else if (sim_center == "square") {
+    tbl_cr_no_sq <- tbl_cr %>% filter(n_categories == 2)
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c(1, 4))
+    tbl_cr_sq$category <- 2
+  }
   tbl_cr <- rbind(tbl_cr_no_sq, tbl_cr_sq)
   tbl_movement <- grouped_agg(
     tbl_cr, c(participant_id, n_categories, session, category), d_measure
@@ -300,6 +306,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       category = fct_relabel(
         category, ~ ifelse(.x == 1, "Residual Category", "Closed Category")
       ),
+      n_categories = fct_inseq(n_categories),
       n_categories = fct_relabel(
         n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))
       )
@@ -338,7 +345,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure) {
       mean_accuracy = mean(mean_accuracy),
       mean_delta_accuracy = mean(mean_delta_accuracy)
     ) %>%
-  pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
+    pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
     mutate(name = fct_inorder(name), name = fct_relabel(name, ~ c("Mean Accuracy (Last Block)", "Delta Mean Accuracy\nFirst vs. Last Block")))
   tbl_label <- tbl_data %>%
     filter(name == "Delta Mean Accuracy\nFirst vs. Last Block") %>%
@@ -369,8 +376,7 @@ plot_distance_to_category_center <- function(tbl_cr, l_info = NULL) {
               dmin_se = sd(dmin_mn_participant)/sqrt(length(unique(tbl_cr$participant_id)))) %>%
     ungroup() %>%
     mutate(
-      session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")),
-      category = factor(category, labels = c("Non-Target", "Target"))
+      session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning"))
     )
   
   pl <- ggplot() +

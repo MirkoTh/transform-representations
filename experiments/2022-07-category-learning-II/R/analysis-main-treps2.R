@@ -39,7 +39,7 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/"
 )
 
-
+sim_center <- "square"
 
 # Load Data ---------------------------------------------------------------
 
@@ -63,20 +63,20 @@ returned_timeout <- c(
   
 )
 
-l_tbls_data <- map(path_data[2], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[1:2], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
 
 # add deviation from response to stimulus
-l_deviations_all <- add_deviations(l_tbl_data, sim_center = "ellipse")
+l_deviations_all <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
 # Set Exclusion Criteria Appropriately ------------------------------------
 
 
-l_cases <- preprocess_data(l_tbl_data, 1, 1)
+l_cases <- preprocess_data(l_tbl_data, 191, 1)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -106,7 +106,7 @@ cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-l_deviations_incl <- add_deviations(l_tbl_data, sim_center = "ellipse", subset_ids = unique(tbl_cat_sim$participant_id))
+l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
 
 
 
@@ -160,18 +160,6 @@ tbl_cat_agg <-
     trial_id_binned = scale(trial_id_binned)[, 1]
   ) %>% group_by(cat_true, trial_id_binned) %>%
   mutate(participant_id_num = row_number(participant_id))
-
-library(nlme)
-m_rs <-
-  lme(
-    accuracy_mn ~ cat_true * trial_id_binned,
-    random = ~ 1 + cat_true + trial_id_binned |
-      participant_id,
-    data = tbl_cat_agg
-  )
-summary(m_rs)
-anova(m_rs)
-tbl_cat_agg$preds <- predict(m_rs, tbl_cat_agg)
 
 l_movement <-
   movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest")
@@ -296,9 +284,10 @@ sample_ids <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   filter(participant_id %in% sample_ids) %>%
-  summarize(response_mn = mean(response)) %>%
+  summarize(response_mn = mean(response), n = n()) %>%
   ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
   geom_line(aes(color = as.numeric(participant_id))) +
+  geom_point(aes(color = as.numeric(participant_id), size = n)) +
   theme_bw() +
   scale_color_viridis_c(name = "Participant ID") +
   labs(x = "Euclidean Distance (Binned)",
@@ -373,9 +362,8 @@ pl_heamaps <-
 pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 
-tbl_cr$n_categories <-
-  factor(tbl_cr$n_categories,
-         labels = c("Control Group", "Experimental Group"))
+tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
+levels(tbl_cr$n_categories) <- c("Similarity", "2 Categories", "4 Categories")
 pl_empirical <- plot_distance_to_category_center(tbl_cr)
 plot_distance_from_decision_boundary(tbl_cr, 10)
 
