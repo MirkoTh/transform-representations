@@ -38,8 +38,8 @@ function setup_experiment(condition_id) {
         n_trial_categorization_lag: 50, //8, //last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
-        thx_cat_overall: .75,//.2,//
-        thx_cat_lag: .8,//.2,//
+        thx_cat_overall: .7,//.2,//.75 for treps2 pilot I & II
+        thx_cat_lag: .75,//.2,//.8 for treps2 pilot I & II
         thx_sim_corr: 0,
         n_training_nocount: 40 //4 // 
     }
@@ -72,7 +72,7 @@ function setup_experiment(condition_id) {
         reproduction: {
             iti: 500,
             fixcross: 500,
-            presentation: 250,
+            presentation: 500, // was 250 for treps2 pilot I & II
             ri: 5000//200//
         },
         categorization: {
@@ -919,8 +919,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    //condition_id = 2
-    //n_categories = 4
+    condition_id = 1;
+    n_categories = 2;
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
