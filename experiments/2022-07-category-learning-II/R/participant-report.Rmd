@@ -48,7 +48,8 @@ walk(files, source)
 
 path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
-  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/"
+  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
+  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/"
 )
 
 
@@ -56,7 +57,7 @@ path_data <- c(
 # Load Data ---------------------------------------------------------------
 
 
-returned_timeout <- c(
+pilot_I <- c(
   '62d8108a083717cafb747770',
   '62d810977a3c6d676074778d',
   '62d8109a7a9e4810935be338',
@@ -72,10 +73,18 @@ returned_timeout <- c(
   '62d811eeb4b6869415c51742',
   '62d8148bd4b1733c1a7c59e6',
   '62d826c15d3dccc2ffebdca1'
-  
 )
 
-l_tbls_data <- map(path_data[1:2], load_data, participants_returned = returned_timeout)
+pilot_II <- c(
+  "608e74070357794c8c355e75",
+  "6162c20e9c675c15e82494ec",
+  "6110c7aa3d662738db309a89",
+  "6047b29b56acb503ce4319f5"
+)
+
+returned_timeout <- c(pilot_I, pilot_II)
+
+l_tbls_data <- map(path_data[3], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 

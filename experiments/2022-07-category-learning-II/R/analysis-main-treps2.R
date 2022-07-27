@@ -36,7 +36,8 @@ walk(files, source)
 
 path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
-  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/"
+  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
+  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -48,7 +49,7 @@ sim_center <- "ellipse"
 # Load Data ---------------------------------------------------------------
 
 
-returned_timeout <- c(
+pilot_I <- c(
   '62d8108a083717cafb747770',
   '62d810977a3c6d676074778d',
   '62d8109a7a9e4810935be338',
@@ -66,7 +67,18 @@ returned_timeout <- c(
   '62d826c15d3dccc2ffebdca1'
 )
 
-l_tbls_data <- map(path_data[1:2], load_data, participants_returned = returned_timeout)
+pilot_II <- c(
+  "608e74070357794c8c355e75",
+  "6162c20e9c675c15e82494ec",
+  "6110c7aa3d662738db309a89",
+  "6047b29b56acb503ce4319f5"
+)
+
+returned_timeout <- c(pilot_I, pilot_II)
+
+
+
+l_tbls_data <- map(path_data[3], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
@@ -79,7 +91,7 @@ l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 # Set Exclusion Criteria Appropriately ------------------------------------
 
 
-l_cases <- preprocess_data(l_tbl_data, 191, 1)
+l_cases <- preprocess_data(l_tbl_data, 100, 1)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -135,8 +147,14 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
   mutate(p_chance = 1 / as.numeric(str_extract(n_categories, "[2-3]$")))
 
 # categorization accuracy overview
+tbl_dropouts <- tbl_cat_overview %>% filter(mean_accuracy <= .7) %>% select(participant_id)
+
 histograms_accuracies_rts(tbl_cat_overview)
-l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat, show_errorbars = TRUE)
+tbl_cat_dropouts <- 
+l_pl <- plot_categorization_accuracy_against_blocks(
+  tbl_cat %>% filter(participant_id %in% tbl_dropouts$participant_id), 
+  show_errorbars = TRUE
+  )
 # overall trajectory
 l_pl[[1]]
 # by-participant trajectories

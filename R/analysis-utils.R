@@ -1139,10 +1139,8 @@ participant_report <- function(l_cases) {
     arrange(mean_rt)
   
   # categorization accuracy overview
-  pl_cat_hist <- ggplotly(
-    histograms_accuracies_rts(tbl_cat_overview) + 
-      theme(legend.position = "none")
-  )
+  l_hists <- histograms_accuracies_rts(tbl_cat_overview)
+  pl_cat_hist <- subplot(l_hists[[1]], l_hists[[2]], nrows = 1)
   
   tbl_sim <- tbl_cat_sim %>%
     filter(n_categories == 1) %>%
@@ -1154,7 +1152,7 @@ participant_report <- function(l_cases) {
     ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
   n_bins_distance <- 9
   bins_distance <-
-    c(seq(-1, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
+    c(seq(-1, ifelse(is.infinite(max(tbl_sim$distance_euclidian)), 2, max(tbl_sim$distance_euclidian)), length.out = n_bins_distance), Inf)
   tbl_sim$distance_binned <-
     cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
   tbl_sim$distance_binned %>% unique()

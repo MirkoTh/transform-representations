@@ -151,22 +151,38 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
   #' histogram of by-participant categorization accuracy and
   #' categorization rts
   #' 
-  tbl_cat_overview %>% arrange(mean_accuracy) %>%
-    mutate(participant_id = fct_inorder(factor(substr(participant_id, 1, 6)))) %>%
-    pivot_longer(c(mean_accuracy, mean_rt)) %>%
+  
+  hist_acc <- tbl_cat_overview %>% arrange(mean_accuracy) %>%
     mutate(
-      name = factor(name),
-      name = fct_relabel(name, ~ c("Mean Accuracy", "Mean RT (s)"))
-    ) %>%
-    ggplot(aes(value, group = participant_id)) +
+      participant_id = fct_inorder(factor(substr(participant_id, 1, 6))),
+      "Mean Accuracy" = mean_accuracy
+      ) %>% ggplot(aes(`Mean Accuracy`, group = participant_id)) +
     geom_histogram(aes(fill = n), color = "white") +
-    facet_grid(n_categories ~ name, scale = "free_x") +
+    facet_grid(~ n_categories) +
+    coord_cartesian(xlim = c(.45, 1)) +
+    scale_x_continuous(breaks = seq(.45, 1, by = .05)) +
+    scale_fill_viridis_c(guide = "none")  +
+    theme_dark() +
+    labs(
+      x = "Mean Accuracy Overall",
+      y = "Participant Counts"
+    )
+  hist_rt <- tbl_cat_overview %>% arrange(mean_rt) %>%
+    mutate(
+      participant_id = fct_inorder(factor(substr(participant_id, 1, 6))),
+      "Mean RT" = mean_rt
+    ) %>% ggplot(aes(`Mean RT`, group = participant_id)) +
+    geom_histogram(aes(fill = n), color = "white") +
+    facet_grid(~ n_categories) +
     scale_fill_viridis_c(name = "Nr. Trials")  +
     theme_dark() +
     labs(
-      x = "Overall Accuracy",
+      x = "Mean RT Overall",
       y = "Participant Counts"
     )
+  l_hist <- list(hist_acc, hist_rt)
+  
+  return(l_hist)
 }
 
 
@@ -192,9 +208,10 @@ plot_categorization_accuracy_against_blocks <- function(tbl_cat, show_errorbars 
     tbl_cat_agg, "accuracy_mn_participant", c("n_categories"), 
     c("cat_true", "trial_id_binned"), "participant_id"
   ) %>% as_tibble()
+  max_categories <- length(unique(tbl_cat_agg_ci$cat_true))
   tbl_cat_agg_ci$trial_id_binned <- as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
   tbl_cat_agg_ci <- tbl_cat_agg_ci %>%
-    mutate(cat_true = factor(cat_true, labels = c("Bukil", "Venak", "Monus", "Ladiv")))
+    mutate(cat_true = factor(cat_true, labels = c("Bukil", "Venak", "Monus", "Ladiv")[1:max_categories]))
   
   tbl_chance <- chance_performance_cat(tbl_cat)
   tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
