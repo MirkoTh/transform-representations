@@ -27,11 +27,11 @@ function setup_experiment(condition_id) {
     // experiment information
     const experiment_info = {
         n_stimuli: 100,
-        n_conditions: 3, // control, 2 ellipse categories, 4 square categories
+        n_conditions: 2, // control, 2 ellipse categories, 4 square categories
         n_reproduction: 2, // baseline and after categorization
         n_practice_reproduction: 3,
-        n_trials_reproduction_1: 100, //5, //
-        n_trials_reproduction_2: 100, //5, //
+        n_trials_reproduction_1: 100, //4, //
+        n_trials_reproduction_2: 100, //4, //
         n_trials_categorization_train_target: 0, // 
         n_trials_categorization: 400, //16, // 
         n_trials_categorization_total: 0 + 400, // 0 + 16, //
@@ -73,7 +73,7 @@ function setup_experiment(condition_id) {
             iti: 500,
             fixcross: 500,
             presentation: 500, // was 250 for treps2 pilot I & II
-            ri: 5000//200//
+            ri: 200//5000//
         },
         categorization: {
             iti: 500,
@@ -373,6 +373,8 @@ async function log_response(rt, i, part, stimulus_ids) {
         x2_start: x2_start,
         rt: rt
     }
+    cr_data_all.push(data_store);
+
     var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response), 2))
     document.getElementById("cr_deviation_cum").innerHTML = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) + deviation
 
@@ -406,9 +408,11 @@ async function my_link() {
         document.getElementById("part_reproduction").innerHTML = 1
     } else if (i == total_trials1 & part == 1) { //part 1 reproduction
         log_response(rt, i, part, stimulus_ids);
+        saveSeveralData(cr_data_all, "cr-allinone-p1");
         clickStart("page4", "page6");
     } else if (i == total_trials2 & part == 2) { //part 2 reproduction
         log_response(rt, i, part, stimulus_ids);
+        saveSeveralData(cr_data_all, "cr-allinone-p2");
         calculate_bonus("succeed")
         clickStart("page4", "page13");
     } else {
@@ -436,6 +440,14 @@ function update_trial_counter(part, i) {
 function saveData(filedata, task) {
     var filename = "./data/" + task + "-participant-" + participant_id + ".json";
     $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
+}
+
+async function saveSeveralData(filedata, task) {
+    var filename = "./data/" + task + "-participant-" + participant_id + ".json";
+    var n_data = filedata.length;
+    for (var i = 0; i < n_data; i++) {
+        $.post("save_data.php", { postresult: JSON.stringify(filedata[i]) + "\n", postfile: filename })
+    }
 }
 
 function download(content, fileName, contentType) {
@@ -545,6 +557,7 @@ async function handle_response(e) {
         // handle special timepoint in the experiment
         // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
+            saveSeveralData(cat_data_all, "cat-allinone");
             document.getElementById("cat_accuracy_running_mean").style.display = 'none';
             document.getElementById("sim_correlation").style.display = 'none';
             document.getElementById("part_reproduction").innerHTML = 2;
@@ -706,7 +719,7 @@ function write_cat_results(i, r) {
         accuracy: accuracy,
         rt: document.getElementById("rt").innerHTML
     }
-
+    cat_data_all.push(data_store);
     //download(JSON.stringify(data_store), 'json.json', 'text/plain');
     saveData(JSON.stringify(data_store), "cat")
 }
@@ -856,10 +869,10 @@ function set_category_instruction(n_categories) {
     Whether you make it to the third part / bonus round of the experiment depends on your performance in the categorization task.<br>
     You make it to the third part when your performance satisfies at least one of the two evaluation criteria:<br>
     First, if at least  ` +
-        parseInt(100 * setup_expt["experiment_info"]["thx_cat_overall"]) + `
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_overall"]) + `%
     of your categorization responses are correct.<br>
     Second, if at least ` +
-        parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `
+        parseInt(100 * setup_expt["experiment_info"]["thx_cat_lag"]) + `%
     of your categorization responses in the last ` +
         setup_expt["experiment_info"]["n_trial_categorization_lag"] + ` trials are correct.<br>
         The running average of your categorization accuracy is shown to you in the upper left corner of the screen.<br>
@@ -916,11 +929,11 @@ function load_csv() {
 
 
 function condition_and_ncategories() {
-    n_different_categories = 3;
+    n_different_categories = 2;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
-    var n_categories = [1, 2, 4][(condition_id % n_different_categories)] // similarity, ellipse, & squares
-    condition_id = 1;
-    n_categories = 2;
+    var n_categories = [1, 4][(condition_id % n_different_categories)] // similarity & squares
+    //condition_id = 1;
+    //n_categories = 4;
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
@@ -933,6 +946,8 @@ function condition_and_ncategories() {
     document.getElementById("secondTaskName1").innerHTML = secondTaskName;
     document.getElementById("secondTaskName2").innerHTML = secondTaskName;
     document.getElementById("q3icheck3").innerHTML = secondTask;
+    cr_data_all = [];
+    cat_data_all = [];
 
     if (n_categories == 1) {
         textCond = `<b>Similarity:</b> Your task in the second part will be somewhat different.<br>
@@ -978,6 +993,8 @@ var total_trials0;
 var total_trials1;
 var total_trials2;
 var trial_info;
+var cr_data_all;
+var cat_data_all;
 
 function set_main_vars(condition_id) {
     setup_expt = setup_experiment(condition_id);
