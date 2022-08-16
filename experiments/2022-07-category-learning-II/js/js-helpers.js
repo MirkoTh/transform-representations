@@ -73,7 +73,7 @@ function setup_experiment(condition_id) {
             iti: 500,
             fixcross: 500,
             presentation: 500, // was 250 for treps2 pilot I & II
-            ri: 200//5000//
+            ri: 5000//200//
         },
         categorization: {
             iti: 500,
