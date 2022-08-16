@@ -103,6 +103,7 @@ plot_marginals_one_session <- function(idx_session, tbl, n_samples = 4) {
   
   participant_sample_groups <- tbl_cr %>% group_by(participant_id, n_categories) %>%
     count() %>% group_by(n_categories) %>% 
+    filter(n == 200) %>%
     mutate(
       id_random = substr(participant_id, sample(1:4, 1), sample(5:8, 1)),
       rwn = row_number(participant_id)) %>%
@@ -159,8 +160,8 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
       ) %>% ggplot(aes(`Mean Accuracy`, group = participant_id)) +
     geom_histogram(aes(fill = n), color = "white") +
     facet_grid(~ n_categories) +
-    coord_cartesian(xlim = c(.45, 1)) +
-    scale_x_continuous(breaks = seq(.45, 1, by = .05)) +
+    coord_cartesian(xlim = c(0, 1)) +
+    scale_x_continuous(breaks = seq(0, 1, by = .05)) +
     scale_fill_viridis_c(guide = "none")  +
     theme_dark() +
     labs(
