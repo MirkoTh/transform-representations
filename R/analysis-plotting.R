@@ -308,9 +308,9 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim
     tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c(1, 4))
   }
   tbl_cr_sq$category <- 2
-  tbl_cr <- rbind(tbl_cr_no_sq, tbl_cr_sq)
+  tbl_cr_plot <- rbind(tbl_cr_no_sq, tbl_cr_sq)
   tbl_movement <- grouped_agg(
-    tbl_cr, c(participant_id, n_categories, session, category), d_measure
+    tbl_cr_plot, c(participant_id, n_categories, session, category), d_measure
   ) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
     select(participant_id, n_categories, session, category, mean_distance) %>%
     left_join(
@@ -321,9 +321,10 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim
     mutate(
       mean_distance_before = lag(mean_distance),
       movement = mean_distance_before - mean_distance,
-      category = fct_relabel(
-        category, ~ ifelse(.x == 1, "Residual Category", "Closed Category")
-      ),
+      category = fct_inseq(factor(category)),
+      # category = fct_relabel(
+      #   category, ~ ifelse(.x == 1, "Residual Category", "Closed Category")
+      # ),
       n_categories = fct_inseq(n_categories),
       n_categories = fct_relabel(
         n_categories, ~ ifelse(.x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x))

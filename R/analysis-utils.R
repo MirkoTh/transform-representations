@@ -407,6 +407,10 @@ add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
+  tbl_cr$move_x1 <- abs(tbl_cr$x1_start - tbl_cr$x1_response)
+  tbl_cr$move_x2 <- abs(tbl_cr$x2_start - tbl_cr$x2_response)
+  tbl_cr$move_sum <- tbl_cr$move_x1 + tbl_cr$move_x2
+  tbl_cr <- dplyr::select(tbl_cr, -c(move_x1, move_x2))
   l_centers <- category_centers(f_stretch = 9, f_shift = 1)
   l_centers[[3]] <- category_centers_squares(n_cats = c(4))
   # todo
