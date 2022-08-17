@@ -28,6 +28,8 @@ load_data <- function(path_data, participants_returned) {
   files_dir <- dir(path_data)
   fld_cat <- files_dir[startsWith(files_dir, "cat")]
   fld_cr <- files_dir[startsWith(files_dir, "cr")]
+  paths_cr_individual <- str_c("experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/", fld_cr[!str_detect(fld_cr, "allinone")])
+  paths_cat_individual <- str_c(path_data,  fld_cat[!str_detect(fld_cat, "allinone")])
   paths_cat <- str_c(path_data,  fld_cat[str_detect(fld_cat, "allinone")])
   paths_cr1 <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p1")])
   paths_cr2 <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p2")])
@@ -44,8 +46,9 @@ load_data <- function(path_data, participants_returned) {
     tbl_cr <- jsonlite::fromJSON(js_txt) %>% as_tibble()
     return(tbl_cr)
   }
-  tbl_cr <- reduce(map(paths_cr, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
-  tbl_cat <- reduce(map(paths_cat, json_to_tibble), rbind)
+  tbl_cr <- reduce(map(paths_cr_individual, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
+  tbl_cr_allatonce <- reduce(map(paths_cr, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
+  tbl_cat <- reduce(map(paths_cat_individual, json_to_tibble), rbind)
   # add stim_id
   tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   

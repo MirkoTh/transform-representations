@@ -38,7 +38,8 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
   "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/",
-  "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/"
+  "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -79,11 +80,17 @@ e_true <- c(
   '606c7d27f4f3ae688332a55d'
 )
 
-returned_timeout <- c(pilot_I, pilot_II, e_true)
+e_true_ii <- c(
+  "601941db6605160008690742",
+  "606f6f81ff1ba0b8455ec8c4",
+  "611118bb5a34e8119eb47ed6"
+)
+
+returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii)
 
 
 
-l_tbls_data <- map(path_data[4], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[5], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
@@ -97,8 +104,8 @@ l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
 l_cases <- preprocess_data(l_tbl_data, 100, 1)
-tbl_cr <- l_cases$l_guessing$keep$tbl_cr
-tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
+tbl_cr <- rbind(l_cases$l_guessing$keep$tbl_cr, l_cases$l_outliers$drop$tbl_cr)
+tbl_cat_sim <- rbind(l_cases$l_guessing$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
 
 # exclusions
 excl_incomplete <-
@@ -155,9 +162,9 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 tbl_dropouts <- tbl_cat_overview %>% filter(mean_accuracy <= .7) %>% select(participant_id)
 
 histograms_accuracies_rts(tbl_cat_overview)
-tbl_cat_dropouts <- 
+
 l_pl <- plot_categorization_accuracy_against_blocks(
-  tbl_cat %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
+  tbl_cat,# %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
   show_errorbars = TRUE
   )
 # overall trajectory
@@ -309,7 +316,7 @@ tbl_sim_ci$distance_binned <-
 sample_ids <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
-  filter(participant_id %in% sample_ids) %>%
+  #filter(participant_id %in% sample_ids) %>%
   summarize(response_mn = mean(response), n = n()) %>%
   ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
   geom_line(aes(color = as.numeric(participant_id))) +
