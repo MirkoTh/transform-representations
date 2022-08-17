@@ -26,8 +26,16 @@ load_data <- function(path_data, participants_returned) {
   #' 
   # read individual performance
   files_dir <- dir(path_data)
-  paths_cat <- str_c(path_data, files_dir[startsWith(files_dir, "cat")])
-  paths_cr <- str_c(path_data, files_dir[startsWith(files_dir, "cr")])
+  fld_cat <- files_dir[startsWith(files_dir, "cat")]
+  fld_cr <- files_dir[startsWith(files_dir, "cr")]
+  paths_cat <- str_c(path_data,  fld_cat[str_detect(fld_cat, "allinone")])
+  paths_cr1 <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p1")])
+  paths_cr2 <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p2")])
+  finished <- str_match(paths_cr2, "participant-(.*?).json")[, 2]
+  halfway <- str_match(paths_cr1, "participant-(.*?).json")[, 2]
+  dropped <- halfway[!(halfway %in% finished)]
+  halfway_keep <- paths_cr1[map(dropped, ~ str_detect(paths_cr1, .x)) %>% reduce(rbind) %>% colSums() %>% as.logical()]
+  paths_cr <- c(paths_cr2, halfway_keep)
   
   json_to_tibble <- function(path_file) {
     js_txt <- read_file(path_file)
@@ -315,10 +323,12 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
   colnames(tbl_d2) <- c("d_closest")
   
   # the following is not very clean, because it is not implemented for three categories a couple of lines below
-  if (is_simulation) {
-    l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2)
-  } else {
-    l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+  if (!is.null(l_tbl_cr[["2"]])) {
+    if (is_simulation) {
+      l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2)
+    } else {
+      l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+    }
   }
   
   if ("3" %in% v_categories) {
@@ -397,6 +407,10 @@ add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
+  tbl_cr$move_x1 <- abs(tbl_cr$x1_start - tbl_cr$x1_response)
+  tbl_cr$move_x2 <- abs(tbl_cr$x2_start - tbl_cr$x2_response)
+  tbl_cr$move_sum <- tbl_cr$move_x1 + tbl_cr$move_x2
+  tbl_cr <- dplyr::select(tbl_cr, -c(move_x1, move_x2))
   l_centers <- category_centers(f_stretch = 9, f_shift = 1)
   l_centers[[3]] <- category_centers_squares(n_cats = c(4))
   # todo
@@ -1091,11 +1105,11 @@ participant_report <- function(l_cases) {
     count(n_categories) %>%
     mutate("Dropout Stage" = "After CR S2")
   tbl_dropouts <- rbind(
-      n_participants_unique_after_practice,
-      n_participants_unique_after_cr_session1,
-      n_participants_unique_after_task2,
-      n_participants_unique_after_cr_session2
-    )
+    n_participants_unique_after_practice,
+    n_participants_unique_after_cr_session1,
+    n_participants_unique_after_task2,
+    n_participants_unique_after_cr_session2
+  )
   tbl_dropouts$`Dropout Stage` <- fct_inorder(tbl_dropouts$`Dropout Stage`)
   tbl_dropouts$n_categories <- str_c(tbl_dropouts$n_categories, " Categories")
   hist_dropouts <- ggplot(tbl_dropouts, aes(`Dropout Stage`, n)) +

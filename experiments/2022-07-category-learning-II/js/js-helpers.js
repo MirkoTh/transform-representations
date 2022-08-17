@@ -35,13 +35,13 @@ function setup_experiment(condition_id) {
         n_trials_categorization_train_target: 0, // 
         n_trials_categorization: 400, //16, // 
         n_trials_categorization_total: 0 + 400, // 0 + 16, //
-        n_trial_categorization_lag: 50, //8, //last n categorization trials to calculate "final" accuracy
+        n_trial_categorization_lag: 40, //8, //last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
         thx_cat_overall: .7,//.2,//.75 for treps2 pilot I & II
         thx_cat_lag: .75,//.2,//.8 for treps2 pilot I & II
         thx_sim_corr: 0,
-        n_training_nocount: 40 //4 // 
+        n_training_nocount: 40 //4 //
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
     // stim_ids of cat2 and cat3
@@ -1083,3 +1083,4 @@ function calculate_bonus(flag_performance) {
 function redirect_to_prolific() {
     window.location.href = "https://app.prolific.co/submissions/complete?cc=240D34C0";
 }
+

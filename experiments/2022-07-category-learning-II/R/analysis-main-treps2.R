@@ -37,14 +37,15 @@ walk(files, source)
 path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
-  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/"
+  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/",
+  "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
 # is computed using ellipse center (i.e., middle of feature space) or
 # category centers of four square categories
 
-sim_center <- "ellipse"
+sim_center <- "square"
 
 # Load Data ---------------------------------------------------------------
 
@@ -74,11 +75,15 @@ pilot_II <- c(
   "6047b29b56acb503ce4319f5"
 )
 
-returned_timeout <- c(pilot_I, pilot_II)
+e_true <- c(
+  '606c7d27f4f3ae688332a55d'
+)
+
+returned_timeout <- c(pilot_I, pilot_II, e_true)
 
 
 
-l_tbls_data <- map(path_data[3], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[4], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
@@ -144,7 +149,7 @@ tbl_cat_overview <- tbl_cat %>%
   arrange(mean_rt)
 tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
   summarize(dummy = mean(mean_accuracy)) %>%
-  mutate(p_chance = 1 / as.numeric(str_extract(n_categories, "[2-3]$")))
+  mutate(p_chance = 1 / as.numeric(str_extract(n_categories, "[2-4]$")))
 
 # categorization accuracy overview
 tbl_dropouts <- tbl_cat_overview %>% filter(mean_accuracy <= .7) %>% select(participant_id)
@@ -152,7 +157,7 @@ tbl_dropouts <- tbl_cat_overview %>% filter(mean_accuracy <= .7) %>% select(part
 histograms_accuracies_rts(tbl_cat_overview)
 tbl_cat_dropouts <- 
 l_pl <- plot_categorization_accuracy_against_blocks(
-  tbl_cat %>% filter(participant_id %in% tbl_dropouts$participant_id), 
+  tbl_cat %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
   show_errorbars = TRUE
   )
 # overall trajectory
@@ -204,7 +209,7 @@ plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_
 ggplot(tbl_movement,
        aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
   geom_point() +
-  geom_smooth(method = "lm") +
+  #geom_smooth(method = "lm") +
   facet_wrap( ~ n_categories)
 # model fits
 ## prototype model
@@ -369,6 +374,10 @@ by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM S
 # tbl_cr <- tbl_cr %>% filter(!(participant_id %in% doubles$participant_id))
 # tbl_cr <- tbl_cr %>% filter(!(participant_id %in% missings$participant_id))
 # tbl_cr <- rbind(tbl_cr, tbl_first_attempt %>% select(-rwn))
+
+
+tbl_cr %>% group_by(participant_id) %>% summarize(move = sum(move_sum), n_trials = n()) %>%
+  mutate(move_avg = move/n_trials)
 
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
