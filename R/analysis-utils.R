@@ -25,19 +25,26 @@ load_data <- function(path_data, participants_returned) {
   #' @return a list with the two tibbles
   #' 
   # read individual performance
+  
+  # check for each participant which file has more data and select that one
+  
+  
   files_dir <- dir(path_data)
   fld_cat <- files_dir[startsWith(files_dir, "cat")]
   fld_cr <- files_dir[startsWith(files_dir, "cr")]
-  paths_cr_individual <- str_c("experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/", fld_cr[!str_detect(fld_cr, "allinone")])
+  paths_cr_individual <- str_c(path_data, fld_cr[!str_detect(fld_cr, "allinone")])
   paths_cat_individual <- str_c(path_data,  fld_cat[!str_detect(fld_cat, "allinone")])
-  paths_cat <- str_c(path_data,  fld_cat[str_detect(fld_cat, "allinone")])
-  paths_cr1 <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p1")])
-  paths_cr2 <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p2")])
-  finished <- str_match(paths_cr2, "participant-(.*?).json")[, 2]
-  halfway <- str_match(paths_cr1, "participant-(.*?).json")[, 2]
-  dropped <- halfway[!(halfway %in% finished)]
-  halfway_keep <- paths_cr1[map(dropped, ~ str_detect(paths_cr1, .x)) %>% reduce(rbind) %>% colSums() %>% as.logical()]
-  paths_cr <- c(paths_cr2, halfway_keep)
+  paths_cat_compound <- str_c(path_data,  fld_cat[str_detect(fld_cat, "allinone")])
+  paths_cr1_compound <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p1")])
+  paths_cr2_compound <- str_c(path_data, fld_cr[str_detect(fld_cr, "allinone-p2")])
+  
+  l_paths <- list(
+    `cr` = paths_cr_individual, 
+    `cat` = paths_cat_individual, 
+    `cat-allinone` = paths_cat_compound, 
+    `cr-allinone-p1` = paths_cr1_compound, 
+    `cr-allinone-p2` = paths_cr2_compound
+    )
   
   json_to_tibble <- function(path_file) {
     js_txt <- read_file(path_file)
@@ -46,9 +53,26 @@ load_data <- function(path_data, participants_returned) {
     tbl_cr <- jsonlite::fromJSON(js_txt) %>% as_tibble()
     return(tbl_cr)
   }
-  tbl_cr <- reduce(map(paths_cr_individual, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
-  tbl_cr_allatonce <- reduce(map(paths_cr, json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
-  tbl_cat <- reduce(map(paths_cat_individual, json_to_tibble), rbind)
+  
+  inner_map <- safely(function(x) map(x, json_to_tibble))
+  l_tbl_all <- map(l_paths, inner_map)
+  l_tbl_all <- map(l_tbl_all, "result")
+  l_mask <- map_lgl(l_tbl_all, ~!(is.null(.x)))
+  l_tbl_all <- l_tbl_all[l_mask]
+  inner_map <- function(a, b) map(
+    a, function(x) c(participant_id = x$participant_id[1], ntrials = nrow(x))
+    ) %>% reduce(rbind) %>% as_tibble() %>% mutate(savemethod = b)
+  tbl_ntrials <- map2(l_tbl_all, names(l_tbl_all), inner_map) %>% reduce(rbind)
+  tbl_ntrials$task <- factor(str_detect(tbl_ntrials$savemethod, "cr"), labels = c("cat", "cr"))
+  files_select <- tbl_ntrials %>% group_by(participant_id, task) %>%
+    mutate(rwn_max = row_number(desc(ntrials))) %>% 
+    filter(rwn_max == 1)
+  l_files_select <- split(files_select, files_select$task)
+  c_paths <- function(x) str_c(path_data, x$savemethod, "-participant-", x$participant_id, ".json")
+  l_paths <- map(l_files_select, c_paths)
+  
+  tbl_cr <- reduce(map(l_paths[["cr"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
+  tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
   # add stim_id
   tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   

@@ -49,12 +49,16 @@ walk(files, source)
 path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
-  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/"
+  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/",
+  "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/"
 )
 
 
 
 # Load Data ---------------------------------------------------------------
+
 
 
 pilot_I <- c(
@@ -82,22 +86,41 @@ pilot_II <- c(
   "6047b29b56acb503ce4319f5"
 )
 
-returned_timeout <- c(pilot_I, pilot_II)
+e_true <- c(
+  '606c7d27f4f3ae688332a55d'
+)
 
-l_tbls_data <- map(path_data[3], load_data, participants_returned = returned_timeout)
+e_true_ii <- c(
+  "601941db6605160008690742",
+  "606f6f81ff1ba0b8455ec8c4",
+  "611118bb5a34e8119eb47ed6"
+)
+
+e_true_iii <- c(
+  "5f13334daab04a01f1bee1bd",
+  "601032f77969062d05802f88",
+  "60c33a1bde764fbff560a573",
+  "60cf6c61cd67587eba89a915",
+  "60e703e4908998ebc5679e8a" 
+)
+
+returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii, e_true_iii)
+
+
+l_tbls_data <- map(path_data[6], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
 
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data, sim_center = "ellipse")
+l_deviations <- add_deviations(l_tbl_data, sim_center = "square")
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
 
 # Screen Participants -----------------------------------------------------
 
 suppressMessages(
-  l_cases <- preprocess_data(l_tbl_data, 200, 400)
+  l_cases <- preprocess_data(l_tbl_data, 100, 400)
 )
 
 l_participant_report <- participant_report(l_cases)

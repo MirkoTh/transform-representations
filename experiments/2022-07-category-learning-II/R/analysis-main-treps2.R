@@ -35,11 +35,9 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-1/",
-  "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
-  "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/",
   "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
-  "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/"
+  "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -86,11 +84,19 @@ e_true_ii <- c(
   "611118bb5a34e8119eb47ed6"
 )
 
-returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii)
+e_true_iii <- c(
+  "5f13334daab04a01f1bee1bd",
+  "601032f77969062d05802f88",
+  "60c33a1bde764fbff560a573",
+  "60cf6c61cd67587eba89a915",
+  "60e703e4908998ebc5679e8a" 
+)
+
+returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii, e_true_iii)
 
 
 
-l_tbls_data <- map(path_data[5], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data, load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
@@ -103,7 +109,7 @@ l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 # Set Exclusion Criteria Appropriately ------------------------------------
 
 
-l_cases <- preprocess_data(l_tbl_data, 100, 1)
+l_cases <- preprocess_data(l_tbl_data, 200, 400)
 tbl_cr <- rbind(l_cases$l_guessing$keep$tbl_cr, l_cases$l_outliers$drop$tbl_cr)
 tbl_cat_sim <- rbind(l_cases$l_guessing$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
 
@@ -135,7 +141,9 @@ l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
 
-
+tbl_cr_incomplete <- l_cases$l_incomplete$drop[[1]]
+tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(n)
+tbl_cr %>% group_by(participant_id) %>% count() %>% arrange(n)
 
 # Categorization ----------------------------------------------------------
 
@@ -161,7 +169,10 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 # categorization accuracy overview
 tbl_dropouts <- tbl_cat_overview %>% filter(mean_accuracy <= .7) %>% select(participant_id)
 
-histograms_accuracies_rts(tbl_cat_overview)
+l_histogram <- histograms_accuracies_rts(tbl_cat_overview)
+l_histogram[[1]]  + coord_cartesian(xlim = c(.5, 1))
+l_histogram[[2]]  + coord_cartesian(xlim = c(1000, 2000))
+
 
 l_pl <- plot_categorization_accuracy_against_blocks(
   tbl_cat,# %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
@@ -400,7 +411,7 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 
 tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
-levels(tbl_cr$n_categories) <- c("Similarity", "2 Categories", "4 Categories")
+levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
 pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
 pl_empirical + labs(title = str_c("Distance in Similarity Condition = ", sim_center))
 plot_distance_from_decision_boundary(tbl_cr, 10)
@@ -462,7 +473,7 @@ tbl_cr_agg %>%
               mean_eucl_deviation,
               mean_accuracy,
               mean_delta_accuracy
-            ) %>% filter(n_categories == "Experimental Group") %>%
+            ) %>% filter(n_categories == "4 Categories") %>%
   pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
   mutate(name = factor(
     name,
