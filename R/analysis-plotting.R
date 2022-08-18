@@ -490,7 +490,7 @@ plot_distance_from_decision_boundary <- function(tbl_cr, nbins) {
   tbl_cr$d2boundary_stim_cut <- cut(tbl_cr$d2boundary_stim, nbins, labels = FALSE)
   tbl_cr <- tbl_cr %>% mutate(
     session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")),
-    category = factor(category, labels = c("Residual", "Closed 1", "Closed 2", "Closed 3"))
+    category = factor(category)
   )
   dg <- position_dodge(width = .2)
   ggplot(

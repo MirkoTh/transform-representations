@@ -54,8 +54,11 @@ load_data <- function(path_data, participants_returned) {
     return(tbl_cr)
   }
   
-  inner_map <- function(x) map(x, json_to_tibble)
+  inner_map <- safely(function(x) map(x, json_to_tibble))
   l_tbl_all <- map(l_paths, inner_map)
+  l_tbl_all <- map(l_tbl_all, "result")
+  l_mask <- map_lgl(l_tbl_all, ~!(is.null(.x)))
+  l_tbl_all <- l_tbl_all[l_mask]
   inner_map <- function(a, b) map(
     a, function(x) c(participant_id = x$participant_id[1], ntrials = nrow(x))
     ) %>% reduce(rbind) %>% as_tibble() %>% mutate(savemethod = b)
