@@ -39,7 +39,8 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-20-treps2-pilot-2/",
   "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/",
   "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
-  "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/"
+  "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -86,11 +87,19 @@ e_true_ii <- c(
   "611118bb5a34e8119eb47ed6"
 )
 
-returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii)
+e_true_iii <- c(
+  "5f13334daab04a01f1bee1bd",
+  "601032f77969062d05802f88",
+  "60c33a1bde764fbff560a573",
+  "60cf6c61cd67587eba89a915",
+  "60e703e4908998ebc5679e8a" 
+)
+
+returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii, e_true_iii)
 
 
 
-l_tbls_data <- map(path_data[5], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[6], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
