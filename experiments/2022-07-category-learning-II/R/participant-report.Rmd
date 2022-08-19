@@ -52,7 +52,8 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-07-26-treps2-pilot-3/",
   "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/",
-  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/"
+  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment/"
 )
 
 
@@ -104,10 +105,32 @@ e_true_iii <- c(
   "60e703e4908998ebc5679e8a" 
 )
 
-returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii, e_true_iii)
+e_true_iv <- c(
+  "60ef5b1cf52939a80af77543",
+  "60bb3b463887c2f9d1385cce",
+  "60ddfb3db6a71ad9ba75e387",
+  "605ddb3c61e1ce50865c3874",
+  "603a758c5fc59967a708e5f4",
+  "5eff6828a958150135ede8a4",
+  "5e10709fb63853754eff7d28",
+  "6105d72b52b6f2348973856f",
+  "614aad5f39fe300e0f0b9be7",
+  "6147e59cb48beb204aef2732",
+  "616aea6b17045149d16aca39",
+  "61608875c054bf0692dcd8ee",
+  "613cfaecee50fc5d702c9cfc",
+  "611ce118d137797315f04b9b",
+  "6164e1b26996fe46860b2291"
+)
+
+returned_timeout <- c(
+  pilot_I, pilot_II, 
+  e_true, e_true_ii, e_true_iii,
+  e_true_iv
+  )
 
 
-l_tbls_data <- map(path_data[6], load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[7], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 

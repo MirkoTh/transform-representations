@@ -37,7 +37,8 @@ walk(files, source)
 path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/",
-  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/"
+  "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -92,7 +93,29 @@ e_true_iii <- c(
   "60e703e4908998ebc5679e8a" 
 )
 
-returned_timeout <- c(pilot_I, pilot_II, e_true, e_true_ii, e_true_iii)
+e_true_iv <- c(
+  "60ef5b1cf52939a80af77543",
+  "60bb3b463887c2f9d1385cce",
+  "60ddfb3db6a71ad9ba75e387",
+  "605ddb3c61e1ce50865c3874",
+  "603a758c5fc59967a708e5f4",
+  "5eff6828a958150135ede8a4",
+  "5e10709fb63853754eff7d28",
+  "6105d72b52b6f2348973856f",
+  "614aad5f39fe300e0f0b9be7",
+  "6147e59cb48beb204aef2732",
+  "616aea6b17045149d16aca39",
+  "61608875c054bf0692dcd8ee",
+  "613cfaecee50fc5d702c9cfc",
+  "611ce118d137797315f04b9b",
+  "6164e1b26996fe46860b2291"
+)
+
+returned_timeout <- c(
+  pilot_I, pilot_II, 
+  e_true, e_true_ii, e_true_iii,
+  e_true_iv
+  )
 
 
 
@@ -133,9 +156,16 @@ excl_guessing <-
 cat(str_c("final N analyzed: ", length(unique(
   tbl_cr$participant_id
 )), "\n"))
+# exclusions
+cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing)))
 same_n <-
   length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
 cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
+# ns per group
+tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>% 
+  group_by(n_categories) %>% count()
+
+
 
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
@@ -395,7 +425,7 @@ by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM S
 
 
 tbl_cr %>% group_by(participant_id) %>% summarize(move = sum(move_sum), n_trials = n()) %>%
-  mutate(move_avg = move/n_trials)
+  mutate(move_avg = move/n_trials) %>% arrange(move_avg)
 
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
@@ -511,7 +541,6 @@ m_rs_cr_control <-
     data = tbl_cr %>% filter(n_categories == "Control Group")
   )
 summary(m_rs_cr_control)
-
 
 # Behavioral Representational Similarity Analysis -------------------------
 
