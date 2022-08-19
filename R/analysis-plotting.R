@@ -44,8 +44,8 @@ plot_1d_marginals <- function(tbl) {
       session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning"))
     ) %>%
     ggplot(aes(val_deviation, group = session)) +
-    geom_histogram(aes(fill = session), bins = 10, alpha = .5, color = "black") +
-    geom_freqpoly(aes(color = session), bins = 10) +
+    geom_histogram(aes(fill = session), bins = 40, alpha = .5, color = "black") +
+    geom_freqpoly(aes(color = session), bins = 40) +
     facet_wrap(~ var_deviation + session) +
     theme_bw() +
     scale_color_brewer(name = "Timepoint", palette = "Set1") +
@@ -164,6 +164,7 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
     scale_x_continuous(breaks = seq(0, 1, by = .05)) +
     scale_fill_viridis_c(guide = "none")  +
     theme_dark() +
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) +
     labs(
       x = "Mean Accuracy Overall",
       y = "Participant Counts"
