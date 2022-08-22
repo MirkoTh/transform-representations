@@ -20,6 +20,7 @@ library(plotly)
 
 
 # Import Home-Grown Modules -----------------------------------------------
+
 files <- c(
   "R/utils.R",
   "R/plotting.R",
@@ -38,7 +39,9 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-08-16-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-17-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/",
-  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment/"
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment/",
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-II/",
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-III/"  
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -49,75 +52,7 @@ sim_center <- "square"
 
 # Load Data ---------------------------------------------------------------
 
-
-pilot_I <- c(
-  '62d8108a083717cafb747770',
-  '62d810977a3c6d676074778d',
-  '62d8109a7a9e4810935be338',
-  '62d810a165900cc3096001bd',
-  '62d810a31af42c699187f4dc',
-  '62d810b1167959341fa067bb',
-  '62d810b6a53df36f6c1ddd3c',
-  '62d810bab18f2bfe81c49f1d',
-  '62d810bae2e7a65aad2abcb0',
-  '62d810bc7031b229278b2d57',
-  '62d810ce2827840a9710adc7',
-  '62d810fbc451b68c780d36b6',
-  '62d811eeb4b6869415c51742',
-  '62d8148bd4b1733c1a7c59e6',
-  '62d826c15d3dccc2ffebdca1'
-)
-
-pilot_II <- c(
-  "608e74070357794c8c355e75",
-  "6162c20e9c675c15e82494ec",
-  "6110c7aa3d662738db309a89",
-  "6047b29b56acb503ce4319f5"
-)
-
-e_true <- c(
-  '606c7d27f4f3ae688332a55d'
-)
-
-e_true_ii <- c(
-  "601941db6605160008690742",
-  "606f6f81ff1ba0b8455ec8c4",
-  "611118bb5a34e8119eb47ed6"
-)
-
-e_true_iii <- c(
-  "5f13334daab04a01f1bee1bd",
-  "601032f77969062d05802f88",
-  "60c33a1bde764fbff560a573",
-  "60cf6c61cd67587eba89a915",
-  "60e703e4908998ebc5679e8a" 
-)
-
-e_true_iv <- c(
-  "60ef5b1cf52939a80af77543",
-  "60bb3b463887c2f9d1385cce",
-  "60ddfb3db6a71ad9ba75e387",
-  "605ddb3c61e1ce50865c3874",
-  "603a758c5fc59967a708e5f4",
-  "5eff6828a958150135ede8a4",
-  "5e10709fb63853754eff7d28",
-  "6105d72b52b6f2348973856f",
-  "614aad5f39fe300e0f0b9be7",
-  "6147e59cb48beb204aef2732",
-  "616aea6b17045149d16aca39",
-  "61608875c054bf0692dcd8ee",
-  "613cfaecee50fc5d702c9cfc",
-  "611ce118d137797315f04b9b",
-  "6164e1b26996fe46860b2291"
-)
-
-returned_timeout <- c(
-  pilot_I, pilot_II, 
-  e_true, e_true_ii, e_true_iii,
-  e_true_iv
-  )
-
-
+returned_timeout <- timeout_and_returns()
 
 l_tbls_data <- map(path_data, load_data, participants_returned = returned_timeout)
 l_tbl_data <-
@@ -133,31 +68,32 @@ l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
 l_cases <- preprocess_data(l_tbl_data, 200, 400)
-tbl_cr <- rbind(l_cases$l_guessing$keep$tbl_cr, l_cases$l_outliers$drop$tbl_cr)
+tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- rbind(l_cases$l_guessing$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
 
 # exclusions
 excl_incomplete <-
   dplyr::union(
-    unique(l_cases$l_incomplete$drop[[1]]$participant_id),
-    unique(l_cases$l_incomplete$drop[[2]]$participant_id)
+    unique(l_cases$l_incomplete$drop[["tbl_cr"]]$participant_id),
+    unique(l_cases$l_incomplete$drop[["tbl_cat"]]$participant_id)
   )
 excl_outlier <-
   dplyr::union(
-    unique(l_cases$l_outliers$drop[[1]]$participant_id),
-    unique(l_cases$l_outliers$drop[[2]]$participant_id)
+    unique(l_cases$l_outliers$drop[["tbl_cr"]]$participant_id),
+    unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
   )
 excl_guessing <-
   dplyr::union(
-    unique(l_cases$l_guessing$drop[[1]]$participant_id),
-    unique(l_cases$l_guessing$drop[[2]]$participant_id)
+    unique(l_cases$l_guessing$drop[["tbl_cr"]]$participant_id),
+    unique(l_cases$l_guessing$drop[["tbl_cat"]]$participant_id)
   )
+
 # inclusions
-cat(str_c("final N analyzed: ", length(unique(
-  tbl_cr$participant_id
-)), "\n"))
+cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
+
 # exclusions
 cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing)))
+
 same_n <-
   length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
 cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
@@ -166,14 +102,14 @@ tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>%
   group_by(n_categories) %>% count()
 
 
-
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
 
-tbl_cr_incomplete <- l_cases$l_incomplete$drop[[1]]
-tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(n)
-tbl_cr %>% group_by(participant_id) %>% count() %>% arrange(n)
+tbl_cr_incomplete <- l_cases$l_incomplete$drop[["tbl_cr"]]
+tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
+tbl_cat_sim %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
+
 
 # Categorization ----------------------------------------------------------
 
@@ -200,19 +136,18 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 tbl_dropouts <- tbl_cat_overview %>% filter(mean_accuracy <= .7) %>% select(participant_id)
 
 l_histogram <- histograms_accuracies_rts(tbl_cat_overview)
-l_histogram[[1]]  + coord_cartesian(xlim = c(.5, 1))
-l_histogram[[2]]  + coord_cartesian(xlim = c(1000, 2000))
+l_histogram[[1]] + coord_cartesian(xlim = c(.4, 1))
+l_histogram[[2]] + coord_cartesian(xlim = c(750, 2000))
 
 
 l_pl <- plot_categorization_accuracy_against_blocks(
   tbl_cat,# %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
   show_errorbars = TRUE
-  )
+)
 # overall trajectory
 l_pl[[1]]
 # by-participant trajectories
 l_pl[[2]]
-
 
 
 tbl_cat_agg <-
@@ -238,6 +173,7 @@ tbl_cat_agg <-
 l_movement <-
   movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest", sim_center)
 tbl_movement <- l_movement[[1]]
+
 # plot movement towards category center against task2 accuracy
 l_movement[[2]]
 
@@ -253,76 +189,73 @@ select_ids <- round(seq(1, nrow(sample_ids), length.out = 4))
 sample_ids <-
   as.character(sample_ids[select_ids, "participant_id"] %>% as_vector() %>% unname())
 plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), c(2, 4))
+mean_against_delta_cat_accuracy(tbl_movement)
 
-ggplot(tbl_movement,
-       aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
-  geom_point() +
-  #geom_smooth(method = "lm") +
-  facet_wrap( ~ n_categories)
-# model fits
-## prototype model
+# prototype analyses
 
-participant_ids_2_cat <-
-  unique(tbl_cat$participant_id[tbl_cat$n_categories == 2]) %>% as.character()
-l_nb <-
-  map(participant_ids_2_cat,
-      fit_predict_nb,
-      tbl = tbl_cat %>% filter(n_categories == 2))
+participant_ids_4_cat <-
+  unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
+l_nb <- map(
+  participant_ids_4_cat, fit_predict_nb,
+  tbl = tbl_cat %>% filter(n_categories == 4)
+)
+names(l_nb) <- participant_ids_4_cat
+
+tbl_square <- tbl_cr %>% filter(as.numeric(n_categories) > 1)
+tbl_square$participant_id <- factor(tbl_square$participant_id)
+l_tbl_square <- split(tbl_square, tbl_square$participant_id)
+tbl_d2_rep_center <- map2(
+  l_tbl_square, l_nb, 
+  d2_rep_center_square
+) %>% reduce(rbind)
+tbl_cr <- tbl_cr %>% 
+  left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
+
+representational_precision <- function(nb_participant) {
+  tbl_params <- as_tibble(data.frame(t(matrix(unlist(
+    nb_participant[[1]][["tables"]]
+  ), nrow = 4, ncol = 4))))
+  names(tbl_params) <- c("mean_x1", "sd_x1", "mean_x2", "sd_x2")
+  mean(colMeans(tbl_params %>% select(starts_with("sd"))))
+}
+v_precision_representation <- map_dbl(l_nb, representational_precision)
+tbl_precision_representation <- tibble(v_precision_representation)
+tbl_precision_representation$participant_id <- participant_ids_4_cat
+tbl_precision <- tbl_cr %>% filter(n_categories == "4") %>%
+  grouped_agg(participant_id, c(d_closest, d_rep_center)) %>%
+  left_join(tbl_precision_representation, by = "participant_id") %>%
+  select(-c(n, nunique_d_closest, nunique_d_rep_center))
+tbl_precision %>% pivot_longer(
+  cols = c(mean_d_closest, mean_d_rep_center)
+) %>% mutate(
+  name = factor(
+    name, 
+    labels = c("True Center", "Representational Center")
+  )) %>%
+ggplot(aes(v_precision_representation, value, group = name)) +
+  geom_point(aes(color = name)) +
+  scale_color_brewer(palette = "Set1", name = "Distance to") +
+  theme_bw() +
+  labs(x = "Representational Precision", y = "Distance to Closest Prototype")
+# 
 tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>%
   mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
-l_m_nb_pds <- map(l_nb, 1) %>% map("tables")
-names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
-tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1])
+  movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
+  )
 tbl_movement <- l_movement[[1]]
-l_movement[[2]]
+l_movement[[2]][[2]]
 
-# can we also include variability in the representations
-# i.e. people with preciser category representations
-# should experience stronger pull/push towards/away the center
-
-plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids),
-                             2,
-                             "Mode") +
-  geom_contour(
-    data = tbl_preds_nb %>% filter(participant_id %in% substr(sample_ids, 1, 6)),
-    aes(x1, x2, z = density, alpha = density),
-    color = "black"
-  ) + geom_point(data = tibble(x = 50, y = 50),
-                 aes(x, y),
-                 color = "#FF3333",
-                 size = 3.5)
-
-
-
-## exemplar model
-
-tbl_gcm <- tbl_tmp[, c("x1_true", "x2_true", "response")] %>%
-  mutate(cat1 = 0, cat2 = 0) %>%
-  rename(category = response) %>%
-  mutate(category = fct_inorder(as.factor(category)))
-
-tbl_gcm$cat1[tbl_gcm$category == 1] <- 1
-tbl_gcm$cat2[tbl_gcm$category == 2] <- 1
-
-l_info <- list(
-  feature_names = c("x1_true", "x2_true"),
-  categories = levels(tbl_gcm$category),
-  n_categories = 2,
-  sens = 1,
-  wgh = .5
-)
-
-fit_gcm <- optim(
-  f = ll_gcm,
-  c(8, .52),
-  lower = c(0, 0),
-  upper = c(10, 1),
-  l_info = l_info,
-  tbl_stim = tbl_gcm,
-  method = "L-BFGS-B"
+plot_categorization_heatmaps(
+  tbl_cat_grid %>% filter(participant_id %in% sample_ids),
+  4, "Mode"
+) + geom_contour(
+  data = tbl_preds_nb %>% 
+    filter(participant_id %in% substr(sample_ids, 1, 6)),
+  aes(x1, x2, group = category, z = density),
+  color = "black"
 )
 
 # Similarity Judgments ----------------------------------------------------
@@ -364,6 +297,7 @@ tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   geom_point(aes(color = as.numeric(participant_id), size = n)) +
   theme_bw() +
   scale_color_viridis_c(name = "Participant ID") +
+  scale_size_continuous(name = "Nr. Similarity Judgments") +
   labs(x = "Euclidean Distance (Binned)",
        y = "Average Similarity (Range: 1 - 4)")
 
@@ -444,6 +378,7 @@ tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
 levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
 pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
 pl_empirical + labs(title = str_c("Distance in Similarity Condition = ", sim_center))
+
 plot_distance_from_decision_boundary(tbl_cr, 10)
 
 
@@ -461,7 +396,7 @@ tbl_cr_agg <-
 ggplot(
   tbl_cr_agg %>% mutate(session = factor(
     session, levels = c(1, 2), labels = c("Before\nCategory Learning", "After\nCategory Learning"))
-    ), aes(mean_eucl_deviation, group = session)) +
+  ), aes(mean_eucl_deviation, group = session)) +
   geom_density(aes(color = session)) +
   facet_wrap(~ n_categories) +
   theme_bw() +

@@ -1,3 +1,100 @@
+timeout_and_returns <- function() {
+  #' manually assign prolific returns and submissions
+  #' 
+  pilot_I <- c(
+    '62d8108a083717cafb747770',
+    '62d810977a3c6d676074778d',
+    '62d8109a7a9e4810935be338',
+    '62d810a165900cc3096001bd',
+    '62d810a31af42c699187f4dc',
+    '62d810b1167959341fa067bb',
+    '62d810b6a53df36f6c1ddd3c',
+    '62d810bab18f2bfe81c49f1d',
+    '62d810bae2e7a65aad2abcb0',
+    '62d810bc7031b229278b2d57',
+    '62d810ce2827840a9710adc7',
+    '62d810fbc451b68c780d36b6',
+    '62d811eeb4b6869415c51742',
+    '62d8148bd4b1733c1a7c59e6',
+    '62d826c15d3dccc2ffebdca1'
+  )
+  
+  pilot_II <- c(
+    "608e74070357794c8c355e75",
+    "6162c20e9c675c15e82494ec",
+    "6110c7aa3d662738db309a89",
+    "6047b29b56acb503ce4319f5"
+  )
+  
+  e_true <- c(
+    '606c7d27f4f3ae688332a55d'
+  )
+  
+  e_true_ii <- c(
+    "601941db6605160008690742",
+    "606f6f81ff1ba0b8455ec8c4",
+    "611118bb5a34e8119eb47ed6"
+  )
+  
+  e_true_iii <- c(
+    "5f13334daab04a01f1bee1bd",
+    "601032f77969062d05802f88",
+    "60c33a1bde764fbff560a573",
+    "60cf6c61cd67587eba89a915",
+    "60e703e4908998ebc5679e8a" 
+  )
+  
+  e_true_iv <- c(
+    "60ef5b1cf52939a80af77543",
+    "60bb3b463887c2f9d1385cce",
+    "60ddfb3db6a71ad9ba75e387",
+    "605ddb3c61e1ce50865c3874",
+    "603a758c5fc59967a708e5f4",
+    "5eff6828a958150135ede8a4",
+    "5e10709fb63853754eff7d28",
+    "6105d72b52b6f2348973856f",
+    "614aad5f39fe300e0f0b9be7",
+    "6147e59cb48beb204aef2732",
+    "616aea6b17045149d16aca39",
+    "61608875c054bf0692dcd8ee",
+    "613cfaecee50fc5d702c9cfc",
+    "611ce118d137797315f04b9b",
+    "6164e1b26996fe46860b2291"
+  )
+  
+  e_true_v <- c(
+    "60ddfb3db6a71ad9ba75e387"
+  )
+  
+  e_true_vi <- c(
+    "5ecae71ae38d170cd1ef0744",
+    "5f6a50062979ef0ee95ba54b",
+    "6022812b3081be01df18e8c8",
+    "611ad1102273f42e9d8425a0",
+    "5ee2726cb596ff36d1faa360",
+    "6005684e172c9b77028985f3",
+    "615aabfd1bbb3b87b2474b18",
+    "612ecee5e7d44d3d46be3722",
+    "614c9257e1f394d0fbc4477d",
+    "611db360a2a64af97385a26a",
+    "60dc2623fd85cf0a3e3ed8ef",
+    "614e5e0f44f5b5284bea47b9",
+    "60fa757249e2a29c22b22431",
+    "61366992ad7770594c043ab6",
+    "60ed8a50f6799ac63ad1cc81",
+    "6107a6c1bb9d83f0f2a2b001",
+    "6162daf69e4d012b71c4383c"
+  )
+  
+  returned_timeout <- c(
+    pilot_I, pilot_II, 
+    e_true, e_true_ii, e_true_iii,
+    e_true_iv, e_true_v, e_true_vi
+  )
+  
+  return(returned_timeout)
+}
+
 fix_data_types <- function(tbl, fs, ns) {
   #' fix data types of columns of tbl
   #' 
@@ -44,7 +141,7 @@ load_data <- function(path_data, participants_returned) {
     `cat-allinone` = paths_cat_compound, 
     `cr-allinone-p1` = paths_cr1_compound, 
     `cr-allinone-p2` = paths_cr2_compound
-    )
+  )
   
   json_to_tibble <- function(path_file) {
     js_txt <- read_file(path_file)
@@ -61,7 +158,7 @@ load_data <- function(path_data, participants_returned) {
   l_tbl_all <- l_tbl_all[l_mask]
   inner_map <- function(a, b) map(
     a, function(x) c(participant_id = x$participant_id[1], ntrials = nrow(x))
-    ) %>% reduce(rbind) %>% as_tibble() %>% mutate(savemethod = b)
+  ) %>% reduce(rbind) %>% rbind() %>% as_tibble() %>% mutate(savemethod = b)
   tbl_ntrials <- map2(l_tbl_all, names(l_tbl_all), inner_map) %>% reduce(rbind)
   tbl_ntrials$task <- factor(str_detect(tbl_ntrials$savemethod, "cr"), labels = c("cat", "cr"))
   files_select <- tbl_ntrials %>% group_by(participant_id, task) %>%
@@ -107,7 +204,15 @@ exclude_incomplete_datasets <- function(l_tbl, n_resp_cr, n_resp_cat) {
   
   # some participants seem to have restarted the experiment: > 200 cr responses
   tbl_cr_n <- tbl_cr %>% 
-    group_by(participant_id) %>% summarize(n_resp = n()) %>%
+    arrange(participant_id, session, trial_id) %>%
+    mutate(
+      trial_inseq = 1:nrow(tbl_cr)
+      ) %>%
+    group_by(participant_id, session, trial_id) %>%
+    mutate(
+      rwn = row_number(trial_inseq)
+    ) %>% group_by(participant_id) %>% filter(rwn == 1) %>%
+    summarize(n_resp = n()) %>%
     ungroup() %>% arrange(n_resp) %>% filter(n_resp >= n_resp_cr)
   
   # some participants seem to have restarted the experiment: > 640 cat responses
@@ -572,7 +677,7 @@ fit_predict_nb <- function(participant_id, tbl) {
   #'
   
   # helper function calculating densities for grid 
-  nb_cat2_densities <- function(params) {
+  nb_cat2_densities <- function(params, cat = 2) {
     # evenly space grid
     x1 <- seq(0, 100, by = 2.5)
     x2 <- x1
@@ -583,14 +688,24 @@ fit_predict_nb <- function(participant_id, tbl) {
                 mean = c(params[["m1"]], params[["m2"]]), 
                 sigma = matrix(c(params[["sd1"]], 0, 0, params[["sd2"]]), nrow = 2))
       })
+    grid_eval$category <- cat
     return(grid_eval)
   }
   
   tbl <- tbl[tbl$participant_id == participant_id, ]
   m_nb <- naive_bayes(tbl[, c("x1_true", "x2_true")], as.character(tbl$response))
-  params <- c(m_nb$tables[["x1_true"]][, 2], m_nb$tables[["x2_true"]][, 2]) %>% as.list()
-  names(params) <- c("m1", "sd1", "m2", "sd2")
-  tbl_densities <- nb_cat2_densities(params)
+  n_cats <- max(as.numeric(tbl$n_categories))
+  l_params <- map(
+    1:n_cats, 
+    ~ c(
+      m_nb$tables[["x1_true"]][, .x], 
+      m_nb$tables[["x2_true"]][, .x]
+      ) %>% as.list()
+    )
+  for (i in 1:length(l_params)) {
+    names(l_params[[i]]) <- c("m1", "sd1", "m2", "sd2")
+  }
+  tbl_densities <- map2(l_params, 1:n_cats, nb_cat2_densities) %>% reduce(rbind)
   tbl_densities$participant_id <- participant_id
   l_nb <- list(m = m_nb, tbl_densities = tbl_densities)
   return(l_nb)
@@ -1219,5 +1334,40 @@ participant_report <- function(l_cases) {
     pl_cat_hist = pl_cat_hist,
     pl_sim_line = pl_sim_line
   )
+  
+}
+
+
+d2_rep_center_square <- function(tbl_participant, nb_participant) {
+  #' calculate distance to representational category center
+  #' 
+  #' @description extracts nb centers and calculates distances to the
+  #' representational center of the correct answer
+  #' 
+  #' @param tbl_participant tbl df with continuous reproduction data for one 
+  #' participant
+  #' @param nb_participant fitted naive Bayes model for the same participant
+  #' 
+  #' @return a tbl df with the distances per session and trial
+  #'  
+  
+  p_id <- tbl_participant$participant_id[1]
+  session <- tbl_participant$session
+  trial_id <- tbl_participant$trial_id
+  tbl_params <- as_tibble(data.frame(t(matrix(unlist(nb_participant[[1]][["tables"]]), nrow = 4, ncol = 4))))
+  names(tbl_params) <- c("mean_x1", "sd_x1", "mean_x2", "sd_x2")
+  tbl_participant <- tbl_participant[, c("category", "x1_response", "x2_response")]
+  
+  distance_to_category_center <- function(category, x1_response, x2_response, tbl_params) {
+    sqrt(
+      (x1_response - tbl_params[category, "mean_x1"])^2 +
+        (x2_response - tbl_params[category, "mean_x2"])^2
+    )
+  }
+  
+  v <- distance_to_category_center(tbl_participant$category, tbl_participant$x1_response, tbl_participant$x2_response, tbl_params)
+  tbl_out <- tibble(participant_id = p_id, session = session, trial_id = trial_id, d_rep = as_vector(v))
+  colnames(tbl_out)[4] <- "d_rep_center"
+  return(tbl_out)
   
 }

@@ -377,7 +377,7 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim
     geom_label(data = tbl_label, aes(.425, 10, label = str_c(no_improvement, " Participants\nWithout Improvement"))) +
     facet_grid(~ n_categories) +
     theme_bw() +
-    coord_cartesian(ylim = c(0, 13)) +
+    #coord_cartesian(ylim = c(0, 13)) +
     scale_fill_brewer(name = "Variable", palette = "Set1") +
     labs(x = "Proportion Correct / Proportion Change", 
          y = "Nr. Participants")
@@ -479,31 +479,58 @@ by_participant_coefs <- function(tbl_df, iv_str, dv_str, title_str) {
 }
 
 
-plot_distance_from_decision_boundary <- function(tbl_cr, nbins) {
+plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins) {
   #' 
   #' @description scatter plot of distance from category center and
   #' distance from decision boundary before and after category learning
-  #' @param tbl_cr the tbl with by-trial cr responses
+  #' @param tbl_cr_d the tbl with by-trial cr responses
   #' @param nbins nr of bins to cut the distances from decision boundary into
   #' 
   #' @return the scatter plot
   #' 
-  tbl_cr$d2boundary_stim_cut <- cut(tbl_cr$d2boundary_stim, nbins, labels = FALSE)
-  tbl_cr <- tbl_cr %>% mutate(
+  tbl_cr_d$d2boundary_stim_cut <- cut(tbl_cr_d$d2boundary_stim, nbins, labels = FALSE)
+  # the following line only works without ellipse category in data
+  tbl_cr_d$d2boundary_stim_cut <- tbl_cr_d$d2boundary_stim
+  tbl_cr_d <- tbl_cr_d %>% mutate(
     session = factor(session, labels = c("Before Cat. Learning", "After Cat. Learning")),
     category = factor(category)
   )
+  # all items in square groups and in similarity groups are treated in the same way
+  tbl_cr_d$category[tbl_cr_d$n_categories != 2] <- 2
+  tbl_cr_d <- grouped_agg(tbl_cr_d, c(session, n_categories, category, d2boundary_stim_cut), d_closest) %>%
+    group_by(n_categories, category, d2boundary_stim_cut) %>%
+    arrange(session) %>%
+    mutate(
+      mean_d_closest_before = lag(mean_d_closest),
+      mean_d_delta = mean_d_closest_before - mean_d_closest
+      ) %>% filter(!is.na(mean_d_delta))
+  
+  
   dg <- position_dodge(width = .2)
   ggplot(
-    grouped_agg(tbl_cr, c(session, n_categories, category, d2boundary_stim_cut), d_closest), 
-    aes(d2boundary_stim_cut, mean_d_closest, group = session)) +
-    geom_point(aes(color = category, shape = session), position = dg) +
-    facet_wrap(~ n_categories) +
+    tbl_cr_d, aes(d2boundary_stim_cut, mean_d_delta, group = n_categories)) +
+    geom_line(aes(color = n_categories), position = dg) +
+    geom_point(color = "white", size = 4, position = dg) +
+    geom_point(aes(color = n_categories), position = dg) +
     theme_bw() +
     scale_color_brewer(palette = "Set1", name = "") +
     scale_shape_discrete(name = "") +
     labs(
       x = "Distance from Decision Boundary",
-      y = "Distance from Category Center"
+      y = "Movement towards Category Center"
     )
 }
+
+mean_against_delta_cat_accuracy <- function(tbl_movement) {
+  #' plot average categorization accuracy against delta
+  #' categorization accuracy
+  #' 
+  ggplot(tbl_movement,
+         aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
+    geom_point() +
+    geom_smooth() +
+    facet_wrap( ~ n_categories) +
+    theme_bw() +
+    labs(x = "Delta Accuracy", y = "Mean Accuracy")
+}
+
