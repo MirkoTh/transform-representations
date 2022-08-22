@@ -195,10 +195,10 @@ mean_against_delta_cat_accuracy(tbl_movement)
 
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
-l_nb <-
-  map(participant_ids_4_cat,
-      fit_predict_nb,
-      tbl = tbl_cat %>% filter(n_categories == 4))
+l_nb <- map(
+  participant_ids_4_cat, fit_predict_nb,
+  tbl = tbl_cat %>% filter(n_categories == 4)
+)
 names(l_nb) <- participant_ids_4_cat
 
 

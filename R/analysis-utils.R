@@ -677,7 +677,7 @@ fit_predict_nb <- function(participant_id, tbl) {
   #'
   
   # helper function calculating densities for grid 
-  nb_cat2_densities <- function(params) {
+  nb_cat2_densities <- function(params, cat = 2) {
     # evenly space grid
     x1 <- seq(0, 100, by = 2.5)
     x2 <- x1
@@ -688,14 +688,24 @@ fit_predict_nb <- function(participant_id, tbl) {
                 mean = c(params[["m1"]], params[["m2"]]), 
                 sigma = matrix(c(params[["sd1"]], 0, 0, params[["sd2"]]), nrow = 2))
       })
+    grid_eval$category <- cat
     return(grid_eval)
   }
   
   tbl <- tbl[tbl$participant_id == participant_id, ]
   m_nb <- naive_bayes(tbl[, c("x1_true", "x2_true")], as.character(tbl$response))
-  params <- c(m_nb$tables[["x1_true"]][, 2], m_nb$tables[["x2_true"]][, 2]) %>% as.list()
-  names(params) <- c("m1", "sd1", "m2", "sd2")
-  tbl_densities <- nb_cat2_densities(params)
+  n_cats <- max(as.numeric(tbl$n_categories))
+  l_params <- map(
+    1:n_cats, 
+    ~ c(
+      m_nb$tables[["x1_true"]][, .x], 
+      m_nb$tables[["x2_true"]][, .x]
+      ) %>% as.list()
+    )
+  for (i in 1:length(l_params)) {
+    names(l_params[[i]]) <- c("m1", "sd1", "m2", "sd2")
+  }
+  tbl_densities <- map2(l_params, 1:n_cats, nb_cat2_densities) %>% reduce(rbind)
   tbl_densities$participant_id <- participant_id
   l_nb <- list(m = m_nb, tbl_densities = tbl_densities)
   return(l_nb)
