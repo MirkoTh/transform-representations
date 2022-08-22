@@ -173,6 +173,7 @@ tbl_cat_agg <-
 l_movement <-
   movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest", sim_center)
 tbl_movement <- l_movement[[1]]
+
 # plot movement towards category center against task2 accuracy
 l_movement[[2]]
 
@@ -190,8 +191,7 @@ sample_ids <-
 plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), c(2, 4))
 mean_against_delta_cat_accuracy(tbl_movement)
 
-# model fits
-## prototype model
+# prototype analyses
 
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
@@ -201,98 +201,61 @@ l_nb <- map(
 )
 names(l_nb) <- participant_ids_4_cat
 
-
-#tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
-tbl_square <- tbl_cr %>% filter(n_categories == "4")
+tbl_square <- tbl_cr %>% filter(as.numeric(n_categories) > 1)
 tbl_square$participant_id <- factor(tbl_square$participant_id)
 l_tbl_square <- split(tbl_square, tbl_square$participant_id)
+tbl_d2_rep_center <- map2(
+  l_tbl_square, l_nb, 
+  d2_rep_center_square
+) %>% reduce(rbind)
+tbl_cr <- tbl_cr %>% 
+  left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
 
-tbl_participant <- l_tbl_square[[1]] 
-nb_participant <- l_nb[[1]]
-
-tbl_d2_rep_center <- map2(l_tbl_square, l_nb, d2_rep_center_square) %>% reduce(rbind)
-tbl_cr <- tbl_cr %>% left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
-
-
-d2_rep_center_square <- function(tbl_participant, nb_participant) {
-  
-  p_id <- tbl_participant$participant_id[1]
-  session <- tbl_participant$session
-  trial_id <- tbl_participant$trial_id
-  tbl_params <- as_tibble(data.frame(t(matrix(unlist(nb_participant[[1]][["tables"]]), nrow = 4, ncol = 4))))
+representational_precision <- function(nb_participant) {
+  tbl_params <- as_tibble(data.frame(t(matrix(unlist(
+    nb_participant[[1]][["tables"]]
+  ), nrow = 4, ncol = 4))))
   names(tbl_params) <- c("mean_x1", "sd_x1", "mean_x2", "sd_x2")
-  tbl_participant <- tbl_participant[, c("category", "x1_response", "x2_response")]
-  
-  distance_to_square_center <- function(category, x1_response, x2_response, tbl_params) {
-    sqrt(
-      (x1_response - tbl_params[category, "mean_x1"])^2 +
-        (x2_response - tbl_params[category, "mean_x2"])^2
-    )
-  }
-  
-  v <- distance_to_square_center(tbl_participant$category, tbl_participant$x1_response, tbl_participant$x2_response, tbl_params)
-  tbl_out <- tibble(participant_id = p_id, session = session, trial_id = trial_id, d_rep = as_vector(v))
-  colnames(tbl_out)[4] <- "d_rep_center"
-  return(tbl_out)
-  
+  mean(colMeans(tbl_params %>% select(starts_with("sd"))))
 }
-
+v_precision_representation <- map_dbl(l_nb, representational_precision)
+tbl_precision_representation <- tibble(v_precision_representation)
+tbl_precision_representation$participant_id <- participant_ids_4_cat
+tbl_precision <- tbl_cr %>% filter(n_categories == "4") %>%
+  grouped_agg(participant_id, c(d_closest, d_rep_center)) %>%
+  left_join(tbl_precision_representation, by = "participant_id") %>%
+  select(-c(n, nunique_d_closest, nunique_d_rep_center))
+tbl_precision %>% pivot_longer(
+  cols = c(mean_d_closest, mean_d_rep_center)
+) %>% mutate(
+  name = factor(
+    name, 
+    labels = c("True Center", "Representational Center")
+  )) %>%
+ggplot(aes(v_precision_representation, value, group = name)) +
+  geom_point(aes(color = name)) +
+  scale_color_brewer(palette = "Set1", name = "Distance to") +
+  theme_bw() +
+  labs(x = "Representational Precision", y = "Distance to Closest Prototype")
 # 
-# tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>%
-#   mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
-# l_m_nb_pds <- map(l_nb, 1) %>% map("tables")
-# names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
-
+tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>%
+  mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
 
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center)
+  movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
+  )
 tbl_movement <- l_movement[[1]]
 l_movement[[2]][[2]]
 
-# can we also include variability in the representations
-# i.e. people with preciser category representations
-# should experience stronger pull/push towards/away the center
-
-plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids),
-                             2,
-                             "Mode") +
-  geom_contour(
-    data = tbl_preds_nb %>% filter(participant_id %in% substr(sample_ids, 1, 6)),
-    aes(x1, x2, z = density, alpha = density),
-    color = "black"
-  ) + geom_point(data = tibble(x = 50, y = 50),
-                 aes(x, y),
-                 color = "#FF3333",
-                 size = 3.5)
-
-
-
-## exemplar model
-
-tbl_gcm <- tbl_tmp[, c("x1_true", "x2_true", "response")] %>%
-  mutate(cat1 = 0, cat2 = 0) %>%
-  rename(category = response) %>%
-  mutate(category = fct_inorder(as.factor(category)))
-
-tbl_gcm$cat1[tbl_gcm$category == 1] <- 1
-tbl_gcm$cat2[tbl_gcm$category == 2] <- 1
-
-l_info <- list(
-  feature_names = c("x1_true", "x2_true"),
-  categories = levels(tbl_gcm$category),
-  n_categories = 2,
-  sens = 1,
-  wgh = .5
-)
-
-fit_gcm <- optim(
-  f = ll_gcm,
-  c(8, .52),
-  lower = c(0, 0),
-  upper = c(10, 1),
-  l_info = l_info,
-  tbl_stim = tbl_gcm,
-  method = "L-BFGS-B"
+plot_categorization_heatmaps(
+  tbl_cat_grid %>% filter(participant_id %in% sample_ids),
+  4, "Mode"
+) + geom_contour(
+  data = tbl_preds_nb %>% 
+    filter(participant_id %in% substr(sample_ids, 1, 6)),
+  aes(x1, x2, group = category, z = density),
+  color = "black"
 )
 
 # Similarity Judgments ----------------------------------------------------
