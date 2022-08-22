@@ -1336,3 +1336,38 @@ participant_report <- function(l_cases) {
   )
   
 }
+
+
+d2_rep_center_square <- function(tbl_participant, nb_participant) {
+  #' calculate distance to representational category center
+  #' 
+  #' @description extracts nb centers and calculates distances to the
+  #' representational center of the correct answer
+  #' 
+  #' @param tbl_participant tbl df with continuous reproduction data for one 
+  #' participant
+  #' @param nb_participant fitted naive Bayes model for the same participant
+  #' 
+  #' @return a tbl df with the distances per session and trial
+  #'  
+  
+  p_id <- tbl_participant$participant_id[1]
+  session <- tbl_participant$session
+  trial_id <- tbl_participant$trial_id
+  tbl_params <- as_tibble(data.frame(t(matrix(unlist(nb_participant[[1]][["tables"]]), nrow = 4, ncol = 4))))
+  names(tbl_params) <- c("mean_x1", "sd_x1", "mean_x2", "sd_x2")
+  tbl_participant <- tbl_participant[, c("category", "x1_response", "x2_response")]
+  
+  distance_to_category_center <- function(category, x1_response, x2_response, tbl_params) {
+    sqrt(
+      (x1_response - tbl_params[category, "mean_x1"])^2 +
+        (x2_response - tbl_params[category, "mean_x2"])^2
+    )
+  }
+  
+  v <- distance_to_category_center(tbl_participant$category, tbl_participant$x1_response, tbl_participant$x2_response, tbl_params)
+  tbl_out <- tibble(participant_id = p_id, session = session, trial_id = trial_id, d_rep = as_vector(v))
+  colnames(tbl_out)[4] <- "d_rep_center"
+  return(tbl_out)
+  
+}
