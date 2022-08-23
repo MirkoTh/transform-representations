@@ -59,7 +59,9 @@ l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
 
-# add deviation from response to stimulus
+# add several distance measures: response to stimulus, response to true
+# category center, & response to closest true decision boundary
+
 l_deviations_all <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
@@ -121,10 +123,8 @@ tbl_cat_sim <- tbl_cat_sim %>%
 
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 0)
-tbl_cat <-
-  tbl_cat_sim %>% filter(n_categories %in% c(2, 4), as.numeric(as.character(trial_id_binned)) <= 15)
-
-
+tbl_cat <- tbl_cat_sim %>% 
+  filter(n_categories %in% c(2, 4))
 tbl_cat_overview <- tbl_cat %>%
   grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
   arrange(mean_rt)
@@ -149,7 +149,7 @@ l_pl[[1]]
 # by-participant trajectories
 l_pl[[2]]
 
-
+# by-participant intercepts vs. slopes from individual lms
 tbl_cat_agg <-
   l_pl[[3]] %>% group_by(participant_id, n_categories, trial_id_binned) %>%
   summarize(accuracy = mean(accuracy_mn_participant)) %>% group_by(participant_id) %>%
@@ -157,7 +157,9 @@ tbl_cat_agg <-
     trial_id_binned = as.numeric(as.character(trial_id_binned)),
     trial_id_binned = trial_id_binned - mean(trial_id_binned)
   )
-by_participant_coefs(tbl_cat_agg, "trial_id_binned", "accuracy", "LM Cat. Accuracy")
+by_participant_coefs(
+  tbl_cat_agg, "trial_id_binned", "accuracy", "LM Cat. Accuracy"
+  )
 
 # stat analysis
 
@@ -181,7 +183,9 @@ marrangeGrob(list(l_pl[[1]], l_movement[[2]]$hist_delta_last),
              nrow = 1,
              ncol = 2)
 
-tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 201)
+# exclude initial trials from following analyses
+n_start_exclude <- 200
+tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, n_start_exclude)
 sample_ids <- tbl_cat_grid %>% group_by(participant_id) %>%
   summarize(mean_accuracy = max(mean_accuracy)) %>%
   arrange(desc(mean_accuracy))
@@ -193,11 +197,12 @@ mean_against_delta_cat_accuracy(tbl_movement)
 
 # prototype analyses
 
+
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
 l_nb <- map(
   participant_ids_4_cat, fit_predict_nb,
-  tbl = tbl_cat %>% filter(n_categories == 4)
+  tbl = tbl_cat %>% filter(n_categories == 4 & trial_id >= n_start_exclude)
 )
 names(l_nb) <- participant_ids_4_cat
 
@@ -246,7 +251,7 @@ l_movement <-
     tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
   )
 tbl_movement <- l_movement[[1]]
-l_movement[[2]][[2]]
+l_movement[[2]][[1]]
 
 plot_categorization_heatmaps(
   tbl_cat_grid %>% filter(participant_id %in% sample_ids),

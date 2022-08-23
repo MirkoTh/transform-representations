@@ -207,7 +207,7 @@ exclude_incomplete_datasets <- function(l_tbl, n_resp_cr, n_resp_cat) {
     arrange(participant_id, session, trial_id) %>%
     mutate(
       trial_inseq = 1:nrow(tbl_cr)
-      ) %>%
+    ) %>%
     group_by(participant_id, session, trial_id) %>%
     mutate(
       rwn = row_number(trial_inseq)
@@ -700,8 +700,8 @@ fit_predict_nb <- function(participant_id, tbl) {
     ~ c(
       m_nb$tables[["x1_true"]][, .x], 
       m_nb$tables[["x2_true"]][, .x]
-      ) %>% as.list()
-    )
+    ) %>% as.list()
+  )
   for (i in 1:length(l_params)) {
     names(l_params[[i]]) <- c("m1", "sd1", "m2", "sd2")
   }
@@ -1351,10 +1351,12 @@ d2_rep_center_square <- function(tbl_participant, nb_participant) {
   #' @return a tbl df with the distances per session and trial
   #'  
   
-  p_id <- tbl_participant$participant_id[1]
+  p_id <- tbl_participant$participant_id
   session <- tbl_participant$session
   trial_id <- tbl_participant$trial_id
-  tbl_params <- as_tibble(data.frame(t(matrix(unlist(nb_participant[[1]][["tables"]]), nrow = 4, ncol = 4))))
+  tbl_params <- as_tibble(data.frame(map(
+    nb_participant[[1]][["tables"]], ~ t(matrix(unlist(.x), nrow = 2, ncol = 4))
+  ) %>% reduce(cbind)))
   names(tbl_params) <- c("mean_x1", "sd_x1", "mean_x2", "sd_x2")
   tbl_participant <- tbl_participant[, c("category", "x1_response", "x2_response")]
   
