@@ -570,3 +570,58 @@ plot_heatmaps_with_representations <- function(l_nb, sample_ids) {
     color = "black"
   )
 }
+
+
+plot_similarity_against_distance <- function(tbl_sim, tbl_sim_ci, sample_ids_sim = NULL) {
+  #' plot similarity ratings against euclidean distance
+  #' @description individual and aggregated plots of similarity against distance
+  #' @param tbl_sim by-trial responses in similarity task
+  #' @param tbl_sim_ci aggregated responses in similarity task
+  #' @param sample_ids_sim list with subset of participants to plot in the
+  #' individual plot
+  #' @return list with the two plots
+  #' 
+  tbl_sample <- tbl_sim %>% 
+    group_by(participant_id, n_categories, distance_binned)
+  if (!is.null(sample_ids_sim)) {
+    tbl_sample <- tbl_sample %>% filter(participant_id %in% sample_ids_sim)
+  }
+  
+  # scatter plot and line plot of sample
+  pl_sample <- tbl_sample %>%
+    summarize(response_mn = mean(response), n = n()) %>%
+    ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
+    geom_line(aes(color = as.numeric(participant_id))) +
+    geom_point(aes(color = as.numeric(participant_id), size = n)) +
+    theme_bw() +
+    scale_color_viridis_c(name = "Participant ID") +
+    scale_size_continuous(name = "Nr. Similarity Judgments") +
+    labs(x = "Euclidean Distance (Binned)",
+         y = "Average Similarity (Range: 1 - 4)")
+  
+  # aggregate scatter plot and line plot
+  pl_agg <- ggplot() +
+    geom_smooth(
+      data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+      aes(distance_binned, response),
+      color = "purple",
+      method = "lm"
+    ) + geom_errorbar(
+      data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+      aes(
+        distance_binned,
+        ymin = response - ci,
+        ymax = response + ci,
+        width = .2
+      )
+    ) +  geom_point(size = 3, color = "white") +
+    geom_point(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+               aes(distance_binned, response)) +
+    theme_bw() +
+    scale_x_continuous(breaks = seq(2, 10, by = 2)) +
+    coord_cartesian(ylim = c(1, 4)) +
+    labs(x = "Euclidean Distance (Binned)",
+         y = "Average Similarity (Range: 1 - 4)")
+  
+  return(list(pl_sample = pl_sample, pl_agg = pl_agg))
+}

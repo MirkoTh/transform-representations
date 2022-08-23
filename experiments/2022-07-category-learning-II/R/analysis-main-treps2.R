@@ -206,7 +206,7 @@ mean_against_delta_cat_accuracy(tbl_movement_gt)
 # fit individual nb models
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
-l_nb <- by_participant_nb(tbl_cat, participant_ids_4_cat)
+l_nb <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
 
 # distance to representational centers and precision of representations
 tbl_square <- tbl_cr %>% filter(as.numeric(n_categories) == 4)
@@ -226,35 +226,8 @@ marrangeGrob(list(
 
 
 tbl_precision <- combine_precision_and_movements(l_nb, participant_ids_4_cat)
-
-
-tbl_precision %>% pivot_longer(
-  cols = c(movement_gt, movement_representation)
-) %>% mutate(
-  name = factor(
-    name, 
-    labels = c("True Center", "Representational Center")
-  )) %>%
-  ggplot(aes(v_precision_representation, value, group = name)) +
-  geom_point(aes(color = name)) +
-  geom_smooth(aes(color = name), method = "lm", se = FALSE, size = .5) +
-  scale_color_brewer(palette = "Set1", name = "Movement to") +
-  theme_bw() +
-  labs(x = "Representational Precision", y = "Movement")
-
-tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>%
-  mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
-
-
-plot_categorization_heatmaps(
-  tbl_cat_grid %>% filter(participant_id %in% sample_ids),
-  4, "Mode"
-) + geom_contour(
-  data = tbl_preds_nb %>% 
-    filter(participant_id %in% substr(sample_ids, 1, 6)),
-  aes(x1, x2, group = category, z = density),
-  color = "black"
-)
+plot_movement_against_precision(tbl_precision)
+plot_heatmaps_with_representations(l_nb, sample_ids)
 
 # Similarity Judgments ----------------------------------------------------
 
@@ -285,42 +258,13 @@ tbl_sim_ci <- summarySEwithin(tbl_sim,
 tbl_sim_ci$distance_binned <-
   as.numeric(as.character(tbl_sim_ci$distance_binned))
 
-sample_ids <-
+sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
-tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
-  #filter(participant_id %in% sample_ids) %>%
-  summarize(response_mn = mean(response), n = n()) %>%
-  ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
-  geom_line(aes(color = as.numeric(participant_id))) +
-  geom_point(aes(color = as.numeric(participant_id), size = n)) +
-  theme_bw() +
-  scale_color_viridis_c(name = "Participant ID") +
-  scale_size_continuous(name = "Nr. Similarity Judgments") +
-  labs(x = "Euclidean Distance (Binned)",
-       y = "Average Similarity (Range: 1 - 4)")
 
-ggplot() +
-  geom_smooth(
-    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
-    aes(distance_binned, response),
-    color = "purple",
-    method = "lm"
-  ) + geom_errorbar(
-    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
-    aes(
-      distance_binned,
-      ymin = response - ci,
-      ymax = response + ci,
-      width = .2
-    )
-  ) +  geom_point(size = 3, color = "white") +
-  geom_point(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
-             aes(distance_binned, response)) +
-  theme_bw() +
-  scale_x_continuous(breaks = seq(2, 10, by = 2)) +
-  coord_cartesian(ylim = c(1, 4)) +
-  labs(x = "Euclidean Distance (Binned)",
-       y = "Average Similarity (Range: 1 - 4)")
+l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim)
+
+grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
+
 
 tbl_sim_agg_subj <- tbl_sim %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
