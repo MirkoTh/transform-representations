@@ -473,7 +473,7 @@ by_participant_coefs <- function(tbl_df, iv_str, dv_str, title_str) {
     geom_point(shape = 1, aes(color = n_categories)) +
     geom_smooth(method = "lm", se = FALSE, aes(color = n_categories)) +
     geom_label(data = tbl_corr, aes(x_label, y_label, label = str_c("r = ", round(corr, 2)))) +
-    scale_color_brewer(palette = "Set1") +
+    scale_color_brewer(name = "", palette = "Set1") +
     theme_bw() +
     labs(title = title_str, x = "Intercept", y = "Slope per Bin")
 }
@@ -534,3 +534,39 @@ mean_against_delta_cat_accuracy <- function(tbl_movement) {
     labs(x = "Delta Accuracy", y = "Mean Accuracy")
 }
 
+plot_movement_against_precision <- function(tbl_precision) {
+  #' plot movements towards true category centers and movements towards
+  #' representational centers against precision of representations
+  #' 
+  tbl_precision %>% pivot_longer(
+    cols = c(movement_gt, movement_representation)
+  ) %>% mutate(
+    name = factor(
+      name, 
+      labels = c("True Center", "Representational Center")
+    )) %>%
+    ggplot(aes(v_precision_representation, value, group = name)) +
+    geom_point(aes(color = name)) +
+    geom_smooth(aes(color = name), method = "lm", se = FALSE, size = .5) +
+    scale_color_brewer(palette = "Set1", name = "Movement to") +
+    theme_bw() +
+    labs(x = "Representational Precision", y = "Movement")
+}
+
+
+plot_heatmaps_with_representations <- function(l_nb, sample_ids) {
+  #' plot heat maps of category learning responses for some sample
+  #' participants and overlay representations from nb model
+  #'
+  tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>%
+    mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
+  plot_categorization_heatmaps(
+    tbl_cat_grid %>% filter(participant_id %in% sample_ids),
+    4, "Mode"
+  ) + geom_contour(
+    data = tbl_preds_nb %>% 
+      filter(participant_id %in% substr(sample_ids, 1, 6)),
+    aes(x1, x2, group = category, z = density),
+    color = "black"
+  )
+}
