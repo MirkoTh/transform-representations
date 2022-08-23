@@ -306,11 +306,13 @@ tbl_cr %>% group_by(participant_id) %>% summarize(move = sum(move_sum), n_trials
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
 pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
+grid.arrange(pl_marginal_before, pl_marginal_after, nrow = 2, ncol = 1)
 
 # heat map of errors over 2d space
 
-pl_heamaps <-
-  plot_2d_binned_heatmaps(l_deviations_incl$tbl_checker, l_deviations_incl$tbl_checker_avg)
+pl_heamaps <- plot_2d_binned_heatmaps(
+  l_deviations_incl$tbl_checker, l_deviations_incl$tbl_checker_avg
+)
 
 # 1d marginal histograms & freq polys of deviations x1 and x2 before vs. after
 pl_1d_marginals <- plot_1d_marginals(tbl_cr)
@@ -323,80 +325,18 @@ pl_empirical + labs(title = str_c("Distance in Similarity Condition = ", sim_cen
 
 plot_distance_from_decision_boundary(tbl_cr, 10)
 
-
-
-
-marrangeGrob(list(pl_avg_move, pl_empirical),
-             nrow = 1,
-             ncol = 2)
+# 
+# marrangeGrob(list(pl_avg_move, pl_empirical),
+#              nrow = 1,
+#              ncol = 2)
 
 tbl_cr_agg <-
   grouped_agg(tbl_cr,
               c(participant_id, session, n_categories),
               eucl_deviation)
+l_pl_euclidean <- plot_deviations_from_stimulus(tbl_cr_agg)
+grid.arrange(l_pl_euclidean$pl_density, l_pl_euclidean$pl_agg, nrow = 1, ncol = 2)
 
-ggplot(
-  tbl_cr_agg %>% mutate(session = factor(
-    session, levels = c(1, 2), labels = c("Before\nCategory Learning", "After\nCategory Learning"))
-  ), aes(mean_eucl_deviation, group = session)) +
-  geom_density(aes(color = session)) +
-  facet_wrap(~ n_categories) +
-  theme_bw() +
-  scale_color_brewer(palette = "Set1", name = "") +
-  labs(
-    x = "Mean Euclidean Deviation",
-    y = "Probability Density"
-  )
-
-pdg <- position_dodge(width = .15)
-summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", betweenvars = "n_categories", withinvars = "session") %>%
-  mutate(session = factor(
-    session,
-    labels = c("Before\nCategory Learning", "After\nCategory Learning")
-  )) %>%
-  ggplot(aes(session, mean_eucl_deviation, group = n_categories)) +
-  geom_point(aes(color = n_categories), position = pdg) +
-  geom_line(aes(color = n_categories), show.legend = FALSE, position = pdg) +
-  geom_errorbar(
-    aes(
-      ymin = mean_eucl_deviation - 1.96 * se,
-      ymax = mean_eucl_deviation + 1.96 * se,
-      color = n_categories
-    ),
-    width = .15, show.legend = FALSE, position = pdg
-  ) +
-  scale_fill_brewer(name = "", palette = "Set1") +
-  scale_color_brewer(name = "Group", palette = "Set1") +
-  theme_bw() +
-  labs(x = "",
-       y = "Mean Euclidean Deviation")
-
-tbl_cr_agg %>%
-  left_join(tbl_movement[, c("participant_id", "mean_accuracy", "mean_delta_accuracy")],
-            by = "participant_id") %>% select(
-              participant_id,
-              session,
-              n_categories,
-              mean_eucl_deviation,
-              mean_accuracy,
-              mean_delta_accuracy
-            ) %>% filter(n_categories == "4 Categories") %>%
-  pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
-  mutate(name = factor(
-    name,
-    labels = c(
-      "Final Categorization Accuracy",
-      "Delta Categorization Accuracy"
-    )
-  )) %>%
-  ggplot(aes(mean_eucl_deviation, value, group = name)) +
-  facet_wrap( ~ name) +
-  geom_point(aes(color = name), show.legend = FALSE) +
-  geom_smooth(method = "lm", aes(color = name), show.legend = FALSE) +
-  scale_color_brewer(palette = "Set1") +
-  theme_bw() +
-  labs(x = "Euclidean Deviation Reproduction",
-       y = "(Delta) Categorization Accuracy")
 
 # lmes
 ## movement to center

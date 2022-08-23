@@ -625,3 +625,77 @@ plot_similarity_against_distance <- function(tbl_sim, tbl_sim_ci, sample_ids_sim
   
   return(list(pl_sample = pl_sample, pl_agg = pl_agg))
 }
+
+
+
+plot_deviations_from_stimulus <- function(tbl_cr_agg) {
+  pl_density <- ggplot(
+    tbl_cr_agg %>% mutate(session = factor(
+      session, levels = c(1, 2), labels = c("Before\nCategory Learning", "After\nCategory Learning"))
+    ), aes(mean_eucl_deviation, group = session)) +
+    geom_density(aes(color = session)) +
+    facet_wrap(~ n_categories) +
+    theme_bw() +
+    scale_color_brewer(palette = "Set1", name = "") +
+    labs(
+      x = "Mean Euclidean Deviation",
+      y = "Probability Density"
+    )
+  
+  pdg <- position_dodge(width = .15)
+  pl_agg <- summarySEwithin(tbl_cr_agg, "mean_eucl_deviation", betweenvars = "n_categories", withinvars = "session") %>%
+    mutate(session = factor(
+      session,
+      labels = c("Before\nCategory Learning", "After\nCategory Learning")
+    )) %>%
+    ggplot(aes(session, mean_eucl_deviation, group = n_categories)) +
+    geom_point(aes(color = n_categories), position = pdg) +
+    geom_line(aes(color = n_categories), show.legend = FALSE, position = pdg) +
+    geom_errorbar(
+      aes(
+        ymin = mean_eucl_deviation - 1.96 * se,
+        ymax = mean_eucl_deviation + 1.96 * se,
+        color = n_categories
+      ),
+      width = .15, show.legend = FALSE, position = pdg
+    ) +
+    scale_fill_brewer(name = "", palette = "Set1") +
+    scale_color_brewer(name = "Group", palette = "Set1") +
+    theme_bw() +
+    labs(x = "",
+         y = "Mean Euclidean Deviation")
+  
+  pl_accuracy_against_deviation <- tbl_cr_agg %>%
+    left_join(tbl_movement_gt[, c("participant_id", "mean_accuracy", "mean_delta_accuracy")],
+              by = "participant_id") %>% select(
+                participant_id,
+                session,
+                n_categories,
+                mean_eucl_deviation,
+                mean_accuracy,
+                mean_delta_accuracy
+              ) %>% filter(n_categories == "4 Categories") %>%
+    pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
+    mutate(name = factor(
+      name,
+      labels = c(
+        "Final Categorization Accuracy",
+        "Delta Categorization Accuracy"
+      )
+    )) %>%
+    ggplot(aes(mean_eucl_deviation, value, group = name)) +
+    facet_wrap( ~ name) +
+    geom_point(aes(color = name), show.legend = FALSE) +
+    geom_smooth(method = "lm", aes(color = name), show.legend = FALSE) +
+    scale_color_brewer(palette = "Set1") +
+    theme_bw() +
+    labs(x = "Euclidean Deviation Reproduction",
+         y = "(Delta) Categorization Accuracy")
+  
+  return(list(
+    pl_density = pl_density,
+    pl_agg = pl_agg,
+    pl_accuracy_against_deviation = pl_accuracy_against_deviation
+  ))
+  
+}
