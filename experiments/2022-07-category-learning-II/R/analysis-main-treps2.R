@@ -229,6 +229,8 @@ tbl_precision <- combine_precision_and_movements(l_nb, participant_ids_4_cat)
 plot_movement_against_precision(tbl_precision)
 plot_heatmaps_with_representations(l_nb, sample_ids)
 
+
+
 # Similarity Judgments ----------------------------------------------------
 
 tbl_sim <- tbl_cat_sim %>%
@@ -249,20 +251,17 @@ tbl_sim$distance_binned %>% unique()
 
 tbl_sim_agg <- tbl_sim %>%
   rutils::grouped_agg(c(distance_binned), c(response, rt))
-tbl_sim_ci <- summarySEwithin(tbl_sim,
-                              "response",
-                              "n_categories",
-                              "distance_binned",
-                              "participant_id",
-                              TRUE) %>% as_tibble()
+tbl_sim_ci <- summarySEwithin(
+  tbl_sim, "response", "n_categories", "distance_binned", "participant_id", TRUE
+) %>% as_tibble()
+
 tbl_sim_ci$distance_binned <-
   as.numeric(as.character(tbl_sim_ci$distance_binned))
 
+# some sample participants to plot similarity ratings
 sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
-
 l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim)
-
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 
 
@@ -309,7 +308,6 @@ pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
 grid.arrange(pl_marginal_before, pl_marginal_after, nrow = 2, ncol = 1)
 
 # heat map of errors over 2d space
-
 pl_heamaps <- plot_2d_binned_heatmaps(
   l_deviations_incl$tbl_checker, l_deviations_incl$tbl_checker_avg
 )
@@ -363,6 +361,9 @@ summary(m_rs_cr_control)
 
 # calculate delta of pairwise distances for empirical data by participant
 l_rsa_all <- pairwise_distances(tbl_cr)
+# repulsion and attraction taking place at the same time
+# could maybe related to spicer et al. (2022) psych science
+
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
 f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"

@@ -1086,8 +1086,8 @@ pairwise_distances <- function(tbl_cr) {
   l_rsa_delta <- map(tbl_groups$participant_id, delta_representational_distance, tbl_cr = tbl_cr)
   
   # plot distance matrices for sample participants
-  list_ids_control <- tbl_groups$rwn[tbl_groups$n_categories == "Control Group"]
-  list_ids_experimental <- tbl_groups$rwn[tbl_groups$n_categories == "Experimental Group"]
+  list_ids_control <- tbl_groups$rwn[tbl_groups$n_categories == "Similarity"]
+  list_ids_experimental <- tbl_groups$rwn[tbl_groups$n_categories != "Similarity"]
   l_rsa_delta_control <- map(l_rsa_delta, list_ids_control)
   l_rs_mat_control <- l_rsa_delta[list_ids_control]
   l_rs_mat_experimental <- l_rsa_delta[list_ids_experimental]
