@@ -1373,3 +1373,68 @@ d2_rep_center_square <- function(tbl_participant, nb_participant) {
   return(tbl_out)
   
 }
+
+
+by_participant_nb <- function(tbl_cat, subset_participants) {
+  #' fit by-participant naive Bayes
+  #' 
+  #' @description fits naive Bayes by participant and predicts on a 
+  #' fine grid of the whole 2D stimulus space
+  #' 
+  #' @param tbl_cat tbl df with by trial category learning responses
+  #' @param subset_participants of participants to fit the model to
+  #' 
+  #' @return a list with the fitted model and predictions
+  #'    
+  l_nb <- map(
+    subset_participants, fit_predict_nb,
+    tbl = tbl_cat %>% filter(n_categories == 4 & trial_id >= n_start_exclude)
+  )
+  names(l_nb) <- subset_participants
+  return(l_nb)
+}
+
+
+representational_precision <- function(nb_participant) {
+  #' calculate average sd of prototype representations from naive Bayes
+  #' 
+  #' @description extracts sds from representations and calculates their mean
+  #' 
+  #' @param nb_participant a fitted naive Bayes model for one participant
+  #' 
+  #' @return the average representational sd
+  #'    
+  tbl_params <- as_tibble(data.frame(map(
+    nb_participant[[1]][["tables"]], 
+    ~ t(matrix(unlist(.x), nrow = 2, ncol = 4))
+  ) %>% reduce(cbind)))
+  names(tbl_params) <- c("mean_x1", "sd_x1", "mean_x2", "sd_x2")
+  mean(colMeans(tbl_params %>% select(starts_with("sd"))))
+}
+
+
+combine_precision_and_movements <- function(l_nb, subset_participants) {
+  #' combine representational precision and representational movements
+  #' 
+  #' @description combines representational precision with movements
+  #' towards true category centers and towards representational category
+  #' centers in one tbl df
+  #' 
+  #' @param l_nb list with all by-participant fitted nb models
+  #' @param subset_participants of participants to fit the model to
+  
+  #' @return a tbl df with aggregated info for all participants
+  #' 
+  v_precision_representation <- map_dbl(l_nb, representational_precision)
+  tbl_precision_representation <- tibble(v_precision_representation)
+  tbl_precision_representation$participant_id <- subset_participants
+  tbl_precision <- tbl_precision_representation %>%
+    left_join(
+      tbl_movement_gt %>% ungroup() %>% 
+        select(participant_id, movement), by = "participant_id"
+    ) %>%
+    rename(movement_gt = movement) %>%
+    left_join(tbl_movement_representation %>% ungroup() %>% select(participant_id, movement), by = "participant_id") %>%
+    rename(movement_representation = movement)
+  return(tbl_precision)
+}
