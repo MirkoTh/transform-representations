@@ -1448,3 +1448,46 @@ combine_precision_and_movements <- function(l_nb, subset_participants) {
     rename(movement_representation = movement)
   return(tbl_precision)
 }
+
+
+separate_cat_and_sim <- function(tbl_cat_sim) {
+  #' separate experimental from control group
+  #' 
+  #' @description separates category learning group (experimental) from
+  #' similarity rating group (control); additionally adds euclidean
+  #' distance to previously presented stimulus in similarity group
+  #' 
+  #' @param tbl_cat_sim the tbl df with by-trial and by-participant data
+  #' from both groups
+  #' 
+  #' @return list with three tbl dfs containing data from:
+  #' 1. both groups, 2. category learning group, 3. similarity rating group
+  #'    
+  # prepare tbl_cat
+  # occasionally, the same trial was saved twice
+  tbl_cat_sim <- tbl_cat_sim %>%
+    group_by(participant_id, trial_id) %>%
+    mutate(rwn = row_number(participant_id)) %>%
+    filter(rwn == 1) %>% select(-rwn)
+  
+  tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 0)
+  tbl_cat <- tbl_cat_sim %>% 
+    filter(n_categories %in% c(2, 4))
+  
+  # prepare tbl_sim
+  tbl_sim <- tbl_cat_sim %>%
+    filter(n_categories == 1) %>%
+    mutate(
+      x1_prev_true = lag(x1_true, 1),
+      x2_prev_true = lag(x2_true, 1),
+      distance_euclidian = sqrt((x1_true - x1_prev_true) ^ 2 + (x2_true - x2_prev_true) ^
+                                  2)
+    ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
+  n_bins_distance <- 9
+  bins_distance <-
+    c(seq(-1, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
+  tbl_sim$distance_binned <-
+    cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
+  
+  return(list(tbl_cat = tbl_cat, tbl_sim = tbl_sim, tbl_cat_sim = tbl_cat_sim))
+}
