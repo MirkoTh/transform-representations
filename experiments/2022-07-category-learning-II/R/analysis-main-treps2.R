@@ -71,7 +71,7 @@ l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 l_cases <- preprocess_data(l_tbl_data, 200, 400)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
-tbl_cat_sim <- rbind(l_cases$l_guessing$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
+tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
 # exclusions
 excl_incomplete <-
@@ -112,19 +112,20 @@ tbl_cr_incomplete <- l_cases$l_incomplete$drop[["tbl_cr"]]
 tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
 tbl_cat_sim %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
 
+l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
+tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
+tbl_cat <- l_cat_sim[["tbl_cat"]]
+tbl_sim <- l_cat_sim[["tbl_sim"]]
+
+today <- lubridate::today()
+saveRDS(tbl_cr, file = str_c("data/", today, "-tbl_cr-treps-long.rds"))
+saveRDS(tbl_cat, file = str_c("data/", today, "-tbl_cat-treps-long.rds"))
+saveRDS(tbl_sim, file = str_c("data/", today, "-tbl_sim-treps-long.rds"))
+
 
 # Categorization ----------------------------------------------------------
 
-# occasionally, the same trial was saved twice
-tbl_cat_sim <- tbl_cat_sim %>%
-  group_by(participant_id, trial_id) %>%
-  mutate(rwn = row_number(participant_id)) %>%
-  filter(rwn == 1) %>% select(-rwn)
 
-
-tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 0)
-tbl_cat <- tbl_cat_sim %>% 
-  filter(n_categories %in% c(2, 4))
 tbl_cat_overview <- tbl_cat %>%
   grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
   arrange(mean_rt)
@@ -184,9 +185,9 @@ marrangeGrob(list(
   l_movement_gt[[2]][[3]]
 ), nrow = 1, ncol = 3)
 
-marrangeGrob(list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last),
-             nrow = 1,
-             ncol = 2)
+marrangeGrob(
+  list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last), nrow = 1, ncol = 2
+)
 
 # exclude initial trials from following analyses
 n_start_exclude <- 200
@@ -232,22 +233,6 @@ plot_heatmaps_with_representations(l_nb, sample_ids)
 
 
 # Similarity Judgments ----------------------------------------------------
-
-tbl_sim <- tbl_cat_sim %>%
-  filter(n_categories == 1) %>%
-  mutate(
-    x1_prev_true = lag(x1_true, 1),
-    x2_prev_true = lag(x2_true, 1),
-    distance_euclidian = sqrt((x1_true - x1_prev_true) ^ 2 + (x2_true - x2_prev_true) ^
-                                2)
-  ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
-n_bins_distance <- 9
-bins_distance <-
-  c(seq(-1, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
-tbl_sim$distance_binned <-
-  cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
-tbl_sim$distance_binned %>% unique()
-
 
 tbl_sim_agg <- tbl_sim %>%
   rutils::grouped_agg(c(distance_binned), c(response, rt))
@@ -305,7 +290,6 @@ tbl_cr %>% group_by(participant_id) %>% summarize(move = sum(move_sum), n_trials
 # 2d marginals
 pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
 pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
-grid.arrange(pl_marginal_before, pl_marginal_after, nrow = 2, ncol = 1)
 
 # heat map of errors over 2d space
 pl_heamaps <- plot_2d_binned_heatmaps(
@@ -367,7 +351,8 @@ l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
 f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
-tbl_both <- load_predictions(f_name)
+f_name <- "data/2022-08-24-grid-search-vary-constrain-space.rds"
+tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 plot_distance_matrix(tbl_rsa_delta_prediction) +
   labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
@@ -375,9 +360,9 @@ plot_distance_matrix(tbl_rsa_delta_prediction) +
 # correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
   filter(l >= r)
-tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
+tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
   left_join(
-    tbl_rsa %>% select(l, r, n_categories, d_euclidean_delta),
+    l_rsa_all[["tbl_rsa"]] %>% dplyr::select(l, r, n_categories, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
   ) %>% group_by(n_categories) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
