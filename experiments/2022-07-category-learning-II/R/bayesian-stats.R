@@ -122,9 +122,6 @@ mm_sim <- model.matrix(
 colnames(mm_sim) <- c("ic", "d_euclidean")
 mm_sim$d_euclidean <- scale(mm_sim$d_euclidean)[, 1]
 
-
-mod_sim$variables()$data
-
 l_data <- list(
   n_data = nrow(tbl_sim),
   n_subj = length(unique(tbl_sim$participant_id)),
@@ -161,3 +158,87 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
+# Movements Towards Centers -----------------------------------------------
+
+tbl_cr %>% group_by(n_categories, session) %>%
+  summarize(d_closest_avg = mean(d_closest)) %>%
+  mutate(session = factor(session, labels = c("Before Category Learning", "After Category Learning"))) %>%
+  ggplot(aes(session, d_closest_avg, group = n_categories)) +
+  geom_line(aes(color = n_categories)) +
+  geom_point(size = 3, color = "white") +
+  geom_point(aes(color = n_categories)) +
+  scale_color_brewer(name = "Nr. Categories", palette = "Set1") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Distance to Closest Center"
+  )
+
+cr_model <- stan_cr()
+mod_cr <- cmdstan_model(cr_model)
+
+mm_cr <- model.matrix(
+  d_closest ~ session + n_categories, data = tbl_cr
+) %>% as_tibble()
+colnames(mm_cr) <- c("ic", "session", "ncat")
+mm_cr$session <- mm_cr$session - .5
+mm_cr$ncat <- mm_cr$ncat - .5
+mm_cr$ia <- mm_cr$session * mm_cr$ncat
+
+mod_cr$variables()$data
+
+l_data <- list(
+  n_data = nrow(tbl_cr),
+  n_subj = length(unique(tbl_cr$participant_id)),
+  d_closest = scale(tbl_cr$d_closest, scale = FALSE)[, 1],
+  subj = as.numeric(factor(
+    tbl_cr$participant_id, 
+    labels = 1:length(unique(tbl_cr$participant_id))
+  )),
+  x = as.matrix(mm_cr)
+)
+
+fit_cr <- mod_cr$sample(
+  data = l_data, iter_sampling = 500, iter_warmup = 500, chains = 1
+)
+
+file_loc <- str_c("experiments/2022-07-category-learning-II/data/cr-model.RDS")
+fit_cr$save_object(file = file_loc)
+pars_interest <- c("mu_tf")
+tbl_draws <- fit_cr$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_cr$summary(variables = pars_interest)
+
+
+params_bf <- c("Intercept", "Timepoint", "Group", "Timepoint x Group")
+
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(starts_with(c("mu")), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter, labels = params_bf))
+
+l <- sd_bfs(tbl_posterior, params_bf, .5)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+install.packages("BayesFactor")
+library(BayesFactor)
+r = 1/2;
+df_bf <- as.data.frame(tbl_cr)
+df_bf$n_categories <- as.factor(df_bf$n_categories)
+
+bfall <- anovaBF(d_closest ~ n_categories*session + participant_id, data = df_bf, whichRandom="participant_id",
+                 rscaleFixed=r, whichModel="all", iterations=50000, progress=TRUE)
+which(bfall@bayesFactor$bf==max(bfall@bayesFactor$bf))
+
+winner <- lmBF(d_closest ~ session + n_categories:session + participant_id, data = df_bf, whichRandom="participant_id",
+               rscaleFixed=r, iterations=50000, progress=TRUE)
+min_ia <- lmBF(d_closest ~ session + participant_id, data = df_bf, whichRandom="participant_id",
+                    rscaleFixed=r, iterations=50000, progress=TRUE)
+winner/min_ia
+

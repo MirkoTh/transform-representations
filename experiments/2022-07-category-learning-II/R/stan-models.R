@@ -42,8 +42,8 @@ model {
     b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
   }
 
-  sigma_subject[1] ~ uniform(0.001, 100);
-  sigma_subject[2] ~ uniform(0.001, 100);
+  sigma_subject[1] ~ uniform(0.001, 10);
+  sigma_subject[2] ~ uniform(0.001, 10);
   mu[1] ~ normal(0, 1);
   mu[2] ~ student_t(1, 0, 1);
 }
@@ -98,12 +98,76 @@ model {
   }
   
   sigma ~ uniform(0.001, 10);
-  sigma_subject[1] ~ uniform(0.001, 100);
-  sigma_subject[2] ~ uniform(0.001, 100);
+  sigma_subject[1] ~ uniform(0.001, 10);
+  sigma_subject[2] ~ uniform(0.001, 10);
   mu[1] ~ normal(0, 1);
   mu[2] ~ student_t(1, 0, 1);
 }
 
 ")
   return(stan_normal_sim)
+}
+
+
+stan_cr <- function() {
+  
+  stan_normal_cr <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  vector[n_data] d_closest;
+  array[n_data] int subj;
+  matrix[n_data, 4] x; // ic, session, ncat, session x ncat
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = .5;
+}
+
+parameters {
+  matrix[n_subj, 4] b;
+  vector[4] mu;
+  vector <lower=0>[4] sigma_subject;
+  real<lower=0> sigma;
+}
+
+transformed parameters {
+  array[4] real mu_tf;
+  mu_tf[1] = mu[1];
+  mu_tf[2] = mu[2];
+  mu_tf[3] = mu[3];
+  mu_tf[4] = mu[4];
+  vector[n_data] mn;
+
+  for (n in 1:n_data) {
+    mn[n] = b[subj[n], 1] * x[n, 1] + b[subj[n], 2] * x[n, 2] + b[subj[n], 3] * x[n, 3] + b[subj[n], 4] * x[n, 4];
+  }
+}
+
+model {
+  for (n in 1:n_data) {
+    d_closest[n] ~ normal(mn[n], sigma);
+  }
+
+  for (s in 1:n_subj) {
+    b[s, 1] ~ normal(mu_tf[1], sigma_subject[1]);
+    b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
+    b[s, 3] ~ normal(mu_tf[3], sigma_subject[3]);
+    b[s, 4] ~ normal(mu_tf[4], sigma_subject[4]);
+  }
+  
+  sigma ~ uniform(0.001, 20);
+  sigma_subject[1] ~ uniform(0.001, 20);
+  sigma_subject[2] ~ uniform(0.001, 20);
+  sigma_subject[3] ~ uniform(0.001, 20);
+  sigma_subject[4] ~ uniform(0.001, 20);
+  mu[1] ~ normal(0, 1);
+  mu[2] ~ student_t(1, 0, 1);
+  mu[3] ~ student_t(1, 0, 1);
+  mu[4] ~ student_t(1, 0, 1);
+}
+
+")
+  return(stan_normal_cr)
 }
