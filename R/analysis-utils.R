@@ -337,7 +337,7 @@ category_centers <- function(f_stretch, f_shift) {
 
 
 
-category_centers_squares <- function(n_cats) {
+category_centers_squares <- function(n_cats, is_simulation = FALSE) {
   #' helper function to define square category centers
   #' 
   #' @description returns x1 and x2 means of the square categories
@@ -346,7 +346,12 @@ category_centers_squares <- function(n_cats) {
   #' @return a tbl_df with the two dimensional centers of the categories
   #'
   category_centers_one_condition <- function(n_cats) {
-    tbl_borders <- tibble(max_x = 100, min_x = 1)
+    if (is_simulation) {
+      tbl_borders <- tibble(max_x = 10, min_x = 0)
+    } else {
+      tbl_borders <- tibble(max_x = 100, min_x = 1)
+    }
+    
     n_segments <- sqrt(n_cats)
     x_widths <- rep((tbl_borders$max_x - tbl_borders$min_x) / n_segments, n_segments - 1)
     x_boundaries <- c(
@@ -431,18 +436,22 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
     tbl_d_response <- pmap(mns, euclidian_distance_to_center, tbl = l_tbl_cr[[n_cat_str]], is_response = TRUE) %>% 
       unlist() %>% matrix(ncol = n_cat_compare) %>% as.data.frame() %>% tibble()
     colnames(tbl_d_response) <- seq(1, n_cat_compare, by = 1)
-    col_idx_closest <- apply(tbl_d_true, 1, function(x) which(x == min(x)))
+    col_idx_closest <- apply(tbl_d_true, 1, function(x) which(x == min(x))[1])
     tbl_d_response$col_idx_closest <- col_idx_closest
     tbl_d_response$d_closest <- apply(tbl_d_response, 1, function(x) x[1:n_cat_compare][x[(n_cat_compare+1)]])
     d_closest <- as_vector(tbl_d_response$d_closest) %>% unname()
-    l_tbl_cr[[n_cat_str]] <- l_tbl_cr[[n_cat_str]] %>% cbind(d_closest) %>% cbind(category = col_idx_closest)
+    l_tbl_cr[[n_cat_str]] <- l_tbl_cr[[n_cat_str]] %>% cbind(d_closest)
+    if (!is_simulation) l_tbl_cr[[n_cat_str]] <- l_tbl_cr[[n_cat_str]] %>% cbind(category = col_idx_closest)
     return(l_tbl_cr[[n_cat_str]])
   }
   
   l_cat_mns_ellipses <- l_centers[[1]]
   l_ellipses <- l_centers[[2]]
-  l_cat_mns_squares <- l_centers[[3]]$`4`$cat_means
-  l_cat_bds_squares <- l_centers[[3]]$`4`$x_boundaries_draws
+  if (sim_center == "square") {
+    l_cat_mns_squares <- l_centers[[3]]$`4`$cat_means
+    l_cat_bds_squares <- l_centers[[3]]$`4`$x_boundaries_draws
+  }
+  
   
   v_categories <- unique(tbl_cr$n_categories)
   
@@ -999,14 +1008,14 @@ representational_distances <- function(p_id, timepoint, tbl_cr) {
   #'
   tmp1 <- tbl_cr %>% 
     filter(participant_id == p_id) %>% 
-    select(stim_id, session, x1_response, x2_response, x1_true, x2_true)
+    dplyr::select(stim_id, session, x1_response, x2_response, x1_true, x2_true)
   tbl_design <- crossing(l = tmp1$stim_id, r = tmp1$stim_id)
   tbl_pre <- tbl_design %>% 
     left_join(
-      tmp1 %>% filter(session == timepoint) %>% select(-session), 
+      tmp1 %>% filter(session == timepoint) %>% dplyr::select(-session), 
       by = c("l" = "stim_id"), suffix = c("_l", "_r")
     ) %>% left_join(
-      tmp1 %>% filter(session == timepoint) %>% select(-session), 
+      tmp1 %>% filter(session == timepoint) %>% dplyr::select(-session), 
       by = c("r" = "stim_id"), suffix = c("_l", "_r")
     )
   tbl_pre$d_euclidean_response <- sqrt(
@@ -1152,13 +1161,15 @@ plot_true_ds_vs_response_ds <- function(tbl_rsa) {
 }
 
 
-load_predictions <- function(f_name){
+load_predictions <- function(f_name, sim_center, is_simulation){
   #' load predictions from simulation study using some arbitrary 
   #' parameter combinations
   #' 
   #' @description loads data from simulation run for the given file name
   #' with prior and posterior means of stimuli
   #' @param f_name the name of the data for a saved simulation run to be loaded
+  #' @param sim_center category centers according to ellipse or square category structure
+  #' @param is_simulation is the function used for simulations or empirical data
   #' 
   #' @return a tbl_df with all stimuli and the associated predictions 
   #' from the model before and after category learning
@@ -1166,10 +1177,9 @@ load_predictions <- function(f_name){
   
   # calculate delta of pairwise distances for model predictions aka model matrix
   l_category_results <- readRDS(file = f_name)
-  l_results_plots <- map(l_category_results, diagnostic_plots)
+  l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = sim_center, is_simulation = is_simulation)
   tbl_design <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
-    select(stim_id, x1_data, x2_data) %>%
-    rename("x1_true" = "x1_data", "x2_true" = "x2_data")
+    select(stim_id, x1_true, x2_true)
   tmp_before <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
     select(stim_id, x1_response, x2_response)
   tmp_after <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
