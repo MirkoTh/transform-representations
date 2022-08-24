@@ -118,9 +118,9 @@ tbl_cat <- l_cat_sim[["tbl_cat"]]
 tbl_sim <- l_cat_sim[["tbl_sim"]]
 
 today <- lubridate::today()
-saveRDS(tbl_cr, file = str_c("data/", today, "-tbl_cr-treps-long.rds"))
-saveRDS(tbl_cat, file = str_c("data/", today, "-tbl_cat-treps-long.rds"))
-saveRDS(tbl_sim, file = str_c("data/", today, "-tbl_sim-treps-long.rds"))
+saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/", today, "-tbl_cr-treps-long-ri.rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/", today, "-tbl_cat-treps-long-ri.rds"))
+saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/", today, "-tbl_sim-treps-long-ri.rds"))
 
 
 # Categorization ----------------------------------------------------------

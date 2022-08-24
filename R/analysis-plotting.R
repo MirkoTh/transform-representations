@@ -157,7 +157,7 @@ histograms_accuracies_rts <- function(tbl_cat_overview) {
     mutate(
       participant_id = fct_inorder(factor(substr(participant_id, 1, 6))),
       "Mean Accuracy" = mean_accuracy
-      ) %>% ggplot(aes(`Mean Accuracy`, group = participant_id)) +
+    ) %>% ggplot(aes(`Mean Accuracy`, group = participant_id)) +
     geom_histogram(aes(fill = n), color = "white") +
     facet_grid(~ n_categories) +
     coord_cartesian(xlim = c(0, 1)) +
@@ -391,11 +391,11 @@ movement_towards_category_center <- function(tbl_cat_sim, tbl_cr, d_measure, sim
 plot_distance_to_category_center <- function(tbl_cr, sim_center, l_info = NULL) {
   
   if(sim_center == "ellipse") {
-    tbl_cr_sq <- tbl_cr %>% filter(n_categories == "4 Categories")
-    tbl_ell <- tbl_cr %>% filter(n_categories %in% c("Similarity", "2 Categories"))
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c("4 Categories", 4))
+    tbl_ell <- tbl_cr %>% filter(n_categories %in% c("Similarity", "2 Categories", 2))
   } else if (sim_center == "square") {
-    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c("Similarity", "4 Categories"))
-    tbl_ell <- tbl_cr %>% filter(n_categories == "2 Categories")
+    tbl_cr_sq <- tbl_cr %>% filter(n_categories %in% c("Similarity", "4 Categories", 4))
+    tbl_ell <- tbl_cr %>% filter(n_categories %in% c("2 Categories", 2))
   }
   tbl_cr_sq$category <- 2
   tbl_cr <- rbind(tbl_ell, tbl_cr_sq)
@@ -503,7 +503,7 @@ plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins) {
     mutate(
       mean_d_closest_before = lag(mean_d_closest),
       mean_d_delta = mean_d_closest_before - mean_d_closest
-      ) %>% filter(!is.na(mean_d_delta))
+    ) %>% filter(!is.na(mean_d_delta))
   
   
   dg <- position_dodge(width = .2)
@@ -596,8 +596,11 @@ plot_similarity_against_distance <- function(tbl_sim, tbl_sim_ci, sample_ids_sim
     theme_bw() +
     scale_color_viridis_c(name = "Participant ID") +
     scale_size_continuous(name = "Nr. Similarity Judgments") +
-    labs(x = "Euclidean Distance (Binned)",
-         y = "Average Similarity (Range: 1 - 4)")
+    labs(
+      x = "Euclidean Distance (Binned)",
+      y = "Average Similarity (Range: 1 - 4)",
+      title = "Sample Participants"
+    )
   
   # aggregate scatter plot and line plot
   pl_agg <- ggplot() +
@@ -620,8 +623,11 @@ plot_similarity_against_distance <- function(tbl_sim, tbl_sim_ci, sample_ids_sim
     theme_bw() +
     scale_x_continuous(breaks = seq(2, 10, by = 2)) +
     coord_cartesian(ylim = c(1, 4)) +
-    labs(x = "Euclidean Distance (Binned)",
-         y = "Average Similarity (Range: 1 - 4)")
+    labs(
+      x = "Euclidean Distance (Binned)",
+      y = "Average Similarity (Range: 1 - 4)",
+      title = "Mean Effect"
+    )
   
   return(list(pl_sample = pl_sample, pl_agg = pl_agg))
 }

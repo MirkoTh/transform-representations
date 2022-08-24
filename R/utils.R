@@ -127,7 +127,7 @@ make_stimuli <- function(l_info) {
   x2 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
-  if (l_info$category_shape == "squares") {
+  if (l_info$category_shape == "square") {
     tbl <- create_categories(tbl, sqrt(l_info$n_categories)) %>% 
       select(-c(x1_cat, x2_cat))
   } else if (l_info$category_shape == "ellipses") {
@@ -515,7 +515,7 @@ agg_and_join <- function(tbl, timepoint_str, tbl_centers){
     tbl_tmp, 
     tbl_centers, 
     by = c("category", "timepoint"),
-    suffix = c("_data", "_center")
+    suffix = c("_true", "_center")
   )
   tbl_results$timepoint <- factor(
     tbl_results$timepoint, 
@@ -1005,15 +1005,15 @@ adapt_posterior_to_empirical_analysis <- function(tbl) {
     left_join(
       tbl %>% 
         filter(timepoint == "After Training") %>%
-        select(stim_id, x1_data, x2_data), by = "stim_id", suffix = c("_bef", "_aft")) %>%
-    filter(!is.na(x1_data_aft))
+        select(stim_id, x1_true, x2_true), by = "stim_id", suffix = c("_bef", "_aft")) %>%
+    filter(!is.na(x1_true_aft))
   samples_posterior_stim_id <- unique(tbl_bef_aft$stim_id)
   tbl_after_complete <- tbl %>% 
     filter(timepoint == "Before Training" & !(stim_id %in% samples_posterior_stim_id)) %>%
     rbind(tbl %>% 
             filter(timepoint == "After Training") %>% 
-            group_by(across(-c(x1_data, x2_data))) %>%
-            summarize(x1_data = mean(x1_data), x2_data = mean(x2_data))) %>% ungroup() %>%
+            group_by(across(-c(x1_true, x2_true))) %>%
+            summarize(x1_true = mean(x1_true), x2_true = mean(x2_true))) %>% ungroup() %>%
     mutate(timepoint = "After Training") %>% arrange(stim_id)
   tbl <- rbind(
     tbl %>% filter(timepoint == "Before Training"),
@@ -1021,19 +1021,21 @@ adapt_posterior_to_empirical_analysis <- function(tbl) {
   return(tbl)
 }
 
-distance_to_closest_center_simulation <- function(tbl) {
+distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation) {
   #' add distance to closest center for sampled representations
   #' 
   #' @description maps simulation results to empirical results and computes distance to closest category center
   #' 
   #' @param tbl tibble with prior and posterior samples
+  #' @param is_simulation is the function used for simulations or empirical data
   #' @return the same tbl with distance column added
   #' 
   tbl$n_categories <- max(as.numeric(as.character(tbl$category)))
-  tbl$x1_response <- tbl$x1_data
-  tbl$x2_response <- tbl$x2_data
-  l_centers_ellipses <- category_centers(f_stretch = 1, f_shift = 0)
-  tbl <- add_distance_to_nearest_center(tbl, l_centers_ellipses, is_simulation = TRUE)
+  tbl$x1_response <- tbl$x1_true
+  tbl$x2_response <- tbl$x2_true
+  l_centers <- category_centers(f_stretch = 1, f_shift = 0)
+  l_centers[[3]] <- category_centers_squares(n_cats = c(4), is_simulation)
+  tbl <- add_distance_to_nearest_center(tbl, l_centers, is_simulation = TRUE, sim_center = sim_center)
   tbl$participant_id <- 1
   tbl$session <- tbl$timepoint 
   return(tbl)

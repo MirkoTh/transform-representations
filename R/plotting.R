@@ -45,18 +45,18 @@ plot_arrangement <- function(pl, n_cols = 2, n_rows = NULL) {
 plot_moves <- function(tbl_results, l_info) {
   if (l_info$category_shape == "ellipses") {
     tbl_results2 <- tbl_results %>% filter(category != 1)
-  } else if (l_info$category_shape == "squares") {
+  } else if (l_info$category_shape == "square") {
     tbl_results2 <- tbl_results
   }
   space_edges <- l_info$space_edges
   xy_breaks <- seq(space_edges[1], space_edges[2], by = 2)
   
-  ggplot(tbl_results, aes(x1_data, x2_data, group = as.numeric(category))) +
+  ggplot(tbl_results, aes(x1_true, x2_true, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
     geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
     geom_segment(
       data = tbl_results2, aes(
-        x = x1_data, y = x2_data, xend = x1_center, yend = x2_center, 
+        x = x1_true, y = x2_true, xend = x1_center, yend = x2_center, 
         color = as.numeric(category)
       ),
       arrow = arrow(length = unit(.1, "inches"))
@@ -232,10 +232,12 @@ plot_marginals <- function(tbl_new, l_info) {
 }
 
 
-diagnostic_plots <- function(l_categorization) {
+diagnostic_plots <- function(l_categorization, sim_center, is_simulation) {
   #' plots showing qualitative predictions from different models
   #' 
   #' @param l_categorization list with category learning results
+  #' @param sim_center category center according to ellipse or square category structure
+  #' @param is_simulation is the function used for simulations or empirical data
   #' @return a list with samples (a) from the prior, 
   #' (b) from the category learning period, and (c) with (a) and (b) together
   #' 
@@ -256,9 +258,9 @@ diagnostic_plots <- function(l_categorization) {
   # add prior to stimulus_ids, which have not been sampled, as posterior = prior for these stimuli
   l_results$tbl_posterior <- adapt_posterior_to_empirical_analysis(l_results$tbl_posterior)
 
-  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior)
+  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior, sim_center, is_simulation)
     
-  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, l_info)
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
   
   # movement of stimulus representations before vs. after
   pl_centers <- plot_moves(l_results$tbl_posterior, l_info)
