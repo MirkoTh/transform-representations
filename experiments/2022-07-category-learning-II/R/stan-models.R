@@ -195,9 +195,9 @@ transformed data {
 }
 
 parameters {
-  matrix[n_subj, 2] b;
+  matrix[n_subj, 1] b;
   vector[4] mu;
-  vector <lower=0>[2] sigma_subject;
+  real <lower=0> sigma_subject;
   real<lower=0> sigma;
 }
 
@@ -220,11 +220,11 @@ model {
   }
 
   for (s in 1:n_subj) {
-    b[s, 1] ~ normal(mu_tf[1], sigma_subject[1]);
+    b[s, 1] ~ normal(mu_tf[1], sigma_subject);
   }
   
   sigma ~ uniform(0.001, 20);
-  sigma_subject[1] ~ uniform(0.001, 20);
+  sigma_subject ~ uniform(0.001, 20);
   mu[1] ~ normal(0, 1);
   mu[2] ~ student_t(1, 0, 1);
   mu[3] ~ student_t(1, 0, 1);

@@ -226,19 +226,26 @@ l_data <- list(
 )
 
 fit_cr_rs <- mod_cr_rs$sample(
-  data = l_data, iter_sampling = 500, iter_warmup = 500, chains = 1
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
 )
 fit_cr_ri <- mod_cr_ri$sample(
-  data = l_data, iter_sampling = 500, iter_warmup = 500, chains = 1
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
 )
+file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
+file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
 
-fit_cr_rs$loo(variables = "log_lik_pred")
+fit_cr_rs$save_object(file = file_loc_rs)
+fit_cr_ri$save_object(file = file_loc_ri)
 
-file_loc <- str_c("experiments/2022-07-category-learning-II/data/cr-model.RDS")
-fit_cr$save_object(file = file_loc)
+loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
+loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
+
+loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
+
+
 pars_interest <- c("mu_tf")
-tbl_draws <- fit_cr$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_cr$summary(variables = pars_interest)
+tbl_draws <- fit_cr_rs$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_cr_rs$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Timepoint", "Group", "Timepoint x Group")
 
