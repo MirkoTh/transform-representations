@@ -25,9 +25,9 @@ walk(files, source)
 
 # Load Data ---------------------------------------------------------------
 
-tbl_cr <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-24-tbl_cr-treps-long-ri.rds")
-tbl_cat <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-24-tbl_cat-treps-long-ri.rds")
-tbl_sim <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-24-tbl_sim-treps-long-ri.rds")
+tbl_cr <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-25-tbl_cr-treps-long-ri.rds")
+tbl_cat <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-25-tbl_cat-treps-long-ri.rds")
+tbl_sim <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-25-tbl_sim-treps-long-ri.rds")
 
 
 # Category Learning -------------------------------------------------------
@@ -162,6 +162,8 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 # Movements Towards Centers -----------------------------------------------
 
+
+# plot mean effects
 tbl_cr %>% group_by(n_categories, session) %>%
   summarize(d_closest_avg = mean(d_closest)) %>%
   mutate(session = factor(session, labels = c("Before Category Learning", "After Category Learning"))) %>%
@@ -176,8 +178,33 @@ tbl_cr %>% group_by(n_categories, session) %>%
     y = "Distance to Closest Center"
   )
 
-cr_model <- stan_cr()
-mod_cr <- cmdstan_model(cr_model)
+# plot distributions of deltas
+tbl_cr %>% group_by(participant_id, session, n_categories) %>%
+  summarize(d_closest_mn = mean(d_closest)) %>%
+  group_by(participant_id) %>%
+  mutate(
+    d_closest_before = lag(d_closest_mn),
+    d_move = d_closest_mn - d_closest_before
+  ) %>%
+  ungroup() %>%
+  mutate(
+    n_categories = factor(n_categories, labels = c("Similarity Judgment", "4 Categories"))
+  ) %>%
+  dplyr::filter(!is.na(d_closest_before)) %>%
+  ggplot(aes(d_move)) +
+  geom_histogram(bins = 60, fill = "dodgerblue", color = "white") +
+  geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
+  facet_wrap(~ n_categories) +
+  theme_bw()
+
+# random slopes on session seem reasonable
+# results from frequentist comparison of ri and rs show that rs are necessary
+
+cr_model_rs <- stan_cr_rs()
+mod_cr_rs <- cmdstan_model(cr_model_rs)
+
+cr_model_ri <- stan_cr_ri()
+mod_cr_ri <- cmdstan_model(cr_model_ri)
 
 mm_cr <- model.matrix(
   d_closest ~ session + n_categories, data = tbl_cr
@@ -186,8 +213,6 @@ colnames(mm_cr) <- c("ic", "session", "ncat")
 mm_cr$session <- mm_cr$session - .5
 mm_cr$ncat <- mm_cr$ncat - .5
 mm_cr$ia <- mm_cr$session * mm_cr$ncat
-
-mod_cr$variables()$data
 
 l_data <- list(
   n_data = nrow(tbl_cr),
@@ -200,16 +225,27 @@ l_data <- list(
   x = as.matrix(mm_cr)
 )
 
-fit_cr <- mod_cr$sample(
-  data = l_data, iter_sampling = 500, iter_warmup = 500, chains = 1
+fit_cr_rs <- mod_cr_rs$sample(
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
 )
+fit_cr_ri <- mod_cr_ri$sample(
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
+)
+file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
+file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
 
-file_loc <- str_c("experiments/2022-07-category-learning-II/data/cr-model.RDS")
-fit_cr$save_object(file = file_loc)
+fit_cr_rs$save_object(file = file_loc_rs)
+fit_cr_ri$save_object(file = file_loc_ri)
+
+loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
+loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
+
+loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
+
+
 pars_interest <- c("mu_tf")
-tbl_draws <- fit_cr$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_cr$summary(variables = pars_interest)
-
+tbl_draws <- fit_cr_rs$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_cr_rs$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Timepoint", "Group", "Timepoint x Group")
 
@@ -226,6 +262,7 @@ tbl_thx <- l[[2]]
 # plot the posteriors and the bfs
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
+# without random slopes on session, only a random intercept, BF for ia is decisive
 install.packages("BayesFactor")
 library(BayesFactor)
 r = 1/2;
@@ -242,3 +279,15 @@ min_ia <- lmBF(d_closest ~ session + participant_id, data = df_bf, whichRandom="
                     rscaleFixed=r, iterations=50000, progress=TRUE)
 winner/min_ia
 
+# frequentist framework with random intercept and random slopes on session
+library(nlme)
+m_ri <- lme(
+  d_closest ~ session*n_categories, 
+  random = ~ 1 | participant_id, data = tbl_cr
+)
+m_rs <- lme(
+  d_closest ~ session*n_categories, 
+  random = ~ 1 + session | participant_id, data = tbl_cr
+  )
+anova(m_ri, m_rs)
+anova(m_rs)
