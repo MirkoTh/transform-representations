@@ -6,7 +6,6 @@ library(gridExtra)
 library(docstring)
 library(rutils)
 library(cmdstanr)
-library(brms)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -18,7 +17,8 @@ files <- c(
   "R/analysis-plotting.R",
   "R/summarySEwithin.R",
   "R/summarySE.R",
-  "R/normDataWithin.R"
+  "R/normDataWithin.R",
+  "experiments/2022-07-category-learning-II/R/stan-models.R"
 )
 walk(files, source)
 
@@ -184,7 +184,7 @@ tbl_cr %>% group_by(participant_id, session, n_categories) %>%
   group_by(participant_id) %>%
   mutate(
     d_closest_before = lag(d_closest_mn),
-    d_move = d_closest_mn - d_closest_before
+    d_move = d_closest_before - d_closest_mn
   ) %>%
   ungroup() %>%
   mutate(
@@ -195,7 +195,8 @@ tbl_cr %>% group_by(participant_id, session, n_categories) %>%
   geom_histogram(bins = 60, fill = "dodgerblue", color = "white") +
   geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
   facet_wrap(~ n_categories) +
-  theme_bw()
+  theme_bw() +
+  labs(x = "Movement Towards Center", y = "Nr. Participants")
 
 # random slopes on session seem reasonable
 # results from frequentist comparison of ri and rs show that rs are necessary
@@ -225,20 +226,34 @@ l_data <- list(
   x = as.matrix(mm_cr)
 )
 
+# random slopes
 fit_cr_rs <- mod_cr_rs$sample(
-  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
-)
-fit_cr_ri <- mod_cr_ri$sample(
-  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
+  data = l_data, iter_sampling = 2000, iter_warmup = 1000,
+  chains = 3, parallel_chains = 3,
+  save_warmup = FALSE
 )
 file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
-file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
+fit_cr_rs$save_object(file = file_loc_rs, compress = "gzip")
 
-fit_cr_rs$save_object(file = file_loc_rs)
+# fit_cr_rs <- readRDS(file_loc_rs)
+file_loc_loo_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-loo.RDS")
+loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
+saveRDS(loo_rs, file = file_loc_loo_rs)
+# loo_rs <- readRDS(file_loc_loo_rs)
+
+# only random intercept
+fit_cr_ri <- mod_cr_ri$sample(
+  data = l_data, iter_sampling = 2000, iter_warmup = 1000,
+  chains = 3, parallel_chains = 3
+)
+file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
 fit_cr_ri$save_object(file = file_loc_ri)
 
-loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
+# fit_cr_ri <- readRDS(file_loc_ri)
+file_loc_loo_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-loo.RDS")
 loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
+saveRDS(loo_ri, file = file_loc_loo_ri)
+# loo_ri <- readRDS(file_loc_loo_ri)
 
 loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 

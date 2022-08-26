@@ -789,7 +789,6 @@ preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat) {
   ))
 }
 
-library(brms)
 calc_bf_posterior <- function(tbl_cat) {
   options(mc.cores = parallel::detectCores() - 2)
   
