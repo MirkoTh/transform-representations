@@ -155,9 +155,9 @@ model {
     b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
   }
   
-  sigma ~ uniform(0.001, 20);
-  sigma_subject[1] ~ uniform(0.001, 20);
-  sigma_subject[2] ~ uniform(0.001, 20);
+  //sigma ~ uniform(0.001, 20);
+  //sigma_subject[1] ~ uniform(0.001, 20);
+  //sigma_subject[2] ~ uniform(0.001, 20);
   mu[1] ~ normal(0, 1);
   mu[2] ~ student_t(1, 0, 1);
   mu[3] ~ student_t(1, 0, 1);

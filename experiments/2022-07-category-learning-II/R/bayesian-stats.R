@@ -25,9 +25,9 @@ walk(files, source)
 
 # Load Data ---------------------------------------------------------------
 
-tbl_cr <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-25-tbl_cr-treps-long-ri.rds")
-tbl_cat <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-25-tbl_cat-treps-long-ri.rds")
-tbl_sim <- read_rds("experiments/2022-07-category-learning-II/data/2022-08-25-tbl_sim-treps-long-ri.rds")
+tbl_cr <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds")
+tbl_cat <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds")
+tbl_sim <- read_rds("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds")
 
 
 # Category Learning -------------------------------------------------------
@@ -68,7 +68,7 @@ l_data <- list(
   subj = as.numeric(factor(
     tbl_cat_binned$participant_id, 
     labels = 1:length(unique(tbl_cat_binned$participant_id))
-    )),
+  )),
   x = as.matrix(mm_cat)
 )
 
@@ -162,15 +162,21 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 # Movements Towards Centers -----------------------------------------------
 
+# sqrt tf on d_closest
 
 # plot mean effects
 tbl_cr %>% group_by(n_categories, session) %>%
-  summarize(d_closest_avg = mean(d_closest)) %>%
+  summarize(
+    d_closest_avg_sqrt = mean(sqrt(d_closest)),
+    d_closest_avg_abs = mean(d_closest)
+    ) %>%
   mutate(session = factor(session, labels = c("Before Category Learning", "After Category Learning"))) %>%
-  ggplot(aes(session, d_closest_avg, group = n_categories)) +
+  pivot_longer(c(d_closest_avg_sqrt, d_closest_avg_abs)) %>%
+  ggplot(aes(session, value, group = n_categories)) +
   geom_line(aes(color = n_categories)) +
   geom_point(size = 3, color = "white") +
   geom_point(aes(color = n_categories)) +
+  facet_wrap(~ name, scales = "free") +
   scale_color_brewer(name = "Nr. Categories", palette = "Set1") +
   theme_bw() +
   labs(
@@ -180,21 +186,27 @@ tbl_cr %>% group_by(n_categories, session) %>%
 
 # plot distributions of deltas
 tbl_cr %>% group_by(participant_id, session, n_categories) %>%
-  summarize(d_closest_mn = mean(d_closest)) %>%
+  summarize(
+    d_closest_mn_sqrt = mean(sqrt(d_closest)),
+    d_closest_mn_abs = mean(d_closest)
+  ) %>%
   group_by(participant_id) %>%
   mutate(
-    d_closest_before = lag(d_closest_mn),
-    d_move = d_closest_before - d_closest_mn
+    d_closest_before_sqrt = lag(d_closest_mn_sqrt),
+    d_move_sqrt = d_closest_before_sqrt - d_closest_mn_sqrt,
+    d_closest_before_abs = lag(d_closest_mn_abs),
+    d_move_abs = d_closest_before_abs - d_closest_mn_abs
   ) %>%
   ungroup() %>%
   mutate(
     n_categories = factor(n_categories, labels = c("Similarity Judgment", "4 Categories"))
   ) %>%
-  dplyr::filter(!is.na(d_closest_before)) %>%
-  ggplot(aes(d_move)) +
-  geom_histogram(bins = 60, fill = "dodgerblue", color = "white") +
+  dplyr::filter(!is.na(d_closest_before_abs)) %>%
+  pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
+  ggplot(aes(value)) +
+  geom_histogram(bins = 60, fill = "#66CCFF", color = "white") + # "dodgerblue"
   geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
-  facet_wrap(~ n_categories) +
+  facet_wrap(name ~ n_categories, scales = "free_x") +
   theme_bw() +
   labs(x = "Movement Towards Center", y = "Nr. Participants")
 
@@ -218,7 +230,7 @@ mm_cr$ia <- mm_cr$session * mm_cr$ncat
 l_data <- list(
   n_data = nrow(tbl_cr),
   n_subj = length(unique(tbl_cr$participant_id)),
-  d_closest = scale(tbl_cr$d_closest, scale = FALSE)[, 1],
+  d_closest = scale(sqrt(tbl_cr$d_closest), scale = FALSE)[, 1],
   subj = as.numeric(factor(
     tbl_cr$participant_id, 
     labels = 1:length(unique(tbl_cr$participant_id))
@@ -232,30 +244,30 @@ fit_cr_rs <- mod_cr_rs$sample(
   chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
-file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
-fit_cr_rs$save_object(file = file_loc_rs, compress = "gzip")
+# file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
+# fit_cr_rs$save_object(file = file_loc_rs, compress = "gzip")
 
 # fit_cr_rs <- readRDS(file_loc_rs)
-file_loc_loo_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-loo.RDS")
-loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
-saveRDS(loo_rs, file = file_loc_loo_rs)
+# file_loc_loo_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-loo.RDS")
+# loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
+# saveRDS(loo_rs, file = file_loc_loo_rs)
 # loo_rs <- readRDS(file_loc_loo_rs)
 
 # only random intercept
 fit_cr_ri <- mod_cr_ri$sample(
-  data = l_data, iter_sampling = 2000, iter_warmup = 1000,
+  data = l_data, iter_sampling = 10000, iter_warmup = 2000,
   chains = 3, parallel_chains = 3
 )
-file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
-fit_cr_ri$save_object(file = file_loc_ri)
+# file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
+# fit_cr_ri$save_object(file = file_loc_ri)
 
 # fit_cr_ri <- readRDS(file_loc_ri)
-file_loc_loo_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-loo.RDS")
-loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
-saveRDS(loo_ri, file = file_loc_loo_ri)
+# file_loc_loo_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-loo.RDS")
+# loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
+# saveRDS(loo_ri, file = file_loc_loo_ri)
 # loo_ri <- readRDS(file_loc_loo_ri)
 
-loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
+# loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 
 
 pars_interest <- c("mu_tf")
@@ -291,18 +303,18 @@ which(bfall@bayesFactor$bf==max(bfall@bayesFactor$bf))
 winner <- lmBF(d_closest ~ session + n_categories:session + participant_id, data = df_bf, whichRandom="participant_id",
                rscaleFixed=r, iterations=50000, progress=TRUE)
 min_ia <- lmBF(d_closest ~ session + participant_id, data = df_bf, whichRandom="participant_id",
-                    rscaleFixed=r, iterations=50000, progress=TRUE)
+               rscaleFixed=r, iterations=50000, progress=TRUE)
 winner/min_ia
 
 # frequentist framework with random intercept and random slopes on session
 library(nlme)
 m_ri <- lme(
-  d_closest ~ session*n_categories, 
+  sqrt(d_closest) ~ session*n_categories, 
   random = ~ 1 | participant_id, data = tbl_cr
 )
 m_rs <- lme(
-  d_closest ~ session*n_categories, 
+  sqrt(d_closest) ~ session*n_categories, 
   random = ~ 1 + session | participant_id, data = tbl_cr
-  )
+)
 anova(m_ri, m_rs)
 anova(m_rs)
