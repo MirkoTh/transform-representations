@@ -86,10 +86,28 @@ timeout_and_returns <- function() {
     "6162daf69e4d012b71c4383c"
   )
   
+  e_true_vii <- c(
+    "61717173748006894b2b54ff",
+    "601129f77e0c21000b0c408a",
+    "616e5ae706e970fe0aff99b6",
+    "5e5d66f2101bf703d65326bc",
+    "5f338ba6ea047119dbd6e49e",
+    "5ee7b7c9eef92207297a0ad4",
+    "60eabe920b976e0972bfa41d",
+    "5e11b252deea2b84136a5d21",
+    "5eb6f85c1c54b4067b4ba65d",
+    "60fdcd33665754977f930324",
+    "5c7341f83a67ad00016ec50b",
+    "6130e97d4106299f8c6120fa",
+    "61372118b7dde713e24191e0",
+    "61645364aa6fda7444570fe0"
+  )
+  
   returned_timeout <- c(
     pilot_I, pilot_II, 
     e_true, e_true_ii, e_true_iii,
-    e_true_iv, e_true_v, e_true_vi
+    e_true_iv, e_true_v, e_true_vi,
+    e_true_vii
   )
   
   return(returned_timeout)

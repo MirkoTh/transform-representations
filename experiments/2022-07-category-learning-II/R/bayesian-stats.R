@@ -164,6 +164,21 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 # sqrt tf on d_closest
 
+tbl_cr %>% mutate(
+  d_closest_sqrt = sqrt(d_closest),
+  d_closest_mc = scale(d_closest, scale = FALSE),
+  d_closest_sqrt_mc = scale(d_closest_sqrt, scale = FALSE)
+  ) %>%
+  pivot_longer(c(d_closest_mc, d_closest_sqrt_mc)) %>%
+  filter(name == "d_closest_sqrt_mc") %>%
+  #mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins = 50, fill = "#66CCFF", color = "white") +
+  facet_wrap(session ~ n_categories, scales = "free") +
+  theme_bw() + 
+  labs(x = "Value", y = "Nr. Responses")
+
+
 # plot mean effects
 tbl_cr %>% group_by(n_categories, session) %>%
   summarize(
@@ -172,6 +187,7 @@ tbl_cr %>% group_by(n_categories, session) %>%
     ) %>%
   mutate(session = factor(session, labels = c("Before Category Learning", "After Category Learning"))) %>%
   pivot_longer(c(d_closest_avg_sqrt, d_closest_avg_abs)) %>%
+  mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
   ggplot(aes(session, value, group = n_categories)) +
   geom_line(aes(color = n_categories)) +
   geom_point(size = 3, color = "white") +
@@ -203,12 +219,56 @@ tbl_cr %>% group_by(participant_id, session, n_categories) %>%
   ) %>%
   dplyr::filter(!is.na(d_closest_before_abs)) %>%
   pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
+  mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
   ggplot(aes(value)) +
   geom_histogram(bins = 60, fill = "#66CCFF", color = "white") + # "dodgerblue"
   geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
   facet_wrap(name ~ n_categories, scales = "free_x") +
   theme_bw() +
   labs(x = "Movement Towards Center", y = "Nr. Participants")
+
+tbl_outliers <- tbl_cr %>% group_by(participant_id, stim_id) %>%
+  arrange(participant_id, stim_id, session) %>%
+  mutate(
+    d_closest_sqrt = sqrt(d_closest),
+    d_closest_before_abs = lag(d_closest),
+    d_closest_before_sqrt = lag(d_closest_sqrt),
+    d_move_sqrt = d_closest_before_sqrt - d_closest_sqrt,
+    d_move_abs = d_closest_before_abs - d_closest
+  ) %>%
+  ungroup() %>%
+  mutate(
+    n_categories = factor(n_categories, labels = c("Control", "4 Categories"))
+  ) %>%
+  dplyr::filter(!is.na(d_closest_before_abs)) %>%
+  group_by(participant_id) %>%
+  mutate(
+    d_move_mn = mean(d_move_sqrt)
+    ) %>% ungroup() %>%
+  mutate(
+    flag_hi = d_move_mn > mean(d_move_mn) + 1 * sd(d_move_mn),
+    flag_lo = d_move_mn < mean(d_move_mn) - 1 * sd(d_move_mn),
+    flag_outlier = factor(flag_hi, labels = c("Lo", "Hi"))
+    ) %>%
+  ungroup() %>%
+  arrange(desc(d_move_mn)) %>%
+  filter(flag_hi | flag_lo) %>%
+  pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
+  mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
+  mutate(participant_id = fct_inorder(factor(str_c(substr(participant_id, 1, 6), ", ", n_categories))))
+tbl_labels <- tbl_outliers %>% filter(name == "Square Root") %>%
+  group_by(participant_id, flag_outlier) %>%
+  summarize(avg_move_sqrt = mean(value)) %>%
+  ungroup()
+
+ggplot(tbl_outliers %>% filter(name == "Square Root"), aes(value, group = flag_outlier)) +
+  geom_histogram(bins = 15, color = "white", aes(fill = flag_outlier)) + # "dodgerblue"
+  geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
+  geom_label(data = tbl_labels, aes(x = 0, y = 40, label = str_c("Move Sqrt = ", round(avg_move_sqrt, 1)))) +
+  facet_wrap(~ participant_id) +
+  theme_bw() +
+  scale_fill_brewer(palette = "Set1", name = "Hi/Lo Outlier") +
+  labs(x = "Movement Towards Center", y = "Nr. Participants", title = "Outliers above/below 1 sd of the Mean")
 
 # random slopes on session seem reasonable
 # results from frequentist comparison of ri and rs show that rs are necessary
@@ -241,36 +301,36 @@ l_data <- list(
 # random slopes
 fit_cr_rs <- mod_cr_rs$sample(
   data = l_data, iter_sampling = 2000, iter_warmup = 1000,
-  chains = 3, parallel_chains = 3,
+  chains = 1, parallel_chains = 3,
   save_warmup = FALSE
 )
-# file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
-# fit_cr_rs$save_object(file = file_loc_rs, compress = "gzip")
+file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
+fit_cr_rs$save_object(file = file_loc_rs, compress = "gzip")
 
 # fit_cr_rs <- readRDS(file_loc_rs)
-# file_loc_loo_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-loo.RDS")
-# loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
-# saveRDS(loo_rs, file = file_loc_loo_rs)
+file_loc_loo_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-loo.RDS")
+loo_rs <- fit_cr_rs$loo(variables = "log_lik_pred")
+saveRDS(loo_rs, file = file_loc_loo_rs)
 # loo_rs <- readRDS(file_loc_loo_rs)
 
 # only random intercept
 fit_cr_ri <- mod_cr_ri$sample(
-  data = l_data, iter_sampling = 10000, iter_warmup = 2000,
-  chains = 3, parallel_chains = 3
+  data = l_data, iter_sampling = 2000, iter_warmup = 1000,
+  chains = 1, parallel_chains = 3
 )
-# file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
-# fit_cr_ri$save_object(file = file_loc_ri)
+file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-model.RDS")
+fit_cr_ri$save_object(file = file_loc_ri)
 
 # fit_cr_ri <- readRDS(file_loc_ri)
-# file_loc_loo_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-loo.RDS")
-# loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
-# saveRDS(loo_ri, file = file_loc_loo_ri)
+file_loc_loo_ri <- str_c("experiments/2022-07-category-learning-II/data/cr-ri-loo.RDS")
+loo_ri <- fit_cr_ri$loo(variables = "log_lik_pred")
+saveRDS(loo_ri, file = file_loc_loo_ri)
 # loo_ri <- readRDS(file_loc_loo_ri)
 
-# loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
+loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 
 
-pars_interest <- c("mu_tf")
+pars_interest <- c("b")
 tbl_draws <- fit_cr_rs$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_cr_rs$summary(variables = pars_interest)
 
@@ -287,7 +347,8 @@ bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
-map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
 
 # without random slopes on session, only a random intercept, BF for ia is decisive
 install.packages("BayesFactor")
@@ -318,3 +379,38 @@ m_rs <- lme(
 )
 anova(m_ri, m_rs)
 anova(m_rs)
+
+# fix mixture model assuming proportion of responses comes from a second intercept
+# second intercept could be assumed as a response bias effect
+# random slopes
+
+cr_model_rs_mixture <- stan_cr_rs_mixture()
+mod_cr_rs_mixture <- cmdstan_model(cr_model_rs_mixture)
+
+
+fit_cr_rs_mixture <- mod_cr_rs_mixture$sample(
+  data = l_data, iter_sampling = 1000, iter_warmup = 1000,
+  chains = 1, parallel_chains = 1,
+  save_warmup = FALSE
+)
+file_loc_rs_mixture <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-mixture-model.RDS")
+fit_cr_rs$save_object(file = file_loc_rs_mixture, compress = "gzip")
+
+
+pars_interest <- c("muI", "mu_tf", "theta")
+tbl_draws <- fit_cr_rs_mixture$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_cr_rs_mixture$summary(variables = pars_interest)
+
+params_bf <- c("Intercept", "Timepoint", "Group", "Timepoint x Group")
+
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(starts_with(c("mu")), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter, labels = params_bf))
+
+
+
+
+
+

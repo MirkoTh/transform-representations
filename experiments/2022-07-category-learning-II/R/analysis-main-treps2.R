@@ -41,7 +41,8 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-II/",
-  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-III/"  
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-III/",
+  "experiments/2022-07-category-learning-II/data/2022-09-02-treps2-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -117,9 +118,9 @@ tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
 tbl_cat <- l_cat_sim[["tbl_cat"]]
 tbl_sim <- l_cat_sim[["tbl_sim"]]
 
-saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds"))
-saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"))
-saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds"))
+# saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds"))
+# saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"))
+# saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds"))
 
 
 # Categorization ----------------------------------------------------------
@@ -254,7 +255,7 @@ tbl_sim_agg_subj <- tbl_sim %>%
   rutils::grouped_agg(c(participant_id, distance_binned), c(response, rt))
 
 m_rs_sim <-
-  lme(
+  nlme::lme(
     mean_response ~ distance_binned,
     random = ~ 1 + distance_binned |
       participant_id,
@@ -322,19 +323,18 @@ grid.arrange(l_pl_euclidean$pl_density, l_pl_euclidean$pl_agg, nrow = 1, ncol = 
 # lmes
 ## movement to center
 m_rs_cr <-
-  lme(
-    d_closest ~ session * category,
-    random = ~ 1 + session + category + session:category |
-      participant_id,
-    data = tbl_cr %>% filter(n_categories == "Experimental Group")
+  nlme::lme(
+    scale(sqrt(d_closest), scale = FALSE) ~ session * n_categories,
+    random = ~ 1 + session | participant_id,
+    data = tbl_cr
   )
 summary(m_rs_cr)
 anova(m_rs_cr)
 tbl_cr$preds <- predict(m_rs_sim, m_rs_cr)
 
 m_rs_cr_control <-
-  lme(
-    d_closest ~ session,
+  nlme::lme(
+    sqrt(d_closest) ~ session,
     random = ~ 1 + session | participant_id,
     data = tbl_cr %>% filter(n_categories == "Control Group")
   )
