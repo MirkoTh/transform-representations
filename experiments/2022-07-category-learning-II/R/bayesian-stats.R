@@ -303,6 +303,10 @@ tbl_participants_lookup <- tibble(
   participant_id_num = as.numeric(fct_inorder(factor(unique(tbl_cr_moves$participant_id))))
 )
 
+tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categories) %>%
+  count() %>% ungroup() %>% select(-n) %>%
+  mutate(participant_id_num = as.numeric(fct_inorder(factor(participant_id))))
+
 
 l_data_move <- list(
   n_data = nrow(tbl_cr_moves),
@@ -353,3 +357,86 @@ pl_outliers_posteriors <- plot_movement_outliers(
 )
 
 grid.draw(arrangeGrob(pl_outliers_prior, pl_outliers_posteriors))
+
+ggplot(tbl_mix, aes(mean, group = n_categories)) + 
+  geom_histogram(fill = "#66CCFF", color = "white") +
+  facet_wrap(~ n_categories) +
+  theme_bw() +
+  labs(x = "Proportion Gamma / Categorical", y = "Nr. Participants")
+
+# todos
+# 1. mixture model with group-level beta parameters for proportion categorical
+# 2. separate model modeling movements with individual gaussians depending on group gaussian and a group effect on the means
+# 3. model comparison of the mixture model with the model predicting a shift in the mean of the gaussian distributions
+
+# storyline
+# 1. analysis of means shows that there is a stronger tendency in the experimental group to be attracted by category means than in the control group
+# 2. stats of this analysis show that the evidence is rather in favor of the Null hypothesis that there is an effect
+# 3. closer look at by-participant distributions of movements suggests a different picture: some responses are attracted by the centers, but most are not
+# 4. this is implemented in the mixture model (, which hopefully fits better than the model predicting a mean shift but only a gaussian distribution)
+# 5. comparing the group-level parameters of probability responding categorically does not show any group effect
+
+
+l_data_mixture_groups <- list(
+  n_data = nrow(tbl_cr_moves),
+  n_subj = length(unique(tbl_cr_moves$participant_id)),
+  n_groups = length(unique(tbl_cr_moves$n_categories)),
+  d_moved = tbl_cr_moves$d_move_abs,
+  subj = fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric(),
+  group = as.numeric(tbl_participants_lookup$n_categories)
+)
+
+
+move_model_mixture_group <- stan_move_mixture_groups()
+move_model_mixture_group <- cmdstan_model(move_model_mixture_group)
+
+fit_move_mixture <- move_model_mixture_group$sample(
+  data = l_data_mixture_groups, iter_sampling = 1000, iter_warmup = 1000,
+  chains = 1, parallel_chains = 1,
+  save_warmup = FALSE
+)
+
+file_loc_mixture_groups <- str_c("experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-model.RDS")
+fit_move_mixture$save_object(file = file_loc_mixture_groups, compress = "gzip")
+
+pars_interest <- "theta"
+pars_interest <- c("sigma_subject", "theta", "mu_theta", "mg_mn", "mg_sd")
+tbl_draws <- fit_move_mixture$draws(variables = pars_interest, format = "df")
+tbl_draws$theta_meandiff <- tbl_draws$`mu_theta[1]` - tbl_draws$`mu_theta[2]`
+tbl_draws$theta_meandiff_prob <- inv_logit(tbl_draws$`mu_theta[1]`) - inv_logit(tbl_draws$`mu_theta[2]`)
+
+ggplot(tbl_draws, aes(theta_meandiff)) + geom_histogram()
+
+tbl_summary <- fit_move_mixture$summary(variables = pars_interest)
+
+params_bf <- c("Group Difference Theta Logit", "Group Difference Theta Prob.")
+pars_interest <- c(pars_interest, "theta_meandiff", "theta_meandiff_prob")
+
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(theta_meandiff, theta_meandiff_prob, .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("theta")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = "Group Difference Theta")
+l <- sd_bfs(tbl_posterior, params_bf, .5)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+grid.arrange(l_pl[[1]], l_pl[[2]], nrow = 1, ncol = 2)
+
+
+tbl_mix <- tbl_summary %>% arrange(desc(mean))
+tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
+tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
+p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
+
+tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot$participant_id)
+
+
+l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
+pl_outliers_posteriors <- plot_movement_outliers(
+  l_outliers_posterior$tbl_outliers, 
+  l_outliers_posterior$tbl_labels, "Highest Posterior Proportion of Gamma"
+)
+

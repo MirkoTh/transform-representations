@@ -254,12 +254,6 @@ data {
 }
 
 
-transformed data {
-  real scale_cont = sqrt(2) / 4;
-  real scale_cat = .5;
-}
-
-
 parameters {
   //vector<lower=0>[n_subj] mg_mn;
   //vector<lower=0>[n_subj] mg_sd;
@@ -307,6 +301,85 @@ model {
       sigma_subject[s] ~ normal(0, 30);
       //mg_mn[s] ~ gamma(2.5, .1);
       //mg_sd[s] ~ gamma(1, 1);
+  }
+  
+}
+
+
+generated quantities {
+  vector[n_data] log_lik_pred;
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = log(d_moved[n]);
+  }
+}
+
+")
+}
+
+
+
+stan_move_mixture_groups <- function() {
+  
+  write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  int n_groups;
+  vector[n_data] d_moved;
+  array[n_data] int subj;
+  array[n_subj] int group;
+}
+
+
+parameters {
+  real<lower=0> mg_mn;
+  real<lower=0> mg_sd;
+  vector<lower=0>[n_subj] sigma_subject;
+  vector[n_subj] b_theta;
+  vector<lower=0>[n_groups] sigma_theta;
+  vector[n_groups] mu_theta;
+}
+
+
+transformed parameters {
+  real<lower=0> shape;
+  real<lower=0> rate;
+  vector<lower=0,upper=1>[n_subj] theta;
+
+  for (s in 1:n_subj) {
+    rate = mg_mn / pow(mg_sd, 2);
+    shape = pow(mg_mn, 2) / pow(mg_sd, 2);
+    theta[s] = inv_logit(b_theta[s]);
+  }
+}
+
+
+model {
+
+  vector[2] lp;
+
+  for (n in 1:n_data) {
+    lp[1] = log(1 - theta[subj[n]]) + normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]]);
+    if (d_moved[n] > 0) {
+      lp[2] = log(theta[subj[n]]) + gamma_lpdf(d_moved[n] | shape, rate);
+      target += log_sum_exp(lp); //lp[1]; //
+    }
+      
+    else {
+      target += lp[1];
+      }
+  }
+
+  mg_mn ~ gamma(2.5, .1);
+  mg_sd ~ gamma(1, 1);
+  for (s in 1:n_subj) {
+      sigma_subject[s] ~ normal(0, 30);
+      b_theta[s] ~ normal(mu_theta[group[s]], sigma_theta[group[s]]);
+  }
+  for (g in 1:n_groups) {
+      mu_theta[g] ~ cauchy(0, 1);
+      sigma_theta[g] ~ cauchy(0, 1);
   }
   
 }
