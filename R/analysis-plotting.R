@@ -705,3 +705,73 @@ plot_deviations_from_stimulus <- function(tbl_cr_agg) {
   ))
   
 }
+
+
+plot_distances_to_centers <- function(tbl_cr) {
+  tbl_cr %>% mutate(
+    d_closest_mc = scale(d_closest, scale = FALSE),
+    d_closest_sqrt_mc = scale(d_closest_sqrt, scale = FALSE)
+  ) %>%
+    pivot_longer(c(d_closest, d_closest_sqrt, d_closest_mc, d_closest_sqrt_mc)) %>%
+    filter(name == c("d_closest", "d_closest_sqrt")) %>%
+    mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
+    ggplot(aes(value)) +
+    geom_histogram(bins = 50, fill = "#66CCFF", color = "white") +
+    facet_wrap(~ name, scales = "free") +
+    theme_bw() + 
+    labs(x = "Value", y = "Nr. Responses")
+}
+
+
+plot_groupmeans_against_session <- function(tbl_cr) {
+  pd <- position_dodge(width = .2)
+  summarySEwithin(tbl_cr, "d_closest_sqrt", "n_categories", "session") %>%
+    mutate(session = factor(session, labels = c("Before Category Learning", "After Category Learning"))) %>%
+    ggplot(aes(session, d_closest_sqrt, group = n_categories)) +
+    geom_errorbar(aes(
+      ymin = d_closest_sqrt - ci, 
+      ymax = d_closest_sqrt + ci, 
+      color = n_categories
+    ), width = .2, position = pd
+    ) + geom_line(aes(color = n_categories), position = pd) +
+    geom_point(size = 3, color = "white", position = pd) +
+    geom_point(aes(color = n_categories), position = pd) +
+    scale_color_brewer(name = "Nr. Categories", palette = "Set1") +
+    theme_bw() +
+    labs(
+      x = "Timepoint",
+      y = "Distance to Closest Center"
+    )
+}
+
+
+
+plot_mean_deltas <- function(tbl_cr) {
+  tbl_cr %>% group_by(participant_id, session, n_categories) %>%
+    summarize(
+      d_closest_mn_sqrt = mean(d_closest_sqrt),
+      d_closest_mn_abs = mean(d_closest)
+    ) %>%
+    group_by(participant_id) %>%
+    mutate(
+      d_closest_before_sqrt = lag(d_closest_mn_sqrt),
+      d_move_sqrt = d_closest_before_sqrt - d_closest_mn_sqrt,
+      d_closest_before_abs = lag(d_closest_mn_abs),
+      d_move_abs = d_closest_before_abs - d_closest_mn_abs
+    ) %>%
+    ungroup() %>%
+    mutate(
+      n_categories = factor(n_categories, labels = c("Similarity Judgment", "4 Categories"))
+    ) %>%
+    dplyr::filter(!is.na(d_closest_before_abs)) %>%
+    pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
+    mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
+    ggplot(aes(value)) +
+    geom_histogram(bins = 60, fill = "#66CCFF", color = "white") + # "dodgerblue"
+    geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
+    facet_wrap(name ~ n_categories, scales = "free_x") +
+    theme_bw() +
+    labs(x = "Movement Towards Center", y = "Nr. Participants")
+}
+
+
