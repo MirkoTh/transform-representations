@@ -170,6 +170,11 @@ plot_groupmeans_against_session(tbl_cr)
 # analysis of the means suggests that there may be an interaction effect
 # note, cis are within-participant cis
 
+
+
+# Mean Effects ------------------------------------------------------------
+
+
 # random slopes on session seem reasonable
 # results from frequentist comparison of ri and rs show that rs are necessary
 
@@ -265,6 +270,11 @@ anova(m_rs)
 
 # stats on mean effects show that there is hardly an effect (n = 119)
 
+
+
+# Mixture Modeling --------------------------------------------------------
+
+
 # the following plots suggest a different option
 # i.e., deltas could represent a mixture between visuo-spatial responses
 # and categorical respones
@@ -282,6 +292,7 @@ pl_outliers_prior <- plot_movement_outliers(
   tbl_labels, 
   "Outliers above/below 1 sd of the Mean"
 )
+pl_outliers_prior
 
 move_model_mixture <- stan_move_mixture()
 move_model_mixture <- cmdstan_model(move_model_mixture)
@@ -296,11 +307,6 @@ assert_that(
     fct_inorder(factor(tbl_cr_d1$participant_id)) %>% as.numeric() == 
       fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric()
   ) == nrow(tbl_cr_d1)
-)
-
-tbl_participants_lookup <- tibble(
-  participant_id = fct_inorder(factor(unique(tbl_cr_moves$participant_id))),
-  participant_id_num = as.numeric(fct_inorder(factor(unique(tbl_cr_moves$participant_id))))
 )
 
 tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categories) %>%
@@ -398,22 +404,36 @@ fit_move_mixture <- move_model_mixture_group$sample(
 
 file_loc_mixture_groups <- str_c("experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-model.RDS")
 fit_move_mixture$save_object(file = file_loc_mixture_groups, compress = "gzip")
+fit_move_mixture <- readRDS(file_loc_mixture_groups)
 
 pars_interest <- "theta"
 pars_interest <- c("sigma_subject", "theta", "mu_theta", "mg_mn", "mg_sd")
 tbl_draws <- fit_move_mixture$draws(variables = pars_interest, format = "df")
 tbl_draws$theta_meandiff <- tbl_draws$`mu_theta[1]` - tbl_draws$`mu_theta[2]`
+inv_logit <- function(x) exp(x)/(exp(x) + 1)
+tbl_draws$theta_cat_prob <- inv_logit(tbl_draws$`mu_theta[2]`)
+tbl_draws$theta_sim_prob <- inv_logit(tbl_draws$`mu_theta[1]`)
 tbl_draws$theta_meandiff_prob <- inv_logit(tbl_draws$`mu_theta[1]`) - inv_logit(tbl_draws$`mu_theta[2]`)
-
-ggplot(tbl_draws, aes(theta_meandiff)) + geom_histogram()
-
 tbl_summary <- fit_move_mixture$summary(variables = pars_interest)
 
-params_bf <- c("Group Difference Theta Logit", "Group Difference Theta Prob.")
-pars_interest <- c(pars_interest, "theta_meandiff", "theta_meandiff_prob")
+# in probability space
+tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) %>%
+  mutate(theta_diff = theta_cat_prob - theta_sim_prob) %>%
+  pivot_longer(c(theta_cat_prob, theta_sim_prob, theta_diff)) %>%
+  mutate(
+    name = fct_inorder(factor(name)),
+    name = factor(
+      name, 
+      labels = c("4 Categories", "Similarity", "Difference"))
+    ) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "white", fill = "#66CCFF") +
+  facet_wrap(~ name) +
+  theme_bw()
 
+params_bf <- "Group Difference Theta"
 tbl_posterior <- tbl_draws %>% 
-  dplyr::select(theta_meandiff, theta_meandiff_prob, .chain) %>%
+  dplyr::select(theta_meandiff, .chain) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(c("theta")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = "Group Difference Theta")
@@ -423,8 +443,7 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
-grid.arrange(l_pl[[1]], l_pl[[2]], nrow = 1, ncol = 2)
-
+l_pl[[1]]
 
 tbl_mix <- tbl_summary %>% arrange(desc(mean))
 tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
