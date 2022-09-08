@@ -10,8 +10,8 @@ library(catlearn)
 
 files <- c(
   "R/utils.R", "R/plotting.R", 
-  "experiments/2022-02-category-learning/R/analysis-utils.R",
-  "experiments/2022-02-category-learning/R/analysis-plotting.R"
+  "R/analysis-utils.R",
+  "R/analysis-plotting.R"
   )
 walk(files, source)
 
@@ -29,9 +29,9 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- crossing(
-  n_categories = c(2L), cat_type = c("prototype", "exemplar"), # "rule", 
+  n_categories = c(4L), cat_type = c("prototype", "exemplar", "rule"), #, 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
-  constrain_space = c(TRUE, FALSE), category_shape = c("ellipses"),
+  constrain_space = c(TRUE, FALSE), category_shape = c("square"),
   is_reward = FALSE
 )
 l_info <- pmap(
@@ -65,11 +65,11 @@ l_category_results <- future_map(
 td <- lubridate::today()
 
 saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
-l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds")
+l_category_results <- readRDS(file = "data/2022-08-24-grid-search-vary-constrain-space.rds")
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
 # Post Processing & Plotting ----------------------------------------------
 
-l_results_plots <- map(l_category_results, diagnostic_plots)
+l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = "square", is_simulation = TRUE)
 
 
 tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
