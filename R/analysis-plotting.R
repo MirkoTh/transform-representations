@@ -775,3 +775,20 @@ plot_mean_deltas <- function(tbl_cr) {
 }
 
 
+
+plot_movement_outliers <- function(tbl_outliers, tbl_labels) {
+  ggplot(
+    tbl_outliers %>% filter(name == "Not Transformed"),
+    aes(value, group = flag_outlier)
+  ) +
+    geom_histogram(bins = 15, color = "white", aes(fill = flag_outlier)) +
+    geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
+    geom_label(data = tbl_labels, aes(x = 0, y = 40, label = str_c("Move = ", round(avg_move, 1)))) +
+    facet_wrap(~ participant_id) +
+    theme_bw() +
+    scale_fill_brewer(palette = "Set1", name = "Outlier") +
+    labs(x = "Movement Towards Center", y = "Nr. Participants", title = "Outliers above/below 1 sd of the Mean")
+}
+
+
+
