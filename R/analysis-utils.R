@@ -1508,3 +1508,74 @@ separate_cat_and_sim <- function(tbl_cat_sim) {
   
   return(list(tbl_cat = tbl_cat, tbl_sim = tbl_sim, tbl_cat_sim = tbl_cat_sim))
 }
+
+
+after_vs_before <- function(tbl_cr) {
+  #' subtract distances to category means after from those before
+  #' 
+  #' @description calculates for each stimulus and participant the movement
+  #' towards the respective category center
+  #' 
+  #' @param tbl_cr the tbl df with by-trial and by-participant cr responses
+  #' 
+  #' @return tbl df with only half of the rows as the input provides
+
+  tbl_cr %>% group_by(participant_id, stim_id) %>%
+    arrange(participant_id, stim_id, session) %>%
+    mutate(
+      d_closest_sqrt = sqrt(d_closest),
+      d_closest_before_abs = lag(d_closest),
+      d_closest_before_sqrt = lag(d_closest_sqrt),
+      d_move_sqrt = d_closest_before_sqrt - d_closest_sqrt,
+      d_move_abs = d_closest_before_abs - d_closest
+    ) %>%
+    ungroup() %>%
+    mutate(
+      n_categories = factor(n_categories, labels = c("Control", "4 Categories"))
+    ) %>%
+    dplyr::filter(!is.na(d_closest_before_abs)) %>%
+    group_by(participant_id) %>%
+    mutate(
+      d_move_mn = mean(d_move_abs)
+    ) %>% ungroup()
+}
+
+
+
+extract_movement_outliers <- function(tbl_cr_moves, n_sds, measurement) {
+  #' extract participants with hi/lo tendency to move responses to
+  #' category centers over time (i.e., before vs. after)
+  #' 
+  #' @description extracts those participants with an average move above/below
+  #' n_sds of the mean
+  #' uses measure of raw movement or movement in sqrt space
+  #' 
+  #' @param tbl_cr_moves the tbl df with by-item and by-participant moves
+  #' towards the category centers
+  #' @param n_sds number of sds to use as a cut off
+  #' @param measurement either "Not Transformed" or "Square Root"
+  #' 
+  #' @return list with two tbl dfs
+  #' (a) outliers and (b) average moves as labels for plotting
+  
+  tbl_outliers <- tbl_cr_moves %>%
+    mutate(
+      flag_hi = d_move_mn > mean(d_move_mn) + n_sds * sd(d_move_mn),
+      flag_lo = d_move_mn < mean(d_move_mn) - n_sds * sd(d_move_mn),
+      flag_outlier = factor(flag_hi, labels = c("Lo", "Hi"))
+    ) %>%
+    ungroup() %>%
+    arrange(desc(d_move_mn)) %>%
+    filter(flag_hi | flag_lo) %>%
+    pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
+    mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
+    mutate(participant_id = fct_inorder(factor(str_c(substr(participant_id, 1, 6), ", ", n_categories))))
+  
+  tbl_labels <- tbl_outliers %>% filter(name == measurement) %>%
+    group_by(participant_id, flag_outlier) %>%
+    summarize(avg_move_sqrt = mean(value)) %>%
+    ungroup()
+  
+  return(list(tbl_outliers = tbl_outliers, tbl_labels = tbl_labels))
+}
+
