@@ -277,7 +277,11 @@ tbl_cr_moves <- after_vs_before(tbl_cr)
 l_outliers <- extract_movement_outliers(tbl_cr_moves, 1, "Not Transformed")
 tbl_outliers <- l_outliers$tbl_outliers
 tbl_labels <- l_outliers$tbl_labels
-pl_outliers_prior <- plot_movement_outliers(tbl_outliers, tbl_labels)
+pl_outliers_prior <- plot_movement_outliers(
+  tbl_outliers, 
+  tbl_labels, 
+  "Outliers above/below 1 sd of the Mean"
+)
 
 move_model_mixture <- stan_move_mixture()
 move_model_mixture <- cmdstan_model(move_model_mixture)
@@ -343,6 +347,9 @@ tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_p
 
 
 l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
-pl_outliers_posteriors <- plot_movement_outliers(l_outliers_posterior$tbl_outliers, l_outliers_posterior$tbl_labels)
+pl_outliers_posteriors <- plot_movement_outliers(
+  l_outliers_posterior$tbl_outliers, 
+  l_outliers_posterior$tbl_labels, "Highest Posterior Proportion of Gamma"
+)
 
 grid.draw(arrangeGrob(pl_outliers_prior, pl_outliers_posteriors))
