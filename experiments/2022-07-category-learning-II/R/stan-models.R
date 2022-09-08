@@ -243,69 +243,72 @@ generated quantities {
   return(stan_normal_cr_ri)
 }
 
-stan_cr_rs_mixture <- function() {
+stan_move_mixture <- function() {
   
   write_stan_file("
 data {
   int n_data;
   int n_subj;
-  vector[n_data] d_closest;
+  vector[n_data] d_moved;
   array[n_data] int subj;
-  matrix[n_data, 4] x; // ic, session, ncat, session x ncat
 }
+
 
 transformed data {
   real scale_cont = sqrt(2) / 4;
   real scale_cat = .5;
 }
 
+
 parameters {
-  matrix[n_subj, 3] b;
-  ordered[2] muI;
-  vector[3] mu;
-  vector <lower=0>[3] sigma_subject;
-  real<lower=0> sigma;
+  //vector<lower=0>[n_subj] mg_mn;
+  //vector<lower=0>[n_subj] mg_sd;
+  real<lower=0> mg_mn;
+  real<lower=0> mg_sd;
+  vector<lower=0>[n_subj] sigma_subject;
   array[n_subj] simplex[2] theta;
 }
 
-transformed parameters {
-  array[3] real mu_tf;
-  mu_tf[1] = mu[1] * scale_cat;
-  mu_tf[2] = mu[2] * scale_cat;
-  mu_tf[3] = mu[3] * scale_cat;
-  vector[n_data] mn;
 
-  for (n in 1:n_data) {
-    mn[n] = (
-    b[subj[n], 1] * x[n, 1] * theta[subj[n], 1] + 
-    b[subj[n], 2] * x[n, 1] * theta[subj[n], 2] + 
-    b[subj[n], 3] * x[n, 2] + 
-    mu_tf[2] * x[n, 3] + 
-    mu_tf[3] * x[n, 4]
-    );
+transformed parameters {
+  //vector<lower=0>[n_subj] shape;
+  //vector<lower=0>[n_subj] rate;
+  real<lower=0> shape;
+  real<lower=0> rate;
+
+  for (s in 1:n_subj) {
+    //rate[s] = mg_mn[s] / pow(mg_sd[s], 2);
+    //shape[s] = pow(mg_mn[s], 2) / pow(mg_sd[s], 2);
+    rate = mg_mn / pow(mg_sd, 2);
+    shape = pow(mg_mn, 2) / pow(mg_sd, 2);
   }
 }
 
+
 model {
+
+  vector[2] lp;
+
   for (n in 1:n_data) {
-    d_closest[n] ~ normal(mn[n], sigma);
+    lp[1] = log(theta[subj[n]][1]) + normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]]);
+    if (d_moved[n] > 0) {
+      lp[2] = log(theta[subj[n]][2]) + gamma_lpdf(d_moved[n] | shape, rate);
+      target += log_sum_exp(lp); //lp[1]; //
+    }
+      
+    else {
+      target += lp[1];
+      }
   }
 
+  mg_mn ~ gamma(2.5, .1);
+  mg_sd ~ gamma(1, 1);
   for (s in 1:n_subj) {
-    b[s, 1] ~ normal(muI[1], sigma_subject[1]);
-    b[s, 2] ~ normal(muI[2], sigma_subject[2]);
-    b[s, 3] ~ normal(mu_tf[1], sigma_subject[3]);
+      sigma_subject[s] ~ normal(0, 30);
+      //mg_mn[s] ~ gamma(2.5, .1);
+      //mg_sd[s] ~ gamma(1, 1);
   }
   
-  sigma ~ cauchy(0, 1);
-  sigma_subject[1] ~ cauchy(0, 1);
-  sigma_subject[2] ~ cauchy(0, 1);
-  sigma_subject[3] ~ cauchy(0, 1);
-  muI[1] ~ student_t(1, -3, 1);
-  muI[2] ~ student_t(1, 0, 1);
-  mu[1] ~ student_t(1, 0, 1);
-  mu[2] ~ student_t(1, 0, 1);
-  mu[3] ~ student_t(1, 0, 1);
 }
 
 
@@ -313,7 +316,7 @@ generated quantities {
   vector[n_data] log_lik_pred;
 
   for (n in 1:n_data) {
-    log_lik_pred[n] = normal_lpdf(d_closest[n] | mn[n], sigma);
+    log_lik_pred[n] = log(d_moved[n]);
   }
 }
 
