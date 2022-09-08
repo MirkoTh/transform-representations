@@ -1573,7 +1573,7 @@ extract_movement_outliers <- function(tbl_cr_moves, n_sds, measurement) {
   
   tbl_labels <- tbl_outliers %>% filter(name == measurement) %>%
     group_by(participant_id, flag_outlier) %>%
-    summarize(avg_move_sqrt = mean(value)) %>%
+    summarize(avg_move = mean(value)) %>%
     ungroup()
   
   return(list(tbl_outliers = tbl_outliers, tbl_labels = tbl_labels))

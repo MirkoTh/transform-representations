@@ -163,112 +163,12 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 # Movements Towards Centers -----------------------------------------------
 
 # sqrt tf on d_closest
+tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
 
-tbl_cr %>% mutate(
-  d_closest_sqrt = sqrt(d_closest),
-  d_closest_mc = scale(d_closest, scale = FALSE),
-  d_closest_sqrt_mc = scale(d_closest_sqrt, scale = FALSE)
-  ) %>%
-  pivot_longer(c(d_closest_mc, d_closest_sqrt_mc)) %>%
-  filter(name == "d_closest_sqrt_mc") %>%
-  #mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
-  ggplot(aes(value)) +
-  geom_histogram(bins = 50, fill = "#66CCFF", color = "white") +
-  facet_wrap(session ~ n_categories, scales = "free") +
-  theme_bw() + 
-  labs(x = "Value", y = "Nr. Responses")
-
-
-# plot mean effects
-tbl_cr %>% group_by(n_categories, session) %>%
-  summarize(
-    d_closest_avg_sqrt = mean(sqrt(d_closest)),
-    d_closest_avg_abs = mean(d_closest)
-    ) %>%
-  mutate(session = factor(session, labels = c("Before Category Learning", "After Category Learning"))) %>%
-  pivot_longer(c(d_closest_avg_sqrt, d_closest_avg_abs)) %>%
-  mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
-  ggplot(aes(session, value, group = n_categories)) +
-  geom_line(aes(color = n_categories)) +
-  geom_point(size = 3, color = "white") +
-  geom_point(aes(color = n_categories)) +
-  facet_wrap(~ name, scales = "free") +
-  scale_color_brewer(name = "Nr. Categories", palette = "Set1") +
-  theme_bw() +
-  labs(
-    x = "Timepoint",
-    y = "Distance to Closest Center"
-  )
-
-# plot distributions of deltas
-tbl_cr %>% group_by(participant_id, session, n_categories) %>%
-  summarize(
-    d_closest_mn_sqrt = mean(sqrt(d_closest)),
-    d_closest_mn_abs = mean(d_closest)
-  ) %>%
-  group_by(participant_id) %>%
-  mutate(
-    d_closest_before_sqrt = lag(d_closest_mn_sqrt),
-    d_move_sqrt = d_closest_before_sqrt - d_closest_mn_sqrt,
-    d_closest_before_abs = lag(d_closest_mn_abs),
-    d_move_abs = d_closest_before_abs - d_closest_mn_abs
-  ) %>%
-  ungroup() %>%
-  mutate(
-    n_categories = factor(n_categories, labels = c("Similarity Judgment", "4 Categories"))
-  ) %>%
-  dplyr::filter(!is.na(d_closest_before_abs)) %>%
-  pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
-  mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
-  ggplot(aes(value)) +
-  geom_histogram(bins = 60, fill = "#66CCFF", color = "white") + # "dodgerblue"
-  geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
-  facet_wrap(name ~ n_categories, scales = "free_x") +
-  theme_bw() +
-  labs(x = "Movement Towards Center", y = "Nr. Participants")
-
-tbl_outliers <- tbl_cr %>% group_by(participant_id, stim_id) %>%
-  arrange(participant_id, stim_id, session) %>%
-  mutate(
-    d_closest_sqrt = sqrt(d_closest),
-    d_closest_before_abs = lag(d_closest),
-    d_closest_before_sqrt = lag(d_closest_sqrt),
-    d_move_sqrt = d_closest_before_sqrt - d_closest_sqrt,
-    d_move_abs = d_closest_before_abs - d_closest
-  ) %>%
-  ungroup() %>%
-  mutate(
-    n_categories = factor(n_categories, labels = c("Control", "4 Categories"))
-  ) %>%
-  dplyr::filter(!is.na(d_closest_before_abs)) %>%
-  group_by(participant_id) %>%
-  mutate(
-    d_move_mn = mean(d_move_sqrt)
-    ) %>% ungroup() %>%
-  mutate(
-    flag_hi = d_move_mn > mean(d_move_mn) + 1 * sd(d_move_mn),
-    flag_lo = d_move_mn < mean(d_move_mn) - 1 * sd(d_move_mn),
-    flag_outlier = factor(flag_hi, labels = c("Lo", "Hi"))
-    ) %>%
-  ungroup() %>%
-  arrange(desc(d_move_mn)) %>%
-  filter(flag_hi | flag_lo) %>%
-  pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
-  mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
-  mutate(participant_id = fct_inorder(factor(str_c(substr(participant_id, 1, 6), ", ", n_categories))))
-tbl_labels <- tbl_outliers %>% filter(name == "Square Root") %>%
-  group_by(participant_id, flag_outlier) %>%
-  summarize(avg_move_sqrt = mean(value)) %>%
-  ungroup()
-
-ggplot(tbl_outliers %>% filter(name == "Square Root"), aes(value, group = flag_outlier)) +
-  geom_histogram(bins = 15, color = "white", aes(fill = flag_outlier)) + # "dodgerblue"
-  geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
-  geom_label(data = tbl_labels, aes(x = 0, y = 40, label = str_c("Move Sqrt = ", round(avg_move_sqrt, 1)))) +
-  facet_wrap(~ participant_id) +
-  theme_bw() +
-  scale_fill_brewer(palette = "Set1", name = "Hi/Lo Outlier") +
-  labs(x = "Movement Towards Center", y = "Nr. Participants", title = "Outliers above/below 1 sd of the Mean")
+plot_distances_to_centers(tbl_cr)
+plot_groupmeans_against_session(tbl_cr)
+# analysis of the means suggests that there may be an interaction effect
+# note, cis are within-participant cis
 
 # random slopes on session seem reasonable
 # results from frequentist comparison of ri and rs show that rs are necessary
@@ -350,23 +250,6 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
 
-# without random slopes on session, only a random intercept, BF for ia is decisive
-install.packages("BayesFactor")
-library(BayesFactor)
-r = 1/2;
-df_bf <- as.data.frame(tbl_cr)
-df_bf$n_categories <- as.factor(df_bf$n_categories)
-
-bfall <- anovaBF(d_closest ~ n_categories*session + participant_id, data = df_bf, whichRandom="participant_id",
-                 rscaleFixed=r, whichModel="all", iterations=50000, progress=TRUE)
-which(bfall@bayesFactor$bf==max(bfall@bayesFactor$bf))
-
-winner <- lmBF(d_closest ~ session + n_categories:session + participant_id, data = df_bf, whichRandom="participant_id",
-               rscaleFixed=r, iterations=50000, progress=TRUE)
-min_ia <- lmBF(d_closest ~ session + participant_id, data = df_bf, whichRandom="participant_id",
-               rscaleFixed=r, iterations=50000, progress=TRUE)
-winner/min_ia
-
 # frequentist framework with random intercept and random slopes on session
 library(nlme)
 m_ri <- lme(
@@ -380,26 +263,63 @@ m_rs <- lme(
 anova(m_ri, m_rs)
 anova(m_rs)
 
-# fix mixture model assuming proportion of responses comes from a second intercept
-# second intercept could be assumed as a response bias effect
-# random slopes
+# stats on mean effects show that there is hardly an effect (n = 119)
 
-cr_model_rs_mixture <- stan_cr_rs_mixture()
-mod_cr_rs_mixture <- cmdstan_model(cr_model_rs_mixture)
+# the following plots suggest a different option
+# i.e., deltas could represent a mixture between visuo-spatial responses
+# and categorical respones
+# what should be analyzed is whether the proportion of categorical respones
+# differs between groups
 
 
-fit_cr_rs_mixture <- mod_cr_rs_mixture$sample(
-  data = l_data, iter_sampling = 1000, iter_warmup = 1000,
-  chains = 1, parallel_chains = 1,
+plot_mean_deltas(tbl_cr)
+tbl_cr_moves <- after_vs_before(tbl_cr)
+l_outliers <- extract_movement_outliers(tbl_cr_moves, 1, "Not Transformed")
+tbl_outliers <- l_outliers$tbl_outliers
+tbl_labels <- l_outliers$tbl_labels
+pl_outliers_prior <- plot_movement_outliers(tbl_outliers, tbl_labels)
+
+move_model_mixture <- stan_move_mixture()
+move_model_mixture <- cmdstan_model(move_model_mixture)
+
+# make sure tbl_cr_d1 and tbl_cr_moves are ordered in exactly the same way
+tbl_cr_d1 <- tbl_cr %>% filter(session == 1)
+tbl_cr_d1 <- tbl_cr_d1 %>% arrange(participant_id, trial_id)
+tbl_cr_moves <- tbl_cr_moves %>% arrange(participant_id, trial_id)
+
+assert_that(
+  sum(
+    fct_inorder(factor(tbl_cr_d1$participant_id)) %>% as.numeric() == 
+      fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric()
+  ) == nrow(tbl_cr_d1)
+)
+
+tbl_participants_lookup <- tibble(
+  participant_id = fct_inorder(factor(unique(tbl_cr_moves$participant_id))),
+  participant_id_num = as.numeric(fct_inorder(factor(unique(tbl_cr_moves$participant_id))))
+)
+
+
+l_data_move <- list(
+  n_data = nrow(tbl_cr_moves),
+  n_subj = length(unique(tbl_cr_moves$participant_id)),
+  #d1 = tbl_cr_d1$d_closest,
+  d_moved = tbl_cr_moves$d_move_abs,
+  subj = fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric()
+)
+
+fit_move_mixture <- move_model_mixture$sample(
+  data = l_data_move, iter_sampling = 5000, iter_warmup = 2000,
+  chains = 4, parallel_chains = 4,
   save_warmup = FALSE
 )
-file_loc_rs_mixture <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-mixture-model.RDS")
-fit_cr_rs$save_object(file = file_loc_rs_mixture, compress = "gzip")
+file_loc_move_mixture <- str_c("experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-model.RDS")
+fit_move_mixture$save_object(file = file_loc_move_mixture, compress = "gzip")
 
-
-pars_interest <- c("muI", "mu_tf", "theta")
-tbl_draws <- fit_cr_rs_mixture$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_cr_rs_mixture$summary(variables = pars_interest)
+pars_interest <- "theta"
+pars_interest <- c("sigma_subject", "theta", "mg_mn", "mg_sd")
+tbl_draws <- fit_move_mixture$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_mixture$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Timepoint", "Group", "Timepoint x Group")
 
@@ -410,7 +330,19 @@ tbl_posterior <- tbl_draws %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
 
+# inspect distribution of movements of participants with high posterior
+# proportion of responses from gamma
+
+filter_theta2 <- str_detect(tbl_summary$variable, "theta\\[[0-9]+,2\\]")
+tbl_mix <- tbl_summary[filter_theta2, ] %>% arrange(desc(mean))
+tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
+tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
+p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
+
+tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot$participant_id)
 
 
+l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
+pl_outliers_posteriors <- plot_movement_outliers(l_outliers_posterior$tbl_outliers, l_outliers_posterior$tbl_labels)
 
-
+grid.draw(arrangeGrob(pl_outliers_prior, pl_outliers_posteriors))
