@@ -52,7 +52,8 @@ path_data <- c(
   "experiments/2022-07-category-learning-II/data/2022-08-18-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment/",
   "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-II/",
-  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-III/"
+  "experiments/2022-07-category-learning-II/data/2022-08-19-treps2-experiment-III/",
+  "experiments/2022-07-category-learning-II/data/2022-09-02-treps2-experiment/"
 )
 
 
@@ -61,7 +62,7 @@ path_data <- c(
 
 returned_timeout <- timeout_and_returns()
 
-l_tbls_data <- map(path_data, load_data, participants_returned = returned_timeout)
+l_tbls_data <- map(path_data[7], load_data, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
