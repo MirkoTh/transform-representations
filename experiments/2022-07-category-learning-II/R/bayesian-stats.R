@@ -171,7 +171,6 @@ plot_groupmeans_against_session(tbl_cr)
 # note, cis are within-participant cis
 
 
-
 # Mean Effects ------------------------------------------------------------
 
 
@@ -206,7 +205,7 @@ l_data <- list(
 # random slopes
 fit_cr_rs <- mod_cr_rs$sample(
   data = l_data, iter_sampling = 2000, iter_warmup = 1000,
-  chains = 1, parallel_chains = 3,
+  chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
 file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/cr-rs-model.RDS")
@@ -235,7 +234,7 @@ saveRDS(loo_ri, file = file_loc_loo_ri)
 loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 
 
-pars_interest <- c("b")
+pars_interest <- c("b", "mu")
 tbl_draws <- fit_cr_rs$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_cr_rs$summary(variables = pars_interest)
 
@@ -310,18 +309,17 @@ tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categorie
   count() %>% ungroup() %>% select(-n) %>%
   mutate(participant_id_num = as.numeric(fct_inorder(factor(participant_id))))
 
-
-# todos
-# 1. mixture model with group-level beta parameters for proportion categorical
-# 2. separate model modeling movements with individual gaussians depending on group gaussian and a group effect on the means
-# 3. model comparison of the mixture model with the model predicting a shift in the mean of the gaussian distributions
-
-# storyline
+# story line
 # 1. analysis of means shows that there is a stronger tendency in the experimental group to be attracted by category means than in the control group
 # 2. stats of this analysis show that the evidence is rather in favor of the Null hypothesis that there is an effect
 # 3. closer look at by-participant distributions of movements suggests a different picture: some responses are attracted by the centers, but most are not
-# 4. this is implemented in the mixture model (, which hopefully fits better than the model predicting a mean shift but only a gaussian distribution)
+# 4. this is implemented in the mixture model (, which fits better than the model predicting a mean shift using a Gaussian distribution)
 # 5. comparing the group-level parameters of probability responding categorically does not show any group effect
+# 6. explanation of this general trend could be that participants break down the continuous response scale into a categorical one;
+# a speed up in rts is at least consistent with this idea
+
+
+plot_group_rts_against_session(tbl_cr)
 
 
 l_data_mixture_groups <- list(
@@ -338,8 +336,8 @@ move_model_mixture_group <- stan_move_mixture_groups()
 move_model_mixture_group <- cmdstan_model(move_model_mixture_group)
 
 fit_move_mixture <- move_model_mixture_group$sample(
-  data = l_data_mixture_groups, iter_sampling = 1000, iter_warmup = 1000,
-  chains = 1, parallel_chains = 1,
+  data = l_data_mixture_groups, iter_sampling = 2000, iter_warmup = 1000,
+  chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
 
@@ -368,9 +366,10 @@ tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) %>%
       labels = c("4 Categories", "Similarity", "Difference"))
   ) %>%
   ggplot(aes(value)) +
-  geom_histogram(color = "white", fill = "#66CCFF") +
+  geom_histogram(color = "white", fill = "#66CCFF", aes(y = ..density..)) +
   facet_wrap(~ name) +
-  theme_bw()
+  theme_bw() +
+  labs(x = "Proportion Categorical", y = "Posterior Density")
 
 params_bf <- "Group Difference Theta"
 tbl_posterior <- tbl_draws %>% 
@@ -397,9 +396,10 @@ l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "No
 pl_outliers_posteriors <- plot_movement_outliers(
   l_outliers_posterior$tbl_outliers, 
   l_outliers_posterior$tbl_labels, 
-  "Highest Posterior Proportion of Gamma", FALSE
+  "Highest Posterior Proportion of Gamma", 
+  nrcols = 5, as_outlier = FALSE
 )
-
+pl_outliers_posteriors
 
 # model having a parameter shifting group mean of categorization group 
 # whereas mean of similarity group is only fixed at zero
@@ -409,8 +409,8 @@ move_model_shift_normal <- stan_move_shift_normal()
 move_model_shift_normal <- cmdstan_model(move_model_shift_normal)
 
 fit_move_shift_normal <- move_model_shift_normal$sample(
-  data = l_data_mixture_groups, iter_sampling = 1000, iter_warmup = 1000,
-  chains = 1, parallel_chains = 1,
+  data = l_data_mixture_groups, iter_sampling = 2000, iter_warmup = 1000,
+  chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
 
@@ -456,5 +456,3 @@ loo::loo_model_weights(
   list(loo_mixture_group, loo_move_shift_normal), 
   method = "stacking"
 )
-tmp <- fit_move_mixture$draws(variables = "log_lik_pred", format = "df")
-tmp2 <- fit_move_shift_normal$draws(variables = "log_lik_pred", format = "df")
