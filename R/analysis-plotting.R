@@ -776,12 +776,21 @@ plot_mean_deltas <- function(tbl_cr) {
 
 
 
-plot_movement_outliers <- function(tbl_outliers, tbl_labels, ttl) {
-  ggplot(
-    tbl_outliers %>% filter(name == "Not Transformed"),
-    aes(value, group = flag_outlier)
-  ) +
-    geom_histogram(bins = 15, color = "white", aes(fill = flag_outlier)) +
+plot_movement_outliers <- function(tbl_outliers, tbl_labels, ttl, as_outlier = TRUE) {
+  if (!as_outlier) {
+    pl <- ggplot(
+      tbl_outliers %>% filter(name == "Not Transformed"),
+      aes(value)
+    ) +
+      geom_histogram(bins = 15, color = "white", fill = "#66CCFF")
+  } else if (as_outlier) {
+    pl <- ggplot(
+      tbl_outliers %>% filter(name == "Not Transformed"),
+      aes(value, group = flag_outlier)
+    ) +
+      geom_histogram(bins = 15, color = "white", aes(fill = flag_outlier))
+  }
+   pl +
     geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
     geom_label(data = tbl_labels, aes(x = 0, y = 40, label = str_c("Move = ", round(avg_move, 1)))) +
     facet_wrap(~ participant_id) +
