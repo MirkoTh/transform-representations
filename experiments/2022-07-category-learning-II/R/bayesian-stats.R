@@ -170,6 +170,11 @@ plot_groupmeans_against_session(tbl_cr)
 # analysis of the means suggests that there may be an interaction effect
 # note, cis are within-participant cis
 
+
+
+# Mean Effects ------------------------------------------------------------
+
+
 # random slopes on session seem reasonable
 # results from frequentist comparison of ri and rs show that rs are necessary
 
@@ -265,6 +270,11 @@ anova(m_rs)
 
 # stats on mean effects show that there is hardly an effect (n = 119)
 
+
+
+# Mixture Modeling --------------------------------------------------------
+
+
 # the following plots suggest a different option
 # i.e., deltas could represent a mixture between visuo-spatial responses
 # and categorical respones
@@ -282,6 +292,7 @@ pl_outliers_prior <- plot_movement_outliers(
   tbl_labels, 
   "Outliers above/below 1 sd of the Mean"
 )
+pl_outliers_prior
 
 move_model_mixture <- stan_move_mixture()
 move_model_mixture <- cmdstan_model(move_model_mixture)
@@ -296,11 +307,6 @@ assert_that(
     fct_inorder(factor(tbl_cr_d1$participant_id)) %>% as.numeric() == 
       fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric()
   ) == nrow(tbl_cr_d1)
-)
-
-tbl_participants_lookup <- tibble(
-  participant_id = fct_inorder(factor(unique(tbl_cr_moves$participant_id))),
-  participant_id_num = as.numeric(fct_inorder(factor(unique(tbl_cr_moves$participant_id))))
 )
 
 tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categories) %>%
@@ -398,22 +404,36 @@ fit_move_mixture <- move_model_mixture_group$sample(
 
 file_loc_mixture_groups <- str_c("experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-model.RDS")
 fit_move_mixture$save_object(file = file_loc_mixture_groups, compress = "gzip")
+fit_move_mixture <- readRDS(file_loc_mixture_groups)
 
 pars_interest <- "theta"
 pars_interest <- c("sigma_subject", "theta", "mu_theta", "mg_mn", "mg_sd")
 tbl_draws <- fit_move_mixture$draws(variables = pars_interest, format = "df")
 tbl_draws$theta_meandiff <- tbl_draws$`mu_theta[1]` - tbl_draws$`mu_theta[2]`
+inv_logit <- function(x) exp(x)/(exp(x) + 1)
+tbl_draws$theta_cat_prob <- inv_logit(tbl_draws$`mu_theta[2]`)
+tbl_draws$theta_sim_prob <- inv_logit(tbl_draws$`mu_theta[1]`)
 tbl_draws$theta_meandiff_prob <- inv_logit(tbl_draws$`mu_theta[1]`) - inv_logit(tbl_draws$`mu_theta[2]`)
-
-ggplot(tbl_draws, aes(theta_meandiff)) + geom_histogram()
-
 tbl_summary <- fit_move_mixture$summary(variables = pars_interest)
 
-params_bf <- c("Group Difference Theta Logit", "Group Difference Theta Prob.")
-pars_interest <- c(pars_interest, "theta_meandiff", "theta_meandiff_prob")
+# in probability space
+tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) %>%
+  mutate(theta_diff = theta_cat_prob - theta_sim_prob) %>%
+  pivot_longer(c(theta_cat_prob, theta_sim_prob, theta_diff)) %>%
+  mutate(
+    name = fct_inorder(factor(name)),
+    name = factor(
+      name, 
+      labels = c("4 Categories", "Similarity", "Difference"))
+  ) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "white", fill = "#66CCFF") +
+  facet_wrap(~ name) +
+  theme_bw()
 
+params_bf <- "Group Difference Theta"
 tbl_posterior <- tbl_draws %>% 
-  dplyr::select(theta_meandiff, theta_meandiff_prob, .chain) %>%
+  dplyr::select(theta_meandiff, .chain) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(c("theta")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = "Group Difference Theta")
@@ -423,20 +443,76 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
-grid.arrange(l_pl[[1]], l_pl[[2]], nrow = 1, ncol = 2)
+l_pl[[1]]
 
-
-tbl_mix <- tbl_summary %>% arrange(desc(mean))
+tbl_mix <- tbl_summary %>% filter(str_detect(variable, "theta")) %>% arrange(desc(mean))
 tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
 tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
 p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
 
 tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot$participant_id)
 
-
 l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
 pl_outliers_posteriors <- plot_movement_outliers(
   l_outliers_posterior$tbl_outliers, 
-  l_outliers_posterior$tbl_labels, "Highest Posterior Proportion of Gamma"
+  l_outliers_posterior$tbl_labels, 
+  "Highest Posterior Proportion of Gamma", FALSE
 )
 
+
+# model having a parameter shifting group mean of categorization group 
+# whereas mean of similarity group is only fixed at zero
+
+
+move_model_shift_normal <- stan_move_shift_normal()
+move_model_shift_normal <- cmdstan_model(move_model_shift_normal)
+
+fit_move_shift_normal <- move_model_shift_normal$sample(
+  data = l_data_mixture_groups, iter_sampling = 1000, iter_warmup = 1000,
+  chains = 1, parallel_chains = 1,
+  save_warmup = FALSE
+)
+
+file_loc_move_shift_normal <- str_c(
+  "experiments/2022-07-category-learning-II/data/cr-move-shift-normal-model.RDS"
+)
+fit_move_shift_normal$save_object(file = file_loc_move_shift_normal, compress = "gzip")
+fit_move_shift_normal <- readRDS(file_loc_mixture_groups)
+
+pars_interest <- c("sigma_subject", "mu")
+tbl_draws <- fit_move_shift_normal$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_shift_normal$summary(variables = pars_interest)
+
+params_bf <- "Group Difference Mu"
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(`mu[2]`, .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = "Group Difference Mu")
+l <- sd_bfs(tbl_posterior, params_bf, .5)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+l_pl[[1]]
+
+
+file_loc_loo_mixture_group <- str_c(
+  "experiments/2022-07-category-learning-II/data/mixture-group-loo.RDS")
+loo_mixture_group <- fit_move_mixture$loo(variables = "log_lik_pred")
+saveRDS(loo_mixture_group, file = file_loc_loo_mixture_group)
+# loo_mixture_group <- readRDS(file_loc_loo_mixture_group)
+
+file_loc_loo_move_shift_normal <- str_c(
+  "experiments/2022-07-category-learning-II/data/move-shift-normal-loo.RDS")
+loo_move_shift_normal <- fit_move_shift_normal$loo(variables = "log_lik_pred")
+saveRDS(loo_move_shift_normal, file = file_loc_loo_move_shift_normal)
+# loo_move_shift_normal <- readRDS(file_loc_loo_move_shift_normal)
+
+loo::loo_model_weights(
+  list(loo_mixture_group, loo_move_shift_normal), 
+  method = "stacking"
+)
+tmp <- fit_move_mixture$draws(variables = "log_lik_pred", format = "df")
+tmp2 <- fit_move_shift_normal$draws(variables = "log_lik_pred", format = "df")
