@@ -776,7 +776,7 @@ plot_mean_deltas <- function(tbl_cr) {
 
 
 
-plot_movement_outliers <- function(tbl_outliers, tbl_labels, ttl, as_outlier = TRUE) {
+plot_movement_outliers <- function(tbl_outliers, tbl_labels, ttl, nrcols = 6, as_outlier = TRUE) {
   if (!as_outlier) {
     pl <- ggplot(
       tbl_outliers %>% filter(name == "Not Transformed"),
@@ -793,7 +793,7 @@ plot_movement_outliers <- function(tbl_outliers, tbl_labels, ttl, as_outlier = T
    pl +
     geom_vline(xintercept = 0, color = "darkred", size = 1, linetype = "dashed") +
     geom_label(data = tbl_labels, aes(x = 0, y = 40, label = str_c("Move = ", round(avg_move, 1)))) +
-    facet_wrap(~ participant_id) +
+    facet_wrap(~ participant_id, ncol = nrcols) +
     theme_bw() +
     scale_fill_brewer(palette = "Set1", name = "Outlier") +
     labs(x = "Movement Towards Center", y = "Nr. Participants", title = ttl)
@@ -801,3 +801,37 @@ plot_movement_outliers <- function(tbl_outliers, tbl_labels, ttl, as_outlier = T
 
 
 
+plot_group_rts_against_session <- function(tbl_cr) {
+  pd <- position_dodge(width = .2)
+  grouped_agg(tbl_cr, c(n_categories, session), rt) %>% ungroup() %>%
+    mutate(
+      n_categories = factor(n_categories, labels = c("Similarity", "4 Categories")),
+      mean_rt = mean_rt / 1000,
+      se_rt = se_rt / 1000
+    ) %>%
+    ggplot(aes(session, mean_rt, group = n_categories)) +
+    geom_errorbar(aes(
+      ymin = mean_rt - 2*se_rt, ymax = mean_rt + 2*se_rt, color = n_categories
+    ), width = .2, position = pd) +
+    geom_line(aes(color = n_categories), position = pd) +
+    geom_point(size = 3, color = "white", position = pd) +
+    geom_point(aes(color = n_categories), position = pd) +
+    scale_color_brewer(palette = "Set1", name = "Group") +
+    theme_bw() +
+    labs(x = "Timepoint", y = "RT (s)")
+}
+
+
+plot_predictions_with_data_mixture <- function(tbl_empirical, tbl_post_preds) {
+  ggplot() +
+    geom_histogram(
+      data = tbl_empirical, color = "white",
+      aes(d_move_abs, y = ..density.., fill = outlier)) +
+    geom_freqpoly(
+      data = tbl_post_preds, color = "#a9a9a9", size = 1.5,
+      aes(value, y = ..density..)
+    ) + facet_wrap(~ participant_id) +
+    scale_fill_brewer(palette = "Set1", name = "Outlier") +
+    theme_bw() +
+    labs(x = "Movement to Center", y = "Probability Density")
+}

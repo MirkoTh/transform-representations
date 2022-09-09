@@ -1579,3 +1579,42 @@ extract_movement_outliers <- function(tbl_cr_moves, n_sds, measurement) {
   return(list(tbl_outliers = tbl_outliers, tbl_labels = tbl_labels))
 }
 
+
+combine_data_with_posterior_outliers <- function(tbl_mix, tbl_cr_moves, tbl_draws, n_outliers) {
+  #' combine posterior predictions and empirical data for n_outliers
+  #' 
+  #' @description half of the outliers are from the upper end of the distribution
+  #' the other half of the outliers are taken from the lower end
+  #' 
+  #' @param tbl_mix mean posterior probabilities of using a categorical representation
+  #' @param tbl_cr_moves tbl df with by participant and by trial moves before - after task 2
+  #' @param tbl_draws tbl df with posterior samples
+  #' @param n_outliers number of outliers to extract
+  #' 
+  #' @return list with two tbl dfs
+  #' (a) with empiricla data and (b) with posterior predictions
+  #'   
+  tbl_outlier_prob <- tbl_mix %>% head(round(n_outliers / 2)) %>% mutate(outlier = "Hi") %>%
+    rbind(tbl_mix %>% tail(round(n_outliers / 2)) %>% mutate(outlier = "Lo")) %>%
+    select(participant_id_num, mean, outlier)
+  tbl_empirical <- tbl_cr_moves %>% 
+    left_join(tbl_participants_lookup[, c("participant_id", "participant_id_num")], by = "participant_id") %>%
+    inner_join(tbl_outlier_prob, by = "participant_id_num") %>%
+    mutate(
+      participant_id = str_c(substr(as.character(participant_id), 1, 6), ", ", n_categories)
+    ) %>% arrange(desc(mean)) %>%
+    mutate(participant_id = fct_inorder(participant_id))
+  tbl_post_preds <- tbl_draws %>%
+    select(starts_with("posterior_prediction"))
+  tbl_post_preds <- tbl_post_preds %>%
+    pivot_longer(cols = colnames(tbl_post_preds)) %>%
+    mutate(participant_id_num = as.numeric(str_match(name, "[0-9]+")[,1])) %>%
+    left_join(tbl_participants_lookup, by = "participant_id_num") %>%
+    inner_join(tbl_outlier_prob, by = "participant_id_num") %>%
+    mutate(
+      participant_id = str_c(substr(as.character(participant_id), 1, 6), ", ", n_categories)
+    ) %>% arrange(desc(mean)) %>%
+    mutate(participant_id = fct_inorder(participant_id))
+  
+  return(list(tbl_empirical = tbl_empirical, tbl_post_preds = tbl_post_preds))
+}

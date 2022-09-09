@@ -243,82 +243,6 @@ generated quantities {
   return(stan_normal_cr_ri)
 }
 
-stan_move_mixture <- function() {
-  
-  write_stan_file("
-data {
-  int n_data;
-  int n_subj;
-  vector[n_data] d_moved;
-  array[n_data] int subj;
-}
-
-
-parameters {
-  //vector<lower=0>[n_subj] mg_mn;
-  //vector<lower=0>[n_subj] mg_sd;
-  real<lower=0> mg_mn;
-  real<lower=0> mg_sd;
-  vector<lower=0>[n_subj] sigma_subject;
-  array[n_subj] simplex[2] theta;
-}
-
-
-transformed parameters {
-  //vector<lower=0>[n_subj] shape;
-  //vector<lower=0>[n_subj] rate;
-  real<lower=0> shape;
-  real<lower=0> rate;
-
-  for (s in 1:n_subj) {
-    //rate[s] = mg_mn[s] / pow(mg_sd[s], 2);
-    //shape[s] = pow(mg_mn[s], 2) / pow(mg_sd[s], 2);
-    rate = mg_mn / pow(mg_sd, 2);
-    shape = pow(mg_mn, 2) / pow(mg_sd, 2);
-  }
-}
-
-
-model {
-
-  vector[2] lp;
-
-  for (n in 1:n_data) {
-    lp[1] = log(theta[subj[n]][1]) + normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]]);
-    if (d_moved[n] > 0) {
-      lp[2] = log(theta[subj[n]][2]) + gamma_lpdf(d_moved[n] | shape, rate);
-      target += log_sum_exp(lp); //lp[1]; //
-    }
-      
-    else {
-      target += lp[1];
-      }
-  }
-
-  mg_mn ~ gamma(2.5, .1);
-  mg_sd ~ gamma(1, 1);
-  for (s in 1:n_subj) {
-      sigma_subject[s] ~ normal(0, 30);
-      //mg_mn[s] ~ gamma(2.5, .1);
-      //mg_sd[s] ~ gamma(1, 1);
-  }
-  
-}
-
-
-generated quantities {
-  vector[n_data] log_lik_pred;
-
-  for (n in 1:n_data) {
-    log_lik_pred[n] = log(d_moved[n]);
-  }
-}
-
-")
-}
-
-
-
 stan_move_mixture_groups <- function() {
   
   write_stan_file("
@@ -388,6 +312,9 @@ model {
 generated quantities {
   vector[n_data] log_lik_pred;
   vector[2] lp_pred;
+  vector[n_subj] posterior_prediction;
+  vector[n_subj] posterior_gaussian;
+  vector[n_subj] posterior_gamma;
 
   for (n in 1:n_data) {
     lp_pred[1] = log(1 - theta[subj[n]]) + normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]]);
@@ -398,6 +325,13 @@ generated quantities {
     else {
       log_lik_pred[n] = lp_pred[1];
     }
+  }
+  
+  for (s in 1:n_subj) {
+    posterior_gaussian[s] = normal_rng(0, sigma_subject[s]);
+    posterior_gamma[s] = gamma_rng(shape, rate);
+    posterior_prediction[s] = (1 - theta[s]) * posterior_gaussian[s] +
+      theta[s] * posterior_gamma[s];
   }
 }
 
