@@ -386,17 +386,17 @@ model {
 
 
 generated quantities {
-  real log_lik_pred;
+  vector[n_data] log_lik_pred;
   vector[2] lp_pred;
 
   for (n in 1:n_data) {
     lp_pred[1] = log(1 - theta[subj[n]]) + normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]]);
     if (d_moved[n] > 0) {
       lp_pred[2] = log(theta[subj[n]]) + gamma_lpdf(d_moved[n] | shape, rate);
-      log_lik_pred += log_sum_exp(lp_pred); //lp[1]; //
+      log_lik_pred[n] = log_sum_exp(lp_pred); //lp[1]; //
     }
     else {
-      log_lik_pred += lp_pred[1];
+      log_lik_pred[n] = lp_pred[1];
     }
   }
 }
@@ -420,7 +420,7 @@ data {
 
 
 parameters {
-  real<lower=0> mu_delta;
+  vector<lower=0>[n_groups] mu;
   vector<lower=0>[n_groups] sigma;
   vector<lower=0>[n_subj] sigma_subject;
   vector[n_subj] b;
@@ -429,9 +429,6 @@ parameters {
 
 
 transformed parameters {
-  vector[n_groups] mu;
-  mu[1] = 0.0;
-  mu[2] = mu[1] + mu_delta;
 
 }
 
@@ -449,16 +446,17 @@ model {
   
   sigma[1] ~ cauchy(0, 1);
   sigma[2] ~ cauchy(0, 1);
-  mu_delta ~ cauchy(0, 1);
+  mu[1] ~ cauchy(0, 1);
+  mu[2] ~ cauchy(0, 1);
 
 }
 
 
 generated quantities {
-  real log_lik_pred;
+  vector[n_data] log_lik_pred;
 
   for (n in 1:n_data) {
-    log_lik_pred += normal_lpdf(d_moved[n] | b[subj[n]], sigma_subject[subj[n]]);
+    log_lik_pred[n] = normal_lpdf(d_moved[n] | b[subj[n]], sigma_subject[subj[n]]);
   }
 }
 

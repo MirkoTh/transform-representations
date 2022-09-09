@@ -480,8 +480,8 @@ fit_move_shift_normal$save_object(file = file_loc_move_shift_normal, compress = 
 fit_move_shift_normal <- readRDS(file_loc_mixture_groups)
 
 pars_interest <- c("sigma_subject", "mu")
-tbl_draws <- fit_move_shift_nornmal$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_move_shift_nornmal$summary(variables = pars_interest)
+tbl_draws <- fit_move_shift_normal$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_shift_normal$summary(variables = pars_interest)
 
 params_bf <- "Group Difference Mu"
 tbl_posterior <- tbl_draws %>% 
