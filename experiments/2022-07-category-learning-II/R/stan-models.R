@@ -312,6 +312,9 @@ model {
 generated quantities {
   vector[n_data] log_lik_pred;
   vector[2] lp_pred;
+  vector[n_subj] posterior_prediction;
+  vector[n_subj] posterior_gaussian;
+  vector[n_subj] posterior_gamma;
 
   for (n in 1:n_data) {
     lp_pred[1] = log(1 - theta[subj[n]]) + normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]]);
@@ -322,6 +325,13 @@ generated quantities {
     else {
       log_lik_pred[n] = lp_pred[1];
     }
+  }
+  
+  for (s in 1:n_subj) {
+    posterior_gaussian[s] = normal_rng(0, sigma_subject[s]);
+    posterior_gamma[s] = gamma_rng(shape, rate);
+    posterior_prediction[s] = (1 - theta[s]) * posterior_gaussian[s] +
+      theta[s] * posterior_gamma[s];
   }
 }
 

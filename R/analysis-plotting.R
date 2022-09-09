@@ -822,3 +822,16 @@ plot_group_rts_against_session <- function(tbl_cr) {
 }
 
 
+plot_predictions_with_data_mixture <- function(tbl_empirical, tbl_post_preds) {
+  ggplot() +
+    geom_histogram(
+      data = tbl_empirical, color = "white",
+      aes(d_move_abs, y = ..density.., fill = outlier)) +
+    geom_freqpoly(
+      data = tbl_post_preds, color = "#a9a9a9", size = 1.5,
+      aes(value, y = ..density..)
+    ) + facet_wrap(~ participant_id) +
+    scale_fill_brewer(palette = "Set1", name = "Outlier") +
+    theme_bw() +
+    labs(x = "Movement to Center", y = "Probability Density")
+}

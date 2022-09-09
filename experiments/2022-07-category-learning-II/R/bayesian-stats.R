@@ -341,12 +341,14 @@ fit_move_mixture <- move_model_mixture_group$sample(
   save_warmup = FALSE
 )
 
-file_loc_mixture_groups <- str_c("experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-model.RDS")
+file_loc_mixture_groups <- str_c(
+  "experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-predict-model.RDS"
+)
 fit_move_mixture$save_object(file = file_loc_mixture_groups, compress = "gzip")
 fit_move_mixture <- readRDS(file_loc_mixture_groups)
 
 pars_interest <- "theta"
-pars_interest <- c("sigma_subject", "theta", "mu_theta", "mg_mn", "mg_sd")
+pars_interest <- c("sigma_subject", "theta", "mu_theta", "mg_mn", "mg_sd", "posterior_prediction")
 tbl_draws <- fit_move_mixture$draws(variables = pars_interest, format = "df")
 tbl_draws$theta_meandiff <- tbl_draws$`mu_theta[1]` - tbl_draws$`mu_theta[2]`
 inv_logit <- function(x) exp(x)/(exp(x) + 1)
@@ -456,3 +458,10 @@ loo::loo_model_weights(
   list(loo_mixture_group, loo_move_shift_normal), 
   method = "stacking"
 )
+
+
+l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 20)
+tbl_empirical <- l_combined$tbl_empirical
+tbl_post_preds <- l_combined$tbl_post_preds
+
+plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds)
