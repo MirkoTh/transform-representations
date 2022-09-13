@@ -407,6 +407,13 @@ pl_outliers_posteriors <- plot_movement_outliers(
 )
 pl_outliers_posteriors
 
+l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
+tbl_empirical <- l_combined$tbl_empirical
+tbl_post_preds <- l_combined$tbl_post_preds
+pl_pp_mixture <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
+  ggtitle("Normal-Gamma Mixture")
+
+
 # model having a parameter shifting group mean of categorization group 
 # whereas mean of similarity group is only fixed at zero
 
@@ -449,6 +456,17 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
 
+
+l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
+tbl_empirical <- l_combined$tbl_empirical
+tbl_post_preds <- l_combined$tbl_post_preds
+pl_pp_shift <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
+  ggtitle("Shift Normal")
+
+grid.draw(arrangeGrob(
+  pl_pp_shift + theme(legend.position = "none"),
+  pl_pp_mixture + theme(legend.position = "none"),
+  nrow = 1, ncol = 2))
 
 file_loc_loo_mixture_group <- str_c(
   "experiments/2022-07-category-learning-II/data/mixture-group-loo.RDS")
