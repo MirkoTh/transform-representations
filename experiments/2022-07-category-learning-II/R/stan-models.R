@@ -388,9 +388,14 @@ model {
 
 generated quantities {
   vector[n_data] log_lik_pred;
+  vector[n_subj] posterior_prediction;
 
   for (n in 1:n_data) {
     log_lik_pred[n] = normal_lpdf(d_moved[n] | b[subj[n]], sigma_subject[subj[n]]);
+  }
+  
+  for (s in 1:n_subj) {
+    posterior_prediction[s] = normal_rng(b[subj[s]], sigma_subject[s]);
   }
 }
 

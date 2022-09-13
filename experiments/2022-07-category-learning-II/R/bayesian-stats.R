@@ -341,11 +341,15 @@ fit_move_mixture <- move_model_mixture_group$sample(
   save_warmup = FALSE
 )
 
+fit_or_read <- "read"
 file_loc_mixture_groups <- str_c(
   "experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-predict-model.RDS"
 )
-fit_move_mixture$save_object(file = file_loc_mixture_groups, compress = "gzip")
-fit_move_mixture <- readRDS(file_loc_mixture_groups)
+if (fit_or_read == "fit") {
+  fit_move_mixture$save_object(file = file_loc_mixture_groups, compress = "gzip")
+} else if (fit_or_read == "read") {
+  fit_move_mixture <- readRDS(file_loc_mixture_groups)
+}
 
 pars_interest <- "theta"
 pars_interest <- c("sigma_subject", "theta", "mu_theta", "mg_mn", "mg_sd", "posterior_prediction")
@@ -387,7 +391,7 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 l_pl[[1]]
 
-tbl_mix <- tbl_summary %>% filter(str_detect(variable, "theta")) %>% arrange(desc(mean))
+tbl_mix <- tbl_summary %>% filter(str_starts(variable, "theta")) %>% arrange(desc(mean))
 tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
 tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
 p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
@@ -419,10 +423,14 @@ fit_move_shift_normal <- move_model_shift_normal$sample(
 file_loc_move_shift_normal <- str_c(
   "experiments/2022-07-category-learning-II/data/cr-move-shift-normal-model.RDS"
 )
-fit_move_shift_normal$save_object(file = file_loc_move_shift_normal, compress = "gzip")
-fit_move_shift_normal <- readRDS(file_loc_mixture_groups)
 
-pars_interest <- c("sigma_subject", "mu") # 
+if (fit_or_read == "fit") {
+  fit_move_shift_normal$save_object(file = file_loc_move_shift_normal, compress = "gzip")
+} else if (fit_or_read == "read") {
+  fit_move_shift_normal <- readRDS(file_loc_mixture_groups)
+}
+
+pars_interest <- c("sigma_subject", "mu", "posterior_prediction") # 
 tbl_draws <- fit_move_shift_normal$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_move_shift_normal$summary(variables = pars_interest)
 
@@ -460,8 +468,12 @@ loo::loo_model_weights(
 )
 
 
-l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 20)
+l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
 tbl_post_preds <- l_combined$tbl_post_preds
 
 plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds)
+
+plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
+  ggtitle("Normal-Gamma Mixture")
+
