@@ -1592,7 +1592,7 @@ combine_data_with_posterior_outliers <- function(tbl_mix, tbl_cr_moves, tbl_draw
   #' @param n_outliers number of outliers to extract
   #' 
   #' @return list with two tbl dfs
-  #' (a) with empiricla data and (b) with posterior predictions
+  #' (a) with empirical data and (b) with posterior predictions
   #'   
   tbl_outlier_prob <- tbl_mix %>% head(round(n_outliers / 2)) %>% mutate(outlier = "Hi") %>%
     rbind(tbl_mix %>% tail(round(n_outliers / 2)) %>% mutate(outlier = "Lo")) %>%
