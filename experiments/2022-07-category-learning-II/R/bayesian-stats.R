@@ -468,8 +468,12 @@ loo::loo_model_weights(
 )
 
 
-l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 20)
+l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
 tbl_post_preds <- l_combined$tbl_post_preds
 
 plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds)
+
+plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
+  ggtitle("Normal-Gamma Mixture")
+
