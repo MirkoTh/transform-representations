@@ -18,7 +18,7 @@ ggplot(tbl_x, aes(x1, x2, color = as.factor(category))) +
   geom_point()
 
 tbl_x2 <- tbl_x %>% 
-  rename(x12 = x1, x22 = x2, category2 = category, stim_id2 = stim_id)
+  rename(x12 = x1, x22 = x2, category2 = category, stim_id2 = stim_id, x1x22 = x1x2)
 tbl_pairwise <- crossing(tbl_x, tbl_x2)
 
 tbl_pairwise <- tbl_pairwise %>%
