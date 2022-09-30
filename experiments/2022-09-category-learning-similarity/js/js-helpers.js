@@ -75,8 +75,13 @@ similarity_pairs_all_flat = append_randomized_arrays(similarity_pairs_all_flat, 
 // which are stored in stim_ids parameter
 var similarity_pairs_stim_id = [];
 for (var i = 0; i < similarity_pairs_all_flat.length; i++) {
-    similarity_pairs_stim_id.push([stim_ids[similarity_pairs_all_flat[i][0]], stim_ids[similarity_pairs_all_flat[i][1]]]);
+    similarity_pairs_stim_id.push([stim_ids[similarity_pairs_all_flat[i][0] - 1], stim_ids[similarity_pairs_all_flat[i][1] - 1]]);
 }
+
+// stimulus pairs shown at t1 and t2 are the same
+// only presentation order is randomized
+var similarity_pairs_stim_id_t1 = similarity_pairs_stim_id;
+var similarity_pairs_stim_id_t2 = append_randomized_arrays(similarity_pairs_stim_id, 1);
 
 // have to iterate over stims and ds and replace stim11 and d11 with these variables
 function select_stim_pairs(s, d, props_pool) {
@@ -146,11 +151,8 @@ function setup_experiment(condition_id) {
 
     // display info
     const display_info = {
-        reproduction: {
+        similarity_simult: {
             iti: 500,
-            fixcross: 500,
-            presentation: 500, // was 250 for treps2 pilot I & II
-            ri: 5000//200//
         },
         categorization: {
             iti: 500,
@@ -182,30 +184,18 @@ function setup_experiment(condition_id) {
             i += 1
         }
     }
-    stim_ids_cat_nt = append_randomized_arrays(stim_ids_cat_nt, 1)
 
     // trial info
     var trial_info = {}
-    trial_info["stimulus_id_rp"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_r1"] = [...stimulus_info["stimulus_id"]]
-    trial_info["stimulus_id_r2"] = [...stimulus_info["stimulus_id"]]
     trial_info["stimulus_id_c"] = []
     trial_info["category_id"] = []
     trial_info["category_name"] = []
     trial_info["response_c"] = []
     trial_info["sim_deviation_trial"] = []
 
-    const n_reps_practice = 1
-    const n_reps_reproduction_1 = Math.ceil(experiment_info["n_trials_reproduction_1"] / stimulus_info["n_stimuli"])
-    const n_reps_reproduction_2 = Math.ceil(experiment_info["n_trials_reproduction_2"] / stimulus_info["n_stimuli"])
-
-    trial_info["stimulus_id_rp"] = append_randomized_arrays(trial_info["stimulus_id_rp"], n_reps_practice)
-    trial_info["stimulus_id_r1"] = append_randomized_arrays(trial_info["stimulus_id_r1"], n_reps_reproduction_1)
-    trial_info["stimulus_id_r2"] = append_randomized_arrays(trial_info["stimulus_id_r2"], n_reps_reproduction_2)
-
-    trial_info["stimulus_id_rp"].length = experiment_info["n_practice_reproduction"]
-    trial_info["stimulus_id_r1"].length = experiment_info["n_trials_reproduction_1"]
-    trial_info["stimulus_id_r2"].length = experiment_info["n_trials_reproduction_2"]
+    trial_info["stimulus_ids_sim_p"] = [[[19, 55], [25, 60]], [[91, 46], [10, 73]], [[55, 55], [64, 64]]];
+    trial_info["stimulus_ids_sim_t1"] = similarity_pairs_stim_id_t1;
+    trial_info["stimulus_ids_sim_t2"] = similarity_pairs_stim_id_t2;
 
     if (n_categories <= 3) {
         // similarity judgement and ellipse categories
@@ -214,8 +204,6 @@ function setup_experiment(condition_id) {
         // square categories (aka grid)
         trial_info = assign_items_to_categories_squares(n_x_steps, experiment_info, trial_info, stimulus_info)
     }
-    /*     console.log("nr. category learning stimuli: " + trial_info["stimulus_id_c"].length)
-        console.log("category learning stimuli are: " + trial_info["stimulus_id_c"]) */
 
     var obj_setup_expt;
     obj_setup_expt = {
@@ -224,8 +212,10 @@ function setup_experiment(condition_id) {
         stimulus_info: stimulus_info,
         trial_info: trial_info
     }
+    console.log(trial_info);
 
     return obj_setup_expt
+
 }
 
 
@@ -1065,13 +1055,6 @@ function set_main_vars(condition_id) {
     category_id = setup_expt["trial_info"]["category_id"]
     category_name = setup_expt["stimulus_info"]["category_name"]
     stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
-    /*     console.log("available x1x2 stimulus values are: " + stimulus_vals)
-        console.log("nr. available x1x2 stimulus values are: " + stimulus_vals.length)
-        console.log("categorization stimuli are: " + stimulus_cat_trial)
-        console.log("nr. categorization stimuli are: " + stimulus_cat_trial.length)
-        for (var i = 0; i < stimulus_cat_trial.length; i++) {
-            console.log("trial " + i + ", stimulus values are: " + stimulus_vals[stimulus_cat_trial[i]])
-        } */
 
     total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
     total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
