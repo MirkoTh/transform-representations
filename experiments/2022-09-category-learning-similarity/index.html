@@ -59,9 +59,10 @@
     <div id="condition_id_prep" style="display:none"></div>
     <div id="condition_id" style="display:none">-1</div>
     <div id="n_categories" style="display:none">-1</div>
-    <div id="trial_nr_cr_practice" style="display:none">0</div>
-    <div id="trial_nr_cr1" style="display:none">0</div>
-    <div id="part_reproduction" style="display:none">0</div>
+    <div id="trial_nr_sim_practice" style="display:none">0</div>
+    <div id="trial_nr_sim1" style="display:none">0</div>
+    <div id="trial_nr_sim2" style="display:none">0</div>
+    <div id="part_similarity_simult" style="display:none">0</div>
     <div id="show_trial" style="display:none">0</div>
     <div id="time_var" style="display:none"></div>
     <div id="sim_deviation_trial" style="display:none">0</div>
@@ -247,7 +248,7 @@
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
             <!-- page2b -->
-            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page2b')" ;>
+            <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page3')" ;>
                 Check Comprehension
             </button>
         </div>
@@ -350,7 +351,8 @@
                 These trials are not going to be used to calculate your bonus payment.
             </p>
 
-            <button type="button" name="button" class="default_button" ; onclick="next_item_cr('page3')" ;> Start
+            <button type="button" name="button" class="default_button" ; onclick="next_item_similarity_simult('page3')"
+                ;> Start
                 Practice Trials </button>
         </div>
 
@@ -359,7 +361,8 @@
             <p>The practice trials are now over. Press the button below to start with the Memory Task.
             </p>
 
-            <button type="button" name="button" class="default_button" ; onclick="next_item_cr('page3.1')" ;> Start
+            <button type="button" name="button" class="default_button" ;
+                onclick="next_item_similarity_simult('page3.1')" ;> Start
                 Memory Task </button>
 
         </div>
@@ -394,13 +397,21 @@
 
         <div id="page5" style="display:none;">
 
-            <div class="present_stimulus" cache-control="no-cache">
-                <img title="maskstim2" id="background_displayed_2" src="stimuli/mask.png" height="300px"
+            <div class="present_stimulus_l" cache-control="no-cache">
+                <img title="maskstim1" id="background_displayed_l" src="stimuli/mask.png" height="300px"
                     cache-control="no-cache">
-            </div><br>
-            <div class="present_stimulus" cache-control="no-cache">
-                <img title="truestim2" id="item_displayed_2" height="300px" cache-control="no-cache">
-            </div><br>
+            </div>
+            <div class="present_stimulus_r" cache-control="no-cache">
+                <img title="maskstim2" id="background_displayed_r" src="stimuli/mask.png" height="300px"
+                    cache-control="no-cache">
+            </div>
+            <div class="present_stimulus_l" cache-control="no-cache">
+                <img title="truestim2_l" id="item_displayed_2_l" height="300px" cache-control="no-cache">
+            </div>
+            <div class="present_stimulus_r" cache-control="no-cache">
+                <img title="truestim2_r" id="item_displayed_2_r" height="300px" cache-control="no-cache">
+            </div>
+            <br>
 
         </div>
         <br>
@@ -451,20 +462,21 @@
                 Part two of the study
             </h1>
             <p>
-                In the second part, your task is to judge how similar the current monster is to the monster on the
+                In the second part, your task is very similar to the task in the first part: <br>
+                You have to judge how similar the current monster is to the monster on the
                 previous trial.<br><br>
                 <b>Responding:</b><br>
-                You can use the number keys on your keyboard to give a response in the task.<br>
+                You can also use the number keys on your keyboard to give a response in the task.<br>
                 "1" relates to not similar at all to the monster presented on the previous trial<br>
-                "4" relates to very similar to the monster presented on the previous trial<br><br>
+                "8" relates to very similar to the monster presented on the previous trial<br><br>
                 There is no option to relate the monster on the first trial to a previous monster.<br>
-                Just respond with key number 4 on the first trial.<br><br>
+                Just respond with key number 8 on the first trial.<br><br>
                 <b>Important</b><br>
                 The performance in the task is going to be measured in terms of the consistency of your responses.<br>
                 Assume that you have to judge the similarity between two pairs of monsters that are very similar.<br>
                 Your response consistency will be relatively low if you judge them once as similar (i.e., 4), but once
                 as dissimilar (i.e., 1).<br>
-                Vice versa, if you judge them twice as similar (i.e., 4), your response consistency will be relatively
+                Vice versa, if you judge them twice as similar (i.e., 8), your response consistency will be relatively
                 high.<br>
                 You make it to the bonus round, if your average response consistency is positive.<br>
                 The first <span id="n_training_trials_exclude_ii"></span> trials are not used to compute your response
@@ -570,10 +582,10 @@
                 Part 3 of the study!
             </h1>
             <p>
-                The third part is the final part of the study. It is again the memory task from part 1.<br>
-                That is, your task is again to remember the spikiness of the head and the fill of the belly of a monster
-                presented in a trial.<br>After presentation, use the two sliders to reproduce the monster just seen as
-                precisely as possible.<br>
+                The third part is the final part of the study. It is again the simultaneous matching task from part
+                1.<br>
+                That is, your task is again to compare the two monsters presented on the screen.<br>
+                Use the number keys 1-8 on your keyboard to respond.<br>
                 By clicking on the button below, you start the third and last part of that study.
             </p>
             <button type="button" name="button" class="default_button" ; onclick="next_item_cr('page12')" ;> Start

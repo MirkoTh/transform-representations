@@ -69,20 +69,14 @@ similarity_pairs_all = similarity_pairs_same.concat(similarity_pairs_diff);
 // map item ids to actual 2D values
 
 similarity_pairs_all_flat = similarity_pairs_all.flat(1);
-similarity_pairs_all_flat = append_randomized_arrays(similarity_pairs_all_flat, 1);
-
-// ids of stimulus pairs still have to be replaced by actual stimulus ids
-// which are stored in stim_ids parameter
-var similarity_pairs_stim_id = [];
-for (var i = 0; i < similarity_pairs_all_flat.length; i++) {
-    similarity_pairs_stim_id.push([stim_ids[similarity_pairs_all_flat[i][0] - 1], stim_ids[similarity_pairs_all_flat[i][1] - 1]]);
-}
 
 // stimulus pairs shown at t1 and t2 are the same
 // only presentation order is randomized
-var similarity_pairs_stim_id_t1 = similarity_pairs_stim_id;
-var similarity_pairs_stim_id_t2 = append_randomized_arrays(similarity_pairs_stim_id, 1);
+var similarity_pairs_stim_id_t1 = append_randomized_arrays(similarity_pairs_all_flat, 1);
+var similarity_pairs_stim_id_t2 = append_randomized_arrays(similarity_pairs_all_flat, 2).slice(100, 200);
 
+console.log("all samples:");
+console.log(similarity_pairs_stim_id_t1);
 // have to iterate over stims and ds and replace stim11 and d11 with these variables
 function select_stim_pairs(s, d, props_pool) {
     var bin1 = [];
@@ -92,16 +86,17 @@ function select_stim_pairs(s, d, props_pool) {
     var bin5 = [];
     for (let i = 0; i < s.length; i++) {
 
+        // randomize left-right position
         if (d[i] < distance_cuts[1]) {
-            bin1.push(s[i])
+            bin1.push(append_randomized_arrays(s[i], 1))
         } else if (d[i] >= distance_cuts[1] & d[i] < distance_cuts[2]) {
-            bin2.push(s[i])
+            bin2.push(append_randomized_arrays(s[i], 1))
         } else if (d[i] >= distance_cuts[2] & d[i] < distance_cuts[3]) {
-            bin3.push(s[i])
+            bin3.push(append_randomized_arrays(s[i], 1))
         } else if (d[i] >= distance_cuts[3] & d[i] < distance_cuts[4]) {
-            bin4.push(s[i])
+            bin4.push(append_randomized_arrays(s[i], 1))
         } else if (d[i] >= distance_cuts[4]) {
-            bin5.push(s[i])
+            bin5.push(append_randomized_arrays(s[i], 1))
         }
     }
 
@@ -128,12 +123,12 @@ function setup_experiment(condition_id) {
         n_conditions: 2, // control, 4 square categories
         n_similarity_sim: 2, // baseline and after categorization
         n_practice_similarity_sim: 3,
-        n_trials_similarity_sim_1: 100, //4, //
-        n_trials_similarity_sim_2: 100, //4, //
+        n_trials_similarity_sim_1: 4, //4, //
+        n_trials_similarity_sim_2: 4, //4, //
         n_trials_categorization_train_target: 0, // 
-        n_trials_categorization: 400, //16, // 
-        n_trials_categorization_total: 0 + 400, // 0 + 16, //
-        n_trial_categorization_lag: 40, //8, //last n categorization trials to calculate "final" accuracy
+        n_trials_categorization: 16, // 400, //
+        n_trials_categorization_total: 0 + 16, //0 + 400, // 
+        n_trial_categorization_lag: 8, //40, //last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
         thx_cat_overall: .7,//.2,//.75 for treps2 pilot I & II
@@ -173,6 +168,10 @@ function setup_experiment(condition_id) {
         category_id: []
     }
 
+    if (experiment_info["n_categories"] == 1) {
+        stimulus_info["category_id"] = cat0map_val
+    }
+
     stimulus_info["n_stimuli"] = stimulus_info["x1"].length * stimulus_info["x2"].length
     var i = 0;
     for (let x1 of stimulus_info["x1"]) {
@@ -193,7 +192,7 @@ function setup_experiment(condition_id) {
     trial_info["response_c"] = []
     trial_info["sim_deviation_trial"] = []
 
-    trial_info["stimulus_ids_sim_p"] = [[[19, 55], [25, 60]], [[91, 46], [10, 73]], [[55, 55], [64, 64]]];
+    trial_info["stimulus_ids_sim_p"] = [[19, 19], [91, 1], [25, 60]];
     trial_info["stimulus_ids_sim_t1"] = similarity_pairs_stim_id_t1;
     trial_info["stimulus_ids_sim_t2"] = similarity_pairs_stim_id_t2;
 
@@ -212,13 +211,10 @@ function setup_experiment(condition_id) {
         stimulus_info: stimulus_info,
         trial_info: trial_info
     }
-    console.log(trial_info);
 
     return obj_setup_expt
 
 }
-
-
 
 function append_randomized_arrays(set, n) {
     var sets_randomized = [];
@@ -234,7 +230,6 @@ function permute(o) {
     for (var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
     return o;
 };
-
 
 function assign_items_to_categories_squares(n_x_steps, experiment_info, trial_info, stimulus_info) {
     const n_stim_repeats = Math.ceil(experiment_info["n_trials_categorization_total"] / experiment_info["n_stimuli"])
@@ -284,6 +279,7 @@ function assign_items_to_categories_ellipse(experiment_info, trial_info, stimulu
             stimulus_ids_per_category[idx + 1] = []
         }
         for (let idx = 0; idx < experiment_info["n_stimuli"]; idx++) {
+            console.log(stimulus_info["category_id"][idx]);
             stimulus_ids_per_category[stimulus_info["category_id"][idx]].push(stimulus_info["stimulus_id"][idx])
         }
         for (let idx = 0; idx < experiment_info["n_categories"]; idx++) {
@@ -346,53 +342,140 @@ function sleep(ms) {
 }
 
 
-async function next_item_cr(old, i) {
-    part = parseInt(document.getElementById("part_reproduction").innerHTML)
+async function next_item_similarity_simult(old) {
+    part = parseInt(document.getElementById("part_similarity_simult").innerHTML)
     if (part == 0) {
-        i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
-        current_stim_id = stimulus_crp_trial[i]
-        current_stim = stimulus_vals[current_stim_id]
+        i = parseInt(document.getElementById("trial_nr_sim_practice").innerHTML)
+        current_stim_l_id = stimuli_simp_trial[i][0] - 1;
+        current_stim_r_id = stimuli_simp_trial[i][1] - 1;
+        console.log("id of left stimulus is:")
+        console.log(stimuli_simp_trial[i])
+        current_stim_l = stimulus_vals[current_stim_l_id];
+        current_stim_r = stimulus_vals[current_stim_r_id];
     }
     if (part == 1) {
-        i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-        current_stim_id = stimulus_cr1_trial[i]
-        current_stim = stimulus_vals[current_stim_id]
+        i = parseInt(document.getElementById("trial_nr_sim1").innerHTML)
+        current_stim_l_id = stimuli_sim1_trial[i][0] - 1;
+        current_stim_r_id = stimuli_sim1_trial[i][1] - 1;
+        current_stim_l = stimulus_vals[current_stim_l_id];
+        current_stim_r = stimulus_vals[current_stim_r_id];
     } else if (part == 2) {
-        i = parseInt(document.getElementById("trial_nr_cr2").innerHTML)
-        current_stim_id = stimulus_cr2_trial[i]
-        current_stim = stimulus_vals[current_stim_id]
+        i = parseInt(document.getElementById("trial_nr_sim2").innerHTML)
+        current_stim_l_id = stimuli_sim2_trial[i][0] - 1;
+        current_stim_r_id = stimuli_sim2_trial[i][1] - 1;
+        current_stim_l = stimulus_vals[current_stim_l_id];
+        current_stim_r = stimulus_vals[current_stim_r_id];
     }
     clickStart(old, 'page5')
 
 
-    stim_path = "stimuli/stimulus[" + current_stim + "].png"
-    stim_path_mask = "stimuli/mask.png"
+    stim_path_l = "stimuli/stimulus[" + current_stim_l + "].png";
+    stim_path_r = "stimuli/stimulus[" + current_stim_r + "].png";
 
     // present stimuli and mask
-    document.getElementById("item_displayed_2").src = stim_path_mask
-    await sleep(setup_expt["display_info"]["reproduction"]["iti"])
-    document.getElementById("item_displayed_2").src = "stimuli/fixcross.png"
-    await sleep(setup_expt["display_info"]["reproduction"]["fixcross"])
-    document.getElementById("item_displayed_2").src = stim_path
-    await sleep(setup_expt["display_info"]["reproduction"]["presentation"])
-    document.getElementById("item_displayed_2").src = stim_path_mask
-    await sleep(setup_expt["display_info"]["reproduction"]["ri"])
+    document.getElementById("item_displayed_2_l").src = "stimuli/mask.png";
+    document.getElementById("item_displayed_2_r").src = "stimuli/mask.png";
+    await sleep(setup_expt["display_info"]["similarity_simult"]["iti"])
+    document.getElementById("item_displayed_2_l").src = stim_path_l;
+    document.getElementById("item_displayed_2_r").src = stim_path_r;
 
-    // increase trial nr by 1
-    document.getElementById("time_var").innerHTML = Date.now()
-
-    // randomly initialize response sliders and stimulus
-    var val1 = Math.ceil(Math.random() * 100);
-    var val2 = Math.ceil(Math.random() * 100);
-    let stimulus_id = "./stimuli/stimulus[" + val1 + "," + val2 + "].png";
-    document.getElementById("selected_monster").src = "stimuli/mask.png";
-    document.getElementById("myRange1_start").value = val1;
-    document.getElementById("myRange2_start").value = val2;
-    document.getElementById("myRange1").value = val1;
-    document.getElementById("myRange2").value = val2;
-    clickStart("page5", "page4")
-
+    document.addEventListener("keydown", handle_sim_response, false);
 }
+
+async function handle_sim_response(e) {
+    var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
+    if (e.keyCode >= 49 && e.keyCode <= 57 || e.keyCodee >= 97 && e.keyCode <= 105) {
+        part = parseInt(document.getElementById("part_similarity_simult").innerHTML);
+        if (part == 0) {
+            var i = parseInt(document.getElementById("trial_nr_sim_practice").innerHTML)
+        } else if (part == 1) {
+            var i = parseInt(document.getElementById("trial_nr_sim1").innerHTML)
+        } else if (part == 2) {
+            var i = parseInt(document.getElementById("trial_nr_sim2").innerHTML)
+        }
+
+        document.getElementById("item_displayed_2_l").src = stim_path_l;
+        document.getElementById("item_displayed_2_r").src = stim_path_r;
+
+        var keyCode = e.keyCode;
+        document.getElementById("key_id").innerHTML = keyCode;
+        rt = Date.now() - document.getElementById("time_var").innerHTML;
+        document.getElementById("rt").innerHTML = rt;
+
+        document.removeEventListener("keydown", handle_sim_response, false);
+        sim_id_response = keycode_to_integer(keyCode)
+        write_sim_results(i, sim_id_response, rt);
+        trial_routing(part, i);
+    }
+}
+
+function trial_routing(part, i) {
+    if (part == 0) {
+        document.getElementById("trial_nr_sim_practice").innerHTML = i + 1;
+        if (i == (setup_expt["experiment_info"]["n_practice_similarity_sim"] - 1)) {
+            document.getElementById("part_similarity_simult").innerHTML = 1;
+            clickStart("page5", "page3.1")
+        } else {
+            next_item_similarity_simult("page5")
+        }
+    } else if (part == 1) {
+        document.getElementById("trial_nr_sim1").innerHTML = i + 1;
+        if (i == (setup_expt["experiment_info"]["n_trials_similarity_sim_1"] - 1)) {
+            document.getElementById("part_similarity_simult").innerHTML = 2;
+            clickStart("page5", "page6")
+        } else {
+            next_item_similarity_simult("page5")
+        }
+    } else if (part == 2) {
+        document.getElementById("trial_nr_sim2").innerHTML = i + 1;
+        if (i == (setup_expt["experiment_info"]["n_trials_similarity_sim_2"] - 1)) {
+            clickStart("page5", "page13")
+        } else {
+            next_item_similarity_simult("page5")
+        }
+    }
+}
+
+function write_sim_results(i, r, rt) {
+    condition_id = parseInt(document.getElementById("condition_id").innerHTML)
+
+    trial_info["stimulus_ids_sim_p"] = [[19, 19], [91, 1], [25, 60]];
+    trial_info["stimulus_ids_sim_t1"] = similarity_pairs_stim_id_t1;
+    trial_info["stimulus_ids_sim_t2"] = similarity_pairs_stim_id_t2;
+
+    part = parseInt(document.getElementById("part_similarity_simult").innerHTML);
+    var stim_pair = [];
+    if (part == 0) {
+        stim_pair = trial_info["stimulus_ids_sim_p"][i];
+    } else if (part == 1) {
+        stim_pair = trial_info["stimulus_ids_sim_t1"][i];
+    } else if (part == 2) {
+        stim_pair = trial_info["stimulus_ids_sim_t2"][i];
+    }
+
+    var x1_true_l = setup_expt["stimulus_info"]["x1_x2"][stim_pair[0]][0];
+    var x2_true_l = setup_expt["stimulus_info"]["x1_x2"][stim_pair[0]][1];
+    var x1_true_r = setup_expt["stimulus_info"]["x1_x2"][stim_pair[1]][0];
+    var x2_true_r = setup_expt["stimulus_info"]["x1_x2"][stim_pair[1]][1];
+
+    var d_euclidean = Math.sqrt(Math.pow((x1_true_l - x1_true_r), 2) + Math.pow((x2_true_l - x2_true_r), 2));
+
+    var data_store = {
+        participant_id: participant_id,
+        n_categories: n_categories,
+        trial_id: i,
+        x1_true_l: x1_true_l,
+        x2_true_l: x2_true_l,
+        x1_true_r: x1_true_r,
+        x2_true_r: x2_true_r,
+        d_euclidean: d_euclidean,
+        response: r,
+        rt: rt
+    }
+    sim_data_all.push(data_store);
+    saveData(JSON.stringify(data_store), "sim_simult")
+}
+
 
 async function log_response(rt, i, part, stimulus_ids) {
     var x1_true = parseFloat(setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][0])
@@ -430,9 +513,9 @@ async function log_response(rt, i, part, stimulus_ids) {
 async function my_link() {
     var rt = Date.now() - document.getElementById("time_var").innerHTML
     var i;
-    part = parseInt(document.getElementById("part_reproduction").innerHTML)
+    part = parseInt(document.getElementById("part_similarity_simult").innerHTML)
     if (part == 0) {
-        i = parseInt(document.getElementById("trial_nr_cr_practice").innerHTML)
+        i = parseInt(document.getElementById("trial_nr_sim_practice").innerHTML)
         stimulus_ids = setup_expt["trial_info"]["stimulus_id_rp"]
     }
     if (part == 1) {
@@ -446,7 +529,7 @@ async function my_link() {
     if (i == total_trials0 & part == 0) { //practice
         log_response(rt, i, part, stimulus_ids);
         clickStart("page4", "page3.1")
-        document.getElementById("part_reproduction").innerHTML = 1
+        document.getElementById("part_similarity_simult").innerHTML = 1
     } else if (i == total_trials1 & part == 1) { //part 1 reproduction
         log_response(rt, i, part, stimulus_ids);
         saveSeveralData(cr_data_all, "cr-allinone-p1");
@@ -467,7 +550,7 @@ function update_trial_counter(part, i) {
     var i_new = i + 1
     switch (part) {
         case 0:
-            document.getElementById("trial_nr_cr_practice").innerHTML = i_new
+            document.getElementById("trial_nr_sim_practice").innerHTML = i_new
             break;
         case 1:
             document.getElementById("trial_nr_cr1").innerHTML = i_new
@@ -541,8 +624,8 @@ async function next_item_cat(old, i) {
 async function handle_response(e) {
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
     if (
-        n_categories == 1 & (e.keyCode >= 49 && e.keyCode <= 52) ||
-        n_categories == 1 & (e.keyCode >= 97 && e.keyCode <= 100) ||
+        n_categories == 1 & (e.keyCode >= 49 && e.keyCode <= 56) ||
+        n_categories == 1 & (e.keyCode >= 97 && e.keyCode <= 104) ||
         n_categories == 3 & (e.keyCode >= 49 && e.keyCode <= 51) ||
         n_categories == 3 & (e.keyCode >= 97 && e.keyCode <= 99) ||
         n_categories == 2 & (e.keyCode >= 49 && e.keyCode <= 50) ||
@@ -598,10 +681,10 @@ async function handle_response(e) {
         // handle special timepoint in the experiment
         // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
-            saveSeveralData(cat_data_all, "cat-allinone");
+            saveSeveralData(sim_data_all, "sim-allinone");
             document.getElementById("cat_accuracy_running_mean").style.display = 'none';
             document.getElementById("sim_correlation").style.display = 'none';
-            document.getElementById("part_reproduction").innerHTML = 2;
+            document.getElementById("part_similarity_simult").innerHTML = 2;
             document.getElementById("cat_continued").innerHTML = 1;
             cat_accuracies = calculate_categorization_accuracy(responses_cat_trial.slice(setup_expt["experiment_info"]["n_training_nocount"], i + 1), setup_expt["experiment_info"]["n_trial_categorization_lag"]);
             document.getElementById("cat_accuracy_overall").innerHTML = Math.round(100 * cat_accuracies[0]) + "%";
@@ -719,8 +802,8 @@ function startTimer(duration, display) {
 
 function keycode_to_integer(kc) {
     number_codes = {
-        48: 0, 49: 1, 50: 2, 51: 3, 52: 4, 53: 5, 54: 6, 55: 7, 56: 8, 57: 9,
-        96: 0, 97: 1, 98: 2, 99: 3, 100: 4, 101: 5, 102: 6, 103: 7, 104: 8, 105: 9
+        49: 1, 50: 2, 51: 3, 52: 4, 53: 5, 54: 6, 55: 7, 56: 8, 57: 9,
+        97: 1, 98: 2, 99: 3, 100: 4, 101: 5, 102: 6, 103: 7, 104: 8, 105: 9
     }
     return number_codes[kc]
 }
@@ -747,7 +830,6 @@ function write_cat_results(i, r) {
             document.getElementById("cat_accuracy_running_mean").innerHTML = "Average Accuracy = " +
                 parseInt(100 * parseInt(document.getElementById("cat_accuracy_cum").innerHTML) / (i + 1 - setup_expt["experiment_info"]["n_training_nocount"])) + "%"
         }
-
     }
     var data_store = {
         participant_id: participant_id,
@@ -760,8 +842,7 @@ function write_cat_results(i, r) {
         accuracy: accuracy,
         rt: document.getElementById("rt").innerHTML
     }
-    cat_data_all.push(data_store);
-    //download(JSON.stringify(data_store), 'json.json', 'text/plain');
+    sim_data_all.push(data_store);
     saveData(JSON.stringify(data_store), "cat")
 }
 
@@ -973,8 +1054,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 4, 4][(condition_id % n_different_categories)] // similarity & squares
-    //condition_id = 1;
-    //n_categories = 4;
+    condition_id = 3;
+    n_categories = 1;
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
@@ -988,7 +1069,7 @@ function condition_and_ncategories() {
     document.getElementById("secondTaskName2").innerHTML = secondTaskName;
     document.getElementById("q3icheck3").innerHTML = secondTask;
     cr_data_all = [];
-    cat_data_all = [];
+    sim_data_all = [];
 
     if (n_categories == 1) {
         textCond = `<b>Similarity:</b> Your task in the second part will be somewhat different.<br>
@@ -1023,9 +1104,9 @@ var n_categories;
 var participant_id;
 var setup_expt;
 var instruction_category;
-var stimulus_crp_trial;
-var stimulus_cr1_trial;
-var stimulus_cr2_trial;
+var stimuli_simp_trial;
+var stimuli_sim1_trial;
+var stimuli_sim2_trial;
 var stimulus_cat_trial;
 var category_id;
 var category_name;
@@ -1035,7 +1116,7 @@ var total_trials1;
 var total_trials2;
 var trial_info;
 var cr_data_all;
-var cat_data_all;
+var sim_data_all;
 
 function set_main_vars(condition_id) {
     setup_expt = setup_experiment(condition_id);
@@ -1047,18 +1128,18 @@ function set_main_vars(condition_id) {
     (() => {
         document.getElementById("myText").innerHTML = document.getElementById("n_categories").innerHTML;
     })();
-    stimulus_crp_trial = setup_expt["trial_info"]["stimulus_id_rp"]
-    stimulus_cr1_trial = setup_expt["trial_info"]["stimulus_id_r1"]
-    stimulus_cr2_trial = setup_expt["trial_info"]["stimulus_id_r2"]
+    stimuli_simp_trial = setup_expt["trial_info"]["stimulus_ids_sim_p"]
+    stimuli_sim1_trial = setup_expt["trial_info"]["stimulus_ids_sim_t1"]
+    stimuli_sim2_trial = setup_expt["trial_info"]["stimulus_ids_sim_t2"]
     stimulus_cat_trial = setup_expt["trial_info"]["stimulus_id_c"]
     responses_cat_trial = setup_expt["trial_info"]["response_c"]
     category_id = setup_expt["trial_info"]["category_id"]
     category_name = setup_expt["stimulus_info"]["category_name"]
     stimulus_vals = setup_expt["stimulus_info"]["x1_x2"]
 
-    total_trials0 = setup_expt["experiment_info"]["n_practice_reproduction"] - 1
-    total_trials1 = setup_expt["experiment_info"]["n_trials_reproduction_1"] - 1
-    total_trials2 = setup_expt["experiment_info"]["n_trials_reproduction_2"] - 1;
+    total_trials0 = setup_expt["experiment_info"]["n_practice_similarity_sim"] - 1
+    total_trials1 = setup_expt["experiment_info"]["n_trials_similarity_sim_1"] - 1
+    total_trials2 = setup_expt["experiment_info"]["n_trials_similarity_sim_2"] - 1;
     trial_info = setup_expt["trial_info"];
     document.getElementById("n_training_trials_exclude_ii").innerHTML = setup_expt["experiment_info"]["n_training_nocount"];
 }

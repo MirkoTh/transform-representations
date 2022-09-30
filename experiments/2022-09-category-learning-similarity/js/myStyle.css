@@ -78,6 +78,24 @@
     text-align: center;
 }
 
+.present_stimulus_l {
+    position: absolute;
+    top: 5%;
+    left: 36.725%;
+    width: 200px;
+    height: 300px;
+    text-align: center;
+}
+
+.present_stimulus_r {
+    position: absolute;
+    top: 5%;
+    left: 52.725%;
+    width: 200px;
+    height: 300px;
+    text-align: center;
+}
+
 .cat_feedback_neg {
     position: absolute;
     top: 450px;
