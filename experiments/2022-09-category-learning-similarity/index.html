@@ -70,8 +70,7 @@
     <div id="cr_deviation_cum" style="display:none">0</div>
     <div id="cat_accuracy_cum" style="display:none">0</div>
     <div id="cat_accuracy_running_mean" style="display:none">Average Accuracy = </div>
-    <div id="myRange1_start" style="display:none">-1</div>
-    <div id="myRange2_start" style="display:none">-1</div>
+    <div id="sim_correlation_cum" style="display:none">0</div>
     <!-- <div id="n_trials_cat_lag" style="display:none">-1</div> -->
 
     <div class='centeredtext'>
@@ -260,25 +259,21 @@
                 <fieldset>
                     <b>What is your goal in the simulatenous comparison task?</b><br>
                     <label for="q1l1" style="font-weight: normal;"><input type="radio" name="q1" id="l11"><span
-                            id="q1l11">
-                            Compare the colors of the two monsters. </span></label><br>
+                            id="q1l11"> Compare the colors of the two monsters. </span></label><br>
                     <label for="q1l2" style="font-weight: normal;"><input type="radio" name="q1" id="icheck1"><span
-                            id="q1icheck1">Compare the spikiness of the head and the fill of the belly of the two
-                            monsters.
+                            id="q1icheck1"> Compare the two monsters according to the spikiness of their head and the
+                            fill of their belly.
                         </span></label><br>
                     <label for="q1l3" style="font-weight: normal;"><input type="radio" name="q1" id="l12"><span
-                            id="q1l12">
-                            Compare the monster to the monster on the previous trial. </span></label><br>
+                            id="q1l12"> Compare the monster to the monster on the previous trial. </span></label><br>
                     <br>
                 </fieldset>
                 <fieldset>
                     <b>How do you respond in the simultaneous comparison task? </b><br>
                     <label for="q2l1" style="font-weight: normal;"><input type="radio" name="q2" id="l21" /><span
-                            id="q2l21">
-                            Using the sliders displayed on the screen. </span></label><br>
+                            id="q2l21"> Using the sliders displayed on the screen. </span></label><br>
                     <label for="q2l2" style="font-weight: normal;"><input type="radio" name="q2" id="l22" /><span
-                            id="q2l22">
-                            Using the right and left mouse buttons </span></label><br>
+                            id="q2l22"> Using the right and left mouse buttons </span></label><br>
                     <label for="q2l3" style="font-weight: normal;"><input type="radio" name="q2" id="icheck2"> <span
                             id="q2icheck2"> Using keys 1-8 on the keyboard</span></label><br>
                     <br>
@@ -286,7 +281,7 @@
                 <fieldset>
                     <b>What is your goal in the <span id="secondTaskName1"></span> task? </b><br>
                     <label for="q3l1" style="font-weight: normal;"><input type="radio" name="q3" id="l31"><span
-                            id="q3l31">Remember the color of the monster. </span></label><br>
+                            id="q3l31"> Remember the color of the monster. </span></label><br>
                     <label for="q3l2" style="font-weight: normal;"><input type="radio" name="q3" id="l32"><span
                             id="q3l32"></span> Reproduce the spikiness of the head and the fill of the belly of the
                         monster using sliders. </span></label><br>
@@ -300,7 +295,7 @@
                             id="q4l41"> Using the sliders displayed on the screen.
                         </span></label><br>
                     <label for="q4l2" style="font-weight: normal;"><input type="radio" name="q4" id="l42" /><span
-                            id="q4l42">Using the right and left mouse buttons </span></label><br>
+                            id="q4l42"> Using the right and left mouse buttons </span></label><br>
                     <label for="q4l3" style="font-weight: normal;"><input type="radio" name="q4" id="icheck4"> <span
                             id="q4icheck4"> Using the digit keys on the keyboard</span></label><br>
                     <br>
@@ -308,18 +303,16 @@
                 <fieldset>
                     <b> How long will the study take approximately? </b><br>
                     <label for="q5l1" style="font-weight: normal;"><input type="radio" name="q5" id="l51"><span
-                            id="q5l51">
-                            20 minutes on average.</span></label><br>
+                            id="q5l51"> 20 minutes on average.</span></label><br>
                     <label for="q5l2" style="font-weight: normal;"><input type="radio" name="q5" id='l52'><span
-                            id="q5l52">Overall about 30 minutes.</span></label><br>
+                            id="q5l52"> Overall about 30 minutes.</span></label><br>
                     <label for="q5l3" style="font-weight: normal;"><input type="radio" name="q5" id='icheck5'><span
-                            id="q5icheck5">
-                            Approx. 40 minutes if I do not make it to the bonus round; about 50 minutes if I make it to
-                            the bonus round.</span></label><br>
+                            id="q5icheck5"> Approx. 40 minutes if I do not make it to the bonus round; about 50 minutes
+                            if I make it to the bonus round.</span></label><br>
                     <label for="q5l4" style="font-weight: normal;"><input type="radio" name="q5" id='l53'><span
-                            id="q5l53">Approx. 90 minutes if I do not make it to the bonus round; about 100 minutes if I
-                            make it to
-                            the bonus round.</span></label><br>
+                            id="q5l53"> Approx. 90 minutes if I do not make it to the bonus round; about 100 minutes if
+                            I
+                            make it to the bonus round.</span></label><br>
                 </fieldset>
             </fieldset>
             <br>
@@ -548,8 +541,8 @@
                 Use the number keys 1-8 on your keyboard to respond.<br>
                 By clicking on the button below, you start the third and last part of that study.
             </p>
-            <button type="button" name="button" class="default_button" ; onclick="next_item_cr('page12')" ;> Start
-                Memory Task </button>
+            <button type="button" name="button" class="default_button" ; onclick="next_item_similarity_simult('page12')"
+                ;> Start Memory Task </button>
         </div>
 
         <div id="page13" style="display:none">
