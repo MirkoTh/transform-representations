@@ -477,90 +477,6 @@ function write_sim_results(i, r, rt) {
 }
 
 
-async function log_response(rt, i, part, stimulus_ids) {
-    var x1_true = parseFloat(setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][0])
-    var x2_true = parseFloat(setup_expt["stimulus_info"]["x1_x2"][stimulus_ids[i]][1])
-    var x1_response = parseFloat(document.getElementById("myRange1").value)
-    var x2_response = parseFloat(document.getElementById("myRange2").value)
-    var x1_start = parseFloat(document.getElementById("myRange1_start").value)
-    var x2_start = parseFloat(document.getElementById("myRange2_start").value)
-    var data_store = {
-        participant_id: participant_id,
-        n_categories: n_categories,
-        session: part,
-        trial_id: i,
-        x1_true: x1_true,
-        x2_true: x2_true,
-        x1_response: x1_response,
-        x2_response: x2_response,
-        x1_start: x1_start,
-        x2_start: x2_start,
-        rt: rt
-    }
-    cr_data_all.push(data_store);
-
-    var deviation = Math.sqrt(Math.pow((x1_true - x1_response), 2) + Math.pow((x2_true - x2_response), 2))
-    document.getElementById("cr_deviation_cum").innerHTML = parseFloat(document.getElementById("cr_deviation_cum").innerHTML) + deviation
-
-    var val1 = Math.ceil(Math.random() * 100);
-    var val2 = Math.ceil(Math.random() * 100);
-    document.getElementById("myRange1").value = val1;
-    document.getElementById("myRange2").value = val2;
-    document.getElementById("selected_monster").src = "stimuli/stimulus[" + val1 + "," + val2 + "].png"
-    saveData(JSON.stringify(data_store), "cr");
-}
-
-async function my_link() {
-    var rt = Date.now() - document.getElementById("time_var").innerHTML
-    var i;
-    part = parseInt(document.getElementById("part_similarity_simult").innerHTML)
-    if (part == 0) {
-        i = parseInt(document.getElementById("trial_nr_sim_practice").innerHTML)
-        stimulus_ids = setup_expt["trial_info"]["stimulus_id_rp"]
-    }
-    if (part == 1) {
-        i = parseInt(document.getElementById("trial_nr_cr1").innerHTML)
-        stimulus_ids = setup_expt["trial_info"]["stimulus_id_r1"]
-    } else if (part == 2) {
-        i = parseInt(document.getElementById("trial_nr_cr2").innerHTML)
-        stimulus_ids = setup_expt["trial_info"]["stimulus_id_r2"]
-    }
-
-    if (i == total_trials0 & part == 0) { //practice
-        log_response(rt, i, part, stimulus_ids);
-        clickStart("page4", "page3.1")
-        document.getElementById("part_similarity_simult").innerHTML = 1
-    } else if (i == total_trials1 & part == 1) { //part 1 reproduction
-        log_response(rt, i, part, stimulus_ids);
-        saveSeveralData(cr_data_all, "cr-allinone-p1");
-        clickStart("page4", "page6");
-    } else if (i == total_trials2 & part == 2) { //part 2 reproduction
-        log_response(rt, i, part, stimulus_ids);
-        saveSeveralData(cr_data_all, "cr-allinone-p2");
-        calculate_bonus("succeed")
-        clickStart("page4", "page13");
-    } else {
-        log_response(rt, i, part, stimulus_ids);
-        update_trial_counter(part, i)
-        next_item_cr('page4');
-    }
-}
-
-function update_trial_counter(part, i) {
-    var i_new = i + 1
-    switch (part) {
-        case 0:
-            document.getElementById("trial_nr_sim_practice").innerHTML = i_new
-            break;
-        case 1:
-            document.getElementById("trial_nr_cr1").innerHTML = i_new
-            break;
-        case 2:
-            document.getElementById("trial_nr_cr2").innerHTML = i_new
-            break;
-    }
-}
-
 function saveData(filedata, task) {
     var filename = "./data/" + task + "-participant-" + participant_id + ".json";
     $.post("save_data.php", { postresult: filedata + "\n", postfile: filename })
@@ -1059,10 +975,10 @@ function condition_and_ncategories() {
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
-        secondTaskName = "similarity";
+        secondTaskName = "Sequential Comparison";
         secondTask = " Compare the monster to the monster on the previous trial.";
     } else {
-        secondTaskName = "categorization";
+        secondTaskName = "Categorization";
         secondTask = " Say what tribe/category a monster is from.";
     }
     document.getElementById("secondTaskName1").innerHTML = secondTaskName;
