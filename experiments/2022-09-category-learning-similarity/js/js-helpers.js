@@ -397,6 +397,7 @@ async function next_item_similarity_simult(old) {
     await sleep(setup_expt["display_info"]["similarity_simult"]["iti"])
     document.getElementById("item_displayed_2_l").src = stim_path_l;
     document.getElementById("item_displayed_2_r").src = stim_path_r;
+    document.getElementById("time_var").innerHTML = Date.now();
 
     document.addEventListener("keydown", handle_sim_response, false);
 }
