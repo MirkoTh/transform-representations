@@ -135,8 +135,9 @@ fix_data_types <- function(tbl, fs, ns) {
 load_data <- function(path_data, participants_returned) {
   #' load continuous reproduction ("cr") and category learning ("cat") data
   #' 
-  #' @description loads data and declares factor and numeric columns in the two tibbles
-  #' 
+  #' @description loads data and declares factor and numeric columns in the two tibbles;
+  #' takes for each participant and task the table containing most data
+  #'  
   #' @return a list with the two tibbles
   #' 
   # read individual performance
@@ -160,14 +161,6 @@ load_data <- function(path_data, participants_returned) {
     `cr-allinone-p1` = paths_cr1_compound, 
     `cr-allinone-p2` = paths_cr2_compound
   )
-  
-  json_to_tibble <- function(path_file) {
-    js_txt <- read_file(path_file)
-    js_txt <-str_c("[", str_replace_all(js_txt, "\\}", "\\},"), "]")
-    js_txt <- str_replace(js_txt, ",\n]", "]")
-    tbl_cr <- jsonlite::fromJSON(js_txt) %>% as_tibble()
-    return(tbl_cr)
-  }
   
   inner_map <- safely(function(x) map(x, json_to_tibble))
   l_tbl_all <- map(l_paths, inner_map)
@@ -204,6 +197,86 @@ load_data <- function(path_data, participants_returned) {
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
   l_data <- list(tbl_cr, tbl_cat)
+  return(l_data)
+}
+
+
+
+json_to_tibble <- function(path_file) {
+  js_txt <- read_file(path_file)
+  js_txt <-str_c("[", str_replace_all(js_txt, "\\}", "\\},"), "]")
+  js_txt <- str_replace(js_txt, ",\n]", "]")
+  tbl_cr <- jsonlite::fromJSON(js_txt) %>% as_tibble()
+  return(tbl_cr)
+}
+
+
+load_data_e3 <- function(path_data, participants_returned) {
+  #' load simultaneous comparison ("sim_simult") and category learning ("cat") data
+  #' for E3
+  #' 
+  #' @description loads data and declares factor and numeric columns in the two tibbles;
+  #' takes for each participant and task the table containing most data
+  #' 
+  #' @return a list with the two tibbles
+  #' 
+  # read individual performance
+  
+  # check for each participant which file has more data and select that one
+  files_dir <- dir(path_data)
+  fld_cat <- files_dir[startsWith(files_dir, "cat")]
+  fld_sim_simult <- files_dir[startsWith(files_dir, "sim_simult")]
+  paths_sim_simult_individual <- str_c(path_data, fld_sim_simult[!str_detect(fld_sim_simult, "allinone")])
+  paths_cat_individual <- str_c(path_data,  fld_cat[!str_detect(fld_cat, "allinone")])
+  paths_cat_compound <- str_c(path_data,  fld_cat[str_detect(fld_cat, "allinone")])
+  paths_sim_simult_compound1 <- str_c(path_data, fld_sim_simult[str_detect(fld_sim_simult, "allinone-p1")])
+  paths_sim_simult_compound2 <- str_c(path_data, fld_sim_simult[str_detect(fld_sim_simult, "allinone-p2")])
+  
+  l_paths <- list(
+    `sim_simult` = paths_sim_simult_individual, 
+    `cat` = paths_cat_individual, 
+    `cat-allinone` = paths_cat_compound, 
+    `sim_simult-allinone-p1` = paths_sim_simult_compound1, 
+    `sim_simult-allinone-p2` = paths_sim_simult_compound2
+  )
+  
+  inner_map <- safely(function(x) map(x, json_to_tibble))
+  l_tbl_all <- map(l_paths, inner_map)
+  l_tbl_all <- map(l_tbl_all, "result")
+  l_mask <- map_lgl(l_tbl_all, ~!(is.null(.x)))
+  l_tbl_all <- l_tbl_all[l_mask]
+  inner_map <- function(a, b) map(
+    a, function(x) c(participant_id = x$participant_id[1], ntrials = nrow(x))
+  ) %>% reduce(rbind) %>% rbind() %>% as_tibble() %>% mutate(savemethod = b)
+  tbl_ntrials <- map2(l_tbl_all, names(l_tbl_all), inner_map) %>% reduce(rbind)
+  tbl_ntrials$task <- factor(str_detect(tbl_ntrials$savemethod, "sim_simult"), labels = c("cat", "sim_simult"))
+  files_select <- tbl_ntrials %>% group_by(participant_id, task) %>%
+    mutate(rwn_max = row_number(desc(ntrials))) %>% 
+    filter(rwn_max == 1)
+  l_files_select <- split(files_select, files_select$task)
+  c_paths <- function(x) str_c(path_data, x$savemethod, "-participant-", x$participant_id, ".json")
+  l_paths <- map(l_files_select, c_paths)
+  
+  tbl_simult <- reduce(map(l_paths[["sim_simult"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
+  tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
+  
+  # only pilot data have to be corrected currently...
+  tbl_simult$session <- as.numeric(tbl_simult$session)
+  #tbl_simult[148:nrow(tbl_simult), "session"] <- 2 + tbl_simult[148:nrow(tbl_simult), "session"]
+  
+  factors <- c("participant_id", "session", "cat_true", "n_categories")
+  numerics <- c(
+    "trial_id", "x1_true", "x2_true", "x1_true_l", "x2_true_l", 
+    "x1_true_r", "x2_true_r", "x1_response", "x2_response", "response", 
+    "accuracy", "rt"
+  )
+  tbl_simult <- fix_data_types(tbl_simult, factors, numerics)
+  tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
+  
+  tbl_simult <- tbl_simult %>% filter(!(participant_id %in% participants_returned))
+  tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
+  
+  l_data <- list(tbl_simult, tbl_cat)
   return(l_data)
 }
 
@@ -1519,7 +1592,7 @@ after_vs_before <- function(tbl_cr) {
   #' @param tbl_cr the tbl df with by-trial and by-participant cr responses
   #' 
   #' @return tbl df with only half of the rows as the input provides
-
+  
   tbl_cr %>% group_by(participant_id, stim_id) %>%
     arrange(participant_id, stim_id, session) %>%
     mutate(
