@@ -49,25 +49,32 @@ const stim_ids = [[10, 10], [10, 19], [10, 28], [10, 37], [10, 46], [10, 55], [1
 // distances are binned using the following thresholds
 const distance_cuts = [0, 30, 50, 70, 90, 200];
 const n_per_pool = 10;
-const props_pool_same = [.5, .5, 0, 0];
-const props_pool_diff = [.2, .3, .3, .2];
+const props_pool_same = [.7, .3, 0, 0, 0];
+const props_pool_side = [.2, .4, .3, .1, 0];
+const props_pool_cross = [0, .2, .3, .4, .1];
 
 const stim_pools_same = [stim11, stim22, stim33, stim44];
-const stim_pools_diff = [stim12, stim13, stim14, stim23, stim24, stim34];
+const stim_pools_side = [stim12, stim13, stim24, stim34];
+const stim_pools_cross = [stim14, stim23];
 const distance_pools_same = [d11, d22, d33, d44];
-const distance_pools_diff = [d12, d13, d14, d23, d24, d34];
+const distance_pools_side = [d12, d13, d24, d34];
+const distance_pools_cross = [d14, d23];
 
 var similarity_pairs_same = [];
-var similarity_pairs_diff = [];
+var similarity_pairs_side = [];
+var similarity_pairs_cross = [];
 var similarity_pairs_all = [];
 // randomly select items from the 10 comparison pools according to the proportions within the bins
 for (var i = 0; i < stim_pools_same.length; i++) {
     similarity_pairs_same[i] = select_stim_pairs(stim_pools_same[i], distance_pools_same[i], props_pool_same);
 }
-for (var i = 0; i < stim_pools_diff.length; i++) {
-    similarity_pairs_diff[i] = select_stim_pairs(stim_pools_diff[i], distance_pools_diff[i], props_pool_diff);
+for (var i = 0; i < stim_pools_side.length; i++) {
+    similarity_pairs_side[i] = select_stim_pairs(stim_pools_side[i], distance_pools_side[i], props_pool_side);
 }
-similarity_pairs_all = similarity_pairs_same.concat(similarity_pairs_diff);
+for (var i = 0; i < stim_pools_cross.length; i++) {
+    similarity_pairs_cross[i] = select_stim_pairs(stim_pools_cross[i], distance_pools_cross[i], props_pool_cross);
+}
+similarity_pairs_all = similarity_pairs_same.concat(similarity_pairs_side).concat(similarity_pairs_cross);
 // map item ids to actual 2D values
 
 similarity_pairs_all_flat = similarity_pairs_all.flat(1);
@@ -424,6 +431,13 @@ async function handle_sim_response(e) {
 
         document.removeEventListener("keydown", handle_sim_response, false);
         sim_id_response = keycode_to_integer(keyCode)
+        // show given response to participants
+        var str = new String("Your response was: " + sim_id_response);
+        document.getElementById("simult_feedback").innerHTML = str
+        await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
+        document.getElementById("simult_feedback").innerHTML = ""
+
+        // save results as json
         write_sim_results(i, sim_id_response, rt);
         trial_routing(part, i);
     }
@@ -441,7 +455,7 @@ function trial_routing(part, i) {
     } else if (part == 1) {
         document.getElementById("trial_nr_sim1").innerHTML = i + 1;
         if (i == (setup_expt["experiment_info"]["n_trials_similarity_sim_1"] - 1)) {
-            saveSeveralData(sim_simult_data_all, "sim-simult-allinone-p1");
+            saveSeveralData(sim_simult_data_all, "sim_simult-allinone-p1");
             document.getElementById("part_similarity_simult").innerHTML = 2;
             clickStart("page5", "page6")
         } else {
@@ -450,7 +464,7 @@ function trial_routing(part, i) {
     } else if (part == 2) {
         document.getElementById("trial_nr_sim2").innerHTML = i + 1;
         if (i == (setup_expt["experiment_info"]["n_trials_similarity_sim_2"] - 1)) {
-            saveSeveralData(sim_simult_data_all, "sim-simult-allinone-p2");
+            saveSeveralData(sim_simult_data_all, "sim_simult-allinone-p2");
             calculate_bonus("succeed")
             clickStart("page5", "page13")
         } else {
@@ -494,9 +508,12 @@ function write_sim_results(i, r, rt) {
     var data_store = {
         participant_id: participant_id,
         n_categories: n_categories,
+        session: part,
         trial_id: i,
+        stim_id_l: stim_pair[0],
         x1_true_l: x1_true_l,
         x2_true_l: x2_true_l,
+        stim_id_r: stim_pair[1],
         x1_true_r: x1_true_r,
         x2_true_r: x2_true_r,
         d_euclidean: Math.round(d_euclidean * 100) / 100,
@@ -628,7 +645,7 @@ async function handle_response(e) {
         // handle special timepoint in the experiment
         // end of categorization part
         if (i == setup_expt["experiment_info"]["n_trials_categorization_total"] - 1) {//1) {
-            saveSeveralData(sim_data_all, "sim-allinone");
+            saveSeveralData(sim_data_all, "cat-allinone");
             document.getElementById("cat_accuracy_running_mean").style.display = 'none';
             document.getElementById("sim_correlation").style.display = 'none';
             document.getElementById("part_similarity_simult").innerHTML = 2;
