@@ -49,9 +49,9 @@ const stim_ids = [[10, 10], [10, 19], [10, 28], [10, 37], [10, 46], [10, 55], [1
 // distances are binned using the following thresholds
 const distance_cuts = [0, 30, 50, 70, 90, 200];
 const n_per_pool = 10;
-const props_pool_same = [.7, .3, 0, 0, 0];
-const props_pool_side = [.2, .4, .3, .1, 0];
-const props_pool_cross = [0, .2, .3, .4, .1];
+const props_pool_same = [.5, .5, 0, 0, 0]; // slightly de-emphasizing high similarity pairings
+const props_pool_side = [.1, .4, .3, .2, 0]; // slightly de-emphasizing high similarity pairings
+const props_pool_cross = [0, .2, .3, .4, .1]; // leave proportion of highly dissimilar pairings as already rather lo
 
 const stim_pools_same = [stim11, stim22, stim33, stim44];
 const stim_pools_side = [stim12, stim13, stim24, stim34];
@@ -113,12 +113,14 @@ function select_stim_pairs(s, d, props_pool) {
     var bin2_shuffled = append_randomized_arrays(bin2, 1);
     var bin3_shuffled = append_randomized_arrays(bin3, 1);
     var bin4_shuffled = append_randomized_arrays(bin4, 1);
+    var bin5_shuffled = append_randomized_arrays(bin5, 1);
 
     var samples1 = bin1_shuffled.slice(0, n_per_pool * props_pool[0]);
     var samples2 = bin2_shuffled.slice(0, n_per_pool * props_pool[1]);
     var samples3 = bin3_shuffled.slice(0, n_per_pool * props_pool[2]);
     var samples4 = bin4_shuffled.slice(0, n_per_pool * props_pool[3]);
-    var all_samples = samples1.concat(samples2, samples3, samples4);
+    var samples5 = bin5_shuffled.slice(0, n_per_pool, props_pool[4]);
+    var all_samples = samples1.concat(samples2, samples3, samples4, samples5);
 
     return all_samples
 }
@@ -371,24 +373,36 @@ function sleep(ms) {
 
 
 async function next_item_similarity_simult(old) {
-    part = parseInt(document.getElementById("part_similarity_simult").innerHTML)
+    part = parseInt(document.getElementById("part_similarity_simult").innerHTML);
+    // randomize location of stimuli (as only lower triangle of all pairs is selected)
+    var left = Math.floor(Math.random() * 2);
+    if (left == 1) {
+        document.getElementById("left").innerHTML = 1;
+        document.getElementById("right").innerHTML = 0;
+        var right = 0;
+    } else if (left == 0) {
+        document.getElementById("left").innerHTML = 0;
+        document.getElementById("right").innerHTML = 1;
+        var right = 1;
+    }
+
     if (part == 0) {
         i = parseInt(document.getElementById("trial_nr_sim_practice").innerHTML)
-        current_stim_l_id = stimuli_simp_trial[i][0] - 1;
-        current_stim_r_id = stimuli_simp_trial[i][1] - 1;
+        current_stim_l_id = stimuli_simp_trial[i][left] - 1;
+        current_stim_r_id = stimuli_simp_trial[i][right] - 1;
         current_stim_l = stimulus_vals[current_stim_l_id];
         current_stim_r = stimulus_vals[current_stim_r_id];
     }
     if (part == 1) {
         i = parseInt(document.getElementById("trial_nr_sim1").innerHTML)
-        current_stim_l_id = stimuli_sim1_trial[i][0] - 1;
-        current_stim_r_id = stimuli_sim1_trial[i][1] - 1;
+        current_stim_l_id = stimuli_sim1_trial[i][left] - 1;
+        current_stim_r_id = stimuli_sim1_trial[i][right] - 1;
         current_stim_l = stimulus_vals[current_stim_l_id];
         current_stim_r = stimulus_vals[current_stim_r_id];
     } else if (part == 2) {
         i = parseInt(document.getElementById("trial_nr_sim2").innerHTML)
-        current_stim_l_id = stimuli_sim2_trial[i][0] - 1;
-        current_stim_r_id = stimuli_sim2_trial[i][1] - 1;
+        current_stim_l_id = stimuli_sim2_trial[i][left] - 1;
+        current_stim_r_id = stimuli_sim2_trial[i][right] - 1;
         current_stim_l = stimulus_vals[current_stim_l_id];
         current_stim_r = stimulus_vals[current_stim_r_id];
     }
@@ -433,7 +447,7 @@ async function handle_sim_response(e) {
         sim_id_response = keycode_to_integer(keyCode)
         // show given response to participants
         var str = new String("Your response was: " + sim_id_response);
-        document.getElementById("simult_feedback").innerHTML = str
+        document.getElementById("simult_feedback").innerHTML = str;
         await sleep(setup_expt["display_info"]["categorization"]["feedbacktime_true"])
         document.getElementById("simult_feedback").innerHTML = ""
 
@@ -494,10 +508,13 @@ function write_sim_results(i, r, rt) {
         stim_pair = trial_info["stimulus_ids_sim_t2"][i];
     }
 
-    var x1_true_l = setup_expt["stimulus_info"]["x1_x2"][stim_pair[0] - 1][0];
-    var x2_true_l = setup_expt["stimulus_info"]["x1_x2"][stim_pair[0] - 1][1];
-    var x1_true_r = setup_expt["stimulus_info"]["x1_x2"][stim_pair[1] - 1][0];
-    var x2_true_r = setup_expt["stimulus_info"]["x1_x2"][stim_pair[1] - 1][1];
+    var left = document.getElementById("left").innerHTML;
+    var right = document.getElementById("right").innerHTML;
+
+    var x1_true_l = setup_expt["stimulus_info"]["x1_x2"][stim_pair[left] - 1][0];
+    var x2_true_l = setup_expt["stimulus_info"]["x1_x2"][stim_pair[left] - 1][1];
+    var x1_true_r = setup_expt["stimulus_info"]["x1_x2"][stim_pair[right] - 1][0];
+    var x2_true_r = setup_expt["stimulus_info"]["x1_x2"][stim_pair[right] - 1][1];
 
     var d_euclidean = Math.sqrt(Math.pow((x1_true_l - x1_true_r), 2) + Math.pow((x2_true_l - x2_true_r), 2));
     // update list with all responses and distances to compute response consistencies
@@ -510,10 +527,10 @@ function write_sim_results(i, r, rt) {
         n_categories: n_categories,
         session: part,
         trial_id: i,
-        stim_id_l: stim_pair[0],
+        stim_id_l: stim_pair[left],
         x1_true_l: x1_true_l,
         x2_true_l: x2_true_l,
-        stim_id_r: stim_pair[1],
+        stim_id_r: stim_pair[right],
         x1_true_r: x1_true_r,
         x2_true_r: x2_true_r,
         d_euclidean: Math.round(d_euclidean * 100) / 100,
@@ -1019,8 +1036,8 @@ function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);
     var n_categories = [1, 4, 4][(condition_id % n_different_categories)] // similarity & squares
-    condition_id = 3;
-    n_categories = 1;
+    //condition_id = 3;
+    //n_categories = 1;
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
@@ -1042,7 +1059,7 @@ function condition_and_ncategories() {
                                 To do so, also use the numbers from 1-8 on the keyboard in the same way as for the simultaneous comparison task; i.e.,<br>
                                 (1) monsters look very different<br>
                                 (8) monsters look very similar<br>
-                                Use number keys (2) - (7) to for intermediate similarity ratings.<br>
+                                Use number keys (2) - (7) for intermediate similarity ratings.<br>
                                 Try to use the whole scale of responses for your ratings.<br>
                                 <b> --> Takes approx. 30 min</b><br>
                                 There will be breaks in between these 30 mins.`
