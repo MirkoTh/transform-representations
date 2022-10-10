@@ -50,7 +50,7 @@ const stim_ids = [[10, 10], [10, 19], [10, 28], [10, 37], [10, 46], [10, 55], [1
 const distance_cuts = [0, 30, 50, 70, 90, 200];
 const n_per_pool = 10;
 const props_pool_same = [.5, .5, 0, 0];
-const props_pool_diff = [.2, .5, .2, .1];
+const props_pool_diff = [.2, .3, .3, .2];
 
 const stim_pools_same = [stim11, stim22, stim33, stim44];
 const stim_pools_diff = [stim12, stim13, stim14, stim23, stim24, stim34];
@@ -124,12 +124,12 @@ function setup_experiment(condition_id) {
         n_conditions: 2, // control, 4 square categories
         n_similarity_sim: 2, // baseline and after categorization
         n_practice_similarity_sim: 3,
-        n_trials_similarity_sim_1: 4, //4, //
-        n_trials_similarity_sim_2: 4, //4, //
+        n_trials_similarity_sim_1: 15, //4, //
+        n_trials_similarity_sim_2: 15, //4, //
         n_trials_categorization_train_target: 0, // 
-        n_trials_categorization: 400, // 400, //
-        n_trials_categorization_total: 0 + 400, //0 + 400, // 
-        n_trial_categorization_lag: 2, //40, //last n categorization trials to calculate "final" accuracy
+        n_trials_categorization: 20, // 400, //
+        n_trials_categorization_total: 0 + 20, //0 + 400, // 
+        n_trial_categorization_lag: 10, //40, //last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
         thx_cat_overall: .7,//.2,//.75 for treps2 pilot I & II
@@ -397,6 +397,7 @@ async function next_item_similarity_simult(old) {
     await sleep(setup_expt["display_info"]["similarity_simult"]["iti"])
     document.getElementById("item_displayed_2_l").src = stim_path_l;
     document.getElementById("item_displayed_2_r").src = stim_path_r;
+    document.getElementById("time_var").innerHTML = Date.now();
 
     document.addEventListener("keydown", handle_sim_response, false);
 }
@@ -498,7 +499,7 @@ function write_sim_results(i, r, rt) {
         x2_true_l: x2_true_l,
         x1_true_r: x1_true_r,
         x2_true_r: x2_true_r,
-        d_euclidean: d_euclidean,
+        d_euclidean: Math.round(d_euclidean * 100) / 100,
         response: r,
         rt: rt
     }
@@ -1019,9 +1020,9 @@ function condition_and_ncategories() {
     sim_data_all = [];
 
     if (n_categories == 1) {
-        textCond = `<b>Sequential Comparison:</b> Your task in the second part will be somewhat different.<br>
+        textCond = `<b>Sequential Comparison:</b> Your task in the second part will be slightly different.<br>
                                 You are asked to judge how similar the monster presented on the current trial is to the monster presented on the previous trial.<br>
-                                To do so, use the numbers from 1-8 on the keyboard in the same way as for the simultaneous comparison task; i.e.,<br>
+                                To do so, also use the numbers from 1-8 on the keyboard in the same way as for the simultaneous comparison task; i.e.,<br>
                                 (1) monsters look very different<br>
                                 (8) monsters look very similar<br>
                                 Use number keys (2) - (7) to for intermediate similarity ratings.<br>
