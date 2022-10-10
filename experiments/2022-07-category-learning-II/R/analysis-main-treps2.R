@@ -53,7 +53,7 @@ sim_center <- "square"
 
 # Load Data ---------------------------------------------------------------
 
-returned_timeout <- timeout_and_returns()
+returned_timeout <- timeout_and_returns_e2()
 
 l_tbls_data <- map(path_data, load_data, participants_returned = returned_timeout)
 l_tbl_data <-
