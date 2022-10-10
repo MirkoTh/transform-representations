@@ -1,4 +1,4 @@
-timeout_and_returns <- function() {
+timeout_and_returns_e2 <- function() {
   #' manually assign prolific returns and submissions
   #' 
   pilot_I <- c(
@@ -111,6 +111,12 @@ timeout_and_returns <- function() {
   )
   
   return(returned_timeout)
+}
+
+timeout_and_returns_e3 <- function() {
+  batch_1 <- NA
+  
+  return(batch_1)
 }
 
 fix_data_types <- function(tbl, fs, ns) {
@@ -259,11 +265,7 @@ load_data_e3 <- function(path_data, participants_returned) {
   
   tbl_simult <- reduce(map(l_paths[["sim_simult"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
   tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
-  
-  # only pilot data have to be corrected currently...
-  tbl_simult$session <- as.numeric(tbl_simult$session)
-  #tbl_simult[148:nrow(tbl_simult), "session"] <- 2 + tbl_simult[148:nrow(tbl_simult), "session"]
-  
+
   factors <- c("participant_id", "session", "cat_true", "n_categories")
   numerics <- c(
     "trial_id", "x1_true", "x2_true", "x1_true_l", "x2_true_l", 
@@ -276,8 +278,38 @@ load_data_e3 <- function(path_data, participants_returned) {
   tbl_simult <- tbl_simult %>% filter(!(participant_id %in% participants_returned))
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
-  l_data <- list(tbl_simult, tbl_cat)
+  # add comparison pool for simultaneous comparison task
+  tbl_simult <- assign_comparison_pool(tbl_simult)
+  
+  l_data <- list(tbl_simult = tbl_simult, tbl_cat = tbl_cat)
   return(l_data)
+}
+
+assign_comparison_pool <- function(tbl_df) {
+  tbl_df$comparison_pool <- "same"
+  tbl_df$pool_left <- 1
+  tbl_df$pool_left[tbl_df$x1_true_l < 50 & tbl_df$x2_true_l > 50] <- 2
+  tbl_df$pool_left[tbl_df$x1_true_l > 50 & tbl_df$x2_true_l < 50] <- 3
+  tbl_df$pool_left[tbl_df$x1_true_l > 50 & tbl_df$x2_true_l > 50] <- 4
+  tbl_df$pool_right <- 1
+  tbl_df$pool_right[tbl_df$x1_true_r < 50 & tbl_df$x2_true_r > 50] <- 2
+  tbl_df$pool_right[tbl_df$x1_true_r > 50 & tbl_df$x2_true_r < 50] <- 3
+  tbl_df$pool_right[tbl_df$x1_true_r > 50 & tbl_df$x2_true_r > 50] <- 4
+  tbl_df$comparison_pool[tbl_df$pool_left == tbl_df$pool_right] <- 0
+  
+  tbl_df$comparison_pool <- map2_chr(tbl_df$pool_left, tbl_df$pool_right, is_cross_pool)
+  
+  is_cross_pool <- function(l, r) {
+    lr_sorted <- sort(c(l, r))
+    if (sum(lr_sorted == c(1, 4)) == 2 | sum(lr_sorted == c(2, 3)) == 2) {
+      out <- "cross"
+    } else if (lr_sorted[1] == lr_sorted[2]) {
+      out <- "same"
+    } else {out <- "side"}
+    return(out)
+  }
+  
+  return(tbl_df)
 }
 
 
