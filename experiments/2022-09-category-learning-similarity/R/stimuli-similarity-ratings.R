@@ -85,4 +85,19 @@ write_file(
   file = "experiments/2022-09-category-learning-similarity/stimuli/stim_ids.txt"
   )
 
+# calculate proportions of distances for each of the bins
+
+tbl_counts <- tbl_pairwise %>% 
+  group_by(pool_comparison, d_euclidean_cut) %>%
+  count() %>%
+  group_by(pool_comparison) %>%
+  mutate(
+    prop_pool = round(n / sum(n), 2)
+  ) %>% ungroup() %>%
+  select(-n) %>%
+  pivot_wider(
+    names_from = d_euclidean_cut, values_from = prop_pool, values_fill = 0
+    )
+
+
 
