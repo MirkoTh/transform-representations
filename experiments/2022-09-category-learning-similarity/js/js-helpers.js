@@ -74,18 +74,19 @@ for (var i = 0; i < stim_pools_side.length; i++) {
 for (var i = 0; i < stim_pools_cross.length; i++) {
     similarity_pairs_cross[i] = select_stim_pairs(stim_pools_cross[i], distance_pools_cross[i], props_pool_cross);
 }
+
 similarity_pairs_all = similarity_pairs_same.concat(similarity_pairs_side).concat(similarity_pairs_cross);
+
 // map item ids to actual 2D values
 
 similarity_pairs_all_flat = similarity_pairs_all.flat(1);
 
 // stimulus pairs shown at t1 and t2 are the same
 // only presentation order is randomized
+
 var similarity_pairs_stim_id_t1 = append_randomized_arrays(similarity_pairs_all_flat, 1);
 var similarity_pairs_stim_id_t2 = append_randomized_arrays(similarity_pairs_all_flat, 2).slice(100, 200);
 
-
-// have to iterate over stims and ds and replace stim11 and d11 with these variables
 function select_stim_pairs(s, d, props_pool) {
     var bin1 = [];
     var bin2 = [];
@@ -119,7 +120,8 @@ function select_stim_pairs(s, d, props_pool) {
     var samples2 = bin2_shuffled.slice(0, n_per_pool * props_pool[1]);
     var samples3 = bin3_shuffled.slice(0, n_per_pool * props_pool[2]);
     var samples4 = bin4_shuffled.slice(0, n_per_pool * props_pool[3]);
-    var samples5 = bin5_shuffled.slice(0, n_per_pool, props_pool[4]);
+    var samples5 = bin5_shuffled.slice(0, n_per_pool * props_pool[4]);
+
     var all_samples = samples1.concat(samples2, samples3, samples4, samples5);
 
     return all_samples
