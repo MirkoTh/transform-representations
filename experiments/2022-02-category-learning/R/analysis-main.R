@@ -31,6 +31,9 @@ files <- c(
 walk(files, source)
 
 
+sim_center <- "ellipse"
+
+
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
@@ -38,16 +41,16 @@ path_data <- c(
   "experiments/2022-02-category-learning/data/2022-04-20-treps1-pilot-2/",
   "experiments/2022-02-category-learning/data/2022-04-21-treps1-experiment/"
 )
-l_tbls_data <- map(path_data[2:3], load_data)
+l_tbls_data <- map(path_data[2:3], load_data, participants_returned = c())
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
 
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data)
+l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_cases <- preprocess_data(l_tbl_data)
+l_cases <- preprocess_data(l_tbl_data, 192, 600)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -96,7 +99,7 @@ l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
 l_pl[[1]]
 # by-participant trajectories
-l_pl[[2]]
+#l_pl[[2]]
 
 
 

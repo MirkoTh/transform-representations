@@ -648,7 +648,11 @@ chance_performance_cat <- function(tbl_cat) {
 }
 
 
-add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
+add_deviations <- function(
+    l_tbl, sim_center, 
+    subset_ids = NULL, 
+    slider_start_postition = NULL
+) {
   #' by-trial, binned, and average deviations of reproduction responses
   #' 
   #' @description calculate deviations from true coordinates to 
@@ -660,6 +664,8 @@ add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
   #' define whether distances in similarity condition are 
   #' computed with regards to ellipse or square categories
   #' @param subset_ids a subset of participants to filter
+  #' @param slider_start_position were sliders in the reproduction task
+  #' located in the middle or placed randomly in each trial
   #' 
   #' @return a list with three tbls
   #' 
@@ -671,10 +677,12 @@ add_deviations <- function(l_tbl, sim_center, subset_ids = NULL) {
   tbl_cr$x1_deviation <- tbl_cr$x1_true - tbl_cr$x1_response
   tbl_cr$x2_deviation <- tbl_cr$x2_true - tbl_cr$x2_response
   tbl_cr$eucl_deviation <- sqrt(tbl_cr$x1_deviation^2 + tbl_cr$x2_deviation^2)
-  tbl_cr$move_x1 <- abs(tbl_cr$x1_start - tbl_cr$x1_response)
-  tbl_cr$move_x2 <- abs(tbl_cr$x2_start - tbl_cr$x2_response)
-  tbl_cr$move_sum <- tbl_cr$move_x1 + tbl_cr$move_x2
-  tbl_cr <- dplyr::select(tbl_cr, -c(move_x1, move_x2))
+  if (!is.null(slider_start_postition)) {
+    tbl_cr$move_x1 <- abs(tbl_cr$x1_start - tbl_cr$x1_response)
+    tbl_cr$move_x2 <- abs(tbl_cr$x2_start - tbl_cr$x2_response)
+    tbl_cr$move_sum <- tbl_cr$move_x1 + tbl_cr$move_x2
+    tbl_cr <- dplyr::select(tbl_cr, -c(move_x1, move_x2))
+  }
   l_centers <- category_centers(f_stretch = 9, f_shift = 1)
   l_centers[[3]] <- category_centers_squares(n_cats = c(4))
   # todo
