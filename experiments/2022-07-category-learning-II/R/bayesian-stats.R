@@ -166,7 +166,11 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
 
 plot_distances_to_centers(tbl_cr)
-plot_groupmeans_against_session(tbl_cr)
+pl_groupmeans <- plot_groupmeans_against_session(
+  tbl_cr %>% mutate(n_categories = factor(n_categories, labels = c("Similarity Judgment", "Category Learning")))
+  ) + theme(legend.position = "bottom")
+save_my_tiff(pl_groupmeans, "experiments/2022-07-category-learning-II/data/means-sqrt-tf.tiff", 5, 4)
+
 # analysis of the means suggests that there may be an interaction effect
 # note, cis are within-participant cis
 
@@ -293,6 +297,7 @@ pl_outliers_prior <- plot_movement_outliers(
 )
 pl_outliers_prior
 
+
 # make sure tbl_cr_d1 and tbl_cr_moves are ordered in exactly the same way
 tbl_cr_d1 <- tbl_cr %>% filter(session == 1)
 tbl_cr_d1 <- tbl_cr_d1 %>% arrange(participant_id, trial_id)
@@ -395,23 +400,44 @@ tbl_mix <- tbl_summary %>% filter(str_starts(variable, "theta")) %>% arrange(des
 tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
 tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
 p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
+p_ids_to_plot <- tbl_mix %>% head(4) %>% rbind(tbl_mix %>% tail(4)) %>% select(participant_id)
+
+map_prop_gamma <- tbl_mix %>% head(4) %>% rbind(tbl_mix %>% tail(4)) %>%
+  select(mean, participant_id, n_categories) %>%
+  mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
 
 tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot$participant_id)
 
 l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
 pl_outliers_posteriors <- plot_movement_outliers(
   l_outliers_posterior$tbl_outliers, 
-  l_outliers_posterior$tbl_labels, 
+  l_outliers_posterior$tbl_labels %>% left_join(map_prop_gamma, by = c("participant_id")), 
   "Highest Posterior Proportion of Gamma", 
-  nrcols = 5, as_outlier = FALSE
+  nrcols = 4, as_outlier = FALSE
 )
 pl_outliers_posteriors
+
+save_my_tiff(pl_outliers_posteriors + labs(title = "Highest & Lowest Outliers"), "experiments/2022-07-category-learning-II/data/top-4-mixture-outliers.tiff", 8.5, 4.5)
 
 l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
 tbl_post_preds <- l_combined$tbl_post_preds
 pl_pp_mixture <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
   ggtitle("Normal-Gamma Mixture")
+
+pl_ppred <- arrangeGrob(
+  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d(),
+  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
+  nrow = 1, ncol = 2)
+pl_poutliers <- pl_outliers_posteriors + labs(title = "Highest & Lowest Outliers")
+
+pl_all <- arrangeGrob(pl_ppred, pl_poutliers, nrow = 1)
+save_my_tiff(
+  pl_all, 
+  "experiments/2022-07-category-learning-II/data/posterior-predictions-and-outliers.tiff",
+  14, 4
+)
+
 
 
 # model having a parameter shifting group mean of categorization group 
@@ -434,7 +460,7 @@ file_loc_move_shift_normal <- str_c(
 if (fit_or_read == "fit") {
   fit_move_shift_normal$save_object(file = file_loc_move_shift_normal, compress = "gzip")
 } else if (fit_or_read == "read") {
-  fit_move_shift_normal <- readRDS(file_loc_mixture_groups)
+  fit_move_shift_normal <- readRDS(file_loc_move_shift_normal)
 }
 
 pars_interest <- c("sigma_subject", "mu", "posterior_prediction") # 
@@ -464,9 +490,18 @@ pl_pp_shift <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds,
   ggtitle("Shift Normal")
 
 grid.draw(arrangeGrob(
-  pl_pp_shift + theme(legend.position = "none"),
-  pl_pp_mixture + theme(legend.position = "none"),
+  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d() ,
+  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
   nrow = 1, ncol = 2))
+
+save_my_tiff(
+  arrangeGrob(
+  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d(),
+  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
+  nrow = 1, ncol = 2), 
+  "experiments/2022-07-category-learning-II/data/posterior-predictions-comparison.tiff",
+  7.5, 3.5
+  )
 
 file_loc_loo_mixture_group <- str_c(
   "experiments/2022-07-category-learning-II/data/mixture-group-loo.RDS")

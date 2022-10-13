@@ -950,8 +950,7 @@ plot_movement_outliers <-
       pl <- ggplot(tbl_outliers %>% filter(name == "Not Transformed"),
                    aes(value)) +
         geom_histogram(bins = 15,
-                       color = "white",
-                       fill = "#66CCFF")
+                       color = "white", fill = "#440154") #,fill = "#66CCFF"
     } else if (as_outlier) {
       pl <- ggplot(
         tbl_outliers %>% filter(name == "Not Transformed"),
@@ -968,10 +967,10 @@ plot_movement_outliers <-
         size = 1,
         linetype = "dashed"
       ) +
-      geom_label(data = tbl_labels, aes(
-        x = 0,
-        y = 40,
-        label = str_c("Move = ", round(avg_move, 1))
+      geom_label(data = tbl_labels, label.padding = unit(0.1, "lines"), aes(
+        x = 10,
+        y = 55,
+        label = str_c("Avg. Move = ", round(avg_move, 1), "\nMAP Gamma = ", round(mean, 2))
       )) +
       facet_wrap( ~ participant_id, ncol = nrcols) +
       theme_bw() +
