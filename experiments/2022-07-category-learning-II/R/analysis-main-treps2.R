@@ -146,9 +146,9 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-l_pl[[1]]
+l_pl[[1]] + labs(x = "Block of 20 Trials", y = "Categorization Accuracy", caption = "")
 # by-participant trajectories
-l_pl[[2]]
+#l_pl[[2]]
 
 # by-participant intercepts vs. slopes from individual lms
 tbl_cat_agg <-
@@ -303,7 +303,11 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
 levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
 pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
-pl_empirical + labs(title = str_c("Distance in Similarity Condition = ", sim_center))
+pl_empirical +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  labs(title = str_c("Distance in Similarity Condition = ", sim_center))
 
 plot_distance_from_decision_boundary(tbl_cr, 10)
 

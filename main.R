@@ -77,10 +77,40 @@ tbl_bef_aft$x2_aft[is.na(tbl_bef_aft$x2_aft)] <- tbl_bef_aft$x2_bef[is.na(tbl_be
 
 ggplot(tbl_bef_aft, aes(x1_aft, x2_aft, group = category)) + geom_point(aes(color = category))
 
-marrangeGrob(
-  list(l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]], l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]]),
-  nrow = 2, ncol = 2, layout_matrix = matrix(c(1,2,3,4), byrow = TRUE, nrow = 2, ncol = 2)
+marrangeGrob(list(
+    l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]], 
+    l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]],
+    l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]
+    ), nrow = 3, ncol = 2, 
+    layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
+    )
+pl_pred <- l_results_plots[[5]][[2]][[1]] +
+  labs(title = "Prototype Model & Improvement Sampling")
+tbl_preds <- crossing(
+  group = c("Category Learning", "Similarity Judgment"),
+  timepoint = factor(c("Before Training", "After Training"), c("Before Training", "After Training"), ordered = TRUE)
 )
+tbl_preds$d_closest <- c(2, 1.75, 2, 2)
+dg <- position_dodge(width = .8)
+pl_pred_delta <- ggplot(tbl_preds, aes(timepoint, d_closest, group = group)) +
+  geom_col(aes(fill = group), position = dg) +
+  theme_bw() +
+  scale_fill_viridis_d(name = "Group") +
+  labs(x = "Time Point", y = "Distance to Closest Center")
+
+save_my_tiff <- function(pl, path_fl, w, h) {
+  tiff(path_fl, w, h, "in", res = 300)
+  grid.draw(pl)
+  dev.off()
+}
+
+save_my_tiff(arrangeGrob(pl_pred, pl_pred_delta), "figures/model-predictions.tiff", 5, 7)
+    
+  # scale_color_brewer(palette = "Set1")
+  # geom_line(aes(color = group), position = dg) +
+  #   geom_point(color = "white", size = 3, position = dg) +
+  #   geom_point(aes(color = group), position = dg) +
+  #   
 
 # Plot Prior Means & Posterior Means --------------------------------------
 
