@@ -97,7 +97,8 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 histograms_accuracies_rts(tbl_cat_overview)
 l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
-l_pl[[1]]
+pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
+  theme(legend.position = "bottom")
 # by-participant trajectories
 #l_pl[[2]]
 
@@ -268,13 +269,20 @@ tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   ggplot(aes(distance_binned, response_mn, group = participant_id)) +
   geom_line(aes(color = participant_id))
 
-ggplot() +
-  geom_smooth(
-    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
-    aes(distance_binned, response),
-    color = "purple",
-    method = "lm"
-  ) + geom_errorbar(
+pl_sim_psychonomics <- ggplot() +
+  geom_line(
+    data = tbl_sim_ci %>% 
+      filter(!(distance_binned %in% c(1, 13))) %>%
+      mutate(n_categories = factor(n_categories, labels = "Similarity")),
+            aes(distance_binned, response, group = n_categories,
+                color = n_categories)) +
+  # geom_smooth(
+  #   data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+  #   aes(distance_binned, response),
+  #   color = "#440154",
+  #   method = "lm"
+  # ) +
+  geom_errorbar(
     data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
     aes(
       distance_binned,
@@ -282,14 +290,19 @@ ggplot() +
       ymax = response + ci,
       width = .2
     )
-  ) +  geom_point(size = 3, color = "white") +
+  ) +  geom_point(
+    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+    size = 2, color = "white", aes(distance_binned, response)
+  ) +
   geom_point(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
              aes(distance_binned, response)) +
   theme_bw() +
   scale_x_continuous(breaks = seq(2, 10, by = 2)) +
   coord_cartesian(ylim = c(1, 4)) +
   labs(x = "Euclidean Distance",
-       y = "Average Similarity (Range: 1 - 4)")
+       y = "Average Similarity (Range: 1 - 4)") +
+  scale_color_viridis_d(name = "Group") +
+  theme(legend.position = "bottom")
 
 tbl_sim_agg_subj <- tbl_sim %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
@@ -348,15 +361,13 @@ plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 # for psychonomics only plot category 2 stimuli to reduce complexity 
 # with different designs a bit
 
-pl_d_psychonomics <- plot_distance_psychonomics(l_empirical$tbl_cr_agg)
+pl_d_psychonomics <- plot_distance_psychonomics(
+  l_empirical$tbl_cr_agg %>% mutate(d_closest = sqrt(d_closest)))
 save_my_tiff(
   pl_d_psychonomics, 
   "experiments/2022-02-category-learning/data/figures/distances-centers-psychonomics.tiff", 
   5, 4
 )
-
-
-
 
 # 
 # marrangeGrob(list(pl_avg_move, pl_empirical),
@@ -476,4 +487,9 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-
+pl <- arrangeGrob(pl_d_psychonomics, pl_cat_learn_psychonomics, pl_sim_psychonomics, ncol = 3)
+save_my_tiff(
+  pl, 
+  "experiments/2022-02-category-learning/data/figures/combined-psychonomics.tiff", 
+  12, 3.5
+)

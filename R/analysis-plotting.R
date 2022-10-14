@@ -289,13 +289,14 @@ plot_categorization_accuracy_against_blocks <-
       # geom_line(
       #   data = tbl_chance, aes(block, prop_chance, group = 1),
       #   linetype = "dotdash", size = .5) +
-      facet_wrap( ~ n_categories, scales = "free_x") +
+      #facet_wrap( ~ n_categories, scales = "free_x") +
       coord_cartesian(ylim = c(.25, 1)) +
       scale_color_brewer(name = "Category", palette = "Set1") +
       scale_x_continuous(breaks = seq(2, 14, by = 2)) +
       labs(x = "Block of 20 Trials",
            y = "Categorization Accuracy",
-           caption = "Note. x-axes differ between panels") + theme_bw()
+           #caption = "Note. x-axes differ between panels"
+           ) + theme_bw()
     
     if (show_errorbars) {
       pl_agg <- pl_agg + geom_errorbar(
@@ -533,7 +534,7 @@ plot_distance_to_category_center <-
     ) %>%
       mutate(session = factor(
         session,
-        labels = c("Before Cat. Learning", "After Cat. Learning")
+        labels = c("Before Training", "After Training")
       ))
     
     pl <- ggplot() +
@@ -1068,27 +1069,26 @@ plot_distance_psychonomics <- function(tbl_cr_agg) {
   dg <- position_dodge(width = .9)
   ggplot(
     tbl_cr_agg %>% filter(category == 2), 
-    aes(category, d_closest, group = session)
+    aes(session, d_closest, group = n_categories)
   ) + 
-    geom_col(aes(fill = session), position = dg, alpha = .5) +
+    geom_col(aes(fill = n_categories), position = dg, alpha = .5) +
     geom_point(
-      aes(color = session), position = dg
+      aes(color = n_categories), position = dg
     ) +
     geom_errorbar(
       aes(
         ymin = d_closest - ci,
         ymax = d_closest + ci,
-        color = session
+        color = n_categories
       ),
       position = dg,
       width = .25,
     ) +
-    facet_wrap( ~ n_categories) +
     theme_bw() +
     theme(legend.position = "bottom") +
     scale_fill_viridis_d(name = "Session") +
     scale_color_viridis_d(guide = "none") +
-    labs(x = "Category",
+    labs(x = "Time Point",
          y = "Distance to Closest Category Center") +
     theme(plot.title = element_text(size = 14, face = "bold"))
 }
