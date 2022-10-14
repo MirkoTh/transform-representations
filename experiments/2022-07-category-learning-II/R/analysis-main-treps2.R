@@ -304,12 +304,25 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
 levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
-pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
-pl_empirical +
+tbl_cr$n_categories <- fct_relevel(tbl_cr$n_categories, "Similarity", after = 1)
+l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+
+pl_psychonomics_means <- l_empirical$pl +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank()) +
-  labs(title = str_c("Distance in Similarity Condition = ", sim_center))
+  labs(title = str_c("Distance in Similarity Condition = ", sim_center)) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_blank()) +
+  scale_fill_viridis_d(name = "Session") +
+  scale_color_viridis_d()
+
+save_my_tiff(
+  pl_psychonomics_means, 
+  "experiments/2022-07-category-learning-II/data/figures/movements-means-psychonomics.tiff",
+  5, 4
+)
 
 plot_distance_from_decision_boundary(tbl_cr, 10)
 

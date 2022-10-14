@@ -166,6 +166,7 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
 
 plot_distances_to_centers(tbl_cr)
+
 pl_groupmeans <- plot_groupmeans_against_session(
   tbl_cr %>% mutate(n_categories = factor(n_categories, labels = c("Similarity Judgment", "Category Learning")))
   ) + theme(legend.position = "bottom")
@@ -399,29 +400,37 @@ l_pl[[1]]
 tbl_mix <- tbl_summary %>% filter(str_starts(variable, "theta")) %>% arrange(desc(mean))
 tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
 tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
-p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
-p_ids_to_plot <- tbl_mix %>% head(4) %>% rbind(tbl_mix %>% tail(4)) %>% select(participant_id)
 
-map_prop_gamma <- tbl_mix %>% head(4) %>% rbind(tbl_mix %>% tail(4)) %>%
+p_ids_to_plot <- sample(tbl_mix$participant_id, 3)
+
+# p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
+# p_ids_to_plot <- tbl_mix %>% head(10) %>% rbind(tbl_mix %>% tail(10)) %>% select(participant_id)
+# map_prop_gamma <- tbl_mix %>% head(10) %>% rbind(tbl_mix %>% tail(10)) %>%
+#   select(mean, participant_id, n_categories) %>%
+#   mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
+
+map_prop_gamma <- tbl_mix %>% filter(participant_id %in% p_ids_to_plot) %>%
   select(mean, participant_id, n_categories) %>%
   mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
 
-tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot$participant_id)
+tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot) #$participant_id
 
 l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
 pl_outliers_posteriors <- plot_movement_outliers(
   l_outliers_posterior$tbl_outliers, 
   l_outliers_posterior$tbl_labels %>% left_join(map_prop_gamma, by = c("participant_id")), 
-  "Highest Posterior Proportion of Gamma", 
-  nrcols = 4, as_outlier = FALSE
+  "Three Individual Participants", 
+  nrcols = 5, as_outlier = FALSE
 )
 pl_outliers_posteriors
 
-save_my_tiff(pl_outliers_posteriors + labs(title = "Highest & Lowest Outliers"), "experiments/2022-07-category-learning-II/data/top-4-mixture-outliers.tiff", 8.5, 4.5)
+save_my_tiff(pl_outliers_posteriors, "experiments/2022-07-category-learning-II/data/figures/random-3-mixture.tiff", 6, 3.5)
 
 l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
 tbl_post_preds <- l_combined$tbl_post_preds
+levels(tbl_empirical$n_categories) <- c("Similarity", "4 Categories")
+tbl_empirical$n_categories <- fct_relevel(tbl_empirical$n_categories, "Similarity", after = 1)
 pl_pp_mixture <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
   ggtitle("Normal-Gamma Mixture")
 
@@ -482,7 +491,7 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
 
-
+tbl_cr_moves$n_categories <- fct_relevel(tbl_cr_moves$n_categories, "Similarity", after = 1)
 l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
 tbl_post_preds <- l_combined$tbl_post_preds

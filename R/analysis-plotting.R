@@ -527,42 +527,42 @@ plot_distance_to_category_center <-
     tbl_cr_sq$category <- 2
     tbl_ell[tbl_ell$n_categories == "Similarity", ]
     tbl_cr <- rbind(tbl_ell, tbl_cr_sq)
+    tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
     
     tbl_cr_agg <- summarySEwithin(
-      tbl_cr, "d_closest", "n_categories", 
+      tbl_cr, "d_closest_sqrt", "n_categories", 
       c("session", "category"), idvar = "participant_id"
     ) %>%
       mutate(session = factor(
         session,
         labels = c("Before Training", "After Training")
       ))
-    
+    dg <- position_dodge(width = .9)
     pl <- ggplot() +
       geom_col(
         data = tbl_cr_agg,
-        aes(category, d_closest, group = session, fill = session),
+        aes(session, d_closest_sqrt, group = n_categories, fill = n_categories),
         position = dg,
         alpha = .5
       ) +
       geom_point(
         data = tbl_cr_agg,
-        aes(category, d_closest, color = session),
+        aes(session, d_closest_sqrt, color = n_categories),
         position = dg,
         show.legend = FALSE
       ) +
       geom_errorbar(
         data = tbl_cr_agg,
         aes(
-          category,
-          ymin = d_closest - ci,
-          ymax = d_closest + ci,
-          color = session
+          session,
+          ymin = d_closest_sqrt - ci,
+          ymax = d_closest_sqrt + ci,
+          color = n_categories
         ),
         position = dg,
         width = .25,
         show.legend = FALSE
       ) +
-      facet_wrap( ~ n_categories) +
       theme_bw() +
       scale_fill_brewer(name = "Session", palette = "Set1") +
       scale_color_brewer(palette = "Set1") +
@@ -982,7 +982,7 @@ plot_movement_outliers <-
       ) +
       geom_label(data = tbl_labels, label.padding = unit(0.1, "lines"), aes(
         x = 10,
-        y = 55,
+        y = 25,
         label = str_c("Avg. Move = ", round(avg_move, 1), "\nMAP Gamma = ", round(mean, 2))
       )) +
       facet_wrap( ~ participant_id, ncol = nrcols) +
@@ -1086,7 +1086,7 @@ plot_distance_psychonomics <- function(tbl_cr_agg) {
     ) +
     theme_bw() +
     theme(legend.position = "bottom") +
-    scale_fill_viridis_d(name = "Session") +
+    scale_fill_viridis_d(name = "Group") +
     scale_color_viridis_d(guide = "none") +
     labs(x = "Time Point",
          y = "Distance to Closest Category Center") +
