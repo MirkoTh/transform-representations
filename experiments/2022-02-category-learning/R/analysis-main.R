@@ -31,6 +31,9 @@ files <- c(
 walk(files, source)
 
 
+sim_center <- "ellipse"
+
+
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
@@ -38,16 +41,16 @@ path_data <- c(
   "experiments/2022-02-category-learning/data/2022-04-20-treps1-pilot-2/",
   "experiments/2022-02-category-learning/data/2022-04-21-treps1-experiment/"
 )
-l_tbls_data <- map(path_data[2:3], load_data)
+l_tbls_data <- map(path_data[2:3], load_data, participants_returned = c())
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
 
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data)
+l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_cases <- preprocess_data(l_tbl_data)
+l_cases <- preprocess_data(l_tbl_data, 192, 600)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -94,14 +97,15 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 histograms_accuracies_rts(tbl_cat_overview)
 l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
-l_pl[[1]]
+pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
+  theme(legend.position = "bottom")
 # by-participant trajectories
-l_pl[[2]]
+#l_pl[[2]]
 
 
 
 tbl_cat_agg <-
-  l_pl[[3]] %>% group_by(participant_id, trial_id_binned) %>%
+  l_pl[[3]] %>% group_by(participant_id, trial_id_binned, n_categories) %>%
   summarize(accuracy = mean(accuracy_mn_participant)) %>% ungroup() %>%
   mutate(
     trial_id_binned = as.numeric(as.character(trial_id_binned)),
@@ -133,7 +137,9 @@ anova(m_rs)
 tbl_cat_agg$preds <- predict(m_rs, tbl_cat_agg)
 
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest")
+  movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, "d_closest", sim_center = "ellipse"
+  )
 tbl_movement <- l_movement[[1]]
 # plot movement towards category center against task2 accuracy
 l_movement[[2]]
@@ -173,7 +179,10 @@ names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
 tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1])
+  movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1],
+    sim_center = sim_center
+  )
 tbl_movement <- l_movement[[1]]
 l_movement[[2]]
 
@@ -260,13 +269,20 @@ tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   ggplot(aes(distance_binned, response_mn, group = participant_id)) +
   geom_line(aes(color = participant_id))
 
-ggplot() +
-  geom_smooth(
-    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
-    aes(distance_binned, response),
-    color = "purple",
-    method = "lm"
-  ) + geom_errorbar(
+pl_sim_psychonomics <- ggplot() +
+  geom_line(
+    data = tbl_sim_ci %>% 
+      filter(!(distance_binned %in% c(1, 13))) %>%
+      mutate(n_categories = factor(n_categories, labels = "Similarity")),
+            aes(distance_binned, response, group = n_categories,
+                color = n_categories)) +
+  # geom_smooth(
+  #   data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+  #   aes(distance_binned, response),
+  #   color = "#440154",
+  #   method = "lm"
+  # ) +
+  geom_errorbar(
     data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
     aes(
       distance_binned,
@@ -274,14 +290,19 @@ ggplot() +
       ymax = response + ci,
       width = .2
     )
-  ) +  geom_point(size = 3, color = "white") +
+  ) +  geom_point(
+    data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+    size = 2, color = "white", aes(distance_binned, response)
+  ) +
   geom_point(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
              aes(distance_binned, response)) +
   theme_bw() +
   scale_x_continuous(breaks = seq(2, 10, by = 2)) +
   coord_cartesian(ylim = c(1, 4)) +
   labs(x = "Euclidean Distance",
-       y = "Average Similarity (Range: 1 - 4)")
+       y = "Average Similarity (Range: 1 - 4)") +
+  scale_color_viridis_d(name = "Group") +
+  theme(legend.position = "bottom")
 
 tbl_sim_agg_subj <- tbl_sim %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
@@ -331,17 +352,28 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 tbl_cr$n_categories <-
   factor(tbl_cr$n_categories,
-         labels = c("Control Group", "Experimental Group"))
-pl_empirical <- plot_distance_to_category_center(tbl_cr)
-plot_distance_from_decision_boundary(tbl_cr, 10)
+         labels = c("Similarity", "2 Categories"))
+l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+l_empirical$pl
+plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 
 
+# for psychonomics only plot category 2 stimuli to reduce complexity 
+# with different designs a bit
 
+pl_d_psychonomics <- plot_distance_psychonomics(
+  l_empirical$tbl_cr_agg %>% mutate(d_closest = sqrt(d_closest)))
+save_my_tiff(
+  pl_d_psychonomics, 
+  "experiments/2022-02-category-learning/data/figures/distances-centers-psychonomics.tiff", 
+  5, 4
+)
 
-marrangeGrob(list(pl_avg_move, pl_empirical),
-             nrow = 1,
-             ncol = 2)
-
+# 
+# marrangeGrob(list(pl_avg_move, pl_empirical),
+#              nrow = 1,
+#              ncol = 2)
+# 
 tbl_cr_agg <-
   grouped_agg(tbl_cr,
               c(participant_id, session, n_categories),
@@ -350,7 +382,7 @@ tbl_cr_agg <-
 ggplot(
   tbl_cr_agg %>% mutate(session = factor(
     session, levels = c(1, 2), labels = c("Before\nCategory Learning", "After\nCategory Learning"))
-    ), aes(mean_eucl_deviation, group = session)) +
+  ), aes(mean_eucl_deviation, group = session)) +
   geom_density(aes(color = session)) +
   facet_wrap(~ n_categories) +
   theme_bw() +
@@ -392,7 +424,7 @@ tbl_cr_agg %>%
               mean_eucl_deviation,
               mean_accuracy,
               mean_delta_accuracy
-            ) %>% filter(n_categories == "Experimental Group") %>%
+            ) %>% filter(n_categories == "2 Categories") %>%
   pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
   mutate(name = factor(
     name,
@@ -455,4 +487,9 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-
+pl <- arrangeGrob(pl_d_psychonomics, pl_cat_learn_psychonomics, pl_sim_psychonomics, ncol = 3)
+save_my_tiff(
+  pl, 
+  "experiments/2022-02-category-learning/data/figures/combined-psychonomics.tiff", 
+  12, 3.5
+)

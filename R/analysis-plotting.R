@@ -289,13 +289,14 @@ plot_categorization_accuracy_against_blocks <-
       # geom_line(
       #   data = tbl_chance, aes(block, prop_chance, group = 1),
       #   linetype = "dotdash", size = .5) +
-      facet_wrap( ~ n_categories, scales = "free_x") +
+      #facet_wrap( ~ n_categories, scales = "free_x") +
       coord_cartesian(ylim = c(.25, 1)) +
       scale_color_brewer(name = "Category", palette = "Set1") +
       scale_x_continuous(breaks = seq(2, 14, by = 2)) +
       labs(x = "Block of 20 Trials",
            y = "Categorization Accuracy",
-           caption = "Note. x-axes differ between panels") + theme_bw()
+           #caption = "Note. x-axes differ between panels"
+           ) + theme_bw()
     
     if (show_errorbars) {
       pl_agg <- pl_agg + geom_errorbar(
@@ -381,7 +382,7 @@ movement_towards_category_center <-
     tbl_cr_plot <- rbind(tbl_cr_no_sq, tbl_cr_sq)
     tbl_movement <- grouped_agg(tbl_cr_plot,
                                 c(participant_id, n_categories, session, category),
-                                d_measure) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
+                                all_of(d_measure)) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
       select(participant_id,
              n_categories,
              session,
@@ -508,41 +509,44 @@ plot_distance_to_category_center <-
       tbl_cr_sq <-
         tbl_cr %>% filter(n_categories %in% c("4 Categories", 4))
       tbl_ell <-
-        tbl_cr %>% filter(n_categories %in% c("Similarity", "2 Categories", 2))
+        tbl_cr %>% 
+        filter(n_categories %in% c("Similarity", "2 Categories", 2))
     } else if (sim_center == "square") {
       tbl_cr_sq <-
         tbl_cr %>% filter(n_categories %in% c("Similarity", "4 Categories", 4))
       tbl_ell <-
         tbl_cr %>% filter(n_categories %in% c("2 Categories", 2))
     }
+    
+    tbl_lookup <- tbl_ell %>% filter(n_categories %in% c("2 Categories", 2)) %>%
+      group_by(stim_id, category) %>% count() %>% select(-n)
+    tbl_ell <- tbl_ell %>% filter(n_categories == "Similarity") %>%
+      select(-category) %>% left_join(tbl_lookup, by = "stim_id") %>%
+      rbind(tbl_ell %>% filter(n_categories %in% c("2 Categories", 2)))
+
     tbl_cr_sq$category <- 2
+    tbl_ell[tbl_ell$n_categories == "Similarity", ]
     tbl_cr <- rbind(tbl_ell, tbl_cr_sq)
-    tbl_cr_agg <-
-      tbl_cr %>% group_by(n_categories, participant_id, session, category) %>%
-      summarize(dmin_mn_participant = mean(d_closest)) %>%
-      group_by(n_categories, session, category) %>%
-      summarize(
-        dmin_mn = mean(dmin_mn_participant),
-        dmin_se = sd(dmin_mn_participant) / sqrt(length(unique(
-          tbl_cr$participant_id
-        )))
-      ) %>%
-      ungroup() %>%
+    
+    tbl_cr_agg <- summarySEwithin(
+      tbl_cr, "d_closest", "n_categories", 
+      c("session", "category"), idvar = "participant_id"
+    ) %>%
       mutate(session = factor(
         session,
-        labels = c("Before Cat. Learning", "After Cat. Learning")
+        labels = c("Before Training", "After Training")
       ))
     
     pl <- ggplot() +
       geom_col(
         data = tbl_cr_agg,
-        aes(category, dmin_mn, group = session, fill = session),
+        aes(category, d_closest, group = session, fill = session),
         position = dg,
         alpha = .5
       ) +
       geom_point(
         data = tbl_cr_agg,
-        aes(category, dmin_mn, color = session),
+        aes(category, d_closest, color = session),
         position = dg,
         show.legend = FALSE
       ) +
@@ -550,8 +554,8 @@ plot_distance_to_category_center <-
         data = tbl_cr_agg,
         aes(
           category,
-          ymin = dmin_mn - 1.96 * dmin_se,
-          ymax = dmin_mn + 1.96 * dmin_se,
+          ymin = d_closest - ci,
+          ymax = d_closest + ci,
           color = session
         ),
         position = dg,
@@ -573,7 +577,7 @@ plot_distance_to_category_center <-
         theme(plot.title = element_text(size = 14, face = "bold"))
     }
     
-    return(pl)
+    return(list(pl = pl, tbl_cr_agg = tbl_cr_agg))
   }
 
 by_participant_coefs <-
@@ -616,30 +620,38 @@ by_participant_coefs <-
   }
 
 
-plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins) {
+plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins, sim_center) {
   #'
   #' @description scatter plot of distance from category center and
   #' distance from decision boundary before and after category learning
   #' @param tbl_cr_d the tbl with by-trial cr responses
   #' @param nbins nr of bins to cut the distances from decision boundary into
+  #' @param sim_center ellipse or square category structure
   #'
   #' @return the scatter plot
   #'
   tbl_cr_d$d2boundary_stim_cut <-
     cut(tbl_cr_d$d2boundary_stim, nbins, labels = FALSE)
-  # the following line only works without ellipse category in data
-  tbl_cr_d$d2boundary_stim_cut <- tbl_cr_d$d2boundary_stim
-  tbl_cr_d <- tbl_cr_d %>% mutate(session = factor(
-    session,
-    labels = c("Before Cat. Learning", "After Cat. Learning")
-  ),
-  category = factor(category))
+  if (sim_center == "square") {
+    tbl_cr_d$d2boundary_stim_cut <- tbl_cr_d$d2boundary_stim
+    tbl_cr_d$category[tbl_cr_d$n_categories != 2] <- 2
+  } else if (sim_center == "ellipse") {
+    tbl_cr_d <- tbl_cr_d %>% 
+      filter(
+        n_categories == "Similarity" | 
+          n_categories == "2 Categories" & category == 2
+      )
+  }
+  tbl_cr_d <- tbl_cr_d %>% 
+    mutate(session = factor(
+      session, labels = c("Before Cat. Learning", "After Cat. Learning")),
+      category = factor(category)
+    )
   # all items in square groups and in similarity groups are treated in the same way
-  tbl_cr_d$category[tbl_cr_d$n_categories != 2] <- 2
-  tbl_cr_d <-
-    grouped_agg(tbl_cr_d,
-                c(session, n_categories, category, d2boundary_stim_cut),
-                d_closest) %>%
+  tbl_cr_d <- grouped_agg(
+    tbl_cr_d, 
+    c(session, n_categories, category, d2boundary_stim_cut), d_closest
+  ) %>%
     group_by(n_categories, category, d2boundary_stim_cut) %>%
     arrange(session) %>%
     mutate(
@@ -655,9 +667,10 @@ plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins) {
     geom_point(color = "white",
                size = 4,
                position = dg) +
-    geom_point(aes(color = n_categories), position = dg) +
+    geom_point(aes(color = n_categories, size = n), position = dg) +
     theme_bw() +
     scale_color_brewer(palette = "Set1", name = "") +
+    scale_size_continuous(guide = "none") +
     scale_shape_discrete(name = "") +
     labs(x = "Distance from Decision Boundary",
          y = "Movement towards Category Center")
@@ -1042,4 +1055,40 @@ plot_predictions_with_data_mixture <- function(
       data = tbl_post_preds, color = "#a9a9a9", size = 1.5, binwidth = 5,
       aes(value, y = ..density..),
     )
+}
+
+
+save_my_tiff <- function(pl, path_fl, w, h) {
+  tiff(path_fl, w, h, "in", res = 300)
+  grid.draw(pl)
+  dev.off()
+}
+
+
+plot_distance_psychonomics <- function(tbl_cr_agg) {
+  dg <- position_dodge(width = .9)
+  ggplot(
+    tbl_cr_agg %>% filter(category == 2), 
+    aes(session, d_closest, group = n_categories)
+  ) + 
+    geom_col(aes(fill = n_categories), position = dg, alpha = .5) +
+    geom_point(
+      aes(color = n_categories), position = dg
+    ) +
+    geom_errorbar(
+      aes(
+        ymin = d_closest - ci,
+        ymax = d_closest + ci,
+        color = n_categories
+      ),
+      position = dg,
+      width = .25,
+    ) +
+    theme_bw() +
+    theme(legend.position = "bottom") +
+    scale_fill_viridis_d(name = "Session") +
+    scale_color_viridis_d(guide = "none") +
+    labs(x = "Time Point",
+         y = "Distance to Closest Category Center") +
+    theme(plot.title = element_text(size = 14, face = "bold"))
 }

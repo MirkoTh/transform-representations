@@ -63,7 +63,9 @@ l_tbl_data <-
 # add several distance measures: response to stimulus, response to true
 # category center, & response to closest true decision boundary
 
-l_deviations_all <- add_deviations(l_tbl_data, sim_center = sim_center)
+l_deviations_all <- add_deviations(
+  l_tbl_data, sim_center = sim_center, slider_start_postition = "random"
+)
 l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
