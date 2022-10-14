@@ -104,7 +104,7 @@ l_pl[[1]]
 
 
 tbl_cat_agg <-
-  l_pl[[3]] %>% group_by(participant_id, trial_id_binned) %>%
+  l_pl[[3]] %>% group_by(participant_id, trial_id_binned, n_categories) %>%
   summarize(accuracy = mean(accuracy_mn_participant)) %>% ungroup() %>%
   mutate(
     trial_id_binned = as.numeric(as.character(trial_id_binned)),
@@ -136,7 +136,9 @@ anova(m_rs)
 tbl_cat_agg$preds <- predict(m_rs, tbl_cat_agg)
 
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest")
+  movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, "d_closest", sim_center = "ellipse"
+  )
 tbl_movement <- l_movement[[1]]
 # plot movement towards category center against task2 accuracy
 l_movement[[2]]
@@ -176,7 +178,10 @@ names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
 tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
 l_movement <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1])
+  movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1],
+    sim_center = sim_center
+    )
 tbl_movement <- l_movement[[1]]
 l_movement[[2]]
 
@@ -334,9 +339,9 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 tbl_cr$n_categories <-
   factor(tbl_cr$n_categories,
-         labels = c("Control Group", "Experimental Group"))
-pl_empirical <- plot_distance_to_category_center(tbl_cr)
-plot_distance_from_decision_boundary(tbl_cr, 10)
+         labels = c("Similarity", "2 Categories"))
+pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 
 
 
@@ -353,7 +358,7 @@ tbl_cr_agg <-
 ggplot(
   tbl_cr_agg %>% mutate(session = factor(
     session, levels = c(1, 2), labels = c("Before\nCategory Learning", "After\nCategory Learning"))
-    ), aes(mean_eucl_deviation, group = session)) +
+  ), aes(mean_eucl_deviation, group = session)) +
   geom_density(aes(color = session)) +
   facet_wrap(~ n_categories) +
   theme_bw() +

@@ -592,6 +592,7 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
       l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2)
     } else {
       l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2) %>% left_join(l_ellipses[[1]][[1]] %>% select(stim_id, category), by = c("stim_id"))
+      l_tbl_cr[["2"]]$category <- as.numeric(l_tbl_cr[["2"]]$category)
     }
   }
   
