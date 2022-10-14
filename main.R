@@ -98,11 +98,7 @@ pl_pred_delta <- ggplot(tbl_preds, aes(timepoint, d_closest, group = group)) +
   scale_fill_viridis_d(name = "Group") +
   labs(x = "Time Point", y = "Distance to Closest Center")
 
-save_my_tiff <- function(pl, path_fl, w, h) {
-  tiff(path_fl, w, h, "in", res = 300)
-  grid.draw(pl)
-  dev.off()
-}
+
 
 save_my_tiff(arrangeGrob(pl_pred, pl_pred_delta), "figures/model-predictions.tiff", 5, 7)
     

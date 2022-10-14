@@ -181,7 +181,7 @@ l_movement <-
   movement_towards_category_center(
     tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1],
     sim_center = sim_center
-    )
+  )
 tbl_movement <- l_movement[[1]]
 l_movement[[2]]
 
@@ -340,16 +340,29 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 tbl_cr$n_categories <-
   factor(tbl_cr$n_categories,
          labels = c("Similarity", "2 Categories"))
-pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+l_empirical$pl
 plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 
 
+# for psychonomics only plot category 2 stimuli to reduce complexity 
+# with different designs a bit
+
+pl_d_psychonomics <- plot_distance_psychonomics(l_empirical$tbl_cr_agg)
+save_my_tiff(
+  pl_d_psychonomics, 
+  "experiments/2022-02-category-learning/data/figures/distances-centers-psychonomics.tiff", 
+  5, 4
+)
 
 
-marrangeGrob(list(pl_avg_move, pl_empirical),
-             nrow = 1,
-             ncol = 2)
 
+
+# 
+# marrangeGrob(list(pl_avg_move, pl_empirical),
+#              nrow = 1,
+#              ncol = 2)
+# 
 tbl_cr_agg <-
   grouped_agg(tbl_cr,
               c(participant_id, session, n_categories),
@@ -400,7 +413,7 @@ tbl_cr_agg %>%
               mean_eucl_deviation,
               mean_accuracy,
               mean_delta_accuracy
-            ) %>% filter(n_categories == "Experimental Group") %>%
+            ) %>% filter(n_categories == "2 Categories") %>%
   pivot_longer(c(mean_accuracy, mean_delta_accuracy)) %>%
   mutate(name = factor(
     name,
