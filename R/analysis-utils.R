@@ -1645,7 +1645,7 @@ after_vs_before <- function(tbl_cr) {
     ) %>%
     ungroup() %>%
     mutate(
-      n_categories = factor(n_categories, labels = c("Control", "4 Categories"))
+      n_categories = factor(n_categories, labels = c("Similarity", "4 Categories"))
     ) %>%
     dplyr::filter(!is.na(d_closest_before_abs)) %>%
     group_by(participant_id) %>%

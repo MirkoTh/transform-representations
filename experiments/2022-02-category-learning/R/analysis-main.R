@@ -362,11 +362,16 @@ plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 # with different designs a bit
 
 pl_d_psychonomics <- plot_distance_psychonomics(
-  l_empirical$tbl_cr_agg %>% mutate(d_closest = sqrt(d_closest)))
+  l_empirical$tbl_cr_agg %>% 
+    mutate(
+      d_closest = sqrt(d_closest),
+      n_categories = fct_relevel(n_categories, "Similarity", after = 1)
+      )
+  )
 save_my_tiff(
   pl_d_psychonomics, 
   "experiments/2022-02-category-learning/data/figures/distances-centers-psychonomics.tiff", 
-  5, 4
+  5, 4.2
 )
 
 # 
@@ -491,5 +496,5 @@ pl <- arrangeGrob(pl_d_psychonomics, pl_cat_learn_psychonomics, pl_sim_psychonom
 save_my_tiff(
   pl, 
   "experiments/2022-02-category-learning/data/figures/combined-psychonomics.tiff", 
-  12, 3.5
+  12, 3.75
 )
