@@ -727,13 +727,14 @@ plot_heatmaps_with_representations <- function(l_nb, sample_ids) {
 
 
 plot_similarity_against_distance <-
-  function(tbl_sim, tbl_sim_ci, sample_ids_sim = NULL) {
+  function(tbl_sim, tbl_sim_ci, sample_ids_sim = NULL, sim_edges = c(1, 4)) {
     #' plot similarity ratings against euclidean distance
     #' @description individual and aggregated plots of similarity against distance
     #' @param tbl_sim by-trial responses in similarity task
     #' @param tbl_sim_ci aggregated responses in similarity task
     #' @param sample_ids_sim list with subset of participants to plot in the
     #' individual plot
+    #' @param sim_edges
     #' @return list with the two plots
     #'
     tbl_sample <- tbl_sim %>%
@@ -753,7 +754,7 @@ plot_similarity_against_distance <-
       scale_color_viridis_c(name = "Participant ID") +
       scale_size_continuous(name = "Nr. Similarity Judgments") +
       labs(x = "Euclidean Distance (Binned)",
-           y = "Average Similarity (Range: 1 - 4)",
+           y = str_c("Average Similarity (Range: ", sim_edges[1], " - ", sim_edges[2], ")"),
            title = "Sample Participants")
     
     # aggregate scatter plot and line plot
@@ -776,9 +777,9 @@ plot_similarity_against_distance <-
                  aes(distance_binned, response)) +
       theme_bw() +
       scale_x_continuous(breaks = seq(2, 10, by = 2)) +
-      coord_cartesian(ylim = c(1, 4)) +
+      coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
-           y = "Average Similarity (Range: 1 - 4)",
+           y = str_c("Average Similarity (Range: ", sim_edges[1], " - ", sim_edges[2], ")"),
            title = "Mean Effect")
     
     return(list(pl_sample = pl_sample, pl_agg = pl_agg))
