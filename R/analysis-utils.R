@@ -114,9 +114,11 @@ timeout_and_returns_e2 <- function() {
 }
 
 timeout_and_returns_e3 <- function() {
-  batch_1 <- NA
+  pilot_1 <- c("60a838a519ca13dddc5b36d3")
   
-  return(batch_1)
+  all_ps <- c(pilot_1)
+  
+  return(all_ps)
 }
 
 fix_data_types <- function(tbl, fs, ns) {
@@ -917,6 +919,37 @@ preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat) {
   return(list(
     l_incomplete = l_incomplete,
     l_outliers = l_outliers,
+    l_guessing = l_guessing
+  ))
+}
+
+preprocess_data_e3 <- function(l_tbl_data, n_resp_simult, n_resp_cat) {
+  #' data preprocessing pipeline for E3
+  #' 
+  #' @description excludes incomplete data sets and participants guessing in 
+  #' categorization task
+  #' note. no exclusion criteria for rating task are applied
+  #' @param l_tbl_data list with tbl_simult and tbl_cat as entries
+  #' 
+  #' @return a list containing the included and excluded data
+  #' after each preprocessing step
+  #'
+  ## people with incomplete data
+  l_incomplete <- exclude_incomplete_datasets(l_tbl_data, n_resp_simult, n_resp_cat)
+  
+  ## people guessing in categorization task
+  l_guessing <- exclude_guessing_participants(l_incomplete$keep, n_resp_cat)
+  
+  ## exclude practice trials in reproduction task
+  l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% filter(session %in% c(1, 2))
+  
+  names(l_incomplete$keep) <- c("tbl_simult", "tbl_cat_sim")
+  names(l_incomplete$drop) <- c("tbl_simult", "tbl_cat_sim")
+  names(l_guessing$keep) <- c("tbl_simult", "tbl_cat_sim")
+  names(l_guessing$drop) <- c("tbl_simult", "tbl_cat_sim")
+
+  return(list(
+    l_incomplete = l_incomplete,
     l_guessing = l_guessing
   ))
 }

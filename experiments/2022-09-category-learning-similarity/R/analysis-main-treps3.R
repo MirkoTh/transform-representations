@@ -36,7 +36,7 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-09-category-learning-similarity/data/"
+  "experiments/2022-09-category-learning-similarity/data/2022-10-15-treps3-pilot-1/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -54,12 +54,137 @@ l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
 
-tbl_simult <- l_tbl_data[[1]]
-tbl_seq_cat <- l_tbl_data[[2]]
-l_cat_sim <- separate_cat_and_sim(tbl_seq_cat)
+# Set Exclusion Criteria Appropriately ------------------------------------
+
+
+n_resp_simult <- 200
+n_resp_cat <- 400
+l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
+
+
+tbl_simult <- l_cases$l_guessing$keep$tbl_simult
+tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
+
+# exclusions
+excl_incomplete <-
+  dplyr::union(
+    unique(l_cases$l_incomplete$drop[["tbl_simult"]]$participant_id),
+    unique(l_cases$l_incomplete$drop[["tbl_cat"]]$participant_id)
+  )
+excl_guessing <-
+  dplyr::union(
+    unique(l_cases$l_guessing$drop[["tbl_simult"]]$participant_id),
+    unique(l_cases$l_guessing$drop[["tbl_cat"]]$participant_id)
+  )
+
+# inclusions
+cat(str_c("final N analyzed: ", length(unique(tbl_simult$participant_id)), "\n"))
+
+# exclusions
+cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_guessing)))
+
+same_n <-
+  length(unique(tbl_simult$participant_id)) == length(unique(tbl_cat_sim$participant_id))
+cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
+# ns per group
+tbl_simult %>% group_by(participant_id, n_categories) %>% count() %>% 
+  group_by(n_categories) %>% count()
+
+
+l_tbl_data <-
+  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+#l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
+
+tbl_simult_incomplete <- l_cases$l_incomplete$drop[["tbl_simult"]]
+tbl_simult_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
+tbl_cat_sim %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
+
+l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
 tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
 tbl_cat <- l_cat_sim[["tbl_cat"]]
-tbl_seq <- l_cat_sim[["tbl_sim"]]
+tbl_seq <- l_cat_sim[["tbl_seq"]]
+
+# saveRDS(tbl_simult, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps-long-ri.rds"))
+# saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps-long-ri.rds"))
+# saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-long-ri.rds"))
+
+
+l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
+tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
+
+tbl_simult$comparison_pool <- factor(
+  tbl_simult$comparison_pool, 
+  levels = c("same", "side", "cross"), ordered = TRUE
+)
+levels(tbl_simult$session) <- c("Before Training", "After Training")
+tbl_simult$stim_id_lo <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ min(.x, .y))
+tbl_simult$stim_id_hi <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ max(.x, .y))
+tbl_simult$comparison_pool_binary <- factor(
+  tbl_simult$comparison_pool == "same", labels = c("Different", "Same")
+)
+
+
+tbl_simult_agg <- summarySEwithin(
+  tbl_simult, 
+  "response", 
+  c("n_categories"), 
+  c("session", "comparison_pool"),
+  "participant_id"
+)
+dg <- position_dodge(.2)
+ggplot(tbl_simult_agg, aes(comparison_pool, response, group = session)) +
+  geom_errorbar(width = .2, position = dg, 
+                aes(ymin = response - ci, ymax = response + ci, color = session)
+  ) +
+  geom_line(aes(color = session), position = dg) +
+  geom_point(color = "white", size = 3, position = dg) +
+  geom_point(aes(color = session), position = dg) +
+  theme(axis.text = element_text(angle = 90)) +
+  facet_wrap(~ n_categories) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90),
+    legend.position = "bottom"
+  ) +
+  scale_color_viridis_d(name = "Time Point") +
+  labs(
+    x = "Comparison",
+    y = "Similarity (Scale from 1-8)"
+  )
+# left join on t2 such that dropouts do not remain in tbl
+tbl_simult_move <- tbl_simult %>%
+  filter(session == "After Training") %>%
+  select(
+    participant_id, n_categories, comparison_pool, comparison_pool_binary,
+    stim_id_lo, stim_id_hi, d_euclidean, response, rt
+  ) %>%
+  left_join(
+    tbl_simult %>% 
+      filter(session == "Before Training") %>%
+      select(
+        participant_id, stim_id_lo, stim_id_hi, response, rt
+      ),
+    by = c("participant_id", "stim_id_lo", "stim_id_hi"),
+    suffix = c("_aft", "_bef")
+  ) %>%
+  mutate(move_response = response_aft - response_bef)
+
+ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
+  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1) +
+  geom_vline(xintercept = 0, linetype = "dotdash", size = 1, color = "grey") +
+  facet_wrap(~ n_categories) +
+  scale_x_continuous(breaks = seq(-5, 5, by = 1)) +
+  scale_color_viridis_d(name = "Category") +
+  theme_bw() +
+  labs(x = "Move After - Before", y = "Probability Mass")
+
+ggplot(tbl_simult, aes(response, group = comparison_pool_binary)) +
+  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1) +
+  facet_wrap(~ n_categories) +
+  scale_x_continuous(breaks = seq(1, 8, by = 1)) +
+  scale_color_viridis_d(name = "Category Comparison") +
+  theme_bw() +
+  labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
 # add several distance measures: response to stimulus, response to true
 # category center, & response to closest true decision boundary
@@ -68,60 +193,6 @@ l_deviations_all <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
 
-# Set Exclusion Criteria Appropriately ------------------------------------
-
-
-l_cases <- preprocess_data(l_tbl_data, 200, 400)
-tbl_cr <- l_cases$l_guessing$keep$tbl_cr
-tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
-
-# exclusions
-excl_incomplete <-
-  dplyr::union(
-    unique(l_cases$l_incomplete$drop[["tbl_cr"]]$participant_id),
-    unique(l_cases$l_incomplete$drop[["tbl_cat"]]$participant_id)
-  )
-excl_outlier <-
-  dplyr::union(
-    unique(l_cases$l_outliers$drop[["tbl_cr"]]$participant_id),
-    unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
-  )
-excl_guessing <-
-  dplyr::union(
-    unique(l_cases$l_guessing$drop[["tbl_cr"]]$participant_id),
-    unique(l_cases$l_guessing$drop[["tbl_cat"]]$participant_id)
-  )
-
-# inclusions
-cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
-
-# exclusions
-cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing)))
-
-same_n <-
-  length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
-cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
-# ns per group
-tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>% 
-  group_by(n_categories) %>% count()
-
-
-l_tbl_data <-
-  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
-
-tbl_cr_incomplete <- l_cases$l_incomplete$drop[["tbl_cr"]]
-tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
-tbl_cat_sim %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
-
-l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
-tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
-tbl_cat <- l_cat_sim[["tbl_cat"]]
-tbl_sim <- l_cat_sim[["tbl_sim"]]
-
-# saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds"))
-# saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"))
-# saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds"))
 
 
 # Categorization ----------------------------------------------------------
@@ -235,23 +306,23 @@ plot_heatmaps_with_representations(l_nb, sample_ids)
 
 # Similarity Judgments ----------------------------------------------------
 
-tbl_sim_agg <- tbl_sim %>%
+tbl_seq_agg <- tbl_seq %>%
   rutils::grouped_agg(c(distance_binned), c(response, rt))
-tbl_sim_ci <- summarySEwithin(
-  tbl_sim, "response", "n_categories", "distance_binned", "participant_id", TRUE
+tbl_seq_ci <- summarySEwithin(
+  tbl_seq, "response", "n_categories", "distance_binned", "participant_id", TRUE
 ) %>% as_tibble()
 
-tbl_sim_ci$distance_binned <-
-  as.numeric(as.character(tbl_sim_ci$distance_binned))
+tbl_seq_ci$distance_binned <-
+  as.numeric(as.character(tbl_seq_ci$distance_binned))
 
 # some sample participants to plot similarity ratings
-sample_ids_sim <-
-  unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
-l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim)
+sample_ids_seq <-
+  unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
+l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1, 8))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 
 
-tbl_sim_agg_subj <- tbl_sim %>%
+tbl_seq_agg_subj <- tbl_seq %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
   rutils::grouped_agg(c(participant_id, distance_binned), c(response, rt))
 
@@ -260,13 +331,13 @@ m_rs_sim <-
     mean_response ~ distance_binned,
     random = ~ 1 + distance_binned |
       participant_id,
-    data = tbl_sim_agg_subj
+    data = tbl_seq_agg_subj
   )
 summary(m_rs_sim)
 anova(m_rs_sim)
-tbl_sim_agg_subj$preds <- predict(m_rs_sim, tbl_sim_agg_subj)
+tbl_seq_agg_subj$preds <- predict(m_rs_sim, tbl_seq_agg_subj)
 
-by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
+by_participant_coefs(tbl_seq_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
 
 
 
