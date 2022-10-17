@@ -1783,8 +1783,38 @@ fix_data_types_simult <- function(tbl_simult) {
     tbl_simult$comparison_pool == "same", labels = c("Different", "Same")
   )
   levels(tbl_simult$session) <- c("Before Training", "After Training")
+  levels(tbl_simult$n_categories) <- c("Similarity", "4 Categories")
   tbl_simult$stim_id_lo <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ min(.x, .y))
   tbl_simult$stim_id_hi <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ max(.x, .y))
   
   return(tbl_simult)
+}
+
+
+delta_simultaneous <- function(tbl_simult) {
+  #' 
+  #' @description compare deltas after - before for simultaneous task
+  #' 
+  #' @param tbl_simult tbl df with simultaneous comparison data
+  #' 
+  #' @return joined tbl df with added columns move_response and d_euclidean_cut
+  #'
+  # left join on t2 such that dropouts do not remain in tbl
+  tbl_simult_move <- tbl_simult %>%
+    filter(session == "After Training") %>%
+    select(
+      participant_id, n_categories, comparison_pool, comparison_pool_binary,
+      stim_id_lo, stim_id_hi, d_euclidean, d_euclidean_cut, response, rt
+    ) %>%
+    left_join(
+      tbl_simult %>% 
+        filter(session == "Before Training") %>%
+        select(
+          participant_id, stim_id_lo, stim_id_hi, response, rt
+        ),
+      by = c("participant_id", "stim_id_lo", "stim_id_hi"),
+      suffix = c("_aft", "_bef")
+    ) %>%
+    mutate(move_response = response_aft - response_bef)
+  return(tbl_simult_move)
 }
