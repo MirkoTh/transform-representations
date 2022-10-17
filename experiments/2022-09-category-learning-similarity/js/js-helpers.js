@@ -135,18 +135,18 @@ function setup_experiment(condition_id) {
         n_conditions: 2, // control, 4 square categories
         n_similarity_sim: 2, // baseline and after categorization
         n_practice_similarity_sim: 3,
-        n_trials_similarity_sim_1: 15, //4, //
-        n_trials_similarity_sim_2: 15, //4, //
+        n_trials_similarity_sim_1: 100, //4, //
+        n_trials_similarity_sim_2: 100, //4, //
         n_trials_categorization_train_target: 0, // 
-        n_trials_categorization: 20, // 400, //
-        n_trials_categorization_total: 0 + 20, //0 + 400, // 
-        n_trial_categorization_lag: 10, //40, //last n categorization trials to calculate "final" accuracy
+        n_trials_categorization: 400, // 8, //
+        n_trials_categorization_total: 0 + 400, //0 + 8, // 
+        n_trial_categorization_lag: 40, //2, //last n categorization trials to calculate "final" accuracy
         condition_id: condition_id,
         n_categories: n_categories,
         thx_cat_overall: .7,//.2,//.75 for treps2 pilot I & II
         thx_cat_lag: .75,//.2,//.8 for treps2 pilot I & II
         thx_sim_corr: 0,
-        n_training_nocount: 4 //40 //
+        n_training_nocount: 40 //2 //
     }
     document.getElementById("n_trials_cat_lag").innerHTML = experiment_info["n_trial_categorization_lag"]
 
@@ -270,6 +270,7 @@ function assign_items_to_categories_squares(n_x_steps, experiment_info, trial_in
         trial_info["category_name"][i] = stimulus_info["category_name"][trial_info["category_id"][i] - 1]
     }
     return trial_info
+
 }
 
 //https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
@@ -427,7 +428,7 @@ async function next_item_similarity_simult(old) {
 
 async function handle_sim_response(e) {
     var condition_id = parseInt(document.getElementById("condition_id").innerHTML)
-    if (e.keyCode >= 49 && e.keyCode <= 57 || e.keyCodee >= 97 && e.keyCode <= 105) {
+    if (e.keyCode >= 49 && e.keyCode <= 56 || e.keyCode >= 97 && e.keyCode <= 104) {
         part = parseInt(document.getElementById("part_similarity_simult").innerHTML);
         if (part == 0) {
             var i = parseInt(document.getElementById("trial_nr_sim_practice").innerHTML)
