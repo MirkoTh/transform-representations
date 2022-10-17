@@ -62,19 +62,19 @@ n_resp_cat <- 400
 l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
 
 
-tbl_simult <- l_cases$l_guessing$keep$tbl_simult
-tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
+tbl_simult <- l_cases$l_outliers$keep$tbl_simult
+tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat_sim
 
 # exclusions
 excl_incomplete <-
   dplyr::union(
-    unique(l_cases$l_incomplete$drop[["tbl_simult"]]$participant_id),
-    unique(l_cases$l_incomplete$drop[["tbl_cat"]]$participant_id)
+    unique(l_cases$l_outliers$drop[["tbl_simult"]]$participant_id),
+    unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
   )
 excl_guessing <-
   dplyr::union(
-    unique(l_cases$l_guessing$drop[["tbl_simult"]]$participant_id),
-    unique(l_cases$l_guessing$drop[["tbl_cat"]]$participant_id)
+    unique(l_cases$l_outliers$drop[["tbl_simult"]]$participant_id),
+    unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
   )
 
 # inclusions
@@ -109,20 +109,8 @@ tbl_seq <- l_cat_sim[["tbl_seq"]]
 # saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-long-ri.rds"))
 
 
-l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
-tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
-
-tbl_simult$comparison_pool <- factor(
-  tbl_simult$comparison_pool, 
-  levels = c("same", "side", "cross"), ordered = TRUE
-)
-levels(tbl_simult$session) <- c("Before Training", "After Training")
-tbl_simult$stim_id_lo <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ min(.x, .y))
-tbl_simult$stim_id_hi <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ max(.x, .y))
-tbl_simult$comparison_pool_binary <- factor(
-  tbl_simult$comparison_pool == "same", labels = c("Different", "Same")
-)
-
+tbl_simult <- fix_data_types_simult(tbl_simult)
+tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
 
 tbl_simult_agg <- summarySEwithin(
   tbl_simult, 
@@ -131,8 +119,18 @@ tbl_simult_agg <- summarySEwithin(
   c("session", "comparison_pool"),
   "participant_id"
 )
+
+tbl_simult_move <- delta_simultaneous(tbl_simult)
+
+move_agg <- summarySEwithin(
+  tbl_simult_move, "move_response", 
+  c("n_categories"), c("comparison_pool_binary", "d_euclidean_cut"), 
+  idvar = "participant_id"
+)
+
+
 dg <- position_dodge(.2)
-ggplot(tbl_simult_agg, aes(comparison_pool, response, group = session)) +
+pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool, response, group = session)) +
   geom_errorbar(width = .2, position = dg, 
                 aes(ymin = response - ci, ymax = response + ci, color = session)
   ) +
@@ -151,25 +149,8 @@ ggplot(tbl_simult_agg, aes(comparison_pool, response, group = session)) +
     x = "Comparison",
     y = "Similarity (Scale from 1-8)"
   )
-# left join on t2 such that dropouts do not remain in tbl
-tbl_simult_move <- tbl_simult %>%
-  filter(session == "After Training") %>%
-  select(
-    participant_id, n_categories, comparison_pool, comparison_pool_binary,
-    stim_id_lo, stim_id_hi, d_euclidean, response, rt
-  ) %>%
-  left_join(
-    tbl_simult %>% 
-      filter(session == "Before Training") %>%
-      select(
-        participant_id, stim_id_lo, stim_id_hi, response, rt
-      ),
-    by = c("participant_id", "stim_id_lo", "stim_id_hi"),
-    suffix = c("_aft", "_bef")
-  ) %>%
-  mutate(move_response = response_aft - response_bef)
 
-ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
+pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
   geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1) +
   geom_vline(xintercept = 0, linetype = "dotdash", size = 1, color = "grey") +
   facet_wrap(~ n_categories) +
@@ -178,8 +159,8 @@ ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
   theme_bw() +
   labs(x = "Move After - Before", y = "Probability Mass")
 
-ggplot(tbl_simult, aes(response, group = comparison_pool_binary)) +
-  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1) +
+pl_rating_mass <- ggplot(tbl_simult, aes(response, group = comparison_pool)) +
+  geom_freqpoly(aes(color = comparison_pool, y = ..density..), binwidth = 1) +
   facet_wrap(~ n_categories) +
   scale_x_continuous(breaks = seq(1, 8, by = 1)) +
   scale_color_viridis_d(name = "Category Comparison") +
@@ -187,24 +168,11 @@ ggplot(tbl_simult, aes(response, group = comparison_pool_binary)) +
   labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
 
-tbl_simult_move$d_euclidean_cut <- cut(tbl_simult_move$d_euclidean, 8)
-move_agg <- summarySEwithin(
-  tbl_simult_move, "move_response", 
-  c("n_categories"), c("comparison_pool_binary", "d_euclidean_cut"), 
-  idvar = "participant_id"
-  )
 
 ggplot(move_agg, aes(d_euclidean_cut, move_response, aes(group = comparison_pool_binary))) +
   geom_point(aes(color = comparison_pool_binary, size = N)) +
   facet_wrap(~ n_categories) +
   theme(axis.text.x = element_text(vjust = 0, angle = 90))
-
-# add several distance measures: response to stimulus, response to true
-# category center, & response to closest true decision boundary
-
-l_deviations_all <- add_deviations(l_tbl_data, sim_center = sim_center)
-l_tbl_data[[1]] <- l_deviations_all$tbl_cr
-
 
 
 

@@ -390,6 +390,34 @@ exclude_reproduction_outliers <- function(tbl_cr, n_sds) {
 }
 
 
+exclude_simult_outliers <- function(l_tbl, n_sds) {
+  #' exclude outliers in simultaneous comparison task
+  #' 
+  #' @description correlation response x euclidean deviation > n_sds above mean deviation are excluded
+  #' @param l_tbl list containing tbl dfs with rating and cateogry learning / sequential comparison data
+  #' @param n_sds how many sds above the mean is the cutoff?
+  #' 
+  #' @return a list with participants kept and participants dropped 
+  #'
+  tbl_simult <- l_tbl[[1]]
+  l_simult <- split(tbl_simult[, c("d_euclidean", "response")], as.character(tbl_simult$participant_id))
+  v_cor_simult <- map_dbl(l_simult, ~ cor(.x$d_euclidean, .x$response))
+  tbl_cor_simult <- tibble(participant_id = names(v_cor_simult), cor = v_cor_simult)
+  cor_summary <- summary(v_cor_simult)
+  thx_dropout <- cor_summary["Mean"] + 3*sd(v_cor_simult)
+  participants_drop <- tbl_cor_simult$participant_id[tbl_cor_simult$cor > thx_dropout]
+  participants_keep <- tbl_cor_simult$participant_id[tbl_cor_simult$cor <= thx_dropout]
+  return(list(
+    keep = list(
+      tbl_simult = tbl_simult %>% filter(participant_id %in% participants_keep), 
+      tbl_cat_sim = l_tbl[[2]] %>% filter(participant_id %in% participants_keep)), 
+    drop = list(
+      tbl_simult = tbl_simult %>% filter(participant_id %in% participants_drop), 
+      tbl_cat_sim = l_tbl[[2]] %>% filter(participant_id %in% participants_drop))
+  ))
+}
+
+
 checkerboard_deviation <- function(tbl, n_agg_x) {
   #' deviation from true cr values in several bins of x1 and x2
   #' 
@@ -940,8 +968,12 @@ preprocess_data_e3 <- function(l_tbl_data, n_resp_simult, n_resp_cat) {
   ## people guessing in categorization task
   l_guessing <- exclude_guessing_participants(l_incomplete$keep, n_resp_cat)
   
+  ## outliers in simultaneous comparison task
+  l_outliers <- exclude_simult_outliers(l_guessing$keep, 3)
+  
+  
   ## exclude practice trials in reproduction task
-  l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% filter(session %in% c(1, 2))
+  l_outliers$keep$tbl_simult <- l_outliers$keep$tbl_simult %>% filter(session %in% c(1, 2))
   
   names(l_incomplete$keep) <- c("tbl_simult", "tbl_cat_sim")
   names(l_incomplete$drop) <- c("tbl_simult", "tbl_cat_sim")
@@ -950,7 +982,8 @@ preprocess_data_e3 <- function(l_tbl_data, n_resp_simult, n_resp_cat) {
 
   return(list(
     l_incomplete = l_incomplete,
-    l_guessing = l_guessing
+    l_guessing = l_guessing,
+    l_outliers = l_outliers
   ))
 }
 
