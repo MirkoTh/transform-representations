@@ -1765,3 +1765,26 @@ combine_data_with_posterior_outliers <- function(tbl_mix, tbl_cr_moves, tbl_draw
   
   return(list(tbl_empirical = tbl_empirical, tbl_post_preds = tbl_post_preds))
 }
+
+
+fix_data_types_simult <- function(tbl_simult) {
+  #' 
+  #' @description assign strings to factor levels and sort stimulus ids
+  #' 
+  #' @param tbl_simult tbl df with simultaneous comparison data
+  #' 
+  #' @return same tbl df with manipulated columns and added columns
+  #' 
+  tbl_simult$comparison_pool <- factor(
+    tbl_simult$comparison_pool, 
+    levels = c("same", "side", "cross"), ordered = TRUE
+  )
+  tbl_simult$comparison_pool_binary <- factor(
+    tbl_simult$comparison_pool == "same", labels = c("Different", "Same")
+  )
+  levels(tbl_simult$session) <- c("Before Training", "After Training")
+  tbl_simult$stim_id_lo <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ min(.x, .y))
+  tbl_simult$stim_id_hi <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ max(.x, .y))
+  
+  return(tbl_simult)
+}
