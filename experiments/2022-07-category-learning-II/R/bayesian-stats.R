@@ -401,19 +401,20 @@ tbl_mix <- tbl_summary %>% filter(str_starts(variable, "theta")) %>% arrange(des
 tbl_mix$participant_id_num <- as.numeric(str_match(tbl_mix$variable, "theta\\[([0-9]+)")[,2])
 tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_num")
 
-p_ids_to_plot <- sample(tbl_mix$participant_id, 3)
 
 # p_ids_to_plot <- tbl_mix %>% head(20) %>% select(participant_id)
 # p_ids_to_plot <- tbl_mix %>% head(10) %>% rbind(tbl_mix %>% tail(10)) %>% select(participant_id)
 # map_prop_gamma <- tbl_mix %>% head(10) %>% rbind(tbl_mix %>% tail(10)) %>%
 #   select(mean, participant_id, n_categories) %>%
 #   mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
+p_ids_to_plot <- sample(tbl_mix$participant_id, 3)
 
 map_prop_gamma <- tbl_mix %>% filter(participant_id %in% p_ids_to_plot) %>%
   select(mean, participant_id, n_categories) %>%
   mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
 
 tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot) #$participant_id
+tbl_cr_moves_posterior$n_categories <- fct_relevel(tbl_cr_moves_posterior$n_categories, "Similarity", after = 1)
 
 l_outliers_posterior <- extract_movement_outliers(tbl_cr_moves_posterior, 0, "Not Transformed")
 pl_outliers_posteriors <- plot_movement_outliers(
@@ -438,12 +439,12 @@ pl_ppred <- arrangeGrob(
   pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d(),
   pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
   nrow = 1, ncol = 2)
-pl_poutliers <- pl_outliers_posteriors + labs(title = "Highest & Lowest Outliers")
+pl_poutliers <- pl_outliers_posteriors + coord_cartesian(xlim = c(-60, 110))
 
 pl_all <- arrangeGrob(pl_ppred, pl_poutliers, nrow = 1)
 save_my_tiff(
   pl_all, 
-  "experiments/2022-07-category-learning-II/data/posterior-predictions-and-outliers.tiff",
+  "experiments/2022-07-category-learning-II/data/figures/posterior-predictions-and-outliers.tiff",
   14, 4
 )
 
