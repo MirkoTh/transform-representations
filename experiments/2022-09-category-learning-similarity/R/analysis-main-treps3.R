@@ -186,6 +186,19 @@ ggplot(tbl_simult, aes(response, group = comparison_pool_binary)) +
   theme_bw() +
   labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
+
+tbl_simult_move$d_euclidean_cut <- cut(tbl_simult_move$d_euclidean, 8)
+move_agg <- summarySEwithin(
+  tbl_simult_move, "move_response", 
+  c("n_categories"), c("comparison_pool_binary", "d_euclidean_cut"), 
+  idvar = "participant_id"
+  )
+
+ggplot(move_agg, aes(d_euclidean_cut, move_response, aes(group = comparison_pool_binary))) +
+  geom_point(aes(color = comparison_pool_binary, size = N)) +
+  facet_wrap(~ n_categories) +
+  theme(axis.text.x = element_text(vjust = 0, angle = 90))
+
 # add several distance measures: response to stimulus, response to true
 # category center, & response to closest true decision boundary
 

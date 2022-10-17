@@ -308,9 +308,9 @@ tbl_cr$n_categories <- fct_relevel(tbl_cr$n_categories, "Similarity", after = 1)
 l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
 
 pl_psychonomics_means <- l_empirical$pl +
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
+  # theme(axis.title.x=element_blank(),
+  #       axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank()) +
   labs(title = str_c("Distance in Similarity Condition = ", sim_center)) +
   theme(
     legend.position = "bottom",

@@ -566,7 +566,7 @@ plot_distance_to_category_center <-
       theme_bw() +
       scale_fill_brewer(name = "Session", palette = "Set1") +
       scale_color_brewer(palette = "Set1") +
-      labs(x = "Category",
+      labs(x = "Time Point",
            y = "Distance to Closest Category Center") +
       theme(plot.title = element_text(size = 14, face = "bold"))
     
