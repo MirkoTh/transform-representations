@@ -36,7 +36,7 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-09-category-learning-similarity/data/2022-10-15-treps3-pilot-1/"
+  "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -55,33 +55,47 @@ l_tbl_data <-
 
 
 # Set Exclusion Criteria Appropriately ------------------------------------
-
-
 n_resp_simult <- 200
 n_resp_cat <- 400
 l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
 
-
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
-tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat_sim
+tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
+
+map(l_cases, participants_ntrials, stage = "drop")
+keeps <- map(l_cases, participants_ntrials, stage = "keep")$l_outliers
+keeps %>% arrange(desc(n_seq))
+keeps %>% arrange(desc(n_simult))
+
+# some participants seem to  have restarted the experiment
+# exclude them from the data sets by hand
+repeats <- c("5e8783b0fde5153fbd9dca43")
+tbl_simult <- tbl_simult %>% filter(!(participant_id %in% repeats))
+tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats))
+
+## TODO: calculate outliers in sequential comparison task and apply that within the preprocess_data_e3 function
 
 # exclusions
 excl_incomplete <-
   dplyr::union(
-    unique(l_cases$l_outliers$drop[["tbl_simult"]]$participant_id),
-    unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
+    unique(l_cases$l_incomplete$drop[["tbl_simult"]]$participant_id),
+    unique(l_cases$l_incomplete$drop[["tbl_cat"]]$participant_id)
   )
 excl_guessing <-
+  dplyr::union(
+    unique(l_cases$l_guessing$drop[["tbl_simult"]]$participant_id),
+    unique(l_cases$l_guessing$drop[["tbl_cat"]]$participant_id)
+  )
+excl_outlier <-
   dplyr::union(
     unique(l_cases$l_outliers$drop[["tbl_simult"]]$participant_id),
     unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
   )
-
 # inclusions
 cat(str_c("final N analyzed: ", length(unique(tbl_simult$participant_id)), "\n"))
 
 # exclusions
-cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_guessing)))
+cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_guessing) + length(excl_outlier) + length(repeats)))
 
 same_n <-
   length(unique(tbl_simult$participant_id)) == length(unique(tbl_cat_sim$participant_id))
@@ -91,23 +105,18 @@ tbl_simult %>% group_by(participant_id, n_categories) %>% count() %>%
   group_by(n_categories) %>% count()
 
 
-l_tbl_data <-
-  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-#l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
-
-tbl_simult_incomplete <- l_cases$l_incomplete$drop[["tbl_simult"]]
-tbl_simult_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
-tbl_cat_sim %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
+tbl_cat_incomplete <- l_cases$l_incomplete$drop[["tbl_cat_sim"]]
+tmp <- tbl_cat_incomplete %>% filter(participant_id == "6171165b0a955ac648f01d30")
+tmp2 <- tbl_simult_incomplete %>% filter(participant_id == "6171165b0a955ac648f01d30")
 
 l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
 tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
 tbl_cat <- l_cat_sim[["tbl_cat"]]
-tbl_seq <- l_cat_sim[["tbl_seq"]]
+tbl_seq <- l_cat_sim[["tbl_sim"]]
 
 # saveRDS(tbl_simult, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps-long-ri.rds"))
 # saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps-long-ri.rds"))
 # saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-long-ri.rds"))
-
 
 tbl_simult <- fix_data_types_simult(tbl_simult)
 tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
@@ -151,29 +160,34 @@ pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool, response, group =
   )
 
 pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
-  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1) +
+  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1, size = 1) +
   geom_vline(xintercept = 0, linetype = "dotdash", size = 1, color = "grey") +
   facet_wrap(~ n_categories) +
-  scale_x_continuous(breaks = seq(-5, 5, by = 1)) +
+  scale_x_continuous(breaks = seq(-7, 7, by = 1)) +
   scale_color_viridis_d(name = "Category") +
   theme_bw() +
   labs(x = "Move After - Before", y = "Probability Mass")
 
-pl_rating_mass <- ggplot(tbl_simult, aes(response, group = comparison_pool)) +
-  geom_freqpoly(aes(color = comparison_pool, y = ..density..), binwidth = 1) +
-  facet_wrap(~ n_categories) +
+pl_rating_mass1 <- ggplot(tbl_simult, aes(response, group = comparison_pool)) +
+  geom_freqpoly(aes(color = comparison_pool, y = ..density..), binwidth = 1, size = 1) +
+  facet_grid(session ~ n_categories) +
   scale_x_continuous(breaks = seq(1, 8, by = 1)) +
   scale_color_viridis_d(name = "Category Comparison") +
   theme_bw() +
   labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
-
+pl_rating_mass2 <- ggplot(tbl_simult, aes(response, group = session)) +
+  geom_freqpoly(aes(color = session, y = ..density..), binwidth = 1, size = 1) +
+  facet_grid(comparison_pool ~ n_categories) +
+  scale_x_continuous(breaks = seq(1, 8, by = 1)) +
+  scale_color_viridis_d(name = "Category Comparison") +
+  theme_bw() +
+  labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
 ggplot(move_agg, aes(d_euclidean_cut, move_response, aes(group = comparison_pool_binary))) +
   geom_point(aes(color = comparison_pool_binary, size = N)) +
   facet_wrap(~ n_categories) +
   theme(axis.text.x = element_text(vjust = 0, angle = 90))
-
 
 
 # Categorization ----------------------------------------------------------
@@ -215,33 +229,6 @@ by_participant_coefs(
   tbl_cat_agg, "trial_id_binned", "accuracy", "LM Cat. Accuracy"
 )
 
-# stat analysis
-
-tbl_cat_agg <-
-  tbl_cat %>% group_by(participant_id, cat_true, trial_id_binned) %>%
-  summarize(accuracy_mn = mean(accuracy)) %>% ungroup() %>%
-  mutate(
-    trial_id_binned = as.numeric(as.character(trial_id_binned)),
-    trial_id_binned = scale(trial_id_binned)[, 1]
-  ) %>% group_by(cat_true, trial_id_binned) %>%
-  mutate(participant_id_num = row_number(participant_id))
-
-# gt for ground truth as compared to representations
-l_movement_gt <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest", sim_center)
-tbl_movement_gt <- l_movement_gt[[1]]
-
-# plot movement towards category center against task2 accuracy
-marrangeGrob(list(
-  l_movement_gt[[2]][[1]],
-  l_movement_gt[[2]][[2]],
-  l_movement_gt[[2]][[3]]
-), nrow = 1, ncol = 3)
-
-marrangeGrob(
-  list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last), nrow = 1, ncol = 2
-)
-
 # exclude initial trials from following analyses
 n_start_exclude <- 200
 tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, n_start_exclude)
@@ -261,28 +248,7 @@ mean_against_delta_cat_accuracy(tbl_movement_gt)
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
 l_nb <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
-
-# distance to representational centers and precision of representations
-tbl_square <- tbl_cr %>% filter(as.numeric(n_categories) == 4)
-tbl_square$participant_id <- factor(tbl_square$participant_id)
-l_tbl_square <- split(tbl_square, tbl_square$participant_id)
-tbl_d2_rep_center <- map2(l_tbl_square, l_nb, d2_rep_center_square) %>% reduce(rbind)
-tbl_cr <- tbl_cr %>% 
-  left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
-l_movement_representation <- movement_towards_category_center(
-  tbl_cat_sim, tbl_cr, "d_rep_center", sim_center
-)
-tbl_movement_representation <- l_movement_representation[[1]]
-marrangeGrob(list(
-  l_movement_representation[[2]][[1]],
-  l_movement_representation[[2]][[2]]
-), nrow = 1, ncol = 2)
-
-
-tbl_precision <- combine_precision_and_movements(l_nb, participant_ids_4_cat)
-plot_movement_against_precision(tbl_precision)
 plot_heatmaps_with_representations(l_nb, sample_ids)
-
 
 
 # Similarity Judgments ----------------------------------------------------

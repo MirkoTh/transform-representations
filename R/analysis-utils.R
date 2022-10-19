@@ -261,7 +261,7 @@ load_data_e3 <- function(path_data, participants_returned) {
   tbl_ntrials$task <- factor(str_detect(tbl_ntrials$savemethod, "sim_simult"), labels = c("cat", "sim_simult"))
   files_select <- tbl_ntrials %>% group_by(participant_id, task) %>%
     mutate(rwn_max = row_number(desc(ntrials))) %>% 
-    filter(rwn_max == 1)
+    filter(rwn_max == 1) %>% ungroup() %>% arrange(desc(ntrials))
   l_files_select <- split(files_select, files_select$task)
   c_paths <- function(x) str_c(path_data, x$savemethod, "-participant-", x$participant_id, ".json")
   l_paths <- map(l_files_select, c_paths)
@@ -277,7 +277,7 @@ load_data_e3 <- function(path_data, participants_returned) {
   )
   tbl_simult <- fix_data_types(tbl_simult, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
-  
+
   tbl_simult <- tbl_simult %>% filter(!(participant_id %in% participants_returned))
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
@@ -405,7 +405,7 @@ exclude_simult_outliers <- function(l_tbl, n_sds) {
   v_cor_simult <- map_dbl(l_simult, ~ cor(.x$d_euclidean, .x$response))
   tbl_cor_simult <- tibble(participant_id = names(v_cor_simult), cor = v_cor_simult)
   cor_summary <- summary(v_cor_simult)
-  thx_dropout <- cor_summary["Mean"] + 3*sd(v_cor_simult)
+  thx_dropout <- cor_summary["Mean"] + n_sds*sd(v_cor_simult)
   participants_drop <- tbl_cor_simult$participant_id[tbl_cor_simult$cor > thx_dropout]
   participants_keep <- tbl_cor_simult$participant_id[tbl_cor_simult$cor <= thx_dropout]
   cat(str_c("\n", length(participants_drop), " outliers in simultaneous comparison task\n"))
@@ -868,7 +868,7 @@ fit_predict_nb <- function(participant_id, tbl) {
   
   tbl <- tbl[tbl$participant_id == participant_id, ]
   m_nb <- naive_bayes(tbl[, c("x1_true", "x2_true")], as.character(tbl$response))
-  n_cats <- max(as.numeric(tbl$n_categories))
+  n_cats <- as.numeric(as.character(tbl$n_categories))[1]
   l_params <- map(
     1:n_cats, 
     ~ c(
@@ -2012,4 +2012,18 @@ delta_simultaneous <- function(tbl_simult) {
     ) %>%
     mutate(move_response = response_aft - response_bef)
   return(tbl_simult_move)
+}
+
+
+participants_ntrials <- function(my_l, stage) {
+  #' 
+  #' @description count nr of trials per participant and task
+  #' 
+    my_l[[stage]]$tbl_cat_sim %>% group_by(participant_id) %>%
+    count() %>% arrange(n) %>% mutate(task = "Categorization/Seq. Comparison") %>%
+    left_join(
+      my_l[[stage]]$tbl_simult %>% group_by(participant_id) %>% 
+        count() %>% arrange(n) %>% mutate(task = "Simult. Comparison"),
+      by = "participant_id", suffix = c("_seq", "_simult")
+    )
 }
