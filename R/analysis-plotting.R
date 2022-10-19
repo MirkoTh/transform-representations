@@ -510,7 +510,7 @@ plot_distance_to_category_center <-
         tbl_cr %>% filter(n_categories %in% c("4 Categories", 4))
       tbl_ell <-
         tbl_cr %>% 
-        filter(n_categories %in% c("Similarity", "2 Categories", 2))
+        filter(n_categories %in% c("Similarity", "2 Categories", 2, 1))
     } else if (sim_center == "square") {
       tbl_cr_sq <-
         tbl_cr %>% filter(n_categories %in% c("Similarity", "4 Categories", 4))
@@ -1070,7 +1070,7 @@ plot_distance_psychonomics <- function(tbl_cr_agg) {
   dg <- position_dodge(width = .9)
   ggplot(
     tbl_cr_agg %>% filter(category == 2), 
-    aes(session, d_closest, group = n_categories)
+    aes(session, d_closest_sqrt, group = n_categories)
   ) + 
     geom_col(aes(fill = n_categories), position = dg, alpha = .5) +
     geom_point(
@@ -1078,8 +1078,8 @@ plot_distance_psychonomics <- function(tbl_cr_agg) {
     ) +
     geom_errorbar(
       aes(
-        ymin = d_closest - ci,
-        ymax = d_closest + ci,
+        ymin = d_closest_sqrt - ci,
+        ymax = d_closest_sqrt + ci,
         color = n_categories
       ),
       position = dg,

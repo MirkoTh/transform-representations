@@ -364,9 +364,8 @@ plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 pl_d_psychonomics <- plot_distance_psychonomics(
   l_empirical$tbl_cr_agg %>% 
     mutate(
-      d_closest = sqrt(d_closest),
       n_categories = fct_relevel(n_categories, "Similarity", after = 1)
-      )
+      ) %>% filter(category == 2)
   )
 save_my_tiff(
   pl_d_psychonomics, 
