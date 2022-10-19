@@ -115,8 +115,9 @@ timeout_and_returns_e2 <- function() {
 
 timeout_and_returns_e3 <- function() {
   pilot_1 <- c("60a838a519ca13dddc5b36d3")
+  e_1 <- c("60f930c46df25698d755230d", "5bce1cf2ac6b660001908ab8")
   
-  all_ps <- c(pilot_1)
+  all_ps <- c(pilot_1, e_1)
   
   return(all_ps)
 }
@@ -407,6 +408,8 @@ exclude_simult_outliers <- function(l_tbl, n_sds) {
   thx_dropout <- cor_summary["Mean"] + 3*sd(v_cor_simult)
   participants_drop <- tbl_cor_simult$participant_id[tbl_cor_simult$cor > thx_dropout]
   participants_keep <- tbl_cor_simult$participant_id[tbl_cor_simult$cor <= thx_dropout]
+  cat(str_c("\n", length(participants_drop), " outliers in simultaneous comparison task\n"))
+  
   return(list(
     keep = list(
       tbl_simult = tbl_simult %>% filter(participant_id %in% participants_keep), 
@@ -1540,6 +1543,165 @@ participant_report <- function(l_cases) {
     pl_heatmaps = pl_heatmaps,
     pl_cat_hist = pl_cat_hist,
     pl_sim_line = pl_sim_line
+  )
+  
+}
+
+
+participant_report_e3 <- function(l_cases) {
+  #' by-participant summaries of experimental results
+  #' 
+  #' @description exclusions by reason, nr trials by task, 
+  #' cr heatmaps, categorization accuracy histogram, similarity-distance line plot
+  #' 
+  #' @param l_cases list of tbl_dfs after exclusion preprocessing
+  #' containing keeps and drops
+  #' 
+  #' @return a list with tbl_dfs and ggplot objects
+  #'
+  
+  tbl_exclusions <- rbind(crossing(
+    participant_id = as.character(unique(l_cases$l_guessing$drop$tbl_simult$participant_id)), 
+    reason = "Guessing Categorization"
+  ), crossing(
+    participant_id = as.character(unique(l_cases$l_incomplete$drop$tbl_simult$participant_id)),
+    reason = "Incomplete Data Set"
+  ), crossing(
+    participant_id = as.character(unique(l_cases$l_outliers$drop$tbl_simult$participant_id)),
+    reason = "Simultaneous Comparison Outlier"
+  ))
+  tbl_simult <- rbind(
+    l_cases$l_outliers$keep$tbl_simult,
+    l_cases$l_guessing$drop$tbl_simult,
+    l_cases$l_incomplete$drop$tbl_simult,
+    l_cases$l_outliers$drop$tbl_simult
+  )
+  tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
+  
+  n_participants_unique_after_practice <- tbl_simult %>% 
+    count(participant_id, n_categories) %>% count(n_categories) %>%
+    mutate("Dropout Stage" = "After Practice")
+  tbl_cat_sim <- rbind(
+    l_cases$l_guessing$keep$tbl_cat_sim,
+    l_cases$l_guessing$drop$tbl_cat_sim,
+    l_cases$l_incomplete$drop$tbl_cat_sim,
+    l_cases$l_outliers$drop$tbl_cat_sim
+  )
+  n_participants_unique_after_simult_session1 <- tbl_cat_sim %>% 
+    count(participant_id, n_categories) %>% count(n_categories) %>%
+    mutate("Dropout Stage" = "After Simult S1")
+  n_trials_simult <- tbl_simult %>% 
+    mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>%
+    group_by(participant_id, n_categories, pidxncat) %>%
+    count() %>% group_by(participant_id) %>%
+    mutate(attempt_nr = row_number(pidxncat)) %>% ungroup()
+  n_trials_cat <- tbl_cat_sim %>% 
+    mutate(pidxncat = interaction(n_categories, participant_id, sep = " & ")) %>% 
+    group_by(participant_id, n_categories, pidxncat) %>%
+    count() %>% group_by(participant_id) %>%
+    mutate(attempt_nr = row_number(pidxncat)) %>% ungroup()
+  # the following thx is hand-adjusted
+  n_participants_unique_after_task2 <- n_trials_cat %>% filter(n == 400) %>% 
+    count(n_categories) %>%
+    mutate("Dropout Stage" = "After Task 2")
+  n_participants_unique_after_simult_session2 <- n_trials_simult %>% filter(n >= 200) %>%
+    count(n_categories) %>%
+    mutate("Dropout Stage" = "After Simult S2")
+  tbl_dropouts <- rbind(
+    n_participants_unique_after_practice,
+    n_participants_unique_after_simult_session1,
+    n_participants_unique_after_task2,
+    n_participants_unique_after_simult_session2
+  )
+  tbl_dropouts$`Dropout Stage` <- fct_inorder(tbl_dropouts$`Dropout Stage`)
+  tbl_dropouts$n_categories <- str_c(tbl_dropouts$n_categories, " Categories")
+  hist_dropouts <- ggplot(tbl_dropouts, aes(`Dropout Stage`, n)) +
+    geom_col(aes(fill = as.numeric(`Dropout Stage`)), show.legend = FALSE) +
+    geom_label(aes(y = n - 1, label = str_c("N = ", n))) +
+    facet_wrap(~ n_categories) +
+    scale_fill_gradient(low = "#FF9999", high = "#339999") +
+    theme_bw() +
+    labs(x = "Dropout Stage", y = "Nr. Participants Remaining")
+  
+  hist_simult <- ggplotly(
+    ggplot(n_trials_simult, aes(n)) + 
+      geom_histogram(aes(fill = pidxncat), show.legend = FALSE) +
+      facet_grid(~ n_categories) +
+      labs(
+        title = "Simultaneous Comparison",
+        x = "Nr. Trials",
+        y = "Nr. Participants"
+      ) + theme_bw() +
+      theme(legend.position = "none")
+  )
+  
+  hist_cat_sim <- ggplotly(
+    ggplot(n_trials_cat, aes(n)) + 
+      geom_histogram(aes(fill = pidxncat), show.legend = FALSE) +
+      facet_grid(~ n_categories) +
+      labs(
+        title = "Categorization & Similarity",
+        x = "Nr. Trials",
+        y = "Nr. Participants"
+      ) + theme_bw() +
+      theme(legend.position = "none")
+  )
+  
+  tbl_cat_overview <- tbl_cat_sim %>%
+    filter(n_categories != "1") %>%
+    grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
+    arrange(mean_rt)
+  
+  # categorization accuracy overview
+  l_hists <- histograms_accuracies_rts(tbl_cat_overview)
+  pl_cat_hist <- subplot(l_hists[[1]], l_hists[[2]], nrows = 1)
+  
+  tbl_sim <- tbl_cat_sim %>%
+    filter(n_categories == 1) %>%
+    mutate(
+      x1_prev_true = lag(x1_true, 1),
+      x2_prev_true = lag(x2_true, 1),
+      distance_euclidian = sqrt((x1_true - x1_prev_true) ^ 2 + (x2_true - x2_prev_true) ^
+                                  2)
+    ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
+  n_bins_distance <- 9
+  bins_distance <-
+    c(seq(-1, ifelse(is.infinite(max(tbl_sim$distance_euclidian)), 2, max(tbl_sim$distance_euclidian)), length.out = n_bins_distance), Inf)
+  tbl_sim$distance_binned <-
+    cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
+  tbl_sim$distance_binned %>% unique()
+  pl_seq_line <- tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
+    summarize(response_mn = mean(response), n = n()) %>%
+    ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
+    geom_point(aes(color = as.numeric(participant_id), size = n)) +
+    geom_line(aes(color = as.numeric(participant_id)), show.legend = FALSE) +
+    scale_color_viridis_c(guide = "none") +
+    scale_size_area(max_size = 4, name = "Nr. Trials") +
+    theme_bw() +
+    labs(x = "Euclidean Distance (Binned)",
+         y = "Average Similarity (Range: 1 - 8)")
+  
+  pl_simult_line <- tbl_simult %>% group_by(participant_id, n_categories, d_euclidean_cut) %>%
+    summarize(response_mn = mean(response), n = n()) %>%
+    ggplot(aes(d_euclidean_cut, response_mn, group = as.numeric(participant_id))) +
+    geom_point(aes(color = as.numeric(participant_id), size = n)) +
+    geom_line(aes(color = as.numeric(participant_id)), show.legend = FALSE) +
+    scale_color_viridis_c(guide = "none") +
+    scale_size_area(max_size = 4, name = "Nr. Trials") +
+    theme_bw() +
+    labs(x = "Euclidean Distance (Binned)",
+         y = "Average Similarity (Range: 1 - 8)")
+  
+  l_screening <- list(
+    tbl_exclusions = tbl_exclusions,
+    n_trials_simult = DT::datatable(n_trials_simult),
+    n_trials_cat = DT::datatable(n_trials_cat),
+    hist_dropouts = hist_dropouts,
+    hist_simult = hist_simult,
+    hist_cat_sim = hist_cat_sim,
+    pl_cat_hist = pl_cat_hist,
+    pl_seq_line = pl_seq_line,
+    pl_simult_line = pl_simult_line
   )
   
 }
