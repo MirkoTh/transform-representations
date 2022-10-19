@@ -116,8 +116,11 @@ timeout_and_returns_e2 <- function() {
 timeout_and_returns_e3 <- function() {
   pilot_1 <- c("60a838a519ca13dddc5b36d3")
   e_1 <- c("60f930c46df25698d755230d", "5bce1cf2ac6b660001908ab8")
-  
-  all_ps <- c(pilot_1, e_1)
+  e_2 <- c(
+    "60f43127b2b2e32120869426", "612504db35fc9c7c741cd164", "612a804d1772460dc0856e5a",
+    "60679c2d7fa61095d417e84e", "613182b13759de601eedaa8a"
+    )
+  all_ps <- c(pilot_1, e_1, e_2)
   
   return(all_ps)
 }

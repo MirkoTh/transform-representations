@@ -36,7 +36,8 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/"
+  "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -258,7 +259,6 @@ tbl_seq_agg <- tbl_seq %>%
 tbl_seq_ci <- summarySEwithin(
   tbl_seq, "response", "n_categories", "distance_binned", "participant_id", TRUE
 ) %>% as_tibble()
-
 tbl_seq_ci$distance_binned <-
   as.numeric(as.character(tbl_seq_ci$distance_binned))
 
@@ -271,7 +271,7 @@ grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 
 tbl_seq_agg_subj <- tbl_seq %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
-  rutils::grouped_agg(c(participant_id, distance_binned), c(response, rt))
+  rutils::grouped_agg(c(participant_id, distance_binned, n_categories), c(response, rt))
 
 m_rs_sim <-
   nlme::lme(
@@ -286,78 +286,6 @@ tbl_seq_agg_subj$preds <- predict(m_rs_sim, tbl_seq_agg_subj)
 
 by_participant_coefs(tbl_seq_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
 
-
-
-# Continuous Reproduction ----------------------------------------------------------
-# 
-# doubles <- tbl_cr %>% count(participant_id) %>% filter(n > 200)
-# missings <- tbl_cr %>% count(participant_id) %>% filter(n < 200)
-# 
-# # only use first trial for a session when participants re-started the experiment
-# tbl_first_attempt <- tbl_cr %>% filter(participant_id %in% doubles$participant_id) %>% 
-#   group_by(participant_id, session, stim_id) %>%
-#   mutate(rwn = row_number(stim_id)) %>%
-#   filter(rwn == 1)
-# tbl_cr <- tbl_cr %>% filter(!(participant_id %in% doubles$participant_id))
-# tbl_cr <- tbl_cr %>% filter(!(participant_id %in% missings$participant_id))
-# tbl_cr <- rbind(tbl_cr, tbl_first_attempt %>% select(-rwn))
-
-
-tbl_cr %>% group_by(participant_id) %>% summarize(move = sum(move_sum), n_trials = n()) %>%
-  mutate(move_avg = move/n_trials) %>% arrange(move_avg)
-
-# 2d marginals
-pl_marginal_before <- plot_marginals_one_session(1, tbl_cr)
-pl_marginal_after <- plot_marginals_one_session(2, tbl_cr)
-
-# heat map of errors over 2d space
-pl_heamaps <- plot_2d_binned_heatmaps(
-  l_deviations_incl$tbl_checker, l_deviations_incl$tbl_checker_avg
-)
-
-# 1d marginal histograms & freq polys of deviations x1 and x2 before vs. after
-pl_1d_marginals <- plot_1d_marginals(tbl_cr)
-
-
-tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
-levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
-pl_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
-pl_empirical + labs(title = str_c("Distance in Similarity Condition = ", sim_center))
-
-plot_distance_from_decision_boundary(tbl_cr, 10)
-
-# 
-# marrangeGrob(list(pl_avg_move, pl_empirical),
-#              nrow = 1,
-#              ncol = 2)
-
-tbl_cr_agg <-
-  grouped_agg(tbl_cr,
-              c(participant_id, session, n_categories),
-              eucl_deviation)
-l_pl_euclidean <- plot_deviations_from_stimulus(tbl_cr_agg)
-grid.arrange(l_pl_euclidean$pl_density, l_pl_euclidean$pl_agg, nrow = 1, ncol = 2)
-
-
-# lmes
-## movement to center
-m_rs_cr <-
-  nlme::lme(
-    scale(sqrt(d_closest), scale = FALSE) ~ session * n_categories,
-    random = ~ 1 + session | participant_id,
-    data = tbl_cr
-  )
-summary(m_rs_cr)
-anova(m_rs_cr)
-tbl_cr$preds <- predict(m_rs_sim, m_rs_cr)
-
-m_rs_cr_control <-
-  nlme::lme(
-    sqrt(d_closest) ~ session,
-    random = ~ 1 + session | participant_id,
-    data = tbl_cr %>% filter(n_categories == "Control Group")
-  )
-summary(m_rs_cr_control)
 
 # Behavioral Representational Similarity Analysis -------------------------
 
