@@ -37,7 +37,8 @@ walk(files, source)
 
 path_data <- c(
   "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
-  "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/"
+  "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -63,14 +64,18 @@ l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
 tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
 
-map(l_cases, participants_ntrials, stage = "drop")
+drops <- map(l_cases, participants_ntrials, stage = "drop")
+drops$l_incomplete %>% print(n = 33)
+drops$l_guessing %>% print(n = 0)
+drops$l_outliers %>% print(n = 3)
+
 keeps <- map(l_cases, participants_ntrials, stage = "keep")$l_outliers
 keeps %>% arrange(desc(n_seq))
 keeps %>% arrange(desc(n_simult))
 
 # some participants seem to  have restarted the experiment
 # exclude them from the data sets by hand
-repeats <- c("5e8783b0fde5153fbd9dca43")
+repeats <- c("5e8783b0fde5153fbd9dca43", "611cf79541223a8ee170a30f")
 tbl_simult <- tbl_simult %>% filter(!(participant_id %in% repeats))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats))
 
@@ -104,11 +109,6 @@ cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 # ns per group
 tbl_simult %>% group_by(participant_id, n_categories) %>% count() %>% 
   group_by(n_categories) %>% count()
-
-
-tbl_cat_incomplete <- l_cases$l_incomplete$drop[["tbl_cat_sim"]]
-tmp <- tbl_cat_incomplete %>% filter(participant_id == "6171165b0a955ac648f01d30")
-tmp2 <- tbl_simult_incomplete %>% filter(participant_id == "6171165b0a955ac648f01d30")
 
 l_cat_sim <- separate_cat_and_sim(tbl_cat_sim)
 tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
@@ -240,7 +240,6 @@ select_ids <- round(seq(1, nrow(sample_ids), length.out = 4))
 sample_ids <-
   as.character(sample_ids[select_ids, "participant_id"] %>% as_vector() %>% unname())
 plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), c(2, 4))
-mean_against_delta_cat_accuracy(tbl_movement_gt)
 
 
 # prototype analyses ------------------------------------------------------

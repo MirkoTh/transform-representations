@@ -120,7 +120,16 @@ timeout_and_returns_e3 <- function() {
     "60f43127b2b2e32120869426", "612504db35fc9c7c741cd164", "612a804d1772460dc0856e5a",
     "60679c2d7fa61095d417e84e", "613182b13759de601eedaa8a"
     )
-  all_ps <- c(pilot_1, e_1, e_2)
+  e_3 <- c(
+    "615eda024a5f84f408625b4f", "58eec50e45de510001b5dcef",
+    "6120eb44c9cb47c287219598", "60b005fde343f75a2b76d406",
+    "615d8ac74e143515e642e7d0", "61253c4b55cb279b0b22ab7e",
+    "5d8d03a1704e2300160ec8a6", "613f8864050f45ce24fe9a84",
+    "5f439781d850b5045ffb4af2", "60e096b8a1a6a9c204099655",
+    "5fbd9bcc54453f1b0b28d89a", "5e87a0b5fc57a7415442f97e",
+    "5fa109039727b218f6e4da86", "5eaf3e142627076426921b1b"
+    )
+  all_ps <- c(pilot_1, e_1, e_2, e_3)
   
   return(all_ps)
 }
@@ -1585,7 +1594,7 @@ participant_report_e3 <- function(l_cases) {
     count(participant_id, n_categories) %>% count(n_categories) %>%
     mutate("Dropout Stage" = "After Practice")
   tbl_cat_sim <- rbind(
-    l_cases$l_guessing$keep$tbl_cat_sim,
+    l_cases$l_outliers$keep$tbl_cat_sim,
     l_cases$l_guessing$drop$tbl_cat_sim,
     l_cases$l_incomplete$drop$tbl_cat_sim,
     l_cases$l_outliers$drop$tbl_cat_sim
