@@ -1,0 +1,98 @@
+---
+title: "Participant Report T-Reps II"
+author: "Mirko Thalmann"
+date: '2022-07-21'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r }
+
+library(jsonlite)
+library(tidyverse)
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(docstring)
+library(rutils)
+library(catlearn)
+library(cmdstanr)
+library(modelr)
+library(plotly)
+
+
+# Import Home-Grown Modules -----------------------------------------------
+files <- c(
+  "R/utils.R",
+  "R/plotting.R",
+  "R/analysis-utils.R",
+  "R/analysis-plotting.R",
+  "R/summarySEwithin.R",
+  "R/summarySE.R",
+  "R/normDataWithin.R"
+)
+walk(files, source)
+
+
+# Load Data and Preprocess Data -------------------------------------------
+
+path_data <- c(
+  "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/"
+)
+
+# Load Data ---------------------------------------------------------------
+
+returned_timeout <- timeout_and_returns_e3()
+
+l_tbls_data <- map(path_data, load_data_e3, participants_returned = returned_timeout)
+l_tbl_data <-
+  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+
+tbl_simult <- l_tbls_data[[1]]$tbl_simult
+tbl_cat_sim <- l_tbls_data[[1]]$tbl_cat
+
+tbl_simult <- fix_data_types_simult(tbl_simult)
+tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
+
+
+# Screen Participants -----------------------------------------------------
+
+suppressMessages(
+  l_cases <- preprocess_data_e3(l_tbl_data, 200, 400)
+)
+
+l_participant_report <- participant_report_e3(l_cases)
+l_participant_report$n_trials_simult
+l_participant_report$n_trials_cat
+l_participant_report$hist_dropouts
+l_participant_report$hist_simult
+l_participant_report$hist_cat_sim
+l_participant_report$pl_cat_hist
+l_participant_report$pl_seq_line
+l_participant_report$pl_simult_line
+
+l_cases$l_incomplete$drop$tbl_cat_sim %>% filter(participant_id == "60f0453779e829aa531cf6c2") %>%
+  mutate(trial_id_cut = cut(trial_id, 10)) %>%
+  group_by(trial_id_cut) %>%
+  summarize(response = mean(accuracy), rt = mean(rt), n = n()) %>%
+  ggplot(aes(trial_id_cut, response)) + geom_point()
+
+l_cases$l_incomplete$drop$tbl_simult %>% filter(participant_id == "60f0453779e829aa531cf6c2") %>%
+  mutate(d_euclidean_cut = cut(d_euclidean, 10)) %>%
+  group_by(d_euclidean_cut) %>%
+  summarize(response = mean(response), n = n()) %>%
+  ggplot(aes(d_euclidean_cut, response)) + geom_point()
+
+
+
+```
