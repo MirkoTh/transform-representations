@@ -1066,6 +1066,13 @@ save_my_tiff <- function(pl, path_fl, w, h) {
 }
 
 
+save_my_pdf <- function(pl, path_fl, w, h) {
+  pdf(path_fl, w, h, paper = "special")
+  grid.draw(pl)
+  dev.off()
+}
+
+
 plot_distance_psychonomics <- function(tbl_cr_agg) {
   dg <- position_dodge(width = .9)
   ggplot(
