@@ -61,6 +61,10 @@ n_resp_simult <- 200
 n_resp_cat <- 400
 l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
 
+# todos
+# have a look at simultaneous comparison outliers
+# maybe some used a reversed mapping from responses to similarity
+
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
 tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
 
@@ -78,8 +82,6 @@ keeps %>% arrange(desc(n_simult))
 repeats <- c("5e8783b0fde5153fbd9dca43", "611cf79541223a8ee170a30f")
 tbl_simult <- tbl_simult %>% filter(!(participant_id %in% repeats))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats))
-
-## TODO: calculate outliers in sequential comparison task and apply that within the preprocess_data_e3 function
 
 # exclusions
 excl_incomplete <-
@@ -159,6 +161,17 @@ pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool, response, group =
     x = "Comparison",
     y = "Similarity (Scale from 1-8)"
   )
+save_my_pdf(
+  pl_lines_simult, 
+  "experiments/2022-09-category-learning-similarity/data/figures/simult-avg-comparison.pdf",
+  5, 4
+  )
+
+# tbl_simult_move %>%
+#   group_by(participant_id, n_categories, comparison_pool_binary) %>%
+#   summarize(move_mn = mean(move_response)) %>%
+#   ggplot(aes(move_mn, group = n_categories)) +
+#   geom_freqpoly(aes(color = n_categories), binwidth = 1)
 
 pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
   geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1, size = 1) +
@@ -169,6 +182,11 @@ pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_po
   theme_bw() +
   labs(x = "Move After - Before", y = "Probability Mass")
 
+save_my_pdf(
+  pl_move_mass, 
+  "experiments/2022-09-category-learning-similarity/data/figures/simult-move-mass.pdf",
+  6.5, 3.5
+)
 pl_rating_mass1 <- ggplot(tbl_simult, aes(response, group = comparison_pool)) +
   geom_freqpoly(aes(color = comparison_pool, y = ..density..), binwidth = 1, size = 1) +
   facet_grid(session ~ n_categories) +
@@ -214,7 +232,14 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-l_pl[[1]]
+pl_cat_learn <- l_pl[[1]] + scale_color_viridis_d(name = "Category")
+save_my_pdf(
+  pl_cat_learn, 
+  "experiments/2022-09-category-learning-similarity/data/figures/category-learning.pdf",
+  5.5, 3.5
+)
+
+
 # by-participant trajectories
 l_pl[[2]]
 
@@ -266,7 +291,12 @@ sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1, 8))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-
+pl_cat_learn <- l_pl[[1]] + scale_color_viridis_d(name = "Category")
+save_my_pdf(
+  l_pl_sim[[2]], 
+  "experiments/2022-09-category-learning-similarity/data/figures/sequential-comparison.pdf",
+  4, 3.5
+)
 
 tbl_seq_agg_subj <- tbl_seq %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
