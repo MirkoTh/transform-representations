@@ -1989,6 +1989,7 @@ fix_data_types_simult <- function(tbl_simult) {
   tbl_simult$comparison_pool_binary <- factor(
     tbl_simult$comparison_pool == "same", labels = c("Different", "Same")
   )
+  tbl_simult$comparison_pool_binary <- fct_relevel(tbl_simult$comparison_pool_binary, "Same", before = "Different")
   levels(tbl_simult$session) <- c("Before Training", "After Training")
   levels(tbl_simult$n_categories) <- c("Similarity", "4 Categories")
   tbl_simult$stim_id_lo <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ min(.x, .y))
