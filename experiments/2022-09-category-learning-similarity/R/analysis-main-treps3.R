@@ -117,22 +117,27 @@ tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
 tbl_cat <- l_cat_sim[["tbl_cat"]]
 tbl_seq <- l_cat_sim[["tbl_sim"]]
 
-# saveRDS(tbl_simult, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps-long-ri.rds"))
-# saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps-long-ri.rds"))
-# saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-long-ri.rds"))
 
 tbl_simult <- fix_data_types_simult(tbl_simult)
 tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
+
+# create data set with movements
+tbl_simult_move <- delta_simultaneous(tbl_simult)
+
+# save data sets for statistical analyses
+saveRDS(tbl_simult, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps.rds"))
+saveRDS(tbl_simult_move, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult_move-treps.rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps.rds"))
+saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps.rds"))
 
 tbl_simult_agg <- summarySEwithin(
   tbl_simult, 
   "response", 
   c("n_categories"), 
-  c("session", "comparison_pool"),
+  c("session", "comparison_pool_binary"),
   "participant_id"
 )
 
-tbl_simult_move <- delta_simultaneous(tbl_simult)
 
 move_agg <- summarySEwithin(
   tbl_simult_move, "move_response", 
@@ -142,7 +147,7 @@ move_agg <- summarySEwithin(
 
 
 dg <- position_dodge(.2)
-pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool, response, group = session)) +
+pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, response, group = session)) +
   geom_errorbar(width = .2, position = dg, 
                 aes(ymin = response - ci, ymax = response + ci, color = session)
   ) +
@@ -174,9 +179,11 @@ save_my_pdf(
 #   geom_freqpoly(aes(color = n_categories), binwidth = 1)
 
 pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_pool_binary)) +
-  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1, size = 1) +
+  geom_freqpoly(aes(color = comparison_pool_binary, y = ..density..), binwidth = 1, size = .75) +
   geom_vline(xintercept = 0, linetype = "dotdash", size = 1, color = "grey") +
-  facet_wrap(~ n_categories) +
+  geom_point(stat="bin", aes(y=..density..), color = "white", size = 3, binwidth=1) +
+  geom_point(stat="bin", aes(y=..density.., color = comparison_pool_binary), binwidth=1)  +
+  facet_wrap( ~ n_categories) +
   scale_x_continuous(breaks = seq(-7, 7, by = 1)) +
   scale_color_viridis_d(name = "Category") +
   theme_bw() +
