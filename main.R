@@ -97,16 +97,23 @@ pl_pred_delta <- ggplot(tbl_preds, aes(timepoint, d_closest, group = group)) +
   theme_bw() +
   scale_fill_viridis_d(name = "Group") +
   labs(x = "Time Point", y = "Distance to Closest Center")
-
-
-
 save_my_tiff(arrangeGrob(pl_pred, pl_pred_delta), "figures/model-predictions.tiff", 5, 7)
-    
-  # scale_color_brewer(palette = "Set1")
-  # geom_line(aes(color = group), position = dg) +
-  #   geom_point(color = "white", size = 3, position = dg) +
-  #   geom_point(aes(color = group), position = dg) +
-  #   
+
+# extract sum of distances between prior and posterior
+l_posteriors <- map(map(l_results_plots, 1), "tbl_posterior")
+l_sum_of_distances <- map(l_posteriors, sum_of_pairwise_distances)
+
+for (i in 1:nrow(tbl_info)) {
+  l_sum_of_distances[[i]] <- cbind(
+    l_sum_of_distances[[i]], 
+    tbl_info[i, c("cat_type", "prior_sd", "sampling", "constrain_space")]
+    )
+}
+tbl_sum_of_distances <- reduce(l_sum_of_distances, rbind)
+tbl_sum_of_distances %>%
+  filter(tp == "After Training") %>%
+  group_by(cat_type, sampling, comparison) %>%
+  summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop))
 
 # Plot Prior Means & Posterior Means --------------------------------------
 
