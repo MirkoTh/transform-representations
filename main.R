@@ -110,10 +110,24 @@ for (i in 1:nrow(tbl_info)) {
     )
 }
 tbl_sum_of_distances <- reduce(l_sum_of_distances, rbind)
-tbl_sum_of_distances %>%
+tbl_ds_agg <- tbl_sum_of_distances %>%
   filter(tp == "After Training") %>%
   group_by(cat_type, sampling, comparison) %>%
-  summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop))
+  summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop)) %>%
+  ungroup()
+tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "Prototype", "Rule"))
+tbl_ds_agg$sampling <- factor(tbl_ds_agg$sampling, labels = c("Improvement", "Metropolis-Hastings"))
+
+dg <- position_dodge(width = .9)
+pl_preds_ds <- ggplot(tbl_ds_agg, aes(comparison, avg_ds_prop, group = cat_type)) +
+  geom_col(aes(fill = cat_type), position = dg, color = "black") +
+  geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
+  facet_wrap(~ sampling) +
+  theme_bw() +
+  scale_fill_viridis_d(name = "Category Learning Model") +
+  labs(x = "Comparison", y = "Prop. Growth of Pairwise Distances")
+
+save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 7, 4)
 
 # Plot Prior Means & Posterior Means --------------------------------------
 
