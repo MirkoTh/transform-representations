@@ -1042,3 +1042,71 @@ distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation
 }
 
 
+
+outer <- function(x11_true, x21_true, tbl_df) {
+  #' @description maps over xs from second tbl
+  pmap(tbl_df[, c("x1_true", "x2_true")], inner, x11_true, x21_true)
+}
+
+inner <- function(x1_true, x2_true, x11_true, x21_true) {
+  #' @description computes distance for a pair of xs
+  sqrt((x11_true - x1_true)^2 + (x21_true - x2_true)^2)
+}
+
+sum_of_distances <- function(tbl_1, tbl_2, cat1, cat2) {
+  #' @description maps over xs from first tbl
+  pmap(
+    tbl_1 %>% filter(category %in% cat1) %>% select(x1_true, x2_true) %>%
+      rename(x11_true = x1_true, x21_true = x2_true),
+    outer,
+    tbl_df = tbl_2 %>% filter(category %in% cat2)
+  ) %>% unlist() %>% sum()
+}
+
+wrap_sum_of_distances <- function(tp, cat1, cat2, tbl_df) {
+  #' @description convenience wrapper of sum_of_distances
+  tbl_select <- tbl_df  %>% filter(timepoint == tp)
+  sum_of_distances(tbl_select, tbl_select,  cat1, cat2)
+}
+
+
+sum_of_pairwise_distances <- function(tbl_posterior) {
+  #' compute sum of pairwise distances
+  #' 
+  #' @description sum of pairwise distances for within-category and between-category pairs
+  #' before and after training (aka category learning)
+  #' 
+  #' @param tbl_posterior tibble with prior and posterior samples
+  #' @return a tbl with the sum of distances and the absolute change and its proportion
+  #' 
+  # design tbl to compute distances before and after
+  tbl_comparisons <- tibble(
+    tp = factor(
+      rep(c("Before Training", "After Training"), 8), 
+      levels = c("Before Training", "After Training"), ordered = TRUE
+      ),
+    cat1 = rep(1:4, each = 4),
+    cat2 = c(
+      1, 1, list(c(2, 3, 4)), list(c(2, 3, 4)),
+      2, 2, list(c(1, 3, 4)), list(c(1, 3, 4)),
+      3, 3, list(c(1, 2, 4)), list(c(1, 2, 4)),
+      4, 4, list(c(1, 2, 3)), list(c(1, 2, 3))
+    ),
+    comparison = rep(rep(c("Within", "Between"), each = 2), 4)
+  )
+  # compute actual distances
+  tbl_comparisons$distances_sum <- pmap_dbl(
+    tbl_comparisons %>% select(-comparison), 
+    wrap_sum_of_distances, 
+    tbl_df = tbl_posterior %>% mutate(timepoint = as.character(timepoint))
+  )
+  # compute 
+  tbl_comparisons %>% 
+    group_by(comparison, tp) %>% 
+    summarize(ds_sum = sum(distances_sum)) %>%
+    group_by(comparison) %>%
+    mutate(
+      ds_abs = ds_sum - lag(ds_sum, 1),
+      ds_prop = ds_sum / lag(ds_sum, 1)
+      ) %>% ungroup()
+}
