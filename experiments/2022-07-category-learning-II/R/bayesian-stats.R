@@ -441,11 +441,11 @@ pl_ppred <- arrangeGrob(
   nrow = 1, ncol = 2)
 pl_poutliers <- pl_outliers_posteriors + coord_cartesian(xlim = c(-60, 110))
 
-pl_all <- arrangeGrob(pl_ppred, pl_poutliers, nrow = 1)
+pl_all <- arrangeGrob(pl_psychonomics_means + ggtitle("Empirical Means") + theme(plot.title = element_text(size = 14, face = "plain")), pl_ppred, pl_poutliers, nrow = 1)
 save_my_tiff(
   pl_all, 
   "experiments/2022-07-category-learning-II/data/figures/posterior-predictions-and-outliers.tiff",
-  14, 4
+  18, 3.75
 )
 
 

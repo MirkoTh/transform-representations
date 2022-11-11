@@ -313,8 +313,7 @@ pl_psychonomics_means <- l_empirical$pl +
   #       axis.ticks.x=element_blank()) +
   labs(title = str_c("Distance in Similarity Condition = ", sim_center)) +
   theme(
-    legend.position = "bottom",
-    plot.title = element_blank()) +
+    legend.position = "bottom") +
   scale_fill_viridis_d(name = "Session") +
   scale_color_viridis_d()
 
