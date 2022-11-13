@@ -1,3 +1,6 @@
+dirs_homegrow <- c("R/normDataWithin.R", "R/summarySE.R", "R/summarySEwithin.R")
+walk(dirs_homegrow, source)
+
 dg <- position_dodge(width = .8)
 
 

@@ -401,3 +401,139 @@ generated quantities {
 
 ")
 }
+
+
+stan_simult_rs <- function() {
+  
+  stan_normal_simult_move_rs <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  vector[n_data] move_response;
+  array[n_data] int subj;
+  matrix[n_data, 4] x; // ic, comp_pool, ncat, comp_pool x ncat
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = .5;
+}
+
+parameters {
+  matrix[n_subj, 2] b;
+  vector[4] mu;
+  vector <lower=0>[2] sigma_subject;
+  real<lower=0> sigma;
+}
+
+transformed parameters {
+  array[4] real mu_tf;
+  mu_tf[1] = mu[1];
+  mu_tf[2] = mu[2] * scale_cat;
+  mu_tf[3] = mu[3] * scale_cat;
+  mu_tf[4] = mu[4] * scale_cat;
+  vector[n_data] mn;
+
+  for (n in 1:n_data) {
+    mn[n] = b[subj[n], 1] * x[n, 1] + b[subj[n], 2] * x[n, 2] + mu_tf[3] * x[n, 3] + mu_tf[4] * x[n, 4];
+  }
+}
+
+model {
+  for (n in 1:n_data) {
+    move_response[n] ~ normal(mn[n], sigma);
+  }
+
+  for (s in 1:n_subj) {
+    b[s, 1] ~ normal(mu_tf[1], sigma_subject[1]);
+    b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
+  }
+  
+  sigma ~ cauchy(0, 1);
+  sigma_subject[1] ~ cauchy(0, 1);
+  sigma_subject[2] ~ cauchy(0, 1);
+  mu[1] ~ cauchy(0, 1);
+  mu[2] ~ cauchy(0, 1);
+  mu[3] ~ cauchy(0, 1);
+  mu[4] ~ cauchy(0, 1);
+}
+
+
+generated quantities {
+  vector[n_data] log_lik_pred;
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = normal_lpdf(move_response[n] | mn[n], sigma);
+  }
+}
+
+")
+  return(stan_normal_simult_move_rs)
+}
+
+
+stan_simult_ri <- function() {
+  
+  stan_normal_simult_move_ri <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  vector[n_data] move_response;
+  array[n_data] int subj;
+  matrix[n_data, 4] x; // ic, comp_pool, ncat, comp_pool x ncat
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = .5;
+}
+
+parameters {
+  matrix[n_subj, 1] b;
+  vector[4] mu;
+  real<lower=0>sigma_subject;
+  real<lower=0> sigma;
+}
+
+transformed parameters {
+  array[4] real mu_tf;
+  mu_tf[1] = mu[1];
+  mu_tf[2] = mu[2] * scale_cat;
+  mu_tf[3] = mu[3] * scale_cat;
+  mu_tf[4] = mu[4] * scale_cat;
+  vector[n_data] mn;
+
+  for (n in 1:n_data) {
+    mn[n] = b[subj[n], 1] * x[n, 1] + mu_tf[2] * x[n, 2] + mu_tf[3] * x[n, 3] + mu_tf[4] * x[n, 4];
+  }
+}
+
+model {
+  for (n in 1:n_data) {
+    move_response[n] ~ normal(mn[n], sigma);
+  }
+
+  for (s in 1:n_subj) {
+    b[s, 1] ~ normal(mu_tf[1], sigma_subject);
+  }
+  
+  sigma ~ cauchy(0, 1);
+  sigma_subject ~ cauchy(0, 1);
+  mu[1] ~ cauchy(0, 1);
+  mu[2] ~ cauchy(0, 1);
+  mu[3] ~ cauchy(0, 1);
+  mu[4] ~ cauchy(0, 1);
+}
+
+
+generated quantities {
+  vector[n_data] log_lik_pred;
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = normal_lpdf(move_response[n] | mn[n], sigma);
+  }
+}
+
+")
+  return(stan_normal_simult_move_ri)
+}
