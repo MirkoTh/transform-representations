@@ -129,8 +129,16 @@ timeout_and_returns_e3 <- function() {
     "5fbd9bcc54453f1b0b28d89a", "5e87a0b5fc57a7415442f97e",
     "5fa109039727b218f6e4da86", "5eaf3e142627076426921b1b"
     )
-  all_ps <- c(pilot_1, e_1, e_2, e_3)
-  
+  e_4 <- c( "6101345e201fce9041fccb84",
+            "616bf81b4f7f4a85dc38c442",
+            "607184500f0f361d7c1d48e1",
+            "5de41d635593770179bb8470",
+            "615c4bfb2e8a77519a94d8f6",
+            "60cc72425533320442c05f8c",
+            "5e1f158a3e33582402807d9f",
+            "61582af93c0150689d3558f6 "
+            )
+  all_ps <- c(pilot_1, e_1, e_2, e_3, e_4)
   return(all_ps)
 }
 
