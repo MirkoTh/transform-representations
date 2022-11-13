@@ -19,6 +19,7 @@ library(modelr)
 library(plotly)
 
 
+rm(list = ls())
 # Import Home-Grown Modules -----------------------------------------------
 
 files <- c(
@@ -36,9 +37,10 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
-  "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
-  "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/"
+  # "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
+  # "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
+  # "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-11-11-treps3-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -63,7 +65,8 @@ l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
 
 # todos
 # have a look at simultaneous comparison outliers
-# maybe some used a reversed mapping from responses to similarity
+# some seem to have used a reversed mapping from responses to similarity!
+# look at outliers in sequential comparison task --> possibly build calculation of mean +/- 3*sd into preprocess_data_e3 pipeline
 
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
 tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
