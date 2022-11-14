@@ -969,7 +969,7 @@ exclude_guessing_participants <- function(l_tbl, n_trials_cat) {
     rbind(tbl_sim)
   tbl_cr_drop <- tbl_cr %>% filter((participant_id %in% c(participants_guess_2$participant_id, participants_guess_4$participant_id)))
   tbl_cat_drop <- tbl_cat %>% filter((participant_id %in% c(participants_guess_2$participant_id, participants_guess_4$participant_id)))
-  cat(str_c("excluded ", nrow(participants_guess_2) + nrow(participants_guess_4), " participants guessing in categorization task\n"))
+  cat(str_c("\nexcluded ", nrow(participants_guess_2) + nrow(participants_guess_4), " participants guessing in categorization task\n"))
   
   return(list(
     keep = list(tbl_cr = tbl_cr_keep, tbl_cat_sim = tbl_cat_sim_keep), 
@@ -1891,11 +1891,11 @@ separate_cat_and_sim <- function(tbl_cat_sim) {
   # prepare tbl_sim
   tbl_sim <- tbl_cat_sim %>%
     filter(n_categories == 1) %>%
+    arrange(participant_id, trial_id) %>%
     mutate(
       x1_prev_true = lag(x1_true, 1),
       x2_prev_true = lag(x2_true, 1),
-      distance_euclidian = sqrt((x1_true - x1_prev_true) ^ 2 + (x2_true - x2_prev_true) ^
-                                  2)
+      distance_euclidian = sqrt((x1_true - x1_prev_true) ^ 2 + (x2_true - x2_prev_true) ^ 2)
     ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
   n_bins_distance <- 9
   bins_distance <-

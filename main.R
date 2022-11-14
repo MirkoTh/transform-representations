@@ -125,7 +125,7 @@ pl_preds_ds <- ggplot(tbl_ds_agg, aes(comparison, avg_ds_prop, group = cat_type)
   #facet_grid(constrain_space ~ sampling) +
   theme_bw() +
   scale_fill_viridis_d(name = "Category Learning Model") +
-  labs(x = "Comparison", y = "Prop. Growth of Pairwise Distances")
+  labs(x = "Comparison", y = "Prop. Change of Pairwise Distances")
 
 save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 7, 4)
 

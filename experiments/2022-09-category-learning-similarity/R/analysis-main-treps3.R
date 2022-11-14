@@ -37,9 +37,9 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  # "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
-  # "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
-  # "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/",
   "experiments/2022-09-category-learning-similarity/data/2022-11-11-treps3-experiment/"
 )
 
@@ -72,9 +72,9 @@ tbl_simult <- l_cases$l_outliers$keep$tbl_simult
 tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
 
 drops <- map(l_cases, participants_ntrials, stage = "drop")
-drops$l_incomplete %>% print(n = 33)
+drops$l_incomplete %>% print(n = 47)
 drops$l_guessing %>% print(n = 0)
-drops$l_outliers %>% print(n = 3)
+drops$l_outliers %>% print(n = 4)
 
 keeps <- map(l_cases, participants_ntrials, stage = "keep")$l_outliers
 keeps %>% arrange(desc(n_seq))
@@ -82,7 +82,8 @@ keeps %>% arrange(desc(n_simult))
 
 # some participants seem to  have restarted the experiment
 # exclude them from the data sets by hand
-repeats <- c("5e8783b0fde5153fbd9dca43", "611cf79541223a8ee170a30f")
+repeats <- keeps %>% filter(n_seq > n_resp_cat | n_simult > n_resp_simult) %>% select(participant_id) %>% as_vector() %>% unname()
+#repeats <- c("5e8783b0fde5153fbd9dca43", "611cf79541223a8ee170a30f", "6134d182408816f4c1284496")
 tbl_simult <- tbl_simult %>% filter(!(participant_id %in% repeats))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats))
 
@@ -187,7 +188,7 @@ pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_po
   geom_point(stat="bin", aes(y=..density..), color = "white", size = 3, binwidth=1) +
   geom_point(stat="bin", aes(y=..density.., color = comparison_pool_binary), binwidth=1)  +
   facet_wrap( ~ n_categories) +
-  scale_x_continuous(breaks = seq(-7, 7, by = 1)) +
+  scale_x_continuous(breaks = seq(-6, 6, by = 2)) +
   scale_color_viridis_d(name = "Category") +
   theme_bw() +
   labs(x = "Move After - Before", y = "Probability Mass")
