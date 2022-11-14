@@ -985,14 +985,14 @@ plot_movement_outliers <-
         linetype = "dashed"
       ) +
       geom_label(data = tbl_labels, label.padding = unit(0.1, "lines"), aes(
-        x = 10,
-        y = 25,
+        x = 25,
+        y = 20,
         label = str_c("Avg. Move = ", round(avg_move, 1), "\nMAP Gamma = ", round(mean, 2))
       )) +
       facet_wrap( ~ participant_id, ncol = nrcols) +
       theme_bw() +
       scale_fill_brewer(palette = "Set1", name = "Outlier") +
-      labs(x = "Movement Towards Center", y = "Nr. Participants", title = ttl)
+      labs(x = "Movement Towards Center", y = "Nr. Stimuli", title = ttl)
   }
 
 
