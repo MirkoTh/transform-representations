@@ -119,7 +119,7 @@ timeout_and_returns_e3 <- function() {
   e_2 <- c(
     "60f43127b2b2e32120869426", "612504db35fc9c7c741cd164", "612a804d1772460dc0856e5a",
     "60679c2d7fa61095d417e84e", "613182b13759de601eedaa8a"
-    )
+  )
   e_3 <- c(
     "615eda024a5f84f408625b4f", "58eec50e45de510001b5dcef",
     "6120eb44c9cb47c287219598", "60b005fde343f75a2b76d406",
@@ -128,7 +128,7 @@ timeout_and_returns_e3 <- function() {
     "5f439781d850b5045ffb4af2", "60e096b8a1a6a9c204099655",
     "5fbd9bcc54453f1b0b28d89a", "5e87a0b5fc57a7415442f97e",
     "5fa109039727b218f6e4da86", "5eaf3e142627076426921b1b"
-    )
+  )
   e_4 <- c( "6101345e201fce9041fccb84",
             "616bf81b4f7f4a85dc38c442",
             "607184500f0f361d7c1d48e1",
@@ -137,7 +137,7 @@ timeout_and_returns_e3 <- function() {
             "60cc72425533320442c05f8c",
             "5e1f158a3e33582402807d9f",
             "61582af93c0150689d3558f6 "
-            )
+  )
   all_ps <- c(pilot_1, e_1, e_2, e_3, e_4)
   return(all_ps)
 }
@@ -297,7 +297,7 @@ load_data_e3 <- function(path_data, participants_returned) {
   )
   tbl_simult <- fix_data_types(tbl_simult, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
-
+  
   tbl_simult <- tbl_simult %>% filter(!(participant_id %in% participants_returned))
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
@@ -411,21 +411,56 @@ exclude_reproduction_outliers <- function(tbl_cr, n_sds) {
 }
 
 
+mirror_responses <- function(tbl_simult, tbl_cor_simult) {
+  #' @description change sign of those participants with positive correlation
+  #' 
+  #' @param tbl_simult tbl_df with similarity ratings from simultaneous task
+  #' @param tbl_cor_simult tbl_df with by-participant correlations between distance and response
+  #' 
+  #' @return tbl_df with responses mirrored
+  #' 
+  participants_mirror <- tbl_cor_simult %>% filter(cor > 0) %>% select(participant_id) %>% as_vector() %>% unname()
+  tbl_mirror <- tbl_simult %>% filter(participant_id %in% participants_mirror)
+  tbl_lookup <- tibble(response = seq(1, 8, by = 1), response_mirror = seq(8, 1, by = -1))
+  tbl_mirror <- tbl_mirror %>% left_join(tbl_lookup, by = "response")
+  tbl_mirror <- tbl_mirror %>% select(-response) %>% rename(response = response_mirror)
+  tbl_simult <- tbl_simult %>% filter(! (participant_id %in% participants_mirror)) %>% rbind(tbl_mirror)
+  return(tbl_simult)
+}
+
+
+cor_ratings_distances <- function(tbl_simult) {
+  #' @description by-participant correlations between distances and responses
+  #' 
+  #' @param tbl_simult tbl_df with similarity ratings from simultaneous task
+  #' 
+  #' @return tbl_cor_simult tbl with by-participant correlations
+  #' 
+  l_simult <- split(tbl_simult[, c("d_euclidean", "response")], as.character(tbl_simult$participant_id))
+  v_cor_simult <- map_dbl(l_simult, ~ cor(.x$d_euclidean, .x$response))
+  tbl_cor_simult <- tibble(participant_id = names(v_cor_simult), cor = v_cor_simult)
+  return(tbl_cor_simult)
+}
+
+
 exclude_simult_outliers <- function(l_tbl, n_sds) {
   #' exclude outliers in simultaneous comparison task
   #' 
   #' @description correlation response x euclidean deviation > n_sds above mean deviation are excluded
-  #' @param l_tbl list containing tbl dfs with rating and cateogry learning / sequential comparison data
+  #' additionally mirror responses from participants with negative correlation
+  #' @param l_tbl list containing tbl dfs with rating and category learning / sequential comparison data
   #' @param n_sds how many sds above the mean is the cutoff?
   #' 
   #' @return a list with participants kept and participants dropped 
   #'
   tbl_simult <- l_tbl[[1]]
-  l_simult <- split(tbl_simult[, c("d_euclidean", "response")], as.character(tbl_simult$participant_id))
-  v_cor_simult <- map_dbl(l_simult, ~ cor(.x$d_euclidean, .x$response))
-  tbl_cor_simult <- tibble(participant_id = names(v_cor_simult), cor = v_cor_simult)
-  cor_summary <- summary(v_cor_simult)
-  thx_dropout <- cor_summary["Mean"] + n_sds*sd(v_cor_simult)
+  
+  tbl_cor_simult <- cor_ratings_distances(tbl_simult)
+  tbl_simult <- mirror_responses(tbl_simult, tbl_cor_simult)
+  tbl_cor_simult <- cor_ratings_distances(tbl_simult)
+  
+  cor_summary <- summary(tbl_cor_simult$cor)
+  thx_dropout <- cor_summary["Mean"] + n_sds*sd(tbl_cor_simult$cor)
   participants_drop <- tbl_cor_simult$participant_id[tbl_cor_simult$cor > thx_dropout]
   participants_keep <- tbl_cor_simult$participant_id[tbl_cor_simult$cor <= thx_dropout]
   cat(str_c("\n", length(participants_drop), " outliers in simultaneous comparison task\n"))
@@ -1002,7 +1037,7 @@ preprocess_data_e3 <- function(l_tbl_data, n_resp_simult, n_resp_cat) {
   names(l_incomplete$drop) <- c("tbl_simult", "tbl_cat_sim")
   names(l_guessing$keep) <- c("tbl_simult", "tbl_cat_sim")
   names(l_guessing$drop) <- c("tbl_simult", "tbl_cat_sim")
-
+  
   return(list(
     l_incomplete = l_incomplete,
     l_guessing = l_guessing,
@@ -2040,7 +2075,7 @@ participants_ntrials <- function(my_l, stage) {
   #' 
   #' @description count nr of trials per participant and task
   #' 
-    my_l[[stage]]$tbl_cat_sim %>% group_by(participant_id) %>%
+  my_l[[stage]]$tbl_cat_sim %>% group_by(participant_id) %>%
     count() %>% arrange(n) %>% mutate(task = "Categorization/Seq. Comparison") %>%
     left_join(
       my_l[[stage]]$tbl_simult %>% group_by(participant_id) %>% 
