@@ -37,9 +37,9 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  # "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
-  # "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
-  # "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-18-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-19-treps3-experiment/",
+  "experiments/2022-09-category-learning-similarity/data/2022-10-20-treps3-experiment/",
   "experiments/2022-09-category-learning-similarity/data/2022-11-11-treps3-experiment/"
 )
 
