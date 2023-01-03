@@ -119,7 +119,7 @@ timeout_and_returns_e3 <- function() {
   e_2 <- c(
     "60f43127b2b2e32120869426", "612504db35fc9c7c741cd164", "612a804d1772460dc0856e5a",
     "60679c2d7fa61095d417e84e", "613182b13759de601eedaa8a"
-    )
+  )
   e_3 <- c(
     "615eda024a5f84f408625b4f", "58eec50e45de510001b5dcef",
     "6120eb44c9cb47c287219598", "60b005fde343f75a2b76d406",
@@ -128,7 +128,7 @@ timeout_and_returns_e3 <- function() {
     "5f439781d850b5045ffb4af2", "60e096b8a1a6a9c204099655",
     "5fbd9bcc54453f1b0b28d89a", "5e87a0b5fc57a7415442f97e",
     "5fa109039727b218f6e4da86", "5eaf3e142627076426921b1b"
-    )
+  )
   e_4 <- c( "6101345e201fce9041fccb84",
             "616bf81b4f7f4a85dc38c442",
             "607184500f0f361d7c1d48e1",
@@ -137,7 +137,7 @@ timeout_and_returns_e3 <- function() {
             "60cc72425533320442c05f8c",
             "5e1f158a3e33582402807d9f",
             "61582af93c0150689d3558f6 "
-            )
+  )
   all_ps <- c(pilot_1, e_1, e_2, e_3, e_4)
   return(all_ps)
 }
@@ -297,7 +297,7 @@ load_data_e3 <- function(path_data, participants_returned) {
   )
   tbl_simult <- fix_data_types(tbl_simult, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
-
+  
   tbl_simult <- tbl_simult %>% filter(!(participant_id %in% participants_returned))
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
@@ -1002,7 +1002,7 @@ preprocess_data_e3 <- function(l_tbl_data, n_resp_simult, n_resp_cat) {
   names(l_incomplete$drop) <- c("tbl_simult", "tbl_cat_sim")
   names(l_guessing$keep) <- c("tbl_simult", "tbl_cat_sim")
   names(l_guessing$drop) <- c("tbl_simult", "tbl_cat_sim")
-
+  
   return(list(
     l_incomplete = l_incomplete,
     l_guessing = l_guessing,
@@ -2040,7 +2040,7 @@ participants_ntrials <- function(my_l, stage) {
   #' 
   #' @description count nr of trials per participant and task
   #' 
-    my_l[[stage]]$tbl_cat_sim %>% group_by(participant_id) %>%
+  my_l[[stage]]$tbl_cat_sim %>% group_by(participant_id) %>%
     count() %>% arrange(n) %>% mutate(task = "Categorization/Seq. Comparison") %>%
     left_join(
       my_l[[stage]]$tbl_simult %>% group_by(participant_id) %>% 
@@ -2126,7 +2126,7 @@ fit_one_subset <- function(p_id, tp, pool, tbl_data, metric) {
   if (metric == "cityblock") f = similarity_cityblock
   if (metric == "euclidean") f = similarity_euclidean
   results <- optim(
-    c(.5, .5), 
+    c(.02, .5), 
     f, 
     tbl_data = tbl_fit, 
     lower = c(.0, .01), upper = c(10, .99),
@@ -2136,5 +2136,152 @@ fit_one_subset <- function(p_id, tp, pool, tbl_data, metric) {
 }
 
 
+summarize_model_results <- function(l, tbl_design) {
+  #' 
+  #' @description summarize model results
+  #' @param l list resulting from fitting individual models for selected data sets
+  #' @param tbl_design tbl with all participants and conditions to be fitted
+  #' @return summary containing tbl with by-trial results, aggregated results,
+  #' histogram of all fitted ws, and by-condition lineplot of cs
+  #'   
+  tmp <- map(map(l, "result"), "par") %>% reduce(rbind)
+  tmp <- data.frame(tmp)
+  tbl_design <- cbind(
+    tbl_design, tmp
+  )
+  colnames(tbl_design) <- c("participant_id", "task", "comparison_pool", "session", "c", "w1")
+  
+  # this participant used responses 1 and 2 for > 90%
+  tbl_design <- tbl_design %>% filter(participant_id != "5ff9dae550f0663236a53c19")
+  
+  hist_w <- ggplot(tbl_design, aes(w1)) +
+    geom_histogram(binwidth = .025, fill = "#66CCFF", color = "white") +
+    geom_vline(xintercept = .5, color = "grey30", linetype = "dotdash", size = .75) +
+    #scale_y_continuous(breaks = seq(0, 200, by = 25)) +
+    theme_bw() +
+    labs(x = expr(w[1]), y = "Nr. Participants")
+
+  tbl_results_agg <- summarySEwithin(
+    tbl_design, "c", 
+    withinvars = c("session", "comparison_pool"), 
+    betweenvars = "task", 
+    idvar = "participant_id"
+  )
+  pd <- position_dodge(width = .3)
+  
+  pl_c <- tbl_results_agg %>% 
+    ggplot(aes(session, c, group = comparison_pool)) +
+    geom_point(aes(color = comparison_pool), position = pd) +
+    geom_errorbar(
+      aes(ymin = c - ci, ymax = c + ci, color = comparison_pool),
+      width = .2, position = pd
+    ) + 
+    scale_color_viridis_d(name = "Category\nComparison") +
+    facet_wrap(~ task) +
+    theme_bw() +
+    labs(x = "Timepoint")
+  
+  l_out <- list(
+    tbl_results = tbl_design,
+    tbl_results_agg = tbl_results_agg,
+    hist_w = hist_w,
+    pl_c = pl_c
+  )
+  
+  return(l_out)
+  
+}
 
 
+
+compare_rsqs <- function(l_results_cityblock, l_results_euclidean) {
+  #' 
+  #' @description compare city-block and euclidean r^2 
+  #' @param l_results_cityblock list with summarized model results using city-block distance 
+  #' @param l_results_euclidean list with summarized model results using euclidean distance
+  #' @return list with tbl containing all r^2s, tbl containing aggregated r^2s,
+  #' and a histogram displaying the two r^2 distributions
+  #'  
+  tbl_rsq <- map(map(l_results_cityblock, "result"), "value") %>% unlist() %>%
+    cbind(
+      map(map(l_results_euclidean, "result"), "value") %>% unlist()
+    ) %>% data.frame()
+  tbl_rsq <- tibble(tbl_rsq)
+  colnames(tbl_rsq) <- c("cityblock", "euclidean")
+  tbl_rsq_long <- tbl_rsq %>% pivot_longer(c(cityblock, euclidean))
+  tbl_labels <- tbl_rsq_long %>% 
+    grouped_agg(name, value)
+  
+  hist_rsq <- ggplot(
+    tbl_rsq_long, aes(value, group = name)) + 
+    geom_histogram(aes(fill = name), color = "white", binwidth = 5) +
+    geom_label(
+      data = tbl_labels, 
+      aes(x = 30, y = 225, label = str_c("Mean = ", round(mean_value, 1)))
+    ) +
+    scale_fill_viridis_d(guide = "none") +
+    facet_wrap(~ name) +
+    theme_bw() +
+    labs(x = "R Squared", y = "Nr. Data Points")
+  
+  l_out <- list(
+    tbl_rsq = tbl_rsq,
+    tbl_rsq_agg = tbl_labels,
+    hist_rsq = hist_rsq
+  )
+  
+  return(l_out)
+}
+
+
+plot_simult_comp_preds <- function(p_id, l_results, tbl_simult) {
+  #' 
+  #' @description compare city-block and euclidean r^2 
+  #' @param l_results_cityblock list with summarized model results using city-block distance 
+  #' @param l_results_euclidean list with summarized model results using euclidean distance
+  #' @return list with tbl containing all r^2s, tbl containing aggregated r^2s,
+  #' and a histogram displaying the two r^2 distributions
+  #'  
+  tbl_participant <- tbl_simult %>% filter(participant_id == p_id)
+  tbl_results <- l_results$tbl_results %>% filter(participant_id == p_id)
+  l_participant_split <- split(
+    tbl_participant, 
+    interaction(tbl_participant$comparison_pool_binary, tbl_participant$session)
+  )
+  l_results_split <- split(
+    tbl_results, 
+    interaction(tbl_results$comparison_pool, tbl_results$session)
+  )
+  tbl_corr <- tibble()
+  for (p in unique(tbl_results$comparison_pool)) {
+    for (s in  unique(tbl_results$session)) {
+      filt <- which(names(l_results_split) == str_c(p, ".", s))
+      l_participant_split[[filt]]$preds <- pred_cityblock(
+        as_vector(l_results_split[[filt]][, c("c", "w1")]), 
+        l_participant_split[[filt]]
+      )
+      tmp <- tibble(
+        comparison_pool_binary = p,
+        session = s,
+        c = cor(
+          l_participant_split[[filt]]$response_scaled, 
+          l_participant_split[[filt]]$preds
+        )
+      )
+      tbl_corr <- rbind(tbl_corr, tmp)
+    }
+  }
+  tbl_participant <- reduce(l_participant_split, rbind)
+  pl_pred_data <- ggplot(tbl_participant, aes(preds, response_scaled)) +
+    geom_point(shape = 1) +
+    geom_label(data = tbl_corr, aes(x = .8, y = .25, label = str_c("r = ", round(c, 2)))) +
+    facet_grid(comparison_pool_binary ~ session) +
+    geom_abline(slope = 1) +
+    theme_bw() +
+    labs(x = "Prediction", y = "Response Scaled")
+  
+  l_out <- list(tbl_participant = tbl_participant, pl_pred_data = pl_pred_data)
+  
+  return(l_out)
+  
+}
