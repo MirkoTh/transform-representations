@@ -79,7 +79,7 @@ fit_one_session <- function(p_id, tp, pool, tbl_data, metric) {
   tbl_fit <- tbl_data %>% 
     filter(
       participant_id == p_id & session == tp & comparison_pool_binary == pool
-      )
+    )
   if (metric == "cityblock") f = similarity_cityblock
   if (metric == "euclidean") f = similarity_euclidean
   results <- optim(
@@ -214,3 +214,64 @@ compare_rsqs <- function(l_results_cityblock, l_results_euclidean) {
   
   return(l_out)
 }
+
+
+# Exemplary Predictions ---------------------------------------------------
+
+
+l_cityblock
+
+p_id <- "5d3587a13e11900001093ae8"
+l_results <- l_cityblock
+
+
+
+plot_simult_comp_preds <- function(p_id, l_results, tbl_simult) {
+  tbl_participant <- tbl_simult %>% filter(participant_id == p_id)
+  tbl_results <- l_results$tbl_results %>% filter(participant_id == p_id)
+  l_participant_split <- split(
+    tbl_participant, 
+    interaction(tbl_participant$comparison_pool_binary, tbl_participant$session)
+  )
+  l_results_split <- split(
+    tbl_results, 
+    interaction(tbl_results$comparison_pool, tbl_results$session)
+  )
+  for (p in tbl_results$comparison_pool) {
+    for (s in  tbl_results$session) {
+      filt <- which(names(l_results_split) == str_c(p, ".", s))
+      l_participant_split[[filt]]$preds <- pred_cityblock(
+        as_vector(l_results_split[[filt]][, c("c", "w1")]), 
+        l_participant_split[[filt]]
+      )
+    }
+  }
+  tbl_participant <- reduce(l_participant_split, rbind)
+  pl_pred_data <- ggplot(tbl_participant, aes(preds, response_scaled)) +
+    geom_point(shape = 1) +
+    facet_grid(comparison_pool_binary ~ session) +
+    geom_abline(slope = 1) +
+    theme_bw() +
+    labs(x = "Prediction", y = "Response Scaled")
+  
+  l_out <- list(tbl_participant = tbl_participant, pl_pred_data = pl_pred_data)
+  
+  return(l_out)
+  
+}
+
+
+
+tmp <- tbl_simult %>% group_by(participant_id) %>% count()
+random_id <- as_vector(tmp[ceiling(runif(1, 1, nrow(tmp))), "participant_id"])
+l_preds_city <- plot_simult_comp_preds(random_id, l_cityblock, tbl_simult)
+l_preds_eucl <- plot_simult_comp_preds(random_id, l_euclidean, tbl_simult)
+
+l_preds_city$pl_pred_data
+l_preds_eucl$pl_pred_data
+
+
+
+
+
+
