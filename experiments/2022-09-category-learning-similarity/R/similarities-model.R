@@ -33,37 +33,6 @@ tbl_simult <- tbl_simult %>%
     response_scaled = response/max(response)
   )
 
-similarity_euclidean <- function(x, tbl_data) {
-  c <- x[1]
-  w1 <- x[2]
-  w2 <- 1 - w1
-  sims <- exp(-c^2*(w1*tbl_data$d_x1^2 + w2*tbl_data$d_x2^2))
-  rsq <- (sims - tbl_data$response_scaled)^2
-  return(sum(rsq))
-}
-
-pred_euclidean <- function(x, tbl_data) {
-  c <- x[1]
-  w1 <- x[2]
-  w2 <- 1 - w1
-  return(exp(-c^2*(w1*tbl_data$d_x1^2 + w2*tbl_data$d_x2^2)))
-}
-
-similarity_cityblock <- function(x, tbl_data) {
-  c <- x[1]
-  w1 <- x[2]
-  w2 <- 1 - w1
-  sims <- exp(-c*(w1*tbl_data$d_x1 + w2*tbl_data$d_x2))
-  rsq <- (sims - tbl_data$response_scaled)^2
-  return(sum(rsq))
-}
-
-pred_cityblock <- function(x, tbl_data) {
-  c <- x[1]
-  w1 <- x[2]
-  w2 <- 1 - w1
-  return(exp(-c*(w1*tbl_data$d_x1 + w2*tbl_data$d_x2)))
-}
 
 tbl_p1 <- tbl_simult %>% filter(participant_id == "55c333b0fdf99b1dbd2131bd")
 tbl_data <- tbl_p1

@@ -2048,3 +2048,62 @@ participants_ntrials <- function(my_l, stage) {
       by = "participant_id", suffix = c("_seq", "_simult")
     )
 }
+
+
+similarity_euclidean <- function(x, tbl_data) {
+  #' 
+  #' @description similarity using euclidean distance
+  #' @param x vector with c and w1 parameter
+  #' @param tbl_data data with one-dimensional distances d_x1 and d_x2
+  #' @return sum of squares over all data points
+  #' 
+  c <- x[1]
+  w1 <- x[2]
+  w2 <- 1 - w1
+  sims <- exp(-c^2*(w1*tbl_data$d_x1^2 + w2*tbl_data$d_x2^2))
+  rsq <- (sims - tbl_data$response_scaled)^2
+  return(sum(rsq))
+}
+
+pred_euclidean <- function(x, tbl_data) {
+  #' 
+  #' @description predict similarities using city block distance
+  #' and fitted c and w1 parameters
+  #' @param x vector with c and w1 parameter
+  #' @param tbl_data data with one-dimensional distances d_x1 and d_x2
+  #' @return predictions for every row in tbl_data
+  #' 
+  c <- x[1]
+  w1 <- x[2]
+  w2 <- 1 - w1
+  return(exp(-c^2*(w1*tbl_data$d_x1^2 + w2*tbl_data$d_x2^2)))
+}
+
+similarity_cityblock <- function(x, tbl_data) {
+  #' 
+  #' @description similarity using city block distance
+  #' @param x vector with c and w1 parameter
+  #' @param tbl_data data with one-dimensional distances d_x1 and d_x2
+  #' @return sum of squares over all data points
+  #'
+  c <- x[1]
+  w1 <- x[2]
+  w2 <- 1 - w1
+  sims <- exp(-c*(w1*tbl_data$d_x1 + w2*tbl_data$d_x2))
+  rsq <- (sims - tbl_data$response_scaled)^2
+  return(sum(rsq))
+}
+
+pred_cityblock <- function(x, tbl_data) {
+  #' 
+  #' @description predict similarities using euclidean distance
+  #' and fitted c and w1 parameters
+  #' @param x vector with c and w1 parameter
+  #' @param tbl_data data with one-dimensional distances d_x1 and d_x2
+  #' @return predictions for every row in tbl_data
+  #' 
+  c <- x[1]
+  w1 <- x[2]
+  w2 <- 1 - w1
+  return(exp(-c*(w1*tbl_data$d_x1 + w2*tbl_data$d_x2)))
+}
