@@ -44,22 +44,6 @@ similarity_euclidean(c(.5, .5), tbl_p1)
 # Fit Both Metrics --------------------------------------------------------
 
 
-fit_one_session <- function(p_id, tp, pool, tbl_data, metric) {
-  tbl_fit <- tbl_data %>% 
-    filter(
-      participant_id == p_id & session == tp & comparison_pool_binary == pool
-    )
-  if (metric == "cityblock") f = similarity_cityblock
-  if (metric == "euclidean") f = similarity_euclidean
-  results <- optim(
-    c(.5, .5), 
-    f, 
-    tbl_data = tbl_fit, 
-    lower = c(.0, .01), upper = c(10, .99),
-    method = "L-BFGS-B"
-  )
-  return(results)
-}
 
 tbl_design <- tbl_simult %>%
   group_by(participant_id, n_categories, comparison_pool_binary, session) %>%
@@ -70,7 +54,7 @@ tbl_design <- tbl_simult %>%
 n_workers_available <- parallel::detectCores()
 plan(multisession, workers = n_workers_available - 2)
 
-fit_safely <- safely(fit_one_session)
+fit_safely <- safely(fit_one_subset)
 
 # fit cityblock
 l_results_cityblock <- furrr::future_pmap(

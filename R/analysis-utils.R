@@ -2107,3 +2107,34 @@ pred_cityblock <- function(x, tbl_data) {
   w2 <- 1 - w1
   return(exp(-c*(w1*tbl_data$d_x1 + w2*tbl_data$d_x2)))
 }
+
+fit_one_subset <- function(p_id, tp, pool, tbl_data, metric) {
+  #' 
+  #' @description optimize c and w parameters for selected data set
+  #' @param p_id participant id
+  #' @param tp time point ("Before Training" or "After Training")
+  #' @param pool indicating same or different category of two stimuli
+  #' note. same mapping as for category-learning group is used for control group
+  #' @param tbl_data data with one-dimensional distances d_x1 and d_x2
+  #' @param metric euclidean or city block
+  #' @return optimization results
+  #' 
+  tbl_fit <- tbl_data %>% 
+    filter(
+      participant_id == p_id & session == tp & comparison_pool_binary == pool
+    )
+  if (metric == "cityblock") f = similarity_cityblock
+  if (metric == "euclidean") f = similarity_euclidean
+  results <- optim(
+    c(.5, .5), 
+    f, 
+    tbl_data = tbl_fit, 
+    lower = c(.0, .01), upper = c(10, .99),
+    method = "L-BFGS-B"
+  )
+  return(results)
+}
+
+
+
+
