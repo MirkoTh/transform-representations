@@ -4,8 +4,8 @@ library(ggstar)
 
 files <- c(
   "R/utils.R", "R/plotting.R", 
-  "experiments/2022-02-category-learning/R/analysis-utils.R",
-  "experiments/2022-02-category-learning/R/analysis-plotting.R"
+  "R/analysis-utils.R",
+  "R/analysis-plotting.R"
 )
 walk(files, source)
 
@@ -22,9 +22,9 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- crossing(
-  n_categories = c(2L), cat_type = c("prototype"), # "rule", 
+  n_categories = c(4L), cat_type = c("prototype"), # "rule", 
   prior_sd = c(.75), sampling = c("improvement"),
-  constrain_space = c(TRUE), category_shape = c("ellipses"),
+  constrain_space = c(TRUE), category_shape = c("square"),
   is_reward = FALSE
 )
 l_info <- pmap(
@@ -43,19 +43,21 @@ tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
 
 
 l_stimuli <- make_stimuli(l_info[[1]])
-l_stimuli[[1]]$category <- factor(l_stimuli[[1]]$category, labels = c("Non-Target", "Target"))
+l_stimuli[[1]]$category <- factor(l_stimuli[[1]]$category, labels = seq(1, 4, by = 1))
 
 tbl_star <- tibble(
-  x1 = c(4.65, 5.25),
-  x2 = c(7.35, 6.75)
+  x1 = c(4.55, 5.45),
+  x2 = c(7.1, 6.9)
 )
 
 plt_categories <- ggplot() +
   geom_point(data = l_stimuli[[1]], aes(x1, x2, color = category), size = 4) +
-  geom_point(data = l_stimuli[[2]]$tbl_ellipses, aes(x_rotated, y_rotated), alpha = .2) +
-  #geom_star(data = tbl_star, aes(x1, x2), color = "gold", fill = "gold", size = 4) +
+  #geom_point(data = l_stimuli[[2]]$tbl_ellipses, aes(x_rotated, y_rotated), alpha = .2) +
+  geom_hline(yintercept = 4.5) +
+  geom_vline(xintercept = 4.5) +
+  #geom_star(data = tbl_star, aes(x1, x2), color = "red", fill = "red", size = 4) +
   theme_bw() +
-  scale_color_brewer(name = "Category", palette = "Set1") +
+  scale_color_viridis_d(name = "Category") +
   scale_x_continuous(breaks = seq(0, 9, 2)) +
   scale_y_continuous(breaks = seq(0, 9, 2)) +
   # theme(
@@ -107,7 +109,7 @@ plt_prior_stim <- ggplot(tbl_prior, aes(x1, x2)) +
   # geom_segment(aes(x = -.5, xend = 5.25, y = 6.75, yend = 6.75), color = "darkorchid2", size = 1.5) +
   # geom_segment(aes(x = 4.75, xend = 4.75, y = -.5, yend = 7.25), color = "darkorchid2", size = 1.5) +
   # geom_segment(aes(x = 5.25, xend = 5.25, y = -.5, yend = 6.75), color = "darkorchid2", size = 1.5) +
-  geom_star(data = tbl_star, aes(x1, x2), color = "gold", fill = "gold", size = 4) +
+  geom_star(data = tbl_star, aes(x1, x2), color = "red", fill = "red", size = 4) +
   theme_bw() +
   labs(
     title = "Stimulus Priors",
