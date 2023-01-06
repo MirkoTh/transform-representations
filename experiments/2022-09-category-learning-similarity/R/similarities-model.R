@@ -80,6 +80,10 @@ if(!is.null(map(l_results_euclidean, "error") %>% unlist())) {
   stop("error for one or more participants")
 }
 
+
+compare_rsqs(l_results_cityblock, l_results_euclidean)
+
+
 l_cityblock <- summarize_model_results(l_results_cityblock, tbl_design)
 l_euclidean <- summarize_model_results(l_results_euclidean, tbl_design)
 
