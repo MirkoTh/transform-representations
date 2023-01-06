@@ -148,7 +148,8 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-l_pl[[1]] + labs(x = "Block of 20 Trials", y = "Categorization Accuracy", caption = "")
+pl_cat_agg <- l_pl[[1]] + labs(x = "Block of 20 Trials", y = "Categorization Accuracy") + # , caption = ""
+  scale_color_viridis_d(name = "Category")
 # by-participant trajectories
 #l_pl[[2]]
 
@@ -250,6 +251,8 @@ sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim)
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
+
+grid.arrange(pl_cat_agg, l_pl_sim[[2]], nrow = 1)
 
 
 tbl_sim_agg_subj <- tbl_sim %>%

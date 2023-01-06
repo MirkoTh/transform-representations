@@ -257,6 +257,8 @@ plot_categorization_accuracy_against_blocks <-
       as.numeric(as.character(tbl_cat_agg_ci$trial_id_binned))
     tbl_cat_agg_ci <- tbl_cat_agg_ci %>%
       mutate(cat_true = factor(cat_true, labels = c("Bukil", "Venak", "Monus", "Ladiv")[1:max_categories]))
+    tbl_cat_agg_ci <- tbl_cat_agg_ci %>%
+      mutate(cat_true = factor(cat_true, labels = seq(1, 4, by = 1)[1:max_categories]))
     
     tbl_chance <- chance_performance_cat(tbl_cat)
     tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
@@ -782,8 +784,7 @@ plot_similarity_against_distance <-
       scale_x_continuous(breaks = seq(2, 10, by = 2)) +
       coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
-           y = str_c("Average Similarity (Range: ", sim_edges[1], " - ", sim_edges[2], ")"),
-           title = "Mean Effect")
+           y = str_c("Average Similarity (Range: ", sim_edges[1], " - ", sim_edges[2], ")")) # ,title = "Mean Effect"
     
     return(list(pl_sample = pl_sample, pl_agg = pl_agg))
   }
