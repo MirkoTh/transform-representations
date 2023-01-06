@@ -2214,10 +2214,10 @@ compare_rsqs <- function(l_results_cityblock, l_results_euclidean) {
   
   hist_rsq <- ggplot(
     tbl_rsq_long, aes(value, group = name)) + 
-    geom_histogram(aes(fill = name), color = "white", binwidth = 5) +
+    geom_histogram(aes(fill = name), color = "white", binwidth = 1) +
     geom_label(
       data = tbl_labels, 
-      aes(x = 30, y = 225, label = str_c("Mean = ", round(mean_value, 1)))
+      aes(x = 7.5, y = 100, label = str_c("Mean = ", round(mean_value, 1)))
     ) +
     scale_fill_viridis_d(guide = "none") +
     facet_wrap(~ name) +
