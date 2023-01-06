@@ -1008,33 +1008,6 @@ function set_category_instruction(n_categories) {
     return (text)
 }
 
-
-function load_csv() {
-    var txt = d3.json("rotate-conditions.json", function (data) {
-        var condition_counts;
-        //condition_counts = Object.values(data);
-        condition_counts = Object.keys(data).map(function (e) {
-            return data[e]
-        })
-        var max_counts = 9999999999;
-        for (var i = 0; i < condition_counts.length; i++) {
-            var obj = condition_counts[i]
-            if (obj < max_counts) {
-                max_counts = obj
-                condition_id = [1, 2, 3][i]
-            }
-        }
-        n_categories = [1, 2, 3][(condition_id % 3)]
-        const str_idx = "condition" + condition_id
-        data[str_idx] += 1;
-        document.getElementById("condition_id").innerHTML = condition_id
-        document.getElementById("n_categories").innerHTML = n_categories
-        saveConditions(JSON.stringify(data));
-    });
-    clickStart('page0', 'page1')
-}
-
-
 function condition_and_ncategories() {
     n_different_categories = 3;
     var condition_id = Math.ceil(Math.random() * n_different_categories);

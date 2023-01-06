@@ -124,10 +124,10 @@
                 You are randomly going to be assigned to one of several conditions. <br>
                 Depending on the condition you are in, you are going to carry out a subset of the following tasks:
                 <ul class="centeredtext">
-                    <li style="font-size: 70%;"><b>Simultaneous Comparison:</b> Compare two monsters presented
-                        simultaneously side by side</li>
-                    <li style="font-size: 70%;"><b>Sequential Comparison:</b> Use your memory to compare the currently
-                        presented monster to the monster presented just before</li>
+                    <li style="font-size: 70%;"><b>Simultaneous Category Comparison:</b> Decide whether two monsters
+                        presented simultaneously side by side likely come from the same category</li>
+                    <li style="font-size: 70%;"><b>Sequential Object Comparison:</b> Use your memory to compare the
+                        currently presented monster to the monster presented just before</li>
                     <li style="font-size: 70%;"><b>Category Learning</b>: The monsters come from different tribes; learn
                         to categorize them into the tribes they come from over several trials</li>
                 </ul> <br>
@@ -227,27 +227,21 @@
             <p>
                 Your session today will be split up into two tasks:
             </p>
-            <!-- <ol>
-                <li> -->
-            <b>Simultaneous Comparison:</b> Compare the two monsters, which are
+            <b>Simultaneous Category Comparison:</b> Compare the two monsters, which are
             presented side-by-side responding with number keys 1-8.<br>
-            Please rate the monsters by how much you think they look similar to each other.<br>
+            Please rate the monsters by how much you think they come from the same category.<br>
             Use the following scale for your similarity rating of the two monsters:<br>
-            (1) they look very different<br>
-            (8) they look very similar<br>
-            Use number keys (2) - (7) for intermediate similarity ratings.<br>
+            (1) they come from different categories<br>
+            (8) they come from the same category<br>
+            Use number keys (2) - (7) for intermediate ratings.<br>
             Try to use the whole scale of responses for your ratings.<br>
             <b> --> Takes approx. 10 min</b> if you do not make it to the bonus round.<br>
             <b> --> Takes approx. 20 min</b> if you make it to the bonus round.<br><br>
-            <!-- </li>
-                <li> -->
             <span id="taskTextCondition"></span>
-            <!-- </li> -->
             <br>
             </ol>
             <button type="button" name="bbutton" class="default_button" ; onclick="clickStart('page2', 'page1')" ;> Back
             </button>
-            <!-- page2b -->
             <button type="button" name="button" class="default_button" ; onclick="clickStart('page2', 'page2b')" ;>
                 Check Comprehension
             </button>
@@ -260,25 +254,29 @@
                     answer
                     all of the questions correctly.</p>
                 <fieldset>
-                    <b>What is your goal in the simulatenous comparison task?</b><br>
+                    <b>What is your goal in the simulatenous category comparison task?</b><br>
                     <label for="q1l1" style="font-weight: normal;"><input type="radio" name="q1" id="l11"><span
                             id="q1l11"> Compare the colors of the two monsters. </span></label><br>
                     <label for="q1l2" style="font-weight: normal;"><input type="radio" name="q1" id="icheck1"><span
-                            id="q1icheck1"> Compare the two monsters according to the spikiness of their head and the
-                            fill of their belly.
+                            id="q1icheck1"> Use the spikiness of the head and the
+                            fill of the belly of the two monsters to decide if they likely come from the same category.
                         </span></label><br>
                     <label for="q1l3" style="font-weight: normal;"><input type="radio" name="q1" id="l12"><span
                             id="q1l12"> Compare the monster to the monster on the previous trial. </span></label><br>
                     <br>
                 </fieldset>
                 <fieldset>
-                    <b>How do you respond in the simultaneous comparison task? </b><br>
+                    <b>How do you respond in the simultaneous category comparison task? </b><br>
                     <label for="q2l1" style="font-weight: normal;"><input type="radio" name="q2" id="l21" /><span
-                            id="q2l21"> Using the sliders displayed on the screen. </span></label><br>
+                            id="q2l21"> Using keys 1-8 on the keyboard: 1 means likely same category, 8 means likely
+                            different category.
+                        </span></label><br>
                     <label for="q2l2" style="font-weight: normal;"><input type="radio" name="q2" id="l22" /><span
-                            id="q2l22"> Using the right and left mouse buttons </span></label><br>
+                            id="q2l22"> Using the right and left mouse buttons. </span></label><br>
                     <label for="q2l3" style="font-weight: normal;"><input type="radio" name="q2" id="icheck2"> <span
-                            id="q2icheck2"> Using keys 1-8 on the keyboard</span></label><br>
+                            id="q2icheck2"> Using keys 1-8 on the keyboard: 1 means likely different category, 8 means
+                            likely same category.</span>
+                    </label><br>
                     <br>
                 </fieldset>
                 <fieldset>
@@ -308,14 +306,13 @@
                     <label for="q5l1" style="font-weight: normal;"><input type="radio" name="q5" id="l51"><span
                             id="q5l51"> 20 minutes on average.</span></label><br>
                     <label for="q5l2" style="font-weight: normal;"><input type="radio" name="q5" id='l52'><span
-                            id="q5l52"> Overall about 30 minutes.</span></label><br>
+                            id="q5l52"> 30 minutes if I make it to the bonus round.</span></label><br>
                     <label for="q5l3" style="font-weight: normal;"><input type="radio" name="q5" id='icheck5'><span
                             id="q5icheck5"> Approx. 40 minutes if I do not make it to the bonus round; about 50 minutes
                             if I make it to the bonus round.</span></label><br>
                     <label for="q5l4" style="font-weight: normal;"><input type="radio" name="q5" id='l53'><span
                             id="q5l53"> Approx. 90 minutes if I do not make it to the bonus round; about 100 minutes if
-                            I
-                            make it to the bonus round.</span></label><br>
+                            I make it to the bonus round.</span></label><br>
                 </fieldset>
             </fieldset>
             <br>
@@ -327,11 +324,11 @@
         </div>
 
         <div id="page3" style="display:none">
-            <h1>Ready for the simultaneous comparison task?</h1>
+            <h1>Ready for the simultaneous category comparison task?</h1>
             <p>If you feel prepared to start, please press the button below. <br>
-                Compare the spikiness of the monsters' head and
-                the fill of the monsters' belly. <br>
-                Respond using the response keys 1-8 to give your similarity rating.<br>
+                Use the spikiness of the monsters' head and
+                the fill of the monsters' belly to decide if they likeley come from the same category. <br>
+                Respond using the response keys 1-8 to give your response.<br>
                 You are given three practice trials to get used to the procedure. <br>
                 These trials are not going to be used to calculate your bonus payment.
             </p>
@@ -342,7 +339,8 @@
 
         <div id="page3.1" style="display:none">
             <h1>Practice is Over</h1>
-            <p>The practice trials are now over. Press the button below to start with the Simultaneous Comparison Task.
+            <p>The practice trials are now over. Press the button below to start with the Simultaneous Category
+                Comparison Task.
             </p>
 
             <button type="button" name="button" class="default_button" ;
@@ -420,7 +418,7 @@
                 Part two of the study
             </h1>
             <p>
-                In the second part, your task is very similar to the task in the first part: <br>
+                In the second part, your task is slightly different to the task in the first part: <br>
                 You have to judge how similar the current monster is to the monster on the
                 previous trial.<br><br>
                 <b>Responding:</b><br>
@@ -443,8 +441,7 @@
                 respond faster if you respond too slowly!<br>
             </p>
             <button type="button" name="button" class="default_button" ; onclick="clickStart('page7b', 'page8')" ;>
-                Start
-                Similarity Judgments</button>
+                Start Sequential Similarity Judgments</button>
         </div>
 
         <div id="trial_nr_cat" style="display:none">0</div>
@@ -529,8 +526,7 @@
                 By clicking on the button below, you get to part 3.
             </p>
             <button type="button" name="button" class="default_button" ; onclick="clickStart('page11', 'page12')" ;>
-                Instructions Simultaneous Comparison Task </button>
-
+                Instructions Part 3 </button>
         </div>
 
         <div id="trial_nr_cr2" style="display:none">0</div>
@@ -539,10 +535,12 @@
                 Part 3 of the study!
             </h1>
             <p>
-                The third part is the final part of the study. It is again the simultaneous matching task from part
-                1.<br>
-                That is, your task is again to compare the two monsters presented on the screen.<br>
+                The third part is the final part of the study. It is again the simultaneous category comparison task
+                from part 1.<br>
+                That is, your task is again to decide whether the two monsters presented on the screen likely come from
+                the same category.<br>
                 Use the number keys 1-8 on your keyboard to respond.<br>
+                8 means likely from the same category; 1 means likely from a different category.<br>
                 By clicking on the button below, you start the third and last part of that study.
             </p>
             <button type="button" name="button" class="default_button" ; onclick="next_item_similarity_simult('page12')"
@@ -557,7 +555,7 @@
             <p>
                 In addition to the base payment of £5.00 you earn a bonus of £<span id="total_bonus"></span>
                 .<br>
-                Your bonus in the simultaneous comparison task is £<span id="cr_bonus"></span>.<br>
+                Your bonus in the simultaneous category comparison task is £<span id="cr_bonus"></span>.<br>
                 Your bonus in the second task is £<span id="cat_bonus"></span><br><br>
                 Please be patient! The payments for your participation will be paid within the next few days.<br>
             </p>
@@ -609,7 +607,6 @@
                 You did not make it to the third part of the study because your performance was below the predefined
                 threshold.
                 Your overall internal consistency is <span id="sim_consistency_overall"></span>.<br>
-
                 Please be patient! The base payment for your participation will be paid within the next few days.
             </p>
 
