@@ -18,7 +18,7 @@ files <- c(
   "R/summarySEwithin.R",
   "R/summarySE.R",
   "R/normDataWithin.R",
-  "experiments/2022-07-category-learning-II/R/stan-models.R"
+  "R/stan-models.R"
 )
 walk(files, source)
 
