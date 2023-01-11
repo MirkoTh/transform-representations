@@ -150,6 +150,8 @@ compare_subsequent_stimuli <- function(l_info) {
   pb <- txtProgressBar(min = 1, max = l_info$nruns, initial = 1, char = "*", style = 2)
   l_x_previous <- list()
   m_vcov <- matrix(c(l_info$prior_sd, 0, 0, l_info$prior_sd), nrow = 2)
+  tbl_ds <- tibble(d_city = c(), d_euclidean = c())
+  
   
   for (i in 1:l_info$nruns) {
     # perceive a randomly sampled stimulus
@@ -190,6 +192,13 @@ compare_subsequent_stimuli <- function(l_info) {
       ))
     }
     
+    if(!is_null(l_x_previous)) {
+      d_city <- sum(l_x_previous$X_new - l_x$X_new)
+      d_euclidean <- sqrt(sum((l_x_previous$X_new - l_x$X_new) ^2))
+      tbl_ds <- rbind(tbl_ds, tibble(d_city, d_euclidean))
+    }
+    l_x_previous <- l_x
+    
     setTxtProgressBar(pb,i)
   }
   close(pb)
@@ -201,7 +210,8 @@ compare_subsequent_stimuli <- function(l_info) {
   tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
   
   l_out <- list(
-    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m, l_info = l_info
+    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m, l_info = l_info,
+    tbl_ds = tbl_ds
   )
   return(l_out)
 }

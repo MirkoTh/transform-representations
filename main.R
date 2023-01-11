@@ -44,6 +44,16 @@ l_info <- pmap(
     )
   )
 )
+
+l_info_seq <- pmap(
+  tbl_vary[, c("prior_sd", "sampling", "constrain_space", "is_reward")] %>% unique(), ~ append(
+    l_info_prep, 
+    list(
+      prior_sd = ..1, sampling = ..2, 
+      constrain_space = ..3, is_reward = ..4
+      )
+  )
+)
 tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
   mutate(condition_id = seq(1:length(l_info))) %>%
   relocate(condition_id, .before = n_stimuli)
@@ -61,7 +71,11 @@ l_category_results <- future_map(
   l_info, categorize_stimuli, 
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
-l_seq_results <- compare_subsequent_stimuli(l_info[[1]])
+
+l_seq_results <- future_map(
+  l_info, compare_subsequent_stimuli, 
+  .progress = TRUE, .options = furrr_options(seed = TRUE)
+)
 
 td <- lubridate::today()
 
