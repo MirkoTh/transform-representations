@@ -19,7 +19,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 5000
+nruns <- 100
 
 # constant
 l_info_prep <- list(
@@ -61,6 +61,7 @@ l_category_results <- future_map(
   l_info, categorize_stimuli, 
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
+l_seq_results <- compare_subsequent_stimuli(l_info[[1]])
 
 td <- lubridate::today()
 

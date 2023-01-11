@@ -115,6 +115,98 @@ categorize_stimuli <- function(l_info) {
 }
 
 
+
+compare_subsequent_stimuli <- function(l_info) {
+  #' main sequential comparison function
+  #' 
+  #' @description compare stimuli, store accepted samples, and visualize results
+  #' 
+  #' @param l_info parameter list with fields n_stimuli, n_categories, prior_sd, nruns
+  #' @return a list with prior, samples, and posterior in [[1]] and some
+  #' visualizations in [[2]]
+  #' 
+  
+  l_tmp <- make_stimuli(l_info)
+  tbl <- l_tmp[[1]]
+  l_info <- l_tmp[[2]]
+  # compute priors
+  l_m <- priors(l_info, tbl)
+  
+  # save prior for later and copy original tbl
+  l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
+  tbl_prior_long <- l_prior_prep[[1]]
+  l_prior <- l_prior_prep[[2]]
+  tbl_new <- tbl
+  
+  unique_boundaries <- boundaries(tbl, l_info)
+  thx_grt <- thxs(unique_boundaries)
+  
+  my_dmvnorm <- function(x1, x2, x_data, m_vcov) {
+    dmvnorm(x_data, mean = c(x1, x2), sigma = m_vcov)
+  }
+  
+  # Seq Comparison Simulation -----------------------------------------------
+  
+  pb <- txtProgressBar(min = 1, max = l_info$nruns, initial = 1, char = "*", style = 2)
+  l_x_previous <- list()
+  m_vcov <- matrix(c(l_info$prior_sd, 0, 0, l_info$prior_sd), nrow = 2)
+  
+  for (i in 1:l_info$nruns) {
+    # perceive a randomly sampled stimulus
+    # while(l_x$stim_id_cur != 1){}
+    l_x <- perceive_stimulus(tbl, l_info)
+    
+    # every stimulus is accepted, but assigned to the stimulus id, which is most likely
+    # most likely can be (a) according to prior means and sds
+    # or (b) according to sampling algorithm
+    is_in_shown_space <- (
+      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
+        between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+    )
+    
+    v_priormean <- as_vector(l_x$X_old[l_x$stim_id_cur, ])
+    v_current <- as_vector(l_x$X_new)
+    d_current <- dmvnorm(v_current, mean = v_priormean, sigma = m_vcov)
+    onehots <- one_hot(l_info, l_x$cat_cur)
+    m_onehots <- as_tibble(t(as.matrix(onehots)))
+    ps_stim <- pmap_dbl(l_x$X_old[, c("x1", "x2")], my_dmvnorm, x_data = v_current, m_vcov = m_vcov)
+    
+    if (l_info$sampling == "improvement" & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
+      idx_max <- which.max(ps_stim)
+      idx_tbl <- l_x$X_mean$stim_id == idx_max
+      tbl_new <- rbind(tbl_new, tibble(
+        stim_id = idx_max, x1 = v_current[[1]], x2 = v_current[[2]],
+        cat_type = l_info$cat_type, m_onehots, category = l_x$cat_cur
+      ))
+    } else if (l_info$sampling != "improvement" & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
+      p_thx <- runif(1)
+      csum_ps <- cumsum(ps_stim)
+      thxs <- csum_ps / max(csum_ps)
+      idx_sampled <- sum(p_thx > thxs) + 1
+      idx_tbl <- l_x$X_mean$stim_id == idx_sampled
+      tbl_new <- rbind(tbl_new, tibble(
+        stim_id = idx_sampled, x1 = v_current[[1]], x2 = v_current[[2]],
+        cat_type = l_info$cat_type, m_onehots, category = l_x$cat_cur
+      ))
+    }
+    
+    setTxtProgressBar(pb,i)
+  }
+  close(pb)
+  
+  # Post Processing ---------------------------------------------------------
+  
+  nstart <- nrow(tbl)
+  nnew <- nrow(tbl_new) - nstart
+  tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
+  
+  l_out <- list(
+    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m, l_info = l_info
+  )
+  return(l_out)
+}
+
+
 make_stimuli <- function(l_info) {
   #' create stimuli from 2D feature space
   #' 
@@ -1084,7 +1176,7 @@ sum_of_pairwise_distances <- function(tbl_posterior) {
     tp = factor(
       rep(c("Before Training", "After Training"), 8), 
       levels = c("Before Training", "After Training"), ordered = TRUE
-      ),
+    ),
     cat1 = rep(1:4, each = 4),
     cat2 = c(
       1, 1, list(c(2, 3, 4)), list(c(2, 3, 4)),
@@ -1108,5 +1200,5 @@ sum_of_pairwise_distances <- function(tbl_posterior) {
     mutate(
       ds_abs = ds_sum - lag(ds_sum, 1),
       ds_prop = ds_sum / lag(ds_sum, 1)
-      ) %>% ungroup()
+    ) %>% ungroup()
 }
