@@ -12,14 +12,14 @@ files <- c(
   "R/utils.R", "R/plotting.R", 
   "R/analysis-utils.R",
   "R/analysis-plotting.R"
-  )
+)
 walk(files, source)
 
 
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 100
+nruns <- 500
 
 # constant
 l_info_prep <- list(
@@ -46,16 +46,14 @@ l_info <- pmap(
 )
 
 l_info_seq <- pmap(
-  tbl_vary[, c(
-    "prior_sd", "sampling", "constrain_space", 
-    "is_reward", "category_shape", "n_categories")] %>% unique(), ~ append(
-    l_info_prep, 
-    list(
-      prior_sd = ..1, sampling = ..2, 
-      constrain_space = ..3, is_reward = ..4,
-      category_shape = ..5, n_categories = ..6
+  tbl_vary %>% filter(cat_type == "exemplar") %>% mutate(cat_type == "no category") %>% unique(), ~ append(
+      l_info_prep, 
+      list(
+        n_categories = ..1, cat_type = ..2, prior_sd = ..3,
+        sampling = ..4, constrain_space = ..5,
+        category_shape = ..6, is_reward = ..7
       )
-  )
+    )
 )
 tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
   mutate(condition_id = seq(1:length(l_info))) %>%
@@ -87,18 +85,72 @@ l_seq_results <- future_map(
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
+
 td <- lubridate::today()
-
-
-compare_subsequent_stimuli(l_info_seq[[1]])
 
 
 saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
 l_category_results <- readRDS(file = "data/2022-08-24-grid-search-vary-constrain-space.rds")
+saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
+l_seq_results <- readRDS(file = "data/2023-01-12-grid-search-sequential-comparison.rds")
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
+
+
+
 # Post Processing & Plotting ----------------------------------------------
 
+
+
+
+diagnostics_seq <- function(l, sim_center, is_simulation) {
+  
+  env <- rlang::current_env()
+  list2env(l, env)
+  
+  l_results <- add_centers(tbl_new, l_m, l_info)
+  l_results$tbl_posterior <- distance_to_closest_center_simulation(
+    l_results$tbl_posterior, sim_center, is_simulation
+    )
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
+  
+  tmp <- l$tbl_new
+  l_tmp <- split(tbl_new, tbl_new$timepoint)
+  tmp_after <- l_tmp[[1]] %>% left_join(
+    l_tmp[[2]][, c("stim_id", "x1", "x2")], 
+    by = "stim_id", suffix = c("_after", "_before")
+  )
+  tmp_before <- l_tmp[[2]] %>% left_join(
+    l_tmp[[2]][, c("stim_id", "x1", "x2")], 
+    by = "stim_id", suffix = c("_after", "_before")
+  )
+  tmp_both <- rbind(tmp_after, tmp_before)
+  tmp_after_agg <- tmp_after %>% group_by(stim_id, timepoint) %>%
+    summarize(x1_after = mean(x1_after), x2_after = mean(x2_after))
+  
+  pl_movement <- ggplot(tmp_both, aes(x1_before, x2_before)) +
+    geom_point() +
+    geom_segment(aes(
+      x = x1_before, xend = x1_after, y = x2_before, yend = x2_after
+    ), arrow = arrow(angle = 15, length = unit(.05, "inches")
+    ), alpha = .15) + geom_point(
+      data = tmp_after_agg, aes(x1_after, x2_after), size = 3, color = "#0099FF"
+    ) + facet_wrap(~ timepoint) +
+    theme_bw() +
+    labs(x = expr(x[1]), y = expr(x[2])) +
+    scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+    scale_y_continuous(breaks = seq(0, 10, by = 2))
+  
+  l_out <- list(
+    pl_movement = pl_movement, pl_avg_move = pl_avg_move$pl,
+    tbl_avg_move = pl_avg_move$tbl_cr_agg
+    )
+  
+  return(l_out)
+}
+
+
 l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = "square", is_simulation = TRUE)
+l_results_plots_seq <- map(l_seq_results, diagnostics_seq, sim_center = "square", is_simulation = TRUE)
 
 
 tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
@@ -107,12 +159,12 @@ tbl_bef_aft$x2_aft[is.na(tbl_bef_aft$x2_aft)] <- tbl_bef_aft$x2_bef[is.na(tbl_be
 ggplot(tbl_bef_aft, aes(x1_aft, x2_aft, group = category)) + geom_point(aes(color = category))
 
 marrangeGrob(list(
-    l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]], 
-    l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]],
-    l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]
-    ), nrow = 3, ncol = 2, 
-    layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
-    )
+  l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]], 
+  l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]],
+  l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]
+), nrow = 3, ncol = 2, 
+layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
+)
 pl_pred <- l_results_plots[[5]][[2]][[1]] +
   labs(title = "Prototype Model & Improvement Sampling")
 tbl_preds <- crossing(
@@ -136,7 +188,7 @@ for (i in 1:nrow(tbl_info)) {
   l_sum_of_distances[[i]] <- cbind(
     l_sum_of_distances[[i]], 
     tbl_info[i, c("cat_type", "prior_sd", "sampling", "constrain_space")]
-    )
+  )
 }
 tbl_sum_of_distances <- reduce(l_sum_of_distances, rbind)
 tbl_ds_agg <- tbl_sum_of_distances %>%

@@ -184,8 +184,8 @@ compare_subsequent_stimuli <- function(l_info) {
     }
     
     if(!is_null(l_x_previous)) {
-      d_city <- sum(l_x_previous$X_new - l_x$X_new)
-      d_euclidean <- sqrt(sum((l_x_previous$X_new - l_x$X_new) ^2))
+      d_city <- sum(abs(l_x_previous$X_new - l_x$X_new))
+      d_euclidean <- sqrt(sum((l_x_previous$X_new - l_x$X_new)^2))
       tbl_ds <- rbind(tbl_ds, tibble(d_city, d_euclidean))
     }
     l_x_previous <- l_x
