@@ -129,17 +129,8 @@ compare_subsequent_stimuli <- function(l_info) {
   l_tmp <- make_stimuli(l_info)
   tbl <- l_tmp[[1]]
   l_info <- l_tmp[[2]]
-  # compute priors
-  l_m <- priors(l_info, tbl)
   
-  # save prior for later and copy original tbl
-  l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
-  tbl_prior_long <- l_prior_prep[[1]]
-  l_prior <- l_prior_prep[[2]]
   tbl_new <- tbl
-  
-  unique_boundaries <- boundaries(tbl, l_info)
-  thx_grt <- thxs(unique_boundaries)
   
   my_dmvnorm <- function(x1, x2, x_data, m_vcov) {
     dmvnorm(x_data, mean = c(x1, x2), sigma = m_vcov)
@@ -210,7 +201,7 @@ compare_subsequent_stimuli <- function(l_info) {
   tbl_new$timepoint <- c(rep("Before Training", nstart), rep("After Training", nnew))
   
   l_out <- list(
-    tbl_new = tbl_new, tbl_prior_long = tbl_prior_long, l_m = l_m, l_info = l_info,
+    tbl_new = tbl_new, l_info = l_info,
     tbl_ds = tbl_ds
   )
   return(l_out)

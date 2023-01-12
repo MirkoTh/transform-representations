@@ -46,17 +46,25 @@ l_info <- pmap(
 )
 
 l_info_seq <- pmap(
-  tbl_vary[, c("prior_sd", "sampling", "constrain_space", "is_reward")] %>% unique(), ~ append(
+  tbl_vary[, c(
+    "prior_sd", "sampling", "constrain_space", 
+    "is_reward", "category_shape", "n_categories")] %>% unique(), ~ append(
     l_info_prep, 
     list(
       prior_sd = ..1, sampling = ..2, 
-      constrain_space = ..3, is_reward = ..4
+      constrain_space = ..3, is_reward = ..4,
+      category_shape = ..5, n_categories = ..6
       )
   )
 )
 tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
   mutate(condition_id = seq(1:length(l_info))) %>%
   relocate(condition_id, .before = n_stimuli)
+
+tbl_info_seq <- tibble(do.call(rbind.data.frame, l_info_seq)) %>%
+  mutate(condition_id = seq(1:length(l_info_seq))) %>%
+  relocate(condition_id, .before = n_stimuli)
+
 
 # sanity checks of parameters
 # makes only sense with square categories:
@@ -67,17 +75,23 @@ walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 # Run Category Learning Task ----------------------------------------------
 
 plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
+
+
 l_category_results <- future_map(
   l_info, categorize_stimuli, 
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
 l_seq_results <- future_map(
-  l_info, compare_subsequent_stimuli, 
+  l_info_seq, compare_subsequent_stimuli, 
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
 td <- lubridate::today()
+
+
+compare_subsequent_stimuli(l_info_seq[[1]])
+
 
 saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
 l_category_results <- readRDS(file = "data/2022-08-24-grid-search-vary-constrain-space.rds")
