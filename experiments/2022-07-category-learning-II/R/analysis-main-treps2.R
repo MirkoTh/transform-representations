@@ -1,3 +1,4 @@
+rm(list = ls())
 # Some Notes
 
 # for simulation f_stretch <- 1, f_shift <- 0
@@ -287,6 +288,10 @@ by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM S
 # tbl_cr <- tbl_cr %>% filter(!(participant_id %in% doubles$participant_id))
 # tbl_cr <- tbl_cr %>% filter(!(participant_id %in% missings$participant_id))
 # tbl_cr <- rbind(tbl_cr, tbl_first_attempt %>% select(-rwn))
+
+n_consider <- 100
+tbl_cr <- tbl_cr %>% filter(trial_id < 100 | session == 1)
+
 
 
 tbl_cr %>% group_by(participant_id) %>% summarize(move = sum(move_sum), n_trials = n()) %>%

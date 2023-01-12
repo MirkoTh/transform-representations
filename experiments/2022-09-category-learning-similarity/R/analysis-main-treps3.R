@@ -1,3 +1,4 @@
+rm(list = ls())
 # Some Notes
 
 # for simulation f_stretch <- 1, f_shift <- 0
@@ -124,6 +125,10 @@ tbl_seq <- l_cat_sim[["tbl_sim"]]
 
 tbl_simult <- fix_data_types_simult(tbl_simult)
 tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
+
+# look only at initial trials after training
+n_consider <- 50
+tbl_simult <- tbl_simult %>% filter(trial_id < n_consider | session == "Before Training")
 
 # create data set with movements
 tbl_simult_move <- delta_simultaneous(tbl_simult)
