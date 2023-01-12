@@ -280,6 +280,61 @@ diagnostic_plots <- function(l_categorization, sim_center, is_simulation) {
 }
 
 
+diagnostics_seq <- function(l, sim_center, is_simulation) {
+  #' plots movements of stimulus representations using different plotting styles
+  #' 
+  #' @param l list with results from sequential comparison task
+  #' @param sim_center category center according to ellipse or square category structure
+  #' @param is_simulation is the function used for simulations or empirical data
+  #' @return a list with two plots of the movements
+  #' and a tbl_df with the average moves towards to closest category center
+  #' (taken from category learning condition)
+  #'   
+  env <- rlang::current_env()
+  list2env(l, env)
+  
+  l_results <- add_centers(tbl_new, l_m, l_info)
+  l_results$tbl_posterior <- distance_to_closest_center_simulation(
+    l_results$tbl_posterior, sim_center, is_simulation
+  )
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
+  
+  tmp <- l$tbl_new
+  l_tmp <- split(tbl_new, tbl_new$timepoint)
+  tmp_after <- l_tmp[[1]] %>% left_join(
+    l_tmp[[2]][, c("stim_id", "x1", "x2")], 
+    by = "stim_id", suffix = c("_after", "_before")
+  )
+  tmp_before <- l_tmp[[2]] %>% left_join(
+    l_tmp[[2]][, c("stim_id", "x1", "x2")], 
+    by = "stim_id", suffix = c("_after", "_before")
+  )
+  tmp_both <- rbind(tmp_after, tmp_before)
+  tmp_after_agg <- tmp_after %>% group_by(stim_id, timepoint) %>%
+    summarize(x1_after = mean(x1_after), x2_after = mean(x2_after))
+  
+  pl_movement <- ggplot(tmp_both, aes(x1_before, x2_before)) +
+    geom_point() +
+    geom_segment(aes(
+      x = x1_before, xend = x1_after, y = x2_before, yend = x2_after
+    ), arrow = arrow(angle = 15, length = unit(.05, "inches")
+    ), alpha = .15) + geom_point(
+      data = tmp_after_agg, aes(x1_after, x2_after), size = 3, color = "#0099FF"
+    ) + facet_wrap(~ timepoint) +
+    theme_bw() +
+    labs(x = expr(x[1]), y = expr(x[2])) +
+    scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+    scale_y_continuous(breaks = seq(0, 10, by = 2))
+  
+  l_out <- list(
+    pl_movement = pl_movement, pl_avg_move = pl_avg_move$pl,
+    tbl_avg_move = pl_avg_move$tbl_cr_agg
+  )
+  
+  return(l_out)
+}
+
+
 save_results_plots <- function(tbl_info, l_results_plot, p_sd, n_cat) {
   #' helper function to plot and save prior means alongside posterior means
   #' a pdf with model type as columns (exemplar, prototype, rule from l.t.r.)

@@ -99,58 +99,18 @@ l_seq_results <- readRDS(file = "data/2023-01-12-grid-search-sequential-comparis
 
 # Post Processing & Plotting ----------------------------------------------
 
-
-
-
-diagnostics_seq <- function(l, sim_center, is_simulation) {
-  
-  env <- rlang::current_env()
-  list2env(l, env)
-  
-  l_results <- add_centers(tbl_new, l_m, l_info)
-  l_results$tbl_posterior <- distance_to_closest_center_simulation(
-    l_results$tbl_posterior, sim_center, is_simulation
-    )
-  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
-  
-  tmp <- l$tbl_new
-  l_tmp <- split(tbl_new, tbl_new$timepoint)
-  tmp_after <- l_tmp[[1]] %>% left_join(
-    l_tmp[[2]][, c("stim_id", "x1", "x2")], 
-    by = "stim_id", suffix = c("_after", "_before")
-  )
-  tmp_before <- l_tmp[[2]] %>% left_join(
-    l_tmp[[2]][, c("stim_id", "x1", "x2")], 
-    by = "stim_id", suffix = c("_after", "_before")
-  )
-  tmp_both <- rbind(tmp_after, tmp_before)
-  tmp_after_agg <- tmp_after %>% group_by(stim_id, timepoint) %>%
-    summarize(x1_after = mean(x1_after), x2_after = mean(x2_after))
-  
-  pl_movement <- ggplot(tmp_both, aes(x1_before, x2_before)) +
-    geom_point() +
-    geom_segment(aes(
-      x = x1_before, xend = x1_after, y = x2_before, yend = x2_after
-    ), arrow = arrow(angle = 15, length = unit(.05, "inches")
-    ), alpha = .15) + geom_point(
-      data = tmp_after_agg, aes(x1_after, x2_after), size = 3, color = "#0099FF"
-    ) + facet_wrap(~ timepoint) +
-    theme_bw() +
-    labs(x = expr(x[1]), y = expr(x[2])) +
-    scale_x_continuous(breaks = seq(0, 10, by = 2)) +
-    scale_y_continuous(breaks = seq(0, 10, by = 2))
-  
-  l_out <- list(
-    pl_movement = pl_movement, pl_avg_move = pl_avg_move$pl,
-    tbl_avg_move = pl_avg_move$tbl_cr_agg
-    )
-  
-  return(l_out)
-}
-
-
 l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = "square", is_simulation = TRUE)
 l_results_plots_seq <- map(l_seq_results, diagnostics_seq, sim_center = "square", is_simulation = TRUE)
+
+dg <- position_dodge(width = .9)
+
+l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+  l_results_plots_seq[[1]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
+) %>% ggplot(aes(session, d_closest_sqrt, group = condition)) +
+  geom_col(aes(fill = condition), position = dg) +
+  scale_fill_viridis_d(name = "Condition") +
+  theme_bw() +
+  labs(x = "Time Point", y = "Distance To Closest Center")
 
 
 tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
