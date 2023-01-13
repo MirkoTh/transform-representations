@@ -31,7 +31,7 @@ tbl_pairwise <- tbl_pairwise %>%
     stim_min = min(stim_id, stim_id2),
     stim_max = max(stim_id, stim_id2),
     stim_comparison = interaction(stim_min, stim_max)
-    ) %>% group_by(stim_comparison) %>%
+  ) %>% group_by(stim_comparison) %>%
   mutate(rwn = row_number(stim_id)) %>%
   ungroup()
 
@@ -45,7 +45,7 @@ tbl_pairwise <- tbl_pairwise %>%
     d_euclidean_cut = cut(d_euclidean, c(0, 30, 50, 70, 90, 200)),
     d_euclidean_cut_int = cut(d_euclidean, c(0, 30, 50, 70, 90, 200), labels = FALSE),
     d_euclidean_round = round(d_euclidean, 1)
-    )
+  )
 
 
 ggplot(tbl_pairwise, aes(d_euclidean, group = d_euclidean_cut)) +
@@ -83,7 +83,7 @@ walk2(l_distance_pools, l_f_names_ds, ~ write_file(str_c(..1 %>% as_vector(), co
 write_file(
   str_c(tbl_x[, c("x1x2")] %>% as_vector(), collapse = ", "), 
   file = "experiments/2022-09-category-learning-similarity/stimuli/stim_ids.txt"
-  )
+)
 
 # calculate proportions of distances for each of the bins
 
@@ -97,7 +97,43 @@ tbl_counts <- tbl_pairwise %>%
   select(-n) %>%
   pivot_wider(
     names_from = d_euclidean_cut, values_from = prop_pool, values_fill = 0
-    )
+  )
+
+
+
+
+# Distance Predictions Simultaneous Comparison ----------------------------
+
+# this is used for predictions on category similarity judgments in E4
+select_from_comparison_pool <- function(tbl_pairwise, n_required) {
+  
+  props_pool_same <- c(.5, .5, 0, 0, 0) # slightly de-emphasizing high similarity pairings
+  props_pool_side <- c(.1, .4, .3, .2, 0) # slightly de-emphasizing high similarity pairings
+  props_pool_cross <- c(0, .2, .3, .4, .1) # leave proportion of highly dissimilar pairings as already rather lo
+  pools_same <- c("1.1", "2.2", "3.3", "4.4")
+  pools_side <- c("1.2", "1.3", "2.4", "3.4")
+  pools_cross <- c("1.4", "2.3")
+  tbl_filter <- tibble(rbind(
+    merge(props_pool_same * n_required, pools_same),
+    merge(props_pool_side * n_required, pools_side),
+    merge(props_pool_cross * n_required, pools_cross)
+  ))
+  colnames(tbl_filter) <- c("n_pool", "pool_comparison")
+  lvl_eucl <- levels(tbl_pairwise$d_euclidean_cut)
+  tbl_filter$d_euclidean_cut <- rep(lvl_eucl, 10)
+  
+  tbl_pairwise %>% 
+    left_join(tbl_filter, by = c("pool_comparison", "d_euclidean_cut")) %>%
+    group_by(pool_comparison, d_euclidean_cut) %>%
+    mutate(
+      rwn = row_number(x12*x22),
+      rwn_rand = sample(max(rwn))
+    ) %>% ungroup() %>%
+    filter(rwn_rand <= n_pool)
+}
+
+tbl_pairs_experiment <- select_from_comparison_pool(tbl_pairwise, 20)
+
 
 
 

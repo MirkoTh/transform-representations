@@ -127,7 +127,7 @@ tbl_simult <- fix_data_types_simult(tbl_simult)
 tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
 
 # look only at initial trials after training
-n_consider <- 50
+n_consider <- 100
 tbl_simult <- tbl_simult %>% filter(trial_id < n_consider | session == "Before Training")
 
 # create data set with movements
