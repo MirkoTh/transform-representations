@@ -133,6 +133,48 @@ select_from_comparison_pool <- function(tbl_pairwise, n_required) {
 }
 
 tbl_pairs_experiment <- select_from_comparison_pool(tbl_pairwise, 20)
+tbl_pairs_experiment$pool_comparison_binary <- "different"
+tbl_pairs_experiment$pool_comparison_binary[tbl_pairs_experiment$pool_comparison %in% c("1.1", "2.2", "3.3", "4.4")] <- "same"
+
+tbl_pairs_experiment <- tbl_pairs_experiment %>%
+  mutate(similarity_before = exp(-d_euclidean*.015) * 8)
+
+
+# participants learned the four categories with about 80% accuracy
+# knowing the correct category structure for both stimuli of the pair 
+# leads participants to answer with "maximally similar"if from the same category,
+# and "minimally similar" if form different categories, otherwise (>= 1 error)
+# they just use the distances between the two stimuli
+
+tbl_pairs_experiment$prob_both_correct <- runif(nrow(tbl_pairs_experiment), 0, 1)
+tbl_pairs_experiment$both_correct <- 0
+tbl_pairs_experiment$both_correct[tbl_pairs_experiment$prob_both_correct <= .64] <- 1
+
+tbl_pairs_experiment$similarity_after <- tbl_pairs_experiment$similarity_before
+tbl_pairs_experiment$similarity_after[tbl_pairs_experiment$both_correct == 1 & tbl_pairs_experiment$pool_comparison_binary == "same"] <- 8
+tbl_pairs_experiment$similarity_after[tbl_pairs_experiment$both_correct == 1 & tbl_pairs_experiment$pool_comparison_binary == "different"] <- 1
+
+dg <- position_dodge(width = .9)
+grouped_agg(tbl_pairs_experiment, c(pool_comparison_binary), c(similarity_before, similarity_after)) %>%
+  select(pool_comparison_binary, mean_similarity_before, mean_similarity_after) %>%
+  pivot_longer(starts_with("mean")) %>%
+  mutate(
+    name = factor(name), 
+    name = fct_relevel(name, "mean_similarity_before", "mean_similarity_after"),
+    name = fct_recode(name, Before = "mean_similarity_before", After = "mean_similarity_after")
+    ) %>%
+  ggplot(aes(name, value, group = pool_comparison_binary)) +
+  geom_col(aes(fill = pool_comparison_binary), position = dg) +
+  scale_fill_viridis_d(name = "Comparison") +
+  theme_bw() +
+  labs(x = "Time Point", y = "Similarity Rating")
+
+
+
+
+
+
+
 
 
 
