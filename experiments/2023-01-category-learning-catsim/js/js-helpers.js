@@ -1017,7 +1017,7 @@ function condition_and_ncategories() {
     document.getElementById("condition_id").innerHTML = condition_id
     document.getElementById("n_categories").innerHTML = n_categories
     if (n_categories == 1) {
-        secondTaskName = "Sequential Comparison";
+        secondTaskName = "Sequential Object Comparison";
         secondTask = " Compare the monster to the monster on the previous trial.";
     } else {
         secondTaskName = "Categorization";
@@ -1030,9 +1030,9 @@ function condition_and_ncategories() {
     sim_data_all = [];
 
     if (n_categories == 1) {
-        textCond = `<b>Sequential Comparison:</b> Your task in the second part will be slightly different.<br>
+        textCond = `<b>Sequential Object Comparison:</b> Your task in the second part will be slightly different.<br>
                                 You are asked to judge how similar the monster presented on the current trial is to the monster presented on the previous trial.<br>
-                                To do so, also use the numbers from 1-8 on the keyboard in the same way as for the simultaneous comparison task; i.e.,<br>
+                                To do so, use the numbers from 1-8 on the keyboard in the following way:<br>
                                 (1) monsters look very different<br>
                                 (8) monsters look very similar<br>
                                 Use number keys (2) - (7) for intermediate similarity ratings.<br>
