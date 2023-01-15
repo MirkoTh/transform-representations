@@ -1161,4 +1161,3 @@ function calculate_bonus(flag_performance) {
 function redirect_to_prolific() {
     window.location.href = "https://app.prolific.co/submissions/complete?cc=240D34C0";
 }
-
