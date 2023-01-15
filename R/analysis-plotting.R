@@ -1104,3 +1104,67 @@ plot_distance_psychonomics <- function(tbl_cr_agg) {
          y = "Distance to Closest Category Center") +
     theme(plot.title = element_text(size = 14, face = "bold"))
 }
+
+
+ribbon_plot <- function(tbl_simult_move) {
+  
+  tmp <- tbl_simult_move %>% 
+    group_by(d_euclidean_cut, comparison_pool_binary, n_categories) %>% 
+    summarize(
+      response = mean(move_response),
+      n_responses = length(move_response)) 
+  
+  tbl_ribbon <- tmp %>%
+    pivot_wider(
+      id_cols = c(d_euclidean_cut, n_categories), 
+      names_from = comparison_pool_binary, values_from = response, names_prefix = "move_"
+    ) %>% left_join(
+      tmp %>% 
+        pivot_wider(
+          id_cols = c(d_euclidean_cut, n_categories), 
+          names_from = comparison_pool_binary, values_from = n_responses, names_prefix = "n_"
+        ), by = c("d_euclidean_cut", "n_categories")
+    )
+  
+  colors <- c(
+    "Same" = "#fde725", "Different" = "#440154"
+  )
+  
+  pl_ribbon <- ggplot(tbl_ribbon %>% rename(Same = move_Same, Different = move_Different), aes(group = n_categories)) +
+    geom_hline(yintercept = 0, linetype = "dotdash", color = "grey70") +
+    geom_line(aes(d_euclidean_cut, Same, color = "Same"), ) +
+    geom_line(aes(d_euclidean_cut, Different, color = "Different")) +
+    geom_point(aes(d_euclidean_cut, Same), color = "white") +
+    geom_point(aes(d_euclidean_cut, Same, size = n_Same, color = "Same")) +
+    geom_point(aes(d_euclidean_cut, Different), color = "white") +
+    geom_point(aes(d_euclidean_cut, Different, size = n_Same, color = "Different")) +
+    geom_ribbon(aes(d_euclidean_cut, ymin = Different + .025, ymax = Same - .025), fill = "grey", alpha = .25, outline.type = "lower") +
+    facet_wrap(~ n_categories) +
+    theme_bw() +
+    scale_size_continuous(name = "Nr. Responses") +
+    scale_color_manual(name = "Category", values = colors) +
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "Euclidean Distance", y = "Move After - Before")
+  
+  pl_no_ribbon <- ggplot(
+    tbl_simult_move %>% 
+      group_by(d_euclidean_cut, comparison_pool_binary, n_categories) %>% 
+      summarize(
+        response = mean(move_response),
+        n_responses = length(move_response)),
+    aes(d_euclidean_cut, response, group = comparison_pool_binary)) +
+    geom_hline(yintercept = 0, linetype = "dotdash", color = "grey70") +
+    geom_line(aes(color = comparison_pool_binary)) +
+    geom_point(color = "white", size = 5) +
+    geom_point(aes(color = comparison_pool_binary, size = n_responses)) +
+    facet_wrap(~ n_categories) +
+    scale_color_viridis_d(name = "Category") +
+    scale_size_continuous(range = c(1, 4), guide = "none") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "Euclidean Distance", y = "Move After - Before")
+  
+  l_plots <- list(pl_ribbon, pl_no_ribbon)
+  
+  return(l_plots)
+}
