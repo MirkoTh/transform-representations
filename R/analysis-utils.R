@@ -142,6 +142,13 @@ timeout_and_returns_e3 <- function() {
   return(all_ps)
 }
 
+timeout_and_returns_e4 <- function() {
+  pilot_1 <- c()
+  all_ps <- c(pilot_1)
+  return(all_ps)
+}
+
+
 fix_data_types <- function(tbl, fs, ns) {
   #' fix data types of columns of tbl
   #' 
