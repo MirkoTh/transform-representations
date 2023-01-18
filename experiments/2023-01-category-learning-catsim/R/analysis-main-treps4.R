@@ -274,16 +274,22 @@ by_participant_coefs(
 )
 
 # exclude initial trials from following analyses
-n_start_exclude <- 200
-is_start <- TRUE
-tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, n_start_exclude, is_start)
-sample_ids <- tbl_cat_grid %>% group_by(participant_id) %>%
+n_trials_split <- 200
+tbl_cat_grid_start <- aggregate_category_responses_by_x1x2(tbl_cat, n_trials_split, is_start = TRUE)
+tbl_cat_grid_end <- aggregate_category_responses_by_x1x2(tbl_cat, n_trials_split, is_start = FALSE)
+
+sample_ids <- tbl_cat_grid_end %>% group_by(participant_id) %>%
   summarize(mean_accuracy = max(mean_accuracy)) %>%
   arrange(desc(mean_accuracy))
 select_ids <- round(seq(1, nrow(sample_ids), length.out = 4))
 sample_ids <-
   as.character(sample_ids[select_ids, "participant_id"] %>% as_vector() %>% unname())
-plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), c(2, 4))
+
+hm_start <- plot_categorization_heatmaps(tbl_cat_grid_start %>% filter(participant_id %in% sample_ids), c(2, 4)) +
+  ggtitle("Start of Training")
+hm_end <- plot_categorization_heatmaps(tbl_cat_grid_end %>% filter(participant_id %in% sample_ids), c(2, 4)) +
+  ggtitle("End of Training")
+grid.draw(arrangeGrob(hm_start, hm_end))
 
 
 # prototype analyses ------------------------------------------------------

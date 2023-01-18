@@ -863,17 +863,19 @@ add_binned_trial_id <- function(tbl_cat_sim, binsize, trial_start_incl) {
 }
 
 
-aggregate_category_responses_by_x1x2 <- function(tbl_cat, trial_id_start_incl) {
+aggregate_category_responses_by_x1x2 <- function(tbl_cat, trial_id_split, is_start = FALSE) {
   #' aggregate category responses per x1-x2 grid cell
   #' 
   #' @description calculate mean and mode responses per x1-x2 grid cell
   #' @param tbl_cat_sim the tibble with the by-trial categorization responses
-  #' @param trial_id_start_incl first trial to be considered
+  #' @param trial_id_split where to cut off the trial sequence
+  #' @param is_start should initial trials be considered or final trials
   #' 
   #' @return the aggregated tbl
   #' 
-  tbl_cat_grid <- tbl_cat %>% 
-    filter(trial_id >= trial_id_start_incl) %>%
+  if (is_start) tmp <- tbl_cat %>% filter(trial_id < trial_id_split)
+  if (!is_start) tmp <- tbl_cat %>% filter(trial_id >= trial_id_split)
+  tbl_cat_grid <- tmp %>%
     group_by(participant_id, n_categories, x1_true, x2_true, response) %>%
     count() %>% arrange(participant_id, x1_true, x2_true) %>%
     group_by(participant_id, n_categories, x1_true, x2_true) %>%
