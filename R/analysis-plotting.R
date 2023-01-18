@@ -1131,17 +1131,17 @@ ribbon_plot <- function(tbl_simult_move) {
   )
   
   pl_ribbon <- ggplot(tbl_ribbon %>% rename(Same = move_Same, Different = move_Different), aes(group = n_categories)) +
+    geom_ribbon(aes(d_euclidean_cut, ymin = Different, ymax = Same), fill = "grey", alpha = .25, outline.type = "lower") +
     geom_hline(yintercept = 0, linetype = "dotdash", color = "grey70") +
     geom_line(aes(d_euclidean_cut, Same, color = "Same"), ) +
     geom_line(aes(d_euclidean_cut, Different, color = "Different")) +
-    geom_point(aes(d_euclidean_cut, Same), color = "white") +
+    geom_point(aes(d_euclidean_cut, Same), color = "white", size = 5) +
     geom_point(aes(d_euclidean_cut, Same, size = n_Same, color = "Same")) +
-    geom_point(aes(d_euclidean_cut, Different), color = "white") +
-    geom_point(aes(d_euclidean_cut, Different, size = n_Same, color = "Different")) +
-    geom_ribbon(aes(d_euclidean_cut, ymin = Different + .025, ymax = Same - .025), fill = "grey", alpha = .25, outline.type = "lower") +
+    geom_point(aes(d_euclidean_cut, Different), color = "white", size = 5) +
+    geom_point(aes(d_euclidean_cut, Different, size = n_Different, color = "Different")) +
     facet_wrap(~ n_categories) +
     theme_bw() +
-    scale_size_continuous(name = "Nr. Responses") +
+    scale_size_continuous(name = "Nr. Responses", range = c(2, 4)) +
     scale_color_manual(name = "Category", values = colors) +
     theme(axis.text.x = element_text(angle = 90)) +
     labs(x = "Euclidean Distance", y = "Move After - Before")

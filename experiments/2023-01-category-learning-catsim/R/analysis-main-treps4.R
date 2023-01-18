@@ -37,7 +37,8 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/"
+  #"experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/",
+  "experiments/2023-01-category-learning-catsim/data/2023-01-17-treps4-experiment/"
 )
 
 # flag defining whether distance to category center in similarity condition
@@ -224,6 +225,7 @@ ggplot(move_agg, aes(d_euclidean_cut, move_response, aes(group = comparison_pool
 l_ribbons <- ribbon_plot(tbl_simult_move)
 l_ribbons[[1]]
 
+# looks like participants find it difficult to differentiate between categories when stimuli come close from boundaries
 
 #Categorization ----------------------------------------------------------
 
@@ -273,7 +275,8 @@ by_participant_coefs(
 
 # exclude initial trials from following analyses
 n_start_exclude <- 200
-tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, n_start_exclude)
+is_start <- TRUE
+tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, n_start_exclude, is_start)
 sample_ids <- tbl_cat_grid %>% group_by(participant_id) %>%
   summarize(mean_accuracy = max(mean_accuracy)) %>%
   arrange(desc(mean_accuracy))
