@@ -714,13 +714,13 @@ plot_movement_against_precision <- function(tbl_precision) {
 }
 
 
-plot_heatmaps_with_representations <- function(l_nb, sample_ids) {
+plot_heatmaps_with_representations <- function(l_nb, sample_ids, tbl_df) {
   #' plot heat maps of category learning responses for some sample
   #' participants and overlay representations from nb model
   #'
   tbl_preds_nb <- reduce(map(l_nb, 2), rbind) %>%
     mutate(participant_id = fct_inorder(substr(participant_id, 1, 6), ordered = TRUE))
-  plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids),
+  plot_categorization_heatmaps(tbl_df %>% filter(participant_id %in% sample_ids),
                                4,
                                "Mode") + geom_contour(
                                  data = tbl_preds_nb %>%

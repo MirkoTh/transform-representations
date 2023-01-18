@@ -227,7 +227,7 @@ l_ribbons[[1]]
 
 # looks like participants find it difficult to differentiate between categories when stimuli come close from boundaries
 
-#Categorization ----------------------------------------------------------
+# Categorization ----------------------------------------------------------
 
 
 tbl_cat_overview <- tbl_cat %>%
@@ -297,8 +297,13 @@ grid.draw(arrangeGrob(hm_start, hm_end))
 # fit individual nb models
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
-l_nb <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
-plot_heatmaps_with_representations(l_nb, sample_ids)
+l_nb_end <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
+hm_pt_end <- plot_heatmaps_with_representations(l_nb_end, sample_ids, tbl_cat_grid_end) +
+  ggtitle("End of Training")
+l_nb_start <- by_participant_nb(tbl_cat %>% filter(trial_id < n_start_exclude), participant_ids_4_cat)
+hm_pt_start <- plot_heatmaps_with_representations(l_nb_start, sample_ids, tbl_cat_grid_start) +
+  ggtitle("Start of Training")
+grid.draw(arrangeGrob(hm_pt_start, hm_pt_end))
 
 
 # Similarity Judgments ----------------------------------------------------

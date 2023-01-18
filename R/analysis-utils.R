@@ -1821,7 +1821,7 @@ by_participant_nb <- function(tbl_cat, subset_participants) {
   #'    
   l_nb <- map(
     subset_participants, fit_predict_nb,
-    tbl = tbl_cat %>% filter(n_categories == 4 & trial_id >= n_start_exclude)
+    tbl = tbl_cat
   )
   names(l_nb) <- subset_participants
   return(l_nb)
