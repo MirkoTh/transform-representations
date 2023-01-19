@@ -59,21 +59,36 @@ l_tbl_data <-
 
 # Set Exclusion Criteria Appropriately ------------------------------------
 n_resp_simult <- 200
+n_resp_cat_min <- 397 # 3 trials were not stored for one participant
 n_resp_cat <- 400
-l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
+l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat_min)
 
 # todos
 # have a look at simultaneous comparison outliers
 # some seem to have used a reversed mapping from responses to similarity!
 # look at outliers in sequential comparison task --> possibly build calculation of mean +/- 3*sd into preprocess_data_e3 pipeline
 
+
+# do not exclude these participants; category membership judgments can be highly subjective
+l_cases$l_outliers$drop$tbl_simult %>% 
+  mutate(d_euclidean_cut = as.numeric(cut(d_euclidean, 8, labels = FALSE))) %>%
+  grouped_agg(c(participant_id, d_euclidean_cut), response) %>%
+  ggplot(aes(d_euclidean_cut, mean_response)) + 
+  geom_point(aes(size = n)) + 
+  geom_smooth(method = "lm", color = "#440154", alpha = .1) +
+  facet_wrap(~ participant_id) +
+  theme_bw() + labs(x = "Distance Binned", y = "Avg. Rating")
+
+l_cases$l_outliers$keep$tbl_simult <- rbind(l_cases$l_outliers$keep$tbl_simult, l_cases$l_outliers$drop$tbl_simult)
+l_cases$l_outliers$keep$tbl_cat_sim <- rbind(l_cases$l_outliers$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
+
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
-tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
+tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat_sim
 
 drops <- map(l_cases, participants_ntrials, stage = "drop")
-drops$l_incomplete %>% print(n = 47)
-drops$l_guessing %>% print(n = 5)
-drops$l_outliers %>% print(n = 4)
+drops$l_incomplete %>% print(n = 100)
+drops$l_guessing %>% print(n = 100)
+
 
 keeps <- map(l_cases, participants_ntrials, stage = "keep")$l_outliers
 keeps %>% arrange(desc(n_seq))
@@ -97,16 +112,15 @@ excl_guessing <-
     unique(l_cases$l_guessing$drop[["tbl_simult"]]$participant_id),
     unique(l_cases$l_guessing$drop[["tbl_cat"]]$participant_id)
   )
-excl_outlier <-
-  dplyr::union(
-    unique(l_cases$l_outliers$drop[["tbl_simult"]]$participant_id),
-    unique(l_cases$l_outliers$drop[["tbl_cat"]]$participant_id)
-  )
+
 # inclusions
 cat(str_c("final N analyzed: ", length(unique(tbl_simult$participant_id)), "\n"))
 
 # exclusions
-cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_guessing) + length(excl_outlier) + length(repeats)))
+cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_guessing)))
+
+# repeats
+cat(str_c("N repeats/restarts: ", length(repeats)))
 
 same_n <-
   length(unique(tbl_simult$participant_id)) == length(unique(tbl_cat_sim$participant_id))
@@ -297,10 +311,10 @@ grid.draw(arrangeGrob(hm_start, hm_end))
 # fit individual nb models
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
-l_nb_end <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
+l_nb_end <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_trials_split), participant_ids_4_cat)
 hm_pt_end <- plot_heatmaps_with_representations(l_nb_end, sample_ids, tbl_cat_grid_end) +
   ggtitle("End of Training")
-l_nb_start <- by_participant_nb(tbl_cat %>% filter(trial_id < n_start_exclude), participant_ids_4_cat)
+l_nb_start <- by_participant_nb(tbl_cat %>% filter(trial_id < n_trials_split), participant_ids_4_cat)
 hm_pt_start <- plot_heatmaps_with_representations(l_nb_start, sample_ids, tbl_cat_grid_start) +
   ggtitle("Start of Training")
 grid.draw(arrangeGrob(hm_pt_start, hm_pt_end))

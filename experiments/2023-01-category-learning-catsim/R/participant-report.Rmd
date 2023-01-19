@@ -47,7 +47,7 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/"
+  "experiments/2023-01-category-learning-catsim/data/2023-01-17-treps4-experiment/"
 )
 
 # Load Data ---------------------------------------------------------------
@@ -81,20 +81,20 @@ l_participant_report$pl_cat_hist
 ggplotly(l_participant_report$pl_seq_line)
 l_participant_report$pl_simult_line
 
-l_cases$l_incomplete$drop$tbl_cat_sim %>% filter(participant_id == "60eaf271ade982685310e4ef") %>%
-  mutate(trial_id_cut = cut(trial_id, 10)) %>%
-  group_by(trial_id_cut) %>%
-  summarize(response = mean(accuracy), rt = mean(rt), n = n()) %>%
-  ggplot(aes(trial_id_cut, response)) + geom_point()
-
-l_cases$l_incomplete$drop$tbl_simult %>% filter(participant_id == "60eaf271ade982685310e4ef") %>%
-  mutate(d_euclidean_cut = cut(d_euclidean, 10)) %>%
-  group_by(d_euclidean_cut) %>%
-  summarize(response = mean(response), n = n()) %>%
-  ggplot(aes(d_euclidean_cut, response)) + geom_point()
-
-
-l_cases$l_incomplete$drop$tbl_cat_sim %>% filter(participant_id == "60eaf271ade982685310e4ef") %>% count()
+# l_cases$l_incomplete$drop$tbl_cat_sim %>% filter(participant_id == "60eaf271ade982685310e4ef") %>%
+#   mutate(trial_id_cut = cut(trial_id, 10)) %>%
+#   group_by(trial_id_cut) %>%
+#   summarize(response = mean(accuracy), rt = mean(rt), n = n()) %>%
+#   ggplot(aes(trial_id_cut, response)) + geom_point()
+# 
+# l_cases$l_incomplete$drop$tbl_simult %>% filter(participant_id == "60eaf271ade982685310e4ef") %>%
+#   mutate(d_euclidean_cut = cut(d_euclidean, 10)) %>%
+#   group_by(d_euclidean_cut) %>%
+#   summarize(response = mean(response), n = n()) %>%
+#   ggplot(aes(d_euclidean_cut, response)) + geom_point()
+# 
+# 
+# l_cases$l_incomplete$drop$tbl_cat_sim %>% filter(participant_id == "60eaf271ade982685310e4ef") %>% count()
 
 
 ```

@@ -144,7 +144,25 @@ timeout_and_returns_e3 <- function() {
 
 timeout_and_returns_e4 <- function() {
   pilot_1 <- c()
-  all_ps <- c(pilot_1)
+  e_1 <- c(
+    "5dd5a4881c219b5653070520",
+    "6035f9e8f7e4a8f06fbee2d1",
+    "6026891e02f12c316ba8bcbb",
+    "5fdaa32e7ef2345435d6f122",
+    "6078a6933f52f5c3d50f6f47",
+    "5fa5bcd9b913e3141cdc8266",
+    "5ecba4b6ef75d53505406d57",
+    "62d151bb770b24c564871319",
+    "608c349d8e7f57e8f84d3a27",
+    "63483069e7c6931be7b56fe9",
+    "5f76884e077186131e17d851",
+    "604e7009ec21c0e9b6990c6f",
+    "6110dd63cb686443f559e99d",
+    "62bdc30224534809032cf056",
+    "582ee44408b46b00010dbb07", 
+    "60684f29dbfe1bb2059e5e27"
+  )
+  all_ps <- c(pilot_1, e_1)
   return(all_ps)
 }
 
