@@ -1,12 +1,13 @@
 library(tidyverse)
 
 
-file_path_paid <- "experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/bonus-paid.csv"
-file_path_pending <- "experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/bonus-pending.csv"
-file_path_new <- "experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/bonus.json"
+file_path_paid <- "experiments/2023-01-category-learning-catsim/data/tmp/bonus-paid.csv"
+file_path_pending <- "experiments/2023-01-category-learning-catsim/data/tmp/bonus-pending.csv"
+file_path_new <- "experiments/2023-01-category-learning-catsim/data/tmp/bonus.json"
 
 
-tbl_bonus_paid <- read.csv(file = file_path_paid) %>% as_tibble()
+tbl_bonus_paid <- read.csv(file = file_path_paid, header = FALSE) %>% as_tibble()
+colnames(tbl_bonus_paid) <- c("participant_id", "bonus_total")
 
 if (!exists("tbl_bonus_paid")) {
   tbl_bonus_paid <- tibble(participant_id = "0", bonus_total_paid = 0)
@@ -28,5 +29,5 @@ tbl_bonus_not_paid <- tbl_bonus_all %>%
 
 tbl_bonus_not_paid <- tbl_bonus_not_paid %>% filter(!(participant_id %in% returned_timeout))
 
-tbl_bonus_not_paid %>% select(participant_id, bonus_total) %>% write.table(file = file_path_paid, quote = FALSE, sep = ", ", col.names = FALSE, row.names = FALSE, append = TRUE)
-tbl_bonus_not_paid %>% select(participant_id, bonus_total) %>% write.table(file = file_path_pending, quote = FALSE, sep = ", ", row.names = FALSE)
+tbl_bonus_not_paid %>% select(starts_with(c("participant_id", "bonus_total"))) %>% write.table(file = file_path_paid, quote = FALSE, sep = ", ", col.names = FALSE, row.names = FALSE, append = TRUE)
+tbl_bonus_not_paid %>% select(starts_with(c("participant_id", "bonus_total"))) %>% write.table(file = file_path_pending, quote = FALSE, sep = ", ", row.names = FALSE)

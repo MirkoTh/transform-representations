@@ -59,7 +59,7 @@ l_tbl_data <-
 
 # Set Exclusion Criteria Appropriately ------------------------------------
 n_resp_simult <- 200
-n_resp_cat_min <- 397 # 3 trials were not stored for one participant
+n_resp_cat_min <- 397 # 3 trials were not stored for one participant; details in participant-report.Rmd
 n_resp_cat <- 400
 l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat_min)
 
@@ -151,6 +151,12 @@ saveRDS(tbl_simult_move, file = str_c("experiments/2023-01-category-learning-cat
 saveRDS(tbl_cat, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps.rds"))
 saveRDS(tbl_seq, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps.rds"))
 
+
+# folder for plots
+if (!dir.exists("experiments/2023-01-category-learning-catsim/data/figures")){
+  dir.create("experiments/2023-01-category-learning-catsim/data/figures")
+}
+
 tbl_simult_agg <- summarySEwithin(
   tbl_simult, 
   "response", 
@@ -158,7 +164,6 @@ tbl_simult_agg <- summarySEwithin(
   c("session", "comparison_pool_binary"),
   "participant_id"
 )
-
 
 move_agg <- summarySEwithin(
   tbl_simult_move, "move_response", 
@@ -190,7 +195,7 @@ pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, response, 
 save_my_pdf(
   pl_lines_simult, 
   "experiments/2023-01-category-learning-catsim/data/figures/simult-avg-comparison.pdf",
-  5, 4
+  6, 4
   )
 
 # tbl_simult_move %>%
@@ -215,6 +220,8 @@ save_my_pdf(
   "experiments/2023-01-category-learning-catsim/data/figures/simult-move-mass.pdf",
   6.5, 3.5
 )
+
+
 pl_rating_mass1 <- ggplot(tbl_simult, aes(response, group = comparison_pool)) +
   geom_freqpoly(aes(color = comparison_pool, y = ..density..), binwidth = 1, size = 1) +
   facet_grid(session ~ n_categories) +
@@ -231,13 +238,20 @@ pl_rating_mass2 <- ggplot(tbl_simult, aes(response, group = session)) +
   theme_bw() +
   labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
-ggplot(move_agg, aes(d_euclidean_cut, move_response, aes(group = comparison_pool_binary))) +
-  geom_point(aes(color = comparison_pool_binary, size = N)) +
-  facet_wrap(~ n_categories) +
-  theme(axis.text.x = element_text(vjust = 0, angle = 90))
+save_my_pdf(
+  pl_rating_mass2, 
+  "experiments/2023-01-category-learning-catsim/data/figures/simult-ratings-mass.pdf",
+  8.5, 7.5
+)
 
 l_ribbons <- ribbon_plot(tbl_simult_move)
 l_ribbons[[1]]
+
+save_my_pdf(
+  l_ribbons[[1]], 
+  "experiments/2023-01-category-learning-catsim/data/figures/move-by-distance.pdf",
+  7, 4.5
+)
 
 # looks like participants find it difficult to differentiate between categories when stimuli come close from boundaries
 
@@ -303,7 +317,6 @@ hm_start <- plot_categorization_heatmaps(tbl_cat_grid_start %>% filter(participa
   ggtitle("Start of Training")
 hm_end <- plot_categorization_heatmaps(tbl_cat_grid_end %>% filter(participant_id %in% sample_ids), c(2, 4)) +
   ggtitle("End of Training")
-grid.draw(arrangeGrob(hm_start, hm_end))
 
 
 # prototype analyses ------------------------------------------------------
@@ -313,12 +326,17 @@ participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
 l_nb_end <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_trials_split), participant_ids_4_cat)
 hm_pt_end <- plot_heatmaps_with_representations(l_nb_end, sample_ids, tbl_cat_grid_end) +
-  ggtitle("End of Training")
+  ggtitle("First Half of Training")
 l_nb_start <- by_participant_nb(tbl_cat %>% filter(trial_id < n_trials_split), participant_ids_4_cat)
 hm_pt_start <- plot_heatmaps_with_representations(l_nb_start, sample_ids, tbl_cat_grid_start) +
-  ggtitle("Start of Training")
-grid.draw(arrangeGrob(hm_pt_start, hm_pt_end))
+  ggtitle("Second Half of Training")
 
+
+save_my_pdf(
+  arrangeGrob(hm_pt_start, hm_pt_end), 
+  "experiments/2023-01-category-learning-catsim/data/figures/prototypes-improvement.pdf",
+  12, 7
+)
 
 # Similarity Judgments ----------------------------------------------------
 

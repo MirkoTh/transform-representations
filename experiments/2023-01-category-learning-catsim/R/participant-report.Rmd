@@ -47,7 +47,8 @@ walk(files, source)
 # Load Data and Preprocess Data -------------------------------------------
 
 path_data <- c(
-  "experiments/2023-01-category-learning-catsim/data/2023-01-17-treps4-experiment/"
+  #"experiments/2023-01-category-learning-catsim/data/2023-01-17-treps4-experiment/",
+  "experiments/2023-01-category-learning-catsim/data/tmp/"
 )
 
 # Load Data ---------------------------------------------------------------

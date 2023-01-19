@@ -159,10 +159,17 @@ timeout_and_returns_e4 <- function() {
     "604e7009ec21c0e9b6990c6f",
     "6110dd63cb686443f559e99d",
     "62bdc30224534809032cf056",
-    "582ee44408b46b00010dbb07", 
-    "60684f29dbfe1bb2059e5e27"
+    "582ee44408b46b00010dbb07",
+    "55ea70c37480920010aa9982",
+    "60bf964f35e4cada9f7f03cc",
+    "5f653cb18aad310a9ee7c32d",
+    "611ceaa4d48088cf9fda1dbc",
+    "5d20f6cbc1dc1c0001162dd5",
+    "634d8068db4d540043ec2b15",
+    "5e7f978759c243033154a18f"
   )
-  all_ps <- c(pilot_1, e_1)
+  manual_removal <- c("5c7fff551c40f30001b45b83")
+  all_ps <- c(pilot_1, e_1, manual_removal)
   return(all_ps)
 }
 
