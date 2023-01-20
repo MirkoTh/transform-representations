@@ -264,8 +264,8 @@ loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 
 
 
-tbl_draws <- fit_simult_move_ri$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_simult_move_ri$summary(variables = pars_interest)
+tbl_draws <- fit_simult_move_rs$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_simult_move_rs$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Category Comparison", "Group", "Category Comparison x Group")
 
