@@ -63,21 +63,26 @@ n_resp_cat_min <- 397 # 3 trials were not stored for one participant; details in
 n_resp_cat <- 400
 l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat_min)
 
-# todos
-# have a look at simultaneous comparison outliers
-# some seem to have used a reversed mapping from responses to similarity!
-# look at outliers in sequential comparison task --> possibly build calculation of mean +/- 3*sd into preprocess_data_e3 pipeline
-
-
 # do not exclude these participants; category membership judgments can be highly subjective
-l_cases$l_outliers$drop$tbl_simult %>% 
-  mutate(d_euclidean_cut = as.numeric(cut(d_euclidean, 8, labels = FALSE))) %>%
-  grouped_agg(c(participant_id, d_euclidean_cut), response) %>%
-  ggplot(aes(d_euclidean_cut, mean_response)) + 
-  geom_point(aes(size = n)) + 
-  geom_smooth(method = "lm", color = "#440154", alpha = .1) +
-  facet_wrap(~ participant_id) +
-  theme_bw() + labs(x = "Distance Binned", y = "Avg. Rating")
+# l_cases$l_outliers$drop$tbl_simult %>% 
+#   mutate(d_euclidean_cut = as.numeric(cut(d_euclidean, 8, labels = FALSE))) %>%
+#   grouped_agg(c(participant_id, d_euclidean_cut), response) %>%
+#   ggplot(aes(d_euclidean_cut, mean_response)) + 
+#   geom_point(aes(size = n)) + 
+#   geom_smooth(method = "lm", color = "#440154", alpha = .1) +
+#   facet_wrap(~ participant_id) +
+#   theme_bw() + labs(x = "Distance Binned", y = "Avg. Rating") +
+#   coord_cartesian(ylim = c(0, 8))
+# 
+# l_cases$l_outliers$drop$tbl_simult$comparison_pool_binary <- l_cases$l_outliers$drop$tbl_simult$comparison_pool
+# l_cases$l_outliers$drop$tbl_simult$comparison_pool_binary[l_cases$l_outliers$drop$tbl_simult$comparison_pool %in% c("side", "cross")] <- "different"
+# tbl_cor_outliers <- cor_ratings_distances_time_pool(l_cases$l_outliers$drop$tbl_simult)
+# tbl_cor_outliers <- tbl_cor_outliers[!is.na(tbl_cor_outliers$cor), ]
+# ggplot(tbl_cor_outliers, aes(cor, group = participant_id)) +
+#   geom_histogram(aes(fill = participant_id)) +
+#   facet_grid(session ~ comparison_pool_binary)
+# 
+
 
 l_cases$l_outliers$keep$tbl_simult <- rbind(l_cases$l_outliers$keep$tbl_simult, l_cases$l_outliers$drop$tbl_simult)
 l_cases$l_outliers$keep$tbl_cat_sim <- rbind(l_cases$l_outliers$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
@@ -137,6 +142,47 @@ tbl_seq <- l_cat_sim[["tbl_sim"]]
 
 tbl_simult <- fix_data_types_simult(tbl_simult)
 tbl_simult$d_euclidean_cut <- cut(tbl_simult$d_euclidean, 8)
+
+tbl_simult$session <- as.numeric(tbl_simult$session)
+
+tbl_cor_outliers <- cor_ratings_distances_time_pool(tbl_simult)
+tbl_cor_outliers <- tbl_cor_outliers[!is.na(tbl_cor_outliers$cor), ]
+tbl_cor_outliers$participant_id <- factor(tbl_cor_outliers$participant_id)
+
+ggplotly(
+  ggplot(tbl_cor_outliers, aes(cor, group = as.numeric(participant_id))) +
+  geom_histogram(aes(fill = as.numeric(participant_id))) +
+  facet_grid(session ~ comparison_pool_binary)
+)
+
+ggplot(tbl_cor_outliers, aes(session, cor, group = as.numeric(participant_id))) +
+  geom_line(aes(color = as.numeric(participant_id))) +
+  geom_point(size = 4, color = "white") +
+  geom_point(aes(color = as.numeric(participant_id))) +
+  facet_wrap(~ comparison_pool_binary) +
+  theme_bw()
+
+tbl_changers <- tbl_cor_outliers %>% 
+  pivot_wider(
+    id_cols = c(participant_id, comparison_pool_binary), 
+    names_from = session, values_from = cor
+    ) %>%
+  filter(sign(`1`) != sign(`2`)) %>%
+  pivot_longer(cols = c(`1`, `2`)) %>%
+  rename(session = name, cor = value)
+
+ggplotly(
+  ggplot(tbl_changers, aes(session, cor, group = as.factor(participant_id))) +
+  geom_line(aes(color = as.factor(participant_id))) +
+  geom_point(aes(color = as.factor(participant_id))) +
+  facet_wrap(~ comparison_pool_binary) +
+  theme_bw() +
+  scale_color_viridis_d(name = "ID")
+)
+
+
+
+
 
 # look only at initial trials after training
 n_consider <- 100
@@ -252,6 +298,16 @@ save_my_pdf(
   "experiments/2023-01-category-learning-catsim/data/figures/move-by-distance.pdf",
   7, 4.5
 )
+
+
+grouped_agg(tbl_simult_move, c(participant_id, n_categories, comparison_pool_binary), move_response) %>%
+  ggplot(aes(mean_move_response, group = n_categories)) +
+  geom_vline(xintercept = 0, color = "grey", linetype = "dotdash") +
+  geom_histogram(aes(fill = n_categories), color = "white") +
+  facet_grid(comparison_pool_binary ~ n_categories) +
+  theme_bw() +
+  scale_fill_viridis_d(name = "Condition") +
+  labs(x = "Mean Move", y = "Nr. Participants")
 
 # looks like participants find it difficult to differentiate between categories when stimuli come close from boundaries
 
