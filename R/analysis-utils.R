@@ -474,6 +474,26 @@ cor_ratings_distances <- function(tbl_simult) {
   return(tbl_cor_simult)
 }
 
+cor_ratings_distances_time_pool <- function(tbl_simult) {
+  #' @description by-participant, -comparison pool, -timepoint correlations
+  #' between distances and responses
+  #' 
+  #' @param tbl_simult tbl_df with similarity ratings from simultaneous task
+  #' 
+  #' @return tbl_cor_simult tbl with correlations
+  #' 
+  l_simult <- split(
+    tbl_simult[, c("d_euclidean", "response")], 
+    interaction(tbl_simult$participant_id, tbl_simult$session, tbl_simult$comparison_pool_binary)
+    )
+  v_cor_simult <- map_dbl(l_simult, ~ cor(.x$d_euclidean, .x$response))
+  tbl_cor_simult <- tibble(participant_id = names(v_cor_simult), cor = v_cor_simult)
+  tbl_cor_simult$session <- as.numeric(str_match(tbl_cor_simult$participant_id, "^.*\\.([1-2])")[, 2])
+  tbl_cor_simult$comparison_pool_binary <- str_match(tbl_cor_simult$participant_id, "([a-z, A-Z]*$)")[, 2]
+  tbl_cor_simult$participant_id <- str_match(tbl_cor_simult$participant_id, "(^.*)\\.[1-2]")[, 2]
+  return(tbl_cor_simult)
+}
+
 
 exclude_simult_outliers <- function(l_tbl, n_sds) {
   #' exclude outliers in simultaneous comparison task
