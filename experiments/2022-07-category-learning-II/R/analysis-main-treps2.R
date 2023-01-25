@@ -148,6 +148,8 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   tbl_cat,# %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
   show_errorbars = TRUE
 )
+pl_cat_learn_pretty <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
+  theme(legend.position = "bottom")
 # overall trajectory
 pl_cat_agg <- l_pl[[1]] + labs(x = "Block of 20 Trials", y = "Categorization Accuracy") + # , caption = ""
   scale_color_viridis_d(name = "Category")
@@ -250,7 +252,7 @@ tbl_sim_ci$distance_binned <-
 # some sample participants to plot similarity ratings
 sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
-l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim)
+l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1, 3.5))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 
 grid.arrange(pl_cat_agg, l_pl_sim[[2]], nrow = 1)
@@ -393,4 +395,15 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-
+# save some plots
+pl <- arrangeGrob(pl_psychonomics_means + theme(plot.title = element_blank()), pl_cat_learn_pretty, l_pl_sim[[3]], ncol = 3)
+save_my_tiff(
+  pl, 
+  "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview.tiff", 
+  13, 3.75
+)
+save_my_pdf(
+  pl, 
+  "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview.pdf", 
+  13, 3.75
+)

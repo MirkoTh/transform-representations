@@ -263,6 +263,7 @@ plot_categorization_accuracy_against_blocks <-
     tbl_chance <- chance_performance_cat(tbl_cat)
     tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
     
+    levels(tbl_cat_agg_ci$cat_true) <- c("Bukil", "Venak", "Monus", "Ladiv")
     pl_agg <- ggplot() +
       geom_line(
         data = tbl_cat_agg_ci,
