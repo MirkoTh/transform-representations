@@ -4,6 +4,7 @@ rm(list = ls())
 library(naivebayes)
 library(tidyverse)
 library(docstring)
+library(grid)
 library(ggExtra)
 library(furrr)
 library(catlearn)
@@ -47,13 +48,13 @@ l_info <- pmap(
 
 l_info_seq <- pmap(
   tbl_vary %>% filter(cat_type == "exemplar") %>% mutate(cat_type == "no category") %>% unique(), ~ append(
-      l_info_prep, 
-      list(
-        n_categories = ..1, cat_type = ..2, prior_sd = ..3,
-        sampling = ..4, constrain_space = ..5,
-        category_shape = ..6, is_reward = ..7
-      )
+    l_info_prep, 
+    list(
+      n_categories = ..1, cat_type = ..2, prior_sd = ..3,
+      sampling = ..4, constrain_space = ..5,
+      category_shape = ..6, is_reward = ..7
     )
+  )
 )
 tbl_info <- tibble(do.call(rbind.data.frame, l_info)) %>%
   mutate(condition_id = seq(1:length(l_info))) %>%
@@ -86,13 +87,19 @@ l_seq_results <- future_map(
 )
 
 
+
+read_write = "read"
+
 td <- lubridate::today()
 
+if (read_write == "write") {
+  saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
+  saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
+} else if (read_write == "read") {
+  l_category_results <- readRDS(file = "data/2022-08-24-grid-search-vary-constrain-space.rds")
+  l_seq_results <- readRDS(file = "data/2023-01-12-grid-search-sequential-comparison.rds")
+}
 
-saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
-l_category_results <- readRDS(file = "data/2022-08-24-grid-search-vary-constrain-space.rds")
-saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
-l_seq_results <- readRDS(file = "data/2023-01-12-grid-search-sequential-comparison.rds")
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
 
 
@@ -104,7 +111,7 @@ l_results_plots_seq <- map(l_seq_results, diagnostics_seq, sim_center = "square"
 
 dg <- position_dodge(width = .9)
 
-l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+pl_pred_delta <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
   l_results_plots_seq[[1]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
 ) %>% ggplot(aes(session, d_closest_sqrt, group = condition)) +
   geom_col(aes(fill = condition), position = dg) +
@@ -125,20 +132,20 @@ marrangeGrob(list(
 ), nrow = 3, ncol = 2, 
 layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
 )
-pl_pred <- l_results_plots[[5]][[2]][[1]] +
-  labs(title = "Prototype Model & Improvement Sampling")
+pl_pred <- l_results_plots[[5]][[2]][[1]]
 tbl_preds <- crossing(
   group = c("Category Learning", "Similarity Judgment"),
   timepoint = factor(c("Before Training", "After Training"), c("Before Training", "After Training"), ordered = TRUE)
 )
 tbl_preds$d_closest <- c(2, 1.75, 2, 2)
 dg <- position_dodge(width = .8)
-pl_pred_delta <- ggplot(tbl_preds, aes(timepoint, d_closest, group = group)) +
-  geom_col(aes(fill = group), position = dg) +
-  theme_bw() +
-  scale_fill_viridis_d(name = "Group") +
-  labs(x = "Time Point", y = "Distance to Closest Center")
-save_my_tiff(arrangeGrob(pl_pred, pl_pred_delta), "figures/model-predictions.tiff", 5, 7)
+# pl_pred_delta <- ggplot(tbl_preds, aes(timepoint, d_closest, group = group)) +
+#   geom_col(aes(fill = group), position = dg) +
+#   theme_bw() +
+#   scale_fill_viridis_d(name = "Group") +
+#   labs(x = "Time Point", y = "Distance to Closest Center")
+save_my_tiff(arrangeGrob(pl_pred + theme(plot.title = element_blank()), pl_pred_delta, nrow = 1), "figures/model-predictions.tiff", 12, 3.5)
+save_my_pdf(arrangeGrob(pl_pred + theme(plot.title = element_blank()), pl_pred_delta, nrow = 1), "figures/model-predictions.pdf", 12, 3.5)
 
 # extract sum of distances between prior and posterior
 l_posteriors <- map(map(l_results_plots, 1), "tbl_posterior")
