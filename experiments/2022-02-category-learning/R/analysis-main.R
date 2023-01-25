@@ -261,13 +261,16 @@ tbl_sim_ci <- summarySEwithin(tbl_sim,
 tbl_sim_ci$distance_binned <-
   as.numeric(as.character(tbl_sim_ci$distance_binned))
 
-sample_ids <-
+sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   filter(participant_id %in% sample_ids) %>%
   summarize(response_mn = mean(response)) %>%
   ggplot(aes(distance_binned, response_mn, group = participant_id)) +
   geom_line(aes(color = participant_id))
+
+
+l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1.5, 3))
 
 pl_sim_psychonomics <- ggplot() +
   geom_line(
@@ -491,9 +494,14 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-pl <- arrangeGrob(pl_d_psychonomics, pl_cat_learn_psychonomics, pl_sim_psychonomics, ncol = 3)
+pl <- arrangeGrob(pl_d_psychonomics, pl_cat_learn_psychonomics, l_pl_sim[[3]], ncol = 3)
 save_my_tiff(
   pl, 
-  "experiments/2022-02-category-learning/data/figures/combined-psychonomics.tiff", 
-  12, 3.75
+  "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview.tiff", 
+  13, 3.75
+)
+save_my_pdf(
+  pl, 
+  "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview.pdf", 
+  13, 3.75
 )

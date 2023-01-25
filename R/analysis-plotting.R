@@ -279,7 +279,7 @@ plot_categorization_accuracy_against_blocks <-
         aes(trial_id_binned, accuracy_mn_participant, group = cat_true),
         position = dg,
         color = "white",
-        size = 3
+        size = 2
       ) +
       geom_point(
         data = tbl_cat_agg_ci,
@@ -288,14 +288,13 @@ plot_categorization_accuracy_against_blocks <-
           accuracy_mn_participant,
           group = cat_true,
           color = cat_true
-        ),
-        position = dg
+        ), position = dg
       ) +
       # geom_line(
       #   data = tbl_chance, aes(block, prop_chance, group = 1),
       #   linetype = "dotdash", size = .5) +
       #facet_wrap( ~ n_categories, scales = "free_x") +
-      coord_cartesian(ylim = c(.25, 1)) +
+      #coord_cartesian(ylim = c(.25, 1)) +
       scale_color_brewer(name = "Category", palette = "Set1") +
       scale_x_continuous(breaks = seq(2, 14, by = 2)) +
       labs(x = "Block of 20 Trials",
@@ -759,7 +758,7 @@ plot_similarity_against_distance <-
       scale_color_viridis_c(name = "Participant ID") +
       scale_size_continuous(name = "Nr. Similarity Judgments") +
       labs(x = "Euclidean Distance (Binned)",
-           y = str_c("Average Similarity (Range: ", sim_edges[1], " - ", sim_edges[2], ")"),
+           y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")"),
            title = "Sample Participants")
     
     # aggregate scatter plot and line plot
@@ -767,7 +766,7 @@ plot_similarity_against_distance <-
       geom_smooth(
         data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
         aes(distance_binned, response),
-        color = "purple",
+        color = "#440154",
         method = "lm"
       ) + geom_errorbar(
         data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
@@ -784,9 +783,35 @@ plot_similarity_against_distance <-
       scale_x_continuous(breaks = seq(2, 10, by = 2)) +
       coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
-           y = str_c("Average Similarity (Range: ", sim_edges[1], " - ", sim_edges[2], ")")) # ,title = "Mean Effect"
+           y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")")) # ,title = "Mean Effect"
     
-    return(list(pl_sample = pl_sample, pl_agg = pl_agg))
+    tbl_tmp <- tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13)))
+    levels(tbl_tmp$n_categories) <- "Similarity"
+    pl_agg_lines <- ggplot() +
+      geom_line(
+        data = tbl_tmp,
+        aes(distance_binned, response, color = n_categories)
+      ) + geom_errorbar(
+        data = tbl_tmp,
+        aes(
+          distance_binned,
+          ymin = response - ci,
+          ymax = response + ci,
+          width = .2
+        )
+      ) + geom_point(data = tbl_tmp,
+                     aes(distance_binned, response), size = 2, color = "white") +
+      geom_point(data = tbl_tmp,
+                 aes(distance_binned, response)) +
+      theme_bw() +
+      theme(legend.position = "bottom") +
+      scale_x_continuous(breaks = seq(2, 10, by = 2)) +
+      scale_color_viridis_d(name = "Group") +
+      coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
+      labs(x = "Euclidean Distance (Binned)",
+           y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")"))
+    
+    return(list(pl_sample = pl_sample, pl_agg = pl_agg, pl_agg_lines = pl_agg_lines))
   }
 
 
