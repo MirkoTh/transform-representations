@@ -395,7 +395,7 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-# save some plots
+# save aggregate plots
 pl <- arrangeGrob(pl_psychonomics_means + theme(plot.title = element_blank()), pl_cat_learn_pretty, l_pl_sim[[3]], ncol = 3)
 save_my_tiff(
   pl, 

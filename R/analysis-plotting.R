@@ -296,7 +296,7 @@ plot_categorization_accuracy_against_blocks <-
       #   linetype = "dotdash", size = .5) +
       #facet_wrap( ~ n_categories, scales = "free_x") +
       #coord_cartesian(ylim = c(.25, 1)) +
-      scale_color_brewer(name = "Category", palette = "Set1") +
+      scale_color_viridis_d(name = "Category") +
       scale_x_continuous(breaks = seq(2, 14, by = 2)) +
       labs(x = "Block of 20 Trials",
            y = "Categorization Accuracy",
@@ -787,6 +787,7 @@ plot_similarity_against_distance <-
            y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")")) # ,title = "Mean Effect"
     
     tbl_tmp <- tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13)))
+    tbl_tmp$n_categories <- factor(tbl_tmp$n_categories)
     levels(tbl_tmp$n_categories) <- "Similarity"
     pl_agg_lines <- ggplot() +
       geom_line(

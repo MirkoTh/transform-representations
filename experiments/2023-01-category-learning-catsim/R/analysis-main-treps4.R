@@ -180,6 +180,8 @@ ggplotly(
   scale_color_viridis_d(name = "ID")
 )
 
+tbl_simult$session <- factor(tbl_simult$session)
+levels(tbl_simult$session) <- c("Before Training", "After Training")
 
 
 
@@ -309,6 +311,30 @@ grouped_agg(tbl_simult_move, c(participant_id, n_categories, comparison_pool_bin
   scale_fill_viridis_d(name = "Condition") +
   labs(x = "Mean Move", y = "Nr. Participants")
 
+
+
+tbl_simult_agg <- summarySEwithin(
+  tbl_simult_move, "move_response", "n_categories", 
+  "comparison_pool_binary", "participant_id"
+)
+tbl_simult_agg$n_categories <- fct_relevel(tbl_simult_agg$n_categories, "4 Categories", "Similarity")
+dg <- position_dodge(width = .2)
+pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_response, group = n_categories)) +
+  geom_hline(yintercept = 0, color = "grey", size = 1, linetype = "dotdash") +
+  geom_errorbar(aes(ymin = move_response - ci, ymax = move_response + ci, color = n_categories), width = .2, position = dg) +
+  geom_line(aes(color = n_categories), position = dg) +
+  geom_point(color = "white", size = 4, position = dg) +
+  geom_point(aes(color = n_categories), position = dg) +
+  scale_color_viridis_d(name = "Group") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Category Comparison",
+    y = "Rating After - Before"
+  )
+save_my_pdf(pl_groupmeans, "experiments/2023-01-category-learning-catsim/data/figures/mean-moves.pdf", 6, 4)
+
+
 # looks like participants find it difficult to differentiate between categories when stimuli come close from boundaries
 
 # Categorization ----------------------------------------------------------
@@ -334,7 +360,7 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn <- l_pl[[1]] + scale_color_viridis_d(name = "Category")
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom")
 save_my_pdf(
   pl_cat_learn, 
   "experiments/2023-01-category-learning-catsim/data/figures/category-learning.pdf",
@@ -407,11 +433,11 @@ tbl_seq_ci$distance_binned <-
 # some sample participants to plot similarity ratings
 sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
-l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1, 8))
+l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-pl_cat_learn <- l_pl[[1]] + scale_color_viridis_d(name = "Category")
+pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom")
 save_my_pdf(
-  l_pl_sim[[2]], 
+  pl_sequential_agg, 
   "experiments/2023-01-category-learning-catsim/data/figures/sequential-comparison.pdf",
   4, 3.5
 )
@@ -462,3 +488,17 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
 
 
 
+
+
+# save aggregate plots
+pl <- arrangeGrob(pl_groupmeans + theme(plot.title = element_blank()), pl_cat_learn_pretty, pl_sequential_agg, ncol = 3)
+save_my_tiff(
+  pl, 
+  "experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview.tiff", 
+  13, 3.75
+)
+save_my_pdf(
+  pl, 
+  "experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview.pdf", 
+  13, 3.75
+)

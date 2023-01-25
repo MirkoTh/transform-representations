@@ -224,6 +224,27 @@ ggplot(move_agg, aes(d_euclidean_cut, move_response, aes(group = comparison_pool
   facet_wrap(~ n_categories) +
   theme(axis.text.x = element_text(vjust = 0, angle = 90))
 
+tbl_simult_agg <- summarySEwithin(
+  tbl_simult_move, "move_response", "n_categories", 
+  "comparison_pool_binary", "participant_id"
+)
+tbl_simult_agg$n_categories <- fct_relevel(tbl_simult_agg$n_categories, "4 Categories", "Similarity")
+dg <- position_dodge(width = .2)
+pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_response, group = n_categories)) +
+  geom_hline(yintercept = 0, color = "grey", size = 1, linetype = "dotdash") +
+  geom_errorbar(aes(ymin = move_response - ci, ymax = move_response + ci, color = n_categories), width = .2, position = dg) +
+  geom_line(aes(color = n_categories), position = dg) +
+  geom_point(color = "white", size = 4, position = dg) +
+  geom_point(aes(color = n_categories), position = dg) +
+  scale_color_viridis_d(name = "Group") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Category Comparison",
+    y = "Rating After - Before"
+  )
+save_my_tiff(pl_groupmeans, "experiments/2022-09-category-learning-similarity/data/figures/mean-moves.tiff", 6, 4)
+
 
 # Categorization ----------------------------------------------------------
 
@@ -248,9 +269,9 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn <- l_pl[[1]] + scale_color_viridis_d(name = "Category")
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom")
 save_my_pdf(
-  pl_cat_learn, 
+  pl_cat_learn_pretty, 
   "experiments/2022-09-category-learning-similarity/data/figures/category-learning.pdf",
   5.5, 3.5
 )
@@ -305,11 +326,11 @@ tbl_seq_ci$distance_binned <-
 # some sample participants to plot similarity ratings
 sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
-l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1, 8))
+l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-pl_cat_learn <- l_pl[[1]] + scale_color_viridis_d(name = "Category")
+pl_sim <- l_pl_sim[[3]] + scale_color_viridis_d(name = "Category")
 save_my_pdf(
-  l_pl_sim[[2]], 
+  l_pl_sim[[3]], 
   "experiments/2022-09-category-learning-similarity/data/figures/sequential-comparison.pdf",
   4, 3.5
 )
@@ -360,3 +381,16 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
 
 
 
+
+# save aggregate plots
+pl <- arrangeGrob(pl_groupmeans + theme(plot.title = element_blank()), pl_cat_learn_pretty, l_pl_sim[[3]], ncol = 3)
+save_my_tiff(
+  pl, 
+  "experiments/2022-09-category-learning-similarity/data/figures/three-tasks-agg-overview.tiff", 
+  13, 3.75
+)
+save_my_pdf(
+  pl, 
+  "experiments/2022-09-category-learning-similarity/data/figures/three-tasks-agg-overview.pdf", 
+  13, 3.75
+)
