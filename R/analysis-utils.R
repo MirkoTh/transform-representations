@@ -242,6 +242,21 @@ load_data <- function(path_data, participants_returned) {
   
   tbl_cr <- reduce(map(l_paths[["cr"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
   tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
+  
+  # create a lookup table mapping prolific ids to random ids
+  tbl_ids_lookup <- tibble(participant_id = unique(tbl_cr$participant_id))
+  tbl_ids_lookup <- tbl_ids_lookup %>%
+    group_by(participant_id) %>%
+    mutate(participant_id_randomized = random_id(1)) %>% ungroup()
+  write_csv(tbl_ids_lookup, str_c(path_data, "participant-lookup.csv"))
+  # replace prolific ids with random ids
+  tbl_cr <- tbl_cr %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
+    select(-participant_id)
+  tbl_cat <- tbl_cat %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
+    select(-participant_id)
+  write_csv(tbl_cr, str_c(path_data, "tbl_cr.csv"))
+  write_csv(tbl_cat, str_c(path_data, "tbl_cat.csv"))
+  
   # add stim_id
   tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   
