@@ -98,7 +98,9 @@ histograms_accuracies_rts(tbl_cat_overview)
 l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
 pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") + scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), breaks = seq(.5, .8, by = .1)) +
+  coord_cartesian(ylim = c(.5, .85))
 # by-participant trajectories
 #l_pl[[2]]
 
@@ -270,7 +272,11 @@ tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
   geom_line(aes(color = participant_id))
 
 
-l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1.5, 3))
+l_pl_sim <- plot_similarity_against_distance(
+  tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1.5, 3)
+  )
+l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0))
 
 pl_sim_psychonomics <- ggplot() +
   geom_line(
@@ -369,7 +375,8 @@ pl_d_psychonomics <- plot_distance_psychonomics(
     mutate(
       n_categories = fct_relevel(n_categories, "Similarity", after = 1)
       ) %>% filter(category == 2)
-  )
+  ) + scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(0, .2)))
 save_my_tiff(
   pl_d_psychonomics, 
   "experiments/2022-02-category-learning/data/figures/distances-centers-psychonomics.tiff", 
@@ -494,7 +501,7 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-pl <- arrangeGrob(pl_d_psychonomics, pl_cat_learn_psychonomics, l_pl_sim[[3]], ncol = 3)
+pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_psychonomics, ncol = 3)
 save_my_tiff(
   pl, 
   "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview.tiff", 

@@ -309,7 +309,9 @@ grouped_agg(tbl_simult_move, c(participant_id, n_categories, comparison_pool_bin
   facet_grid(comparison_pool_binary ~ n_categories) +
   theme_bw() +
   scale_fill_viridis_d(name = "Condition") +
-  labs(x = "Mean Move", y = "Nr. Participants")
+  labs(x = "Mean Move", y = "Nr. Participants") +
+  theme(strip.background =element_rect(fill="white"))+
+  theme(strip.text = element_text(colour = 'black'))
 
 
 
@@ -326,6 +328,8 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
   geom_point(color = "white", size = 4, position = dg) +
   geom_point(aes(color = n_categories), position = dg) +
   scale_color_viridis_d(name = "Group") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.025, .025))) +
   theme_bw() +
   theme(legend.position = "bottom") +
   labs(
@@ -360,7 +364,9 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom")
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(0, .02)))
 save_my_pdf(
   pl_cat_learn, 
   "experiments/2023-01-category-learning-catsim/data/figures/category-learning.pdf",
@@ -435,7 +441,9 @@ sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom")
+pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(0, .02)))
 save_my_pdf(
   pl_sequential_agg, 
   "experiments/2023-01-category-learning-catsim/data/figures/sequential-comparison.pdf",
@@ -491,7 +499,10 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
 
 
 # save aggregate plots
-pl <- arrangeGrob(pl_groupmeans + theme(plot.title = element_blank()), pl_cat_learn_pretty, pl_sequential_agg, ncol = 3)
+pl <- arrangeGrob(
+  pl_cat_learn_pretty, pl_sequential_agg,
+  pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
+  )
 save_my_tiff(
   pl, 
   "experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview.tiff", 

@@ -20,7 +20,6 @@ library(modelr)
 library(plotly)
 
 
-rm(list = ls())
 # Import Home-Grown Modules -----------------------------------------------
 
 files <- c(
@@ -179,7 +178,7 @@ save_my_pdf(
   pl_lines_simult, 
   "experiments/2022-09-category-learning-similarity/data/figures/simult-avg-comparison.pdf",
   5, 4
-  )
+)
 
 # tbl_simult_move %>%
 #   group_by(participant_id, n_categories, comparison_pool_binary) %>%
@@ -239,6 +238,7 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
   scale_color_viridis_d(name = "Group") +
   theme_bw() +
   theme(legend.position = "bottom") +
+  scale_x_discrete(expand = c(0, 0)) +
   labs(
     x = "Category Comparison",
     y = "Rating After - Before"
@@ -269,7 +269,9 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom")
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(0, .02)))
 save_my_pdf(
   pl_cat_learn_pretty, 
   "experiments/2022-09-category-learning-similarity/data/figures/category-learning.pdf",
@@ -328,7 +330,9 @@ sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-pl_sim <- l_pl_sim[[3]] + scale_color_viridis_d(name = "Category")
+pl_sim <- l_pl_sim[[3]] + scale_color_viridis_d(name = "Category") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
 save_my_pdf(
   l_pl_sim[[3]], 
   "experiments/2022-09-category-learning-similarity/data/figures/sequential-comparison.pdf",
@@ -383,7 +387,10 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
 
 
 # save aggregate plots
-pl <- arrangeGrob(pl_groupmeans + theme(plot.title = element_blank()), pl_cat_learn_pretty, l_pl_sim[[3]], ncol = 3)
+pl <- arrangeGrob(
+  pl_cat_learn_pretty, l_pl_sim[[3]],
+  pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
+)
 save_my_tiff(
   pl, 
   "experiments/2022-09-category-learning-similarity/data/figures/three-tasks-agg-overview.tiff", 

@@ -7,6 +7,7 @@ rm(list = ls())
 
 # Import Packages ---------------------------------------------------------
 
+library(ids)
 library(jsonlite)
 library(tidyverse)
 library(grid)
@@ -149,7 +150,8 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 pl_cat_learn_pretty <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") + scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.01, .01)))
 # overall trajectory
 pl_cat_agg <- l_pl[[1]] + labs(x = "Block of 20 Trials", y = "Categorization Accuracy") + # , caption = ""
   scale_color_viridis_d(name = "Category")
@@ -325,7 +327,9 @@ pl_psychonomics_means <- l_empirical$pl +
   theme(
     legend.position = "bottom") +
   scale_fill_viridis_d(name = "Session") +
-  scale_color_viridis_d()
+  scale_color_viridis_d() +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(0, .2)))
 
 save_my_tiff(
   pl_psychonomics_means, 
@@ -396,7 +400,11 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
 
 
 # save aggregate plots
-pl <- arrangeGrob(pl_psychonomics_means + theme(plot.title = element_blank()), pl_cat_learn_pretty, l_pl_sim[[3]], ncol = 3)
+pl <- arrangeGrob(
+  pl_cat_learn_pretty, l_pl_sim[[3]], 
+  pl_psychonomics_means + theme(plot.title = element_blank()),
+  ncol = 3
+  )
 save_my_tiff(
   pl, 
   "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview.tiff", 
