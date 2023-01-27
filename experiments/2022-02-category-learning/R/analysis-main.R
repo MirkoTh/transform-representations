@@ -46,7 +46,7 @@ path_data <- c(
 
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
-# walk(path_data[2:3], hash_ids, participants_returned = c())
+# walk(path_data[2:3], hash_ids_e1, participants_returned = c())
 
 l_tbls_data <- map(path_data[2:3], load_data_e1)
 l_tbl_data <-

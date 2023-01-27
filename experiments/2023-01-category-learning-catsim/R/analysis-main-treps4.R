@@ -18,6 +18,7 @@ library(catlearn)
 library(cmdstanr)
 library(modelr)
 library(plotly)
+library(ids)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -55,6 +56,16 @@ returned_timeout <- timeout_and_returns_e4()
 l_tbls_data <- map(path_data, load_data_e3, participants_returned = returned_timeout)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+
+
+# hash prolific ids and load data
+# only hashed ids are uploaded on osf
+# walk(path_data, hash_ids_e3, participants_returned = returned_timeout)
+
+l_tbls_data <- map(path_data, load_data_e3)
+l_tbl_data <-
+  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+
 
 
 # Set Exclusion Criteria Appropriately ------------------------------------
@@ -368,7 +379,7 @@ pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02)))
 save_my_pdf(
-  pl_cat_learn, 
+  pl_cat_learn_pretty, 
   "experiments/2023-01-category-learning-catsim/data/figures/category-learning.pdf",
   5.5, 3.5
 )

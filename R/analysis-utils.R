@@ -224,14 +224,14 @@ load_data_e1 <- function(path_data) {
 
 
 # check for each participant which file has more data and select that one
-hash_ids <- function(path_data, participants_returned) {
+hash_ids_e1 <- function(path_data, participants_returned) {
   #' save continuous reproduction ("cr") and category learning ("cat") data
   #' with prolific ids replaced by random identifiers
   #' 
   #' @description loads data from json files and writes to csv with
   #' prolific ids replaced by random ids; writes hash table to csv as well
   #' @param path_data sub-folder with batch data
-  #' @param participants_returned list with pro
+  #' @param participants_returned list with returned and rejected prolific
   
   #'  
   #' @return nothing, just writes
@@ -307,9 +307,8 @@ json_to_tibble <- function(path_file) {
   return(tbl_cr)
 }
 
-
-load_data_e3 <- function(path_data, participants_returned) {
-  #' load simultaneous comparison ("sim_simult") and category learning ("cat") data
+load_data_e3 <- function(path_data) {
+  #' load simultaneous comparison ("sim_simult") and secondary task ("cat") data
   #' for E3
   #' 
   #' @description loads data and declares factor and numeric columns in the two tibbles;
@@ -318,6 +317,33 @@ load_data_e3 <- function(path_data, participants_returned) {
   #' @return a list with the two tibbles
   #' 
   # read individual performance
+  tbl_simult <- read_csv(str_c(path_data, "tbl_simult.csv"))
+  tbl_cat <- read_csv(str_c(path_data, "tbl_cat.csv"))
+  
+  factors <- c("participant_id", "session", "cat_true", "n_categories")
+  numerics <- c(
+    "trial_id", "x1_true", "x2_true", "x1_true_l", "x2_true_l", 
+    "x1_true_r", "x2_true_r", "x1_response", "x2_response", "response", 
+    "accuracy", "rt"
+  )
+  tbl_simult <- fix_data_types(tbl_simult, factors, numerics)
+  tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
+  
+  # add comparison pool for simultaneous comparison task
+  tbl_simult <- assign_comparison_pool(tbl_simult)
+  
+  l_data <- list(tbl_simult = tbl_simult, tbl_cat = tbl_cat)
+  return(l_data)
+}
+
+hash_ids_e3 <- function(path_data, participants_returned) {
+  #' save simultaneous comparison ("simult") and secondary task ("cat") data
+  #' with prolific ids replaced by random identifiers
+  #' 
+  #' @description loads data from json files and writes to csv with
+  #' prolific ids replaced by random ids; writes hash table to csv as well
+  #' @param path_data sub-folder with batch data
+  #' @param participants_returned list with returned and rejected prolific
   
   # check for each participant which file has more data and select that one
   files_dir <- dir(path_data)
@@ -357,23 +383,26 @@ load_data_e3 <- function(path_data, participants_returned) {
   tbl_simult <- reduce(map(l_paths[["sim_simult"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
   tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
   
-  factors <- c("participant_id", "session", "cat_true", "n_categories")
-  numerics <- c(
-    "trial_id", "x1_true", "x2_true", "x1_true_l", "x2_true_l", 
-    "x1_true_r", "x2_true_r", "x1_response", "x2_response", "response", 
-    "accuracy", "rt"
-  )
-  tbl_simult <- fix_data_types(tbl_simult, factors, numerics)
-  tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
+  # create a lookup table mapping prolific ids to random ids
+  tbl_ids_lookup <- tibble(participant_id = unique(tbl_simult$participant_id))
+  tbl_ids_lookup <- tbl_ids_lookup %>%
+    group_by(participant_id) %>%
+    mutate(participant_id_randomized = random_id(1)) %>% ungroup()
+  write_csv(tbl_ids_lookup, str_c(path_data, "participant-lookup.csv"))
+  # replace prolific ids with random ids
+  tbl_simult <- tbl_simult %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
+    select(-participant_id) %>% rename(participant_id = participant_id_randomized)
+  tbl_cat <- tbl_cat %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
+    select(-participant_id) %>% rename(participant_id = participant_id_randomized)
   
+  # exclude returned and rejected participants
   tbl_simult <- tbl_simult %>% filter(!(participant_id %in% participants_returned))
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
-  # add comparison pool for simultaneous comparison task
-  tbl_simult <- assign_comparison_pool(tbl_simult)
+  write_csv(tbl_simult, str_c(path_data, "tbl_simult.csv"))
+  write_csv(tbl_cat, str_c(path_data, "tbl_cat.csv"))
   
-  l_data <- list(tbl_simult = tbl_simult, tbl_cat = tbl_cat)
-  return(l_data)
+
 }
 
 assign_comparison_pool <- function(tbl_df) {

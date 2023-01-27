@@ -59,7 +59,7 @@ sim_center <- "square"
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
 # returned_timeout <- timeout_and_returns_e2()
-# walk(path_data, hash_ids, participants_returned = returned_timeout)
+# walk(path_data, hash_ids_e1, participants_returned = returned_timeout)
 
 l_tbls_data <- map(path_data, load_data_e1)
 l_tbl_data <-

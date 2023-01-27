@@ -18,6 +18,7 @@ library(catlearn)
 library(cmdstanr)
 library(modelr)
 library(plotly)
+library(ids)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -53,7 +54,11 @@ sim_center <- "square"
 
 returned_timeout <- timeout_and_returns_e3()
 
-l_tbls_data <- map(path_data, load_data_e3, participants_returned = returned_timeout)
+# hash prolific ids and load data
+# only hashed ids are uploaded on osf
+#walk(path_data, hash_ids_e3, participants_returned = returned_timeout)
+
+l_tbls_data <- map(path_data, load_data_e3)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
