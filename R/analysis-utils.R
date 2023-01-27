@@ -192,19 +192,53 @@ fix_data_types <- function(tbl, fs, ns) {
   return(tbl)
 }
 
-
-load_data <- function(path_data, participants_returned) {
-  #' load continuous reproduction ("cr") and category learning ("cat") data
+load_data_e1 <- function(path_data) {
+  #' load continuous reproduction ("cr") and secondary task ("cat_sim") data
+  #' with prolific ids replaced by random identifiers
   #' 
   #' @description loads data and declares factor and numeric columns in the two tibbles;
   #' takes for each participant and task the table containing most data
+  #' @param path_data sub-folder containing batch data
   #'  
   #' @return a list with the two tibbles
   #' 
   # read individual performance
+  # add stim_id
+  tbl_cr <- read_csv(str_c(path_data, "tbl_cr.csv"))
+  # replace text label generated for one participant
+  tbl_cr$n_categories[str_detect(tbl_cr$n_categories, "\">1</")] <- 1
+  tbl_cr$n_categories <- as.numeric(tbl_cr$n_categories)
+  tbl_cat <- read_csv(str_c(path_data, "tbl_cat.csv"))
+  tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
+  tbl_cr$session <- as.numeric(tbl_cr$session)
+
+  factors <- c("participant_id", "session", "cat_true")
+  numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
+  tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
+  tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
+  
+  l_data <- list(tbl_cr, tbl_cat)
+  return(l_data)
+}
+
+
+
+# check for each participant which file has more data and select that one
+hash_ids <- function(path_data, participants_returned) {
+  #' save continuous reproduction ("cr") and category learning ("cat") data
+  #' with prolific ids replaced by random identifiers
+  #' 
+  #' @description loads data from json files and writes to csv with
+  #' prolific ids replaced by random ids; writes hash table to csv as well
+  #' @param path_data sub-folder with batch data
+  #' @param participants_returned list with pro
+  
+  #'  
+  #' @return nothing, just writes
+  #' 
+  # read individual performance
   
   # check for each participant which file has more data and select that one
-  
   
   files_dir <- dir(path_data)
   fld_cat <- files_dir[startsWith(files_dir, "cat")]
@@ -251,29 +285,16 @@ load_data <- function(path_data, participants_returned) {
   write_csv(tbl_ids_lookup, str_c(path_data, "participant-lookup.csv"))
   # replace prolific ids with random ids
   tbl_cr <- tbl_cr %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
-    select(-participant_id)
+    select(-participant_id) %>% rename(participant_id = participant_id_randomized)
   tbl_cat <- tbl_cat %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
-    select(-participant_id)
-  write_csv(tbl_cr, str_c(path_data, "tbl_cr.csv"))
-  write_csv(tbl_cat, str_c(path_data, "tbl_cat.csv"))
-  
-  # add stim_id
-  tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
-  
-  # only pilot data have to be corrected currently...
-  tbl_cr$session <- as.numeric(tbl_cr$session)
-  #tbl_cr[148:nrow(tbl_cr), "session"] <- 2 + tbl_cr[148:nrow(tbl_cr), "session"]
-  
-  factors <- c("participant_id", "session", "cat_true")
-  numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
-  tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
-  tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
-  
+    select(-participant_id) %>% rename(participant_id = participant_id_randomized)
+  # exclude returned and rejected participants
   tbl_cr <- tbl_cr %>% filter(!(participant_id %in% participants_returned))
   tbl_cat <- tbl_cat %>% filter(!(participant_id %in% participants_returned))
   
-  l_data <- list(tbl_cr, tbl_cat)
-  return(l_data)
+  write_csv(tbl_cr, str_c(path_data, "tbl_cr.csv"))
+  write_csv(tbl_cat, str_c(path_data, "tbl_cat.csv"))
+
 }
 
 

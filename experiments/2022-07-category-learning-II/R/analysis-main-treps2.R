@@ -55,12 +55,19 @@ sim_center <- "square"
 
 # Load Data ---------------------------------------------------------------
 
-returned_timeout <- timeout_and_returns_e2()
 
-l_tbls_data <- map(path_data, load_data, participants_returned = returned_timeout)
+# hash prolific ids and load data
+# only hashed ids are uploaded on osf
+# returned_timeout <- timeout_and_returns_e2()
+# walk(path_data, hash_ids, participants_returned = returned_timeout)
+
+l_tbls_data <- map(path_data, load_data_e1)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
+# these are the files uploaded on osf
+write_csv(l_tbl_data[[1]], "experiments/2022-07-category-learning-II/data/continuous-reproduction.csv")
+write_csv(l_tbl_data[[2]], "experiments/2022-07-category-learning-II/data/secondary-task.csv")
 
 # add several distance measures: response to stimulus, response to true
 # category center, & response to closest true decision boundary

@@ -1,3 +1,4 @@
+rm(list = ls())
 # Some Notes
 
 # for simulation f_stretch <- 1, f_shift <- 0
@@ -16,6 +17,7 @@ library(rutils)
 library(catlearn)
 library(cmdstanr)
 library(modelr)
+library(ids)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -41,10 +43,18 @@ path_data <- c(
   "experiments/2022-02-category-learning/data/2022-04-20-treps1-pilot-2/",
   "experiments/2022-02-category-learning/data/2022-04-21-treps1-experiment/"
 )
-l_tbls_data <- map(path_data[2:3], load_data, participants_returned = c())
+
+# hash prolific ids and load data
+# only hashed ids are uploaded on osf
+# walk(path_data[2:3], hash_ids, participants_returned = c())
+
+l_tbls_data <- map(path_data[2:3], load_data_e1)
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 
+# these are the files uploaded on osf
+write_csv(l_tbl_data[[1]], "experiments/2022-02-category-learning/data/continuous-reproduction.csv")
+write_csv(l_tbl_data[[2]], "experiments/2022-02-category-learning/data/secondary-task.csv")
 
 # add deviation from response to stimulus
 l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)
@@ -53,6 +63,8 @@ l_tbl_data[[1]] <- l_deviations$tbl_cr
 l_cases <- preprocess_data(l_tbl_data, 192, 600)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
+
+
 
 # exclusions
 excl_incomplete <-
