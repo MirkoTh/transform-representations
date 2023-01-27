@@ -16,11 +16,10 @@ files <- c(
 )
 walk(files, source)
 
-
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 500
+nruns <- 5000
 
 # constant
 l_info_prep <- list(
@@ -73,7 +72,7 @@ walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 
 # Run Category Learning Task ----------------------------------------------
 
-plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
+plan(multisession, workers = min(future::availableCores() - 4, length(l_info)))
 
 
 l_category_results <- future_map(
@@ -88,7 +87,7 @@ l_seq_results <- future_map(
 
 
 
-read_write = "read"
+read_write <- "read"
 
 td <- lubridate::today()
 
@@ -96,8 +95,8 @@ if (read_write == "write") {
   saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
   saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
 } else if (read_write == "read") {
-  l_category_results <- readRDS(file = "data/2022-08-24-grid-search-vary-constrain-space.rds")
-  l_seq_results <- readRDS(file = "data/2023-01-12-grid-search-sequential-comparison.rds")
+  l_category_results <- readRDS(file = "data/2023-01-27-grid-search-vary-constrain-space.rds")
+  l_seq_results <- readRDS(file = "data/2023-01-27-grid-search-sequential-comparison.rds")
 }
 
 # approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
@@ -117,22 +116,28 @@ pl_pred_delta <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition 
   geom_col(aes(fill = condition), position = dg) +
   scale_fill_viridis_d(name = "Condition") +
   theme_bw() +
+  theme(strip.background =element_rect(fill="white"))+
+  theme(strip.text = element_text(colour = 'black'))+
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center")
 
 
-tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
-tbl_bef_aft$x2_aft[is.na(tbl_bef_aft$x2_aft)] <- tbl_bef_aft$x2_bef[is.na(tbl_bef_aft$x2_aft)]
+# tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
+# tbl_bef_aft$x2_aft[is.na(tbl_bef_aft$x2_aft)] <- tbl_bef_aft$x2_bef[is.na(tbl_bef_aft$x2_aft)]
+# 
+# ggplot(tbl_bef_aft, aes(x1_aft, x2_aft, group = category)) + geom_point(aes(color = category))
 
-ggplot(tbl_bef_aft, aes(x1_aft, x2_aft, group = category)) + geom_point(aes(color = category))
-
-marrangeGrob(list(
-  l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]], 
-  l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]],
-  l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]
-), nrow = 3, ncol = 2, 
+grid.draw(arrangeGrob(
+  l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]]$pl, 
+  l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]]$pl,
+  l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]$pl, nrow = 3, ncol = 2, 
 layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
-)
-pl_pred <- l_results_plots[[5]][[2]][[1]]
+))
+pl_pred <- l_results_plots[[5]][[2]][[1]] +
+  theme(strip.background = element_rect(fill="white"))+
+  theme(strip.text = element_text(colour = 'black'))
+
 tbl_preds <- crossing(
   group = c("Category Learning", "Similarity Judgment"),
   timepoint = factor(c("Before Training", "After Training"), c("Before Training", "After Training"), ordered = TRUE)
@@ -157,10 +162,10 @@ for (i in 1:nrow(tbl_info)) {
     tbl_info[i, c("cat_type", "prior_sd", "sampling", "constrain_space")]
   )
 }
-tbl_sum_of_distances <- reduce(l_sum_of_distances, rbind)
+tbl_sum_of_distances <- reduce(l_sum_of_distances, rbind) %>% as_tibble()
 tbl_ds_agg <- tbl_sum_of_distances %>%
   filter(tp == "After Training") %>%
-  group_by(cat_type, comparison) %>%
+  group_by(cat_type, comparison, sampling, n_comparisons) %>%
   summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop)) %>%
   ungroup()
 tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "Prototype", "Rule"))

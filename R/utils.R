@@ -1148,12 +1148,13 @@ inner <- function(x1_true, x2_true, x11_true, x21_true) {
 
 sum_of_distances <- function(tbl_1, tbl_2, cat1, cat2) {
   #' @description maps over xs from first tbl
-  pmap(
+  tmp <- pmap(
     tbl_1 %>% filter(category %in% cat1) %>% select(x1_true, x2_true) %>%
       rename(x11_true = x1_true, x21_true = x2_true),
     outer,
     tbl_df = tbl_2 %>% filter(category %in% cat2)
-  ) %>% unlist() %>% sum()
+  ) %>% unlist()
+  return(c(n = length(tmp), s = sum(tmp)))
 }
 
 wrap_sum_of_distances <- function(tp, cat1, cat2, tbl_df) {
@@ -1188,14 +1189,17 @@ sum_of_pairwise_distances <- function(tbl_posterior) {
     comparison = rep(rep(c("Within", "Between"), each = 2), 4)
   )
   # compute actual distances
-  tbl_comparisons$distances_sum <- pmap_dbl(
+  tmp <- pmap(
     tbl_comparisons %>% select(-comparison), 
     wrap_sum_of_distances, 
     tbl_df = tbl_posterior %>% mutate(timepoint = as.character(timepoint))
-  )
+  ) %>% reduce(rbind) %>% as.data.frame()
+  
+  tbl_comparisons$n_comparisons <- tmp$n
+  tbl_comparisons$distances_sum <- tmp$s
   # compute 
   tbl_comparisons %>% 
-    group_by(comparison, tp) %>% 
+    group_by(comparison, tp, n_comparisons) %>% 
     summarize(ds_sum = sum(distances_sum)) %>%
     group_by(comparison) %>%
     mutate(
