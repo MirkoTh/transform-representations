@@ -2283,7 +2283,7 @@ fit_one_subset <- function(p_id, tp, pool, tbl_data, metric) {
     c(.02, .5), 
     f, 
     tbl_data = tbl_fit, 
-    lower = c(.0, .01), upper = c(10, .99),
+    lower = c(.0, .01), upper = c(.1, .99),
     method = "L-BFGS-B"
   )
   return(results)
@@ -2305,12 +2305,14 @@ summarize_model_results <- function(l, tbl_design) {
   )
   colnames(tbl_design) <- c("participant_id", "task", "comparison_pool", "session", "c", "w1")
   
-  # this participant used responses 1 and 2 for > 90%
-  tbl_design <- tbl_design %>% filter(participant_id != "5ff9dae550f0663236a53c19")
+  # E3: this participant used responses 1 and 2 for > 90%
+  if ("5ff9dae550f0663236a53c19" %in% tbl_design$participant_id) {
+      tbl_design <- tbl_design %>% filter(participant_id != "5ff9dae550f0663236a53c19")
+  }
   
   hist_w <- ggplot(tbl_design, aes(w1)) +
     geom_histogram(binwidth = .025, fill = "#66CCFF", color = "white") +
-    geom_vline(xintercept = .5, color = "grey30", linetype = "dotdash", size = .75) +
+    geom_vline(xintercept = .5, color = "grey30", linetype = "dotdash", linewidth = .75) +
     #scale_y_continuous(breaks = seq(0, 200, by = 25)) +
     theme_bw() +
     labs(x = expr(w[1]), y = "Nr. Participants") + 
@@ -2325,13 +2327,24 @@ summarize_model_results <- function(l, tbl_design) {
   )
   pd <- position_dodge(width = .3)
   
+  hist_c <- ggplot(tbl_design, aes(c)) +
+    geom_histogram(fill = "#66CCFF", color = "white", binwidth = .002) +
+    theme_bw() +
+    scale_fill_viridis_d(name = "Category Comparison") +
+    labs(x = "c", y = "Nr. Participants") + 
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    coord_cartesian(xlim = c(.0, .05))
+  
   pl_c <- tbl_results_agg %>% 
     ggplot(aes(session, c, group = comparison_pool)) +
-    geom_point(aes(color = comparison_pool), position = pd) +
     geom_errorbar(
       aes(ymin = c - ci, ymax = c + ci, color = comparison_pool),
       width = .2, position = pd
     ) + 
+    geom_line(aes(color = comparison_pool), position = pd) +
+    geom_point(color = "white", size = 3, position = pd) +
+    geom_point(aes(color = comparison_pool), position = pd) +
     scale_color_viridis_d(name = "Category\nComparison") +
     facet_wrap(~ task) +
     theme_bw() +
@@ -2344,7 +2357,8 @@ summarize_model_results <- function(l, tbl_design) {
     tbl_results = tbl_design,
     tbl_results_agg = tbl_results_agg,
     hist_w = hist_w,
-    pl_c = pl_c
+    pl_c = pl_c,
+    hist_c = hist_c
   )
   
   return(l_out)
