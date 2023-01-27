@@ -50,7 +50,6 @@ tbl_design <- tbl_simult %>%
   count() %>% select(-n) %>%
   rename(p_id = participant_id, tp = session, pool = comparison_pool_binary)
 
-
 n_workers_available <- parallel::detectCores()
 plan(multisession, workers = n_workers_available - 2)
 
@@ -84,15 +83,26 @@ if(!is.null(map(l_results_euclidean, "error") %>% unlist())) {
 compare_rsqs(l_results_cityblock, l_results_euclidean)
 
 
+levels(tbl_design$tp) <- c("Before\nTraining", "After\nTraining")
 l_cityblock <- summarize_model_results(l_results_cityblock, tbl_design)
-l_euclidean <- summarize_model_results(l_results_euclidean, tbl_design)
+# l_euclidean <- summarize_model_results(l_results_euclidean, tbl_design)
 
-l_euclidean$hist_w
+# l_euclidean$hist_w
 l_cityblock$hist_w
 
-l_euclidean$pl_c
+# l_euclidean$pl_c
 l_cityblock$pl_c
 
+save_my_pdf(
+  l_cityblock$pl_c, 
+  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters.pdf",
+  8, 3.25
+)
+save_my_tiff(
+  l_cityblock$pl_c, 
+  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters.tiff",
+  8, 3.25
+)
 
 fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Same", tbl_simult, "euclidean")
 fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Different", tbl_simult, "euclidean")
