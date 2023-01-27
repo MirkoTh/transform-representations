@@ -2313,7 +2313,9 @@ summarize_model_results <- function(l, tbl_design) {
     geom_vline(xintercept = .5, color = "grey30", linetype = "dotdash", size = .75) +
     #scale_y_continuous(breaks = seq(0, 200, by = 25)) +
     theme_bw() +
-    labs(x = expr(w[1]), y = "Nr. Participants")
+    labs(x = expr(w[1]), y = "Nr. Participants") + 
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0))
 
   tbl_results_agg <- summarySEwithin(
     tbl_design, "c", 
@@ -2333,7 +2335,10 @@ summarize_model_results <- function(l, tbl_design) {
     scale_color_viridis_d(name = "Category\nComparison") +
     facet_wrap(~ task) +
     theme_bw() +
-    labs(x = "Timepoint")
+    labs(x = "Timepoint") + scale_x_discrete(expand = c(0, 0)) +
+    scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
+    theme(strip.background =element_rect(fill="white")) +
+    theme(strip.text = element_text(colour = 'black'))
   
   l_out <- list(
     tbl_results = tbl_design,
