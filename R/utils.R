@@ -163,18 +163,19 @@ compare_subsequent_stimuli <- function(l_info) {
     d_current <- dmvnorm(v_current, mean = v_priormean, sigma = m_vcov)
     onehots <- one_hot(l_info, l_x$cat_cur)
     m_onehots <- as_tibble(t(as.matrix(onehots)))
-    ps_stim <- pmap_dbl(l_x$X_old[, c("x1", "x2")], my_dmvnorm, x_data = v_current, m_vcov = m_vcov)
+    ds_stim <- pmap_dbl(l_x$X_old[, c("x1", "x2")], my_dmvnorm, x_data = v_current, m_vcov = m_vcov)
+    idx_max <- which.max(ds_stim)
     
-    if (l_info$sampling == "improvement" & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
-      idx_max <- which.max(ps_stim)
+    if (l_info$sampling == "improvement" & idx_max == l_x$stim_id_cur & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
       cat_current <- tbl$category[tbl$stim_id == idx_max]
       tbl_new <- rbind(tbl_new, tibble(
         stim_id = idx_max, x1 = v_current[[1]], x2 = v_current[[2]],
         cat_type = l_info$cat_type, m_onehots, category = cat_current
       ))
     } else if (l_info$sampling != "improvement" & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
+      
+      csum_ps <- cumsum(ds_stim / d_current)
       p_thx <- runif(1)
-      csum_ps <- cumsum(ps_stim)
       thxs <- csum_ps / max(csum_ps)
       idx_sampled <- sum(p_thx > thxs) + 1
       cat_current <- tbl$category[tbl$stim_id == idx_sampled]
