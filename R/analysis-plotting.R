@@ -301,7 +301,7 @@ plot_categorization_accuracy_against_blocks <-
       labs(x = "Block of 20 Trials",
            y = "Categorization Accuracy",
            #caption = "Note. x-axes differ between panels"
-           ) + theme_bw()
+      ) + theme_bw()
     
     if (show_errorbars) {
       pl_agg <- pl_agg + geom_errorbar(
@@ -385,6 +385,10 @@ movement_towards_category_center <-
     }
     tbl_cr_sq$category <- 2
     tbl_cr_plot <- rbind(tbl_cr_no_sq, tbl_cr_sq)
+    
+    tbl_lookup_category <- tbl_cr_plot %>% filter(n_categories != 1) %>% count(stim_id, category) %>% select(-n)
+    tbl_cr_plot <- tbl_cr_plot %>% select(-category) %>% left_join(tbl_lookup_category, by = "stim_id")
+    
     tbl_movement <- grouped_agg(tbl_cr_plot,
                                 c(participant_id, n_categories, session, category),
                                 all_of(d_measure)) %>% rename(mean_distance = str_c("mean_", d_measure)) %>%
@@ -409,57 +413,89 @@ movement_towards_category_center <-
         ))
       ) %>%
       filter(!is.na(mean_distance_before))
+    tbl_movement$category <- factor(tbl_movement$category, labels = c("Bukil", "Venak"))
+    levels(tbl_movement$n_categories) <- c("Sequential Comparison", "Category Learning")
     
     pl_last <- ggplot() +
       geom_point(
-        data = tbl_movement,
-        aes(mean_accuracy, movement, group = category, color = category),
-        shape = 1
-      ) +
+        data = tbl_movement %>% 
+          filter(n_categories == "Category Learning"),
+        aes(mean_accuracy, movement, group = category, color = category)
+        ) +
       geom_smooth(
-        data = tbl_movement,
+        data = tbl_movement %>% 
+          filter(n_categories == "Category Learning"),
         method = "lm",
-        se = FALSE,
+        se = TRUE, level = .95,
         aes(mean_accuracy, movement, color = category),
-        size = .5
+        size = .5, alpha = .25
       ) +
       geom_hline(yintercept = 0,
                  linetype = "dotdash",
                  alpha = .5) +
-      facet_grid(n_categories ~ category) +
-      scale_color_brewer(palette = "Set1", name = "Category") +
+      facet_wrap( ~ category) +
+      scale_color_viridis_d(name = "Category") +
       theme_bw() +
       labs(x = "Categorization Accuracy Last Block",
-           y = "Movement (Euclidian Distance)")
-    
+           y = "Movement Towards Category Center") +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
+      theme(
+        strip.background =element_rect(fill="white"),
+        strip.text = element_text(colour = 'black'),
+        legend.position = "bottom")
+
     pl_delta <- ggplot() +
       geom_point(
-        data = tbl_movement,
+        data = tbl_movement %>% 
+          filter(n_categories == "Category Learning"),
         aes(
           mean_delta_accuracy,
           movement,
           group = category,
           color = category
-        ),
-        shape = 1
+        )
       ) +
       geom_smooth(
-        data = tbl_movement,
+        data = tbl_movement %>% 
+          filter(n_categories == "Category Learning"),
         method = "lm",
-        se = FALSE,
+        se = TRUE, level = .95, 
         aes(mean_delta_accuracy, movement, color = category),
-        size = .5
+        size = .5, alpha = .25
       ) +
-      geom_hline(yintercept = 0,
-                 linetype = "dotdash",
-                 alpha = .5) +
-      facet_grid(n_categories ~ category) +
-      scale_color_brewer(palette = "Set1", name = "Category") +
+      geom_hline(yintercept = 0, linetype = "dotdash", alpha = .5) +
+      facet_wrap( ~ category) +
+      scale_color_viridis_d(name = "Category") +
       theme_bw() +
       labs(x = "Delta Categorization Accuracy",
-           y = "Movement (Euclidian Distance)")
+           y = "Movement Towards Category Center") +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
+      theme(
+        strip.background =element_rect(fill="white"),
+        strip.text = element_text(colour = 'black'),
+        legend.position = "bottom")
     
-    tbl_data <- tbl_movement %>%
+
+    hist_movements <- ggplot(tbl_movement, aes(movement, group = fct_rev(n_categories), drop = TRUE)) +
+      geom_histogram(aes(
+        fill = fct_rev(n_categories), y=(..count..)/tapply(..count..,..PANEL..,sum)[..PANEL..]
+      ), color = "white", binwidth = 1) +
+      geom_vline(xintercept = 0, linetype = "dotdash", color = "grey", linewidth = 1) +
+      scale_fill_viridis_d(name = "Group") +
+      facet_grid(fct_rev(n_categories) ~ category) +
+      theme_bw() +
+      labs(x = "Movement Towards Category Center", y = "Proportion Participants per Group") +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
+      theme(
+        strip.background =element_rect(fill="white"),
+        strip.text = element_text(colour = 'black'),
+        legend.position = "bottom")
+    
+    
+    tbl_data_improve <- tbl_movement %>%
       filter(n_categories != "Control (Similarity)") %>%
       group_by(participant_id, n_categories, session) %>%
       summarize(
@@ -475,14 +511,14 @@ movement_towards_category_center <-
           "Delta Mean Accuracy\nFirst vs. Last Block"
         )
       ))
-    tbl_label <- tbl_data %>%
+    tbl_label <- tbl_data_improve %>%
       filter(name == "Delta Mean Accuracy\nFirst vs. Last Block") %>%
       group_by(n_categories) %>%
       summarize(no_improvement = str_c(sum(value < 0), "/", length(value)))
     
     hist_delta_last <- ggplot() +
       geom_histogram(
-        data = tbl_data,
+        data = tbl_data_improve,
         aes(value, group = name, fill = name),
         alpha = .5,
         color = "black"
@@ -492,17 +528,22 @@ movement_towards_category_center <-
         10,
         label = str_c(no_improvement, " Participants\nWithout Improvement")
       )) +
-      facet_grid( ~ n_categories) +
+      facet_wrap( ~ n_categories) +
       theme_bw() +
       #coord_cartesian(ylim = c(0, 13)) +
       scale_fill_brewer(name = "Variable", palette = "Set1") +
       labs(x = "Proportion Correct / Proportion Change",
-           y = "Nr. Participants")
+           y = "Nr. Participants")    +  theme(
+             strip.background =element_rect(fill="white"),
+             strip.text = element_text(colour = 'black'),
+             legend.position = "bottom")
     
-    l_pl <-
-      list(pl_last = pl_last,
-           pl_delta = pl_delta,
-           hist_delta_last = hist_delta_last)
+    l_pl <- list(
+      pl_last = pl_last,
+      pl_delta = pl_delta,
+      hist_delta_last = hist_delta_last,
+      hist_movements = hist_movements
+    )
     
     return(list(tbl_movement, l_pl))
   }
@@ -528,7 +569,7 @@ plot_distance_to_category_center <-
     tbl_ell <- tbl_ell %>% filter(n_categories == "Similarity") %>%
       select(-category) %>% left_join(tbl_lookup, by = "stim_id") %>%
       rbind(tbl_ell %>% filter(n_categories %in% c("2 Categories", 2)))
-
+    
     tbl_cr_sq$category <- 2
     tbl_ell[tbl_ell$n_categories == "Similarity", ]
     tbl_cr <- rbind(tbl_ell, tbl_cr_sq)

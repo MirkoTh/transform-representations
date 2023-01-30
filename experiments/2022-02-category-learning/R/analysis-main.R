@@ -156,12 +156,28 @@ l_movement <-
   )
 tbl_movement <- l_movement[[1]]
 # plot movement towards category center against task2 accuracy
-l_movement[[2]]
+l_movement[[2]]$hist_movements
+l_movement[[2]]$pl_delta
+l_movement[[2]]$pl_last
 
-marrangeGrob(list(l_pl[[1]], l_movement[[2]]$hist_delta_last),
-             nrow = 1,
-             ncol = 2)
+pls_moves_catlearn <- arrangeGrob(
+  l_movement[[2]]$hist_movements,
+  l_movement[[2]]$pl_delta,
+  l_movement[[2]]$pl_last,
+  nrow = 1
+)
 
+save_my_pdf(
+  pls_moves_catlearn,
+  "experiments/2022-02-category-learning/data/figures/moves-compilation.pdf",
+  13, 4.5
+)
+
+save_my_tiff(
+  pls_moves_catlearn,
+  "experiments/2022-02-category-learning/data/figures/moves-compilation.tiff",
+  13, 4.5
+)
 
 tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 241)
 sample_ids <- tbl_cat_grid %>% group_by(participant_id) %>%
@@ -286,7 +302,7 @@ tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
 
 l_pl_sim <- plot_similarity_against_distance(
   tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1.5, 3)
-  )
+)
 l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_x_continuous(expand = c(0, 0)) + 
   scale_y_continuous(expand = c(0, 0))
 
@@ -295,8 +311,8 @@ pl_sim_psychonomics <- ggplot() +
     data = tbl_sim_ci %>% 
       filter(!(distance_binned %in% c(1, 13))) %>%
       mutate(n_categories = factor(n_categories, labels = "Similarity")),
-            aes(distance_binned, response, group = n_categories,
-                color = n_categories)) +
+    aes(distance_binned, response, group = n_categories,
+        color = n_categories)) +
   # geom_smooth(
   #   data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
   #   aes(distance_binned, response),
@@ -386,8 +402,8 @@ pl_d_psychonomics <- plot_distance_psychonomics(
   l_empirical$tbl_cr_agg %>% 
     mutate(
       n_categories = fct_relevel(n_categories, "Similarity", after = 1)
-      ) %>% filter(category == 2)
-  ) + scale_x_discrete(expand = c(0, 0)) +
+    ) %>% filter(category == 2)
+) + scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .2)))
 save_my_tiff(
   pl_d_psychonomics, 
