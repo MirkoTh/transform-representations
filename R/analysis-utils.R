@@ -212,7 +212,7 @@ load_data_e1 <- function(path_data) {
   tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   tbl_cr$session <- as.numeric(tbl_cr$session)
 
-  factors <- c("participant_id", "session", "cat_true")
+  factors <- c("participant_id", "session", "cat_true", "n_categories")
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
   tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
   tbl_cat <- fix_data_types(tbl_cat, factors, numerics)
