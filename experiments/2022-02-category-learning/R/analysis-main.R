@@ -90,10 +90,18 @@ same_n <-
   length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
 cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 
+tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
+
+repeats <- tbl_cr %>% count(participant_id) %>% arrange(desc(n)) %>% filter(n >= 235)
+tbl_cr <- tbl_cr %>% filter(!(participant_id %in% repeats$participant_id))
+tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats$participant_id))
+
+saveRDS(tbl_cr, "experiments/2022-02-category-learning/data/tbl_cr.rds")
+saveRDS(tbl_cat_sim, "experiments/2022-07-category-learning-II/data/tbl_catsim.rds")
+
 
 # Categorization ----------------------------------------------------------
 
-tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
 tbl_cat <-
   tbl_cat_sim %>% filter(n_categories %in% c(2, 3), as.numeric(as.character(trial_id_binned)) <= 15)
 
