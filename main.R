@@ -104,9 +104,15 @@ if (read_write == "write") {
 
 
 # Post Processing & Plotting ----------------------------------------------
-
-l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = "square", is_simulation = TRUE)
-l_results_plots_seq <- map(l_seq_results, diagnostics_seq, sim_center = "square", is_simulation = TRUE)
+if (read_write == "write") {
+  l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = "square", is_simulation = TRUE)
+  l_results_plots_seq <- map(l_seq_results, diagnostics_seq, sim_center = "square", is_simulation = TRUE)
+  saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
+  saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
+} else if (read_write == "read") {
+  l_results_plots <- readRDS(str_c("data/2023-01-28-category-learning-result-plots.RDS"))
+  l_results_plots_seq <- readRDS(str_c("data/2023-01-28-sequential-comparison-result-plots.RDS"))
+}
 
 dg <- position_dodge(width = .9)
 
@@ -132,7 +138,7 @@ grid.draw(arrangeGrob(
   l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]]$pl, 
   l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]]$pl,
   l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]$pl, nrow = 3, ncol = 2, 
-layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
+  layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
 ))
 pl_pred <- l_results_plots[[5]][[2]][[1]] +
   theme(strip.background = element_rect(fill="white"))+
@@ -153,19 +159,64 @@ save_my_tiff(arrangeGrob(pl_pred + theme(plot.title = element_blank()), pl_pred_
 save_my_pdf(arrangeGrob(pl_pred + theme(plot.title = element_blank()), pl_pred_delta, nrow = 1), "figures/model-predictions.pdf", 12, 3.5)
 
 # extract sum of distances between prior and posterior
-l_posteriors <- map(map(l_results_plots, 1), "tbl_posterior")
-l_sum_of_distances <- map(l_posteriors, sum_of_pairwise_distances)
+l_posteriors_cat <- map(map(l_results_plots, 1), "tbl_posterior")
+l_sum_of_distances_cat <- map(l_posteriors_cat, sum_of_pairwise_distances)
 
-for (i in 1:nrow(tbl_info)) {
-  l_sum_of_distances[[i]] <- cbind(
-    l_sum_of_distances[[i]], 
-    tbl_info[i, c("cat_type", "prior_sd", "sampling", "constrain_space")]
-  )
+
+## todos
+# why does category change for some stimuli in sequential comparison task?
+# fix that and then plot within vs. between distances before and after
+
+# l_posteriors_seq <- map(
+#   l_seq_results, ~ .x$tbl_new %>% 
+#     group_by(stim_id, cat_type, category, timepoint) %>%
+#     summarize(x1_true = mean(x1), x2_true = mean(x2)) %>% ungroup()
+#   )
+temporary_correction <- function(l) {
+  tbl_df <- l$tbl_new
+  tmp_before <- tbl_df %>% filter(timepoint == "Before Training")
+  tmp_after <- tbl_df %>% filter(timepoint == "After Training")
+  tmp_after <- tmp_before[, c("stim_id", "category")] %>% 
+    left_join(tmp_after, by = c("stim_id", "category"))
+  rbind(tmp_before, tmp_after) %>% 
+    group_by(stim_id, cat_type, category, timepoint) %>%
+    summarize(x1_true = mean(x1), x2_true = mean(x2)) %>% ungroup()
 }
-tbl_sum_of_distances <- reduce(l_sum_of_distances, rbind) %>% as_tibble()
+
+l_posteriors_seq <- map(l_seq_results, temporary_correction)
+l_sum_of_distances_seq <- map(l_posteriors_seq, sum_of_pairwise_distances)
+
+
+
+l_conds <- split(tbl_info[, c("cat_type", "prior_sd", "sampling", "constrain_space")], tbl_info$condition_id)
+l_conds_rep <- map(l_conds, ~ slice(.x, rep(1:n(), each = 4)))
+
+l_sum_of_distances_cat <- map2(
+  l_sum_of_distances_cat, 
+  l_conds_rep,
+  ~ cbind(tibble(.x), tibble(.y))
+)
+
+
+l_conds <- split(tbl_info_seq[, c("cat_type", "prior_sd", "sampling", "constrain_space")], tbl_info_seq$condition_id)
+l_conds_rep <- map(l_conds, ~ slice(.x, rep(1:n(), each = 4)))
+
+l_sum_of_distances_seq <- map2(
+  l_sum_of_distances_seq,
+  l_conds_rep,
+  ~ cbind(tibble(.x), tibble(.y))
+)
+
+tbl_sum_of_distances <- reduce(l_sum_of_distances_cat, rbind) %>% as_tibble()
+tbl_sum_of_distances$task <- "Category Learning"
+
+tmp <- reduce(l_sum_of_distances_seq, rbind) %>% as_tibble()
+tmp$task <- "Sequential Comparison"
+tbl_sum_of_distances <- rbind(tbl_sum_of_distances, tmp)
+
 tbl_ds_agg <- tbl_sum_of_distances %>%
   filter(tp == "After Training") %>%
-  group_by(cat_type, comparison, sampling, n_comparisons) %>%
+  group_by(task, cat_type, comparison, sampling, constrain_space, n_comparisons) %>%
   summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop)) %>%
   ungroup()
 tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "Prototype", "Rule"))
@@ -175,7 +226,8 @@ dg <- position_dodge(width = .9)
 pl_preds_ds <- ggplot(tbl_ds_agg, aes(comparison, avg_ds_prop, group = cat_type)) +
   geom_col(aes(fill = cat_type), position = dg, color = "black") +
   geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
-  #facet_grid(constrain_space ~ sampling) +
+  #facet_grid(interaction(constrain_space, sampling) ~ task) +
+  facet_wrap(~ task) +
   theme_bw() +
   scale_fill_viridis_d(name = "Category Learning Model") +
   labs(x = "Comparison", y = "Prop. Change of Pairwise Distances")

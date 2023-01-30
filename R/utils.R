@@ -122,8 +122,9 @@ compare_subsequent_stimuli <- function(l_info) {
   #' @description compare stimuli, store accepted samples, and visualize results
   #' 
   #' @param l_info parameter list with fields n_stimuli, n_categories, prior_sd, nruns
-  #' @return a list with prior, samples, and posterior in [[1]] and some
-  #' visualizations in [[2]]
+  #' @return a list with prior, samples, and posterior in [[1]] and
+  #' information about simulation condition in [[2]] and
+  #' distances between sequentially presented stimuli in [[3]]
   #' 
   
   l_tmp <- make_stimuli(l_info)
@@ -166,20 +167,20 @@ compare_subsequent_stimuli <- function(l_info) {
     
     if (l_info$sampling == "improvement" & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
       idx_max <- which.max(ps_stim)
-      idx_tbl <- l_x$X_mean$stim_id == idx_max
+      cat_current <- tbl$category[tbl$stim_id == idx_max]
       tbl_new <- rbind(tbl_new, tibble(
         stim_id = idx_max, x1 = v_current[[1]], x2 = v_current[[2]],
-        cat_type = l_info$cat_type, m_onehots, category = l_x$cat_cur
+        cat_type = l_info$cat_type, m_onehots, category = cat_current
       ))
     } else if (l_info$sampling != "improvement" & ifelse(l_info$constrain_space, is_in_shown_space, TRUE)) {
       p_thx <- runif(1)
       csum_ps <- cumsum(ps_stim)
       thxs <- csum_ps / max(csum_ps)
       idx_sampled <- sum(p_thx > thxs) + 1
-      idx_tbl <- l_x$X_mean$stim_id == idx_sampled
+      cat_current <- tbl$category[tbl$stim_id == idx_sampled]
       tbl_new <- rbind(tbl_new, tibble(
         stim_id = idx_sampled, x1 = v_current[[1]], x2 = v_current[[2]],
-        cat_type = l_info$cat_type, m_onehots, category = l_x$cat_cur
+        cat_type = l_info$cat_type, m_onehots, category = cat_current
       ))
     }
     
