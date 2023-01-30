@@ -1243,7 +1243,7 @@ plot_2d_distributions <- function(tbl_combined, save) {
   d2 <- tbl_combined %>% filter(session == 2)
   pl1 <- ggplot(data = d1, aes(x1_deviation, x2_deviation)) +
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
-    geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses") +
+    geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
     # somehow ggMarginal does not like coord_cartesian...
     # the following excludes some of the responses, though
     scale_x_continuous(limits = c(-40, 40)) +
@@ -1258,7 +1258,7 @@ plot_2d_distributions <- function(tbl_combined, save) {
   pl2 <- ggplot(data = d2, aes(x1_deviation, x2_deviation)) +
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     #geom_density2d(data = d1, color = "#440154", aes(x1_deviation, x2_deviation)) +
-    geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses") +
+    geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
     scale_x_continuous(limits = c(-40, 40)) +
     scale_y_continuous(limits = c(-40, 40)) +
     theme_bw() +
