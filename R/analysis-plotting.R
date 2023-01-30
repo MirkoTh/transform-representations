@@ -1236,3 +1236,55 @@ ribbon_plot <- function(tbl_simult_move) {
   
   return(l_plots)
 }
+
+
+plot_2d_distributions <- function(tbl_combined, save) {
+  d1 <- tbl_combined %>% filter(session == 1)
+  d2 <- tbl_combined %>% filter(session == 2)
+  pl1 <- ggplot(data = d1, aes(x1_deviation, x2_deviation)) +
+    geom_point(shape = 1, size = 0, color = "white", fill = "white") +
+    geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses") +
+    # somehow ggMarginal does not like coord_cartesian...
+    # the following excludes some of the responses, though
+    scale_x_continuous(limits = c(-40, 40)) +
+    scale_y_continuous(limits = c(-40, 40)) +
+    theme_bw() +
+    theme(legend.position = "bottom") +
+    
+    labs(
+      x = "Head Spikiness",
+      y = "Belly Size"
+    )
+  pl2 <- ggplot(data = d2, aes(x1_deviation, x2_deviation)) +
+    geom_point(shape = 1, size = 0, color = "white", fill = "white") +
+    #geom_density2d(data = d1, color = "#440154", aes(x1_deviation, x2_deviation)) +
+    geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses") +
+    scale_x_continuous(limits = c(-40, 40)) +
+    scale_y_continuous(limits = c(-40, 40)) +
+    theme_bw() +
+    theme(legend.position = "bottom") +
+    labs(
+      x = "Head Spikiness",
+      y = "Belly Size"
+    )
+  pl_precision <- arrangeGrob(
+    ggMarginal(pl1, type = "histogram", fill = "#440154"), 
+    ggMarginal(pl2, type = "histogram", fill = "#fde725"),
+    nrow = 1)
+  
+  if (save) {
+    save_my_pdf(
+    pl_precision,
+    "figures/precision-e1-e2-combined.pdf",
+    9, 5
+  )
+  save_my_tiff(
+    pl_precision,
+    "figures/precision-e1-e2-combined.tiff",
+    9, 5
+  )
+  }
+  
+  
+  return(pl_precision)
+}
