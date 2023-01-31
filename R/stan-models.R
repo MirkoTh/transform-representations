@@ -557,40 +557,31 @@ transformed data {
 }
 
 parameters {
-  matrix[n_subj, 1] b;
-  vector[2] mu;
-  real<lower=0>sigma_subject1;
-  real<lower=0>sigma_subject2;
-  real<lower=0>sigma_subject3;
-  data_matrix2[n_subj, 2, 2] real<lower=0> sigma;
+  cholesky_factor_corr[2] L;
+  vector<lower=0>[2] L_std;
 }
 
 model {
+  matrix[2, 2] L_Sigma;
+  
+  
+  L ~ lkj_corr_cholesky(1);
+  L_std ~ normal(10, 3);
+  
+  
   for (n in 1:n_data) {
-    y[n] ~ multi_normal(v_mn, sigma[subj[n]]);
+    target += multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std, L));
   }
-  
-  for (s in 1:n_subj) {
-    sigma[s][1, 1] ~ normal(mu[1], sigma_subject1);
-    sigma[s][2, 2] ~ normal(mu[2], sigma_subject2);
-    sigma[s][1, 2] ~ normal(mu[3], sigma_subject3);
-    sigma[s][2, 1] ~ normal(mu[3], sigma_subject3);
-  }
-  
-  sigma_subject1 ~ gamma(.2, .1);
-  sigma_subject2 ~ gamma(.2, .1);
-  sigma_subject3 ~ gamma(.2, .1);
-  mu[1] ~ cauchy(10, 3);
-  mu[2] ~ cauchy(10, 3);
-  mu[3] ~ cauchy(5, 3);
 }
 
-
 generated quantities {
-  vector[n_data] log_lik_pred;
+  corr_matrix[2] Sigma;
+  array[n_data] real log_lik_pred;
+
+  Sigma = multiply_lower_tri_self_transpose(L);
 
   for (n in 1:n_data) {
-    log_lik_pred[n] = multi_normal_lpdf(y[n] | v_mn, sigma[subj[n]]);
+    log_lik_pred[n] = multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std, L));
   }
 }
 
