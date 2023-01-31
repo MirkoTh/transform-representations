@@ -537,3 +537,64 @@ generated quantities {
 ")
   return(stan_normal_simult_move_ri)
 }
+
+
+stan_cr_2d <- function() {
+  
+  stan_mv <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  matrix[n_data, 2] y;
+  array[n_data] int subj;
+  matrix[n_data, 2] x; // group, timepoint
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = .5;
+  vector[2] v_mn = [0, 0]';
+}
+
+parameters {
+  matrix[n_subj, 1] b;
+  vector[2] mu;
+  real<lower=0>sigma_subject1;
+  real<lower=0>sigma_subject2;
+  real<lower=0>sigma_subject3;
+  data_matrix2[n_subj, 2, 2] real<lower=0> sigma;
+}
+
+model {
+  for (n in 1:n_data) {
+    y[n] ~ multi_normal(v_mn, sigma[subj[n]]);
+  }
+  
+  for (s in 1:n_subj) {
+    sigma[s][1, 1] ~ normal(mu[1], sigma_subject1);
+    sigma[s][2, 2] ~ normal(mu[2], sigma_subject2);
+    sigma[s][1, 2] ~ normal(mu[3], sigma_subject3);
+    sigma[s][2, 1] ~ normal(mu[3], sigma_subject3);
+  }
+  
+  sigma_subject1 ~ gamma(.2, .1);
+  sigma_subject2 ~ gamma(.2, .1);
+  sigma_subject3 ~ gamma(.2, .1);
+  mu[1] ~ cauchy(10, 3);
+  mu[2] ~ cauchy(10, 3);
+  mu[3] ~ cauchy(5, 3);
+}
+
+
+generated quantities {
+  vector[n_data] log_lik_pred;
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = multi_normal_lpdf(y[n] | v_mn, sigma[subj[n]]);
+  }
+}
+
+")
+  return(stan_mv)
+}
+
