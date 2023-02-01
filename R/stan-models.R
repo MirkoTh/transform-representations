@@ -589,3 +589,73 @@ generated quantities {
   return(stan_mv)
 }
 
+
+stan_cr_2d_nested <- function() {
+  
+  stan_mv <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  matrix[n_data, 2] y;
+  array[n_data] int subj;
+  matrix[n_data, 2] x; // group, timepoint
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = .5;
+  vector[2] v_mn = [0, 0]';
+}
+
+parameters {
+  array[n_subj] cholesky_factor_corr[2] L;
+  vector<lower=0>[2] mu0;
+  array[n_subj] vector<lower=0>[2] b0;
+  vector<lower=0>[2] sdsubj;
+  vector[2] muGroup; //<lower=0>
+  vector[2] muTime; // <lower=0>
+  vector[2] muIA; // <lower=0>
+}
+
+transformed parameters {
+  array[n_data] vector<lower=0>[2] L_std;
+
+  for (n in 1:n_data) {
+    L_std[n] = b0[subj[n]] + muGroup * x[n, 1] + muTime * x[n, 2] + muIA * x[n, 1] * x[n, 2];
+  }
+}
+
+model {
+
+  for (s in 1:n_subj) {
+    L[s] ~ lkj_corr_cholesky(1);
+    b0[s] ~ normal(mu0, sdsubj);
+  }
+  
+  sdsubj ~ gamma(.05, .1);
+  mu0 ~ normal(10, 3);
+  muGroup ~ normal(0, 1);
+  muTime ~ normal(0, 1);
+  muIA ~ normal(0, 1);
+  
+  for (n in 1:n_data) {
+    target += multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std[n], L[subj[n]]));
+  }
+}
+
+generated quantities {
+  array[n_subj] corr_matrix[2] Sigma;
+  array[n_data] real log_lik_pred;
+
+  for (s in 1:n_subj) {
+    Sigma[s] = multiply_lower_tri_self_transpose(L[s]);
+  }
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std[n], L[subj[n]]));
+  }
+}
+
+")
+  return(stan_mv)
+}
