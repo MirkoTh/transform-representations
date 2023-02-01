@@ -60,9 +60,11 @@ write_csv(l_tbl_data[[2]], "experiments/2022-02-category-learning/data/secondary
 l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_cases <- preprocess_data(l_tbl_data, 192, 600)
+l_cases <- preprocess_data(l_tbl_data, 192, 600, n_sds = 1)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
+
+l_deviations <- map(l_deviations, ~ filter(.x, substr(participant_id, 1, 6) %in% substr(unique(tbl_cat_sim$participant_id), 1, 6)))
 
 
 
@@ -194,8 +196,17 @@ plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_
 ggplot(tbl_movement,
        aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
   geom_point() +
-  geom_smooth(method = "lm") +
-  facet_wrap( ~ n_categories)
+  geom_smooth(method = "lm", alpha = .2) +
+  facet_wrap( ~ n_categories) +
+  labs(x = "Delta Categorization Accuracy", y = "Final Categorization Accuracy") +
+  theme_bw() +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  )  +
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0))
 # model fits
 ## prototype model
 
@@ -223,17 +234,14 @@ l_movement[[2]]
 # i.e. people with preciser category representations
 # should experience stronger pull/push towards/away the center
 
-plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids),
-                             2,
-                             "Mode") +
-  geom_contour(
+plot_categorization_heatmaps(
+  tbl_cat_grid %>% filter(participant_id %in% sample_ids), 2, "Mode"
+  ) + geom_contour(
     data = tbl_preds_nb %>% filter(participant_id %in% substr(sample_ids, 1, 6)),
     aes(x1, x2, z = density, alpha = density),
     color = "black"
-  ) + geom_point(data = tibble(x = 50, y = 50),
-                 aes(x, y),
-                 color = "#FF3333",
-                 size = 3.5)
+  ) + geom_point(
+    data = tibble(x = 50, y = 50), aes(x, y), color = "#FF3333", size = 3.5)
 
 
 
@@ -297,7 +305,7 @@ tbl_sim_ci$distance_binned <-
 sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 tbl_sim %>% group_by(participant_id, n_categories, distance_binned) %>%
-  filter(participant_id %in% sample_ids) %>%
+  filter(participant_id %in% sample_ids_sim) %>%
   summarize(response_mn = mean(response)) %>%
   ggplot(aes(distance_binned, response_mn, group = participant_id)) +
   geom_line(aes(color = participant_id))
@@ -346,7 +354,7 @@ pl_sim_psychonomics <- ggplot() +
 
 tbl_sim_agg_subj <- tbl_sim %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
-  rutils::grouped_agg(c(participant_id, distance_binned), c(response, rt))
+  rutils::grouped_agg(c(participant_id, n_categories, distance_binned), c(response, rt))
 
 m_rs_sim <-
   lme(
@@ -394,7 +402,15 @@ tbl_cr$n_categories <-
   factor(tbl_cr$n_categories,
          labels = c("Similarity", "2 Categories"))
 l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
-l_empirical$pl
+l_empirical$pl + facet_wrap(~ category) +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  )  +
+  scale_x_discrete(expand = c(0, 0)) + 
+  scale_y_continuous(expand = expansion(add = c(0, .1)))
+
 plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
 
 
@@ -494,7 +510,7 @@ m_rs_cr <-
     d_closest ~ session * category,
     random = ~ 1 + session + category + session:category |
       participant_id,
-    data = tbl_cr %>% filter(n_categories == "Experimental Group")
+    data = tbl_cr %>% filter(n_categories == "2 Categories")
   )
 summary(m_rs_cr)
 anova(m_rs_cr)
@@ -504,7 +520,7 @@ m_rs_cr_control <-
   lme(
     d_closest ~ session,
     random = ~ 1 + session | participant_id,
-    data = tbl_cr %>% filter(n_categories == "Control Group")
+    data = tbl_cr %>% filter(n_categories == "Similarity")
   )
 summary(m_rs_cr_control)
 
@@ -516,7 +532,7 @@ l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
 f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
-tbl_both <- load_predictions(f_name)
+tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 plot_distance_matrix(tbl_rsa_delta_prediction) +
   labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
@@ -526,10 +542,12 @@ tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>%
   filter(l >= r)
 tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   left_join(
-    tbl_rsa %>% select(l, r, n_categories, d_euclidean_delta),
+    l_rsa_all$tbl_rsa %>% select(l, r, n_categories, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
   ) %>% group_by(n_categories) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
+l_rsa_all$pl_m_experimental
+l_rsa_all$pl_m_control
 
 
 pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_psychonomics, ncol = 3)

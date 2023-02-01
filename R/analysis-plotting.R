@@ -337,10 +337,7 @@ plot_categorization_accuracy_against_blocks <-
 
 
 movement_towards_category_center <-
-  function(tbl_cat_sim,
-           tbl_cr,
-           d_measure,
-           sim_center) {
+  function(tbl_cat_sim, tbl_cr, d_measure, sim_center) {
     #'
     #' @description calculate and plot average movement of reproduction
     #' responses towards category center
@@ -610,7 +607,7 @@ plot_distance_to_category_center <-
         show.legend = FALSE
       ) +
       theme_bw() +
-      scale_fill_brewer(name = "Session", palette = "Set1") +
+      scale_fill_brewer(name = "Group", palette = "Set1") +
       scale_color_brewer(palette = "Set1") +
       labs(x = "Time Point",
            y = "Distance to Closest Category Center") +

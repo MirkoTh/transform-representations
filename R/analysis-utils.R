@@ -1096,13 +1096,16 @@ exclude_guessing_participants <- function(l_tbl, n_trials_cat) {
   ))
 }
 
-preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat) {
+preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat, n_sds = 3) {
   #' data preprocessing pipeline
   #' 
   #' @description excludes incomplete data sets, outliers in 
   #' reproduction task, and participants guessing in 
   #' categorization task
   #' @param l_tbl_data list with tbl_cr and tbl_cat as entries
+  #' @param n_resp_cr min nr of responses in cr
+  #' @param n_resp_cat min nr of responses in cat
+  #' @param n_sds participants are excluded if > nr of sds above mean
   #' 
   #' @return a list containing the included and excluded data
   #' after each preprocessing step
@@ -1113,7 +1116,7 @@ preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat) {
   l_incomplete <- exclude_incomplete_datasets(l_tbl_data, n_resp_cr, n_resp_cat)
   
   ## reproduction outliers
-  l_outliers <- exclude_cr_outliers(l_incomplete$keep, 3)
+  l_outliers <- exclude_cr_outliers(l_incomplete$keep, n_sds)
   
   ## people guessing in categorization task
   l_guessing <- exclude_guessing_participants(l_outliers$keep, n_resp_cat)
