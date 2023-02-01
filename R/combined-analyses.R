@@ -60,7 +60,7 @@ l_data <- list(
 )
 init_fun <- function() list(muGroup = 0, muTime = 0, muIA = 0)
 fit_2d <- mod_2d$sample(
-  data = l_data, iter_sampling = 500, iter_warmup = 200, chains = 1, init = init_fun
+  data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3, init = init_fun, parallel_chains = 3
 )
 
 # file_loc <- str_c("data/cr-e1-e2-combined-2d-regression-on-prec.RDS")
@@ -69,6 +69,7 @@ pars_interest <- c("mu0", "muGroup", "muTime", "muIA")
 tbl_draws <- fit_2d$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_2d$summary(variables = pars_interest)
 #tbl_summary <- tbl_summary %>% mutate(dim = str_match(variable, ",([1-2])\\]$")[,2])
+saveRDS(tbl_draws, "data/cr-e1-e2-combined-2d-regression-on-prec-mcmc-samples.RDS")
 
 
 lbls <- c("Intercept (Head)", "Intercept (Belly)", "Group (Head)", "Group (Belly)", "Time (Head)", "Time(Belly)", "IA (Head)", "IA (Belly)")
@@ -85,24 +86,21 @@ tbl_posterior <- tbl_draws %>%
 levels(tbl_posterior$parameter) <- lbls
 
 # params_bf <- c("SD (Head)", "SD (Belly)", "Corr(1)")
-params_bf <- unique(tbl_posterior$parameter)
-l <- sd_bfs(tbl_posterior, params_bf, sqrt(2)/4)
+params_bf <- unique(tbl_posterior$parameter)params_bf <- params_bf %>% filter(r)
+l <- sd_bfs(tbl_posterior, params_bf, .5)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
+bfs <- bfs[names(bfs) %in% params_bf]
+tbl_thx <- tbl_thx %>% filter(parameter %in% params_bf)
+
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 #grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
 
-l_pl[[1]] + coord_cartesian(xlim = c(0, 17)) # 13, 17
-l_pl[[2]] + coord_cartesian(xlim = c(0, 16)) # 13, 16
-l_pl[[3]] + coord_cartesian(xlim = c(-3, 3)) # 13, 17
-l_pl[[4]] + coord_cartesian(xlim = c(-3, 3)) # 13, 16
-l_pl[[5]] + coord_cartesian(xlim = c(-2, 2)) # 13, 17
-l_pl[[6]] + coord_cartesian(xlim = c(-2, 2)) # 13, 16
-l_pl[[7]] + coord_cartesian(xlim = c(-1.5, 1.5)) # 13, 17
-l_pl[[8]] + coord_cartesian(xlim = c(-2.5, 1.5)) # 13, 16
-
-
+grid.arrange(
+  l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]],
+  l_pl[[5]], l_pl[[6]], l_pl[[7]], l_pl[[8]],
+  nrow = 2, ncol = 4)
 
 
 
