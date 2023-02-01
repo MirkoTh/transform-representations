@@ -99,7 +99,7 @@ tbl_cr <- tbl_cr %>% filter(!(participant_id %in% repeats$participant_id))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats$participant_id))
 
 saveRDS(tbl_cr, "experiments/2022-02-category-learning/data/tbl_cr.rds")
-saveRDS(tbl_cat_sim, "experiments/2022-07-category-learning-II/data/tbl_catsim.rds")
+saveRDS(tbl_cat_sim, "experiments/2022-02-category-learning/data/tbl_cat_sim.rds")
 
 
 # Categorization ----------------------------------------------------------
@@ -289,6 +289,8 @@ bins_distance <-
 tbl_sim$distance_binned <-
   cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
 tbl_sim$distance_binned %>% unique()
+
+saveRDS(tbl_sim, "experiments/2022-02-category-learning/data/tbl_sim.rds")
 
 
 tbl_sim_agg <- tbl_sim %>%
@@ -547,7 +549,7 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   ) %>% group_by(n_categories) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 l_rsa_all$pl_m_experimental
-l_rsa_all$pl_m_control
+l_rsa_all$pl_m_con
 
 
 pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_psychonomics, ncol = 3)
