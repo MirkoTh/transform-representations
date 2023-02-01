@@ -441,7 +441,7 @@ movement_towards_category_center <-
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
       theme(
-        strip.background =element_rect(fill="white"),
+        strip.background = element_rect(fill="white"),
         strip.text = element_text(colour = 'black'),
         legend.position = "bottom")
 
@@ -482,7 +482,7 @@ movement_towards_category_center <-
       geom_histogram(aes(
         fill = fct_rev(n_categories), y=(..count..)/tapply(..count..,..PANEL..,sum)[..PANEL..]
       ), color = "white", binwidth = 1) +
-      geom_vline(xintercept = 0, linetype = "dotdash", color = "grey", linewidth = 1) +
+      geom_vline(xintercept = 0, linetype = "dotdash", color = "grey", size = 1) +
       scale_fill_viridis_d(name = "Group") +
       facet_grid(fct_rev(n_categories) ~ category) +
       theme_bw() +
@@ -658,7 +658,7 @@ by_participant_coefs <-
                  color = "tomato",
                  size = 1) +
       geom_point(shape = 1, aes(color = n_categories)) +
-      geom_smooth(method = "lm", se = FALSE, aes(color = n_categories)) +
+      geom_smooth(method = "lm", se = TRUE, aes(color = n_categories)) +
       geom_label(data = tbl_corr, aes(x_label, y_label, label = str_c("r = ", round(corr, 2)))) +
       scale_color_brewer(name = "", palette = "Set1") +
       theme_bw() +
@@ -1142,6 +1142,11 @@ save_my_pdf <- function(pl, path_fl, w, h) {
   pdf(path_fl, w, h, paper = "special")
   grid.draw(pl)
   dev.off()
+}
+
+save_my_pdf_and_tiff <- function(pl, path_fl, w, h) {
+  save_my_pdf(pl, path_fl, w, h)
+  save_my_tiff(pl, path_fl, w, h)
 }
 
 

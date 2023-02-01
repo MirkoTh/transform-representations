@@ -133,7 +133,8 @@ tbl_cat_agg <-
     trial_id_binned = as.numeric(as.character(trial_id_binned)),
     trial_id_binned = trial_id_binned - mean(trial_id_binned)
   )
-by_participant_coefs(tbl_cat_agg, "trial_id_binned", "accuracy", "LM Cat. Accuracy")
+by_participant_coefs(tbl_cat_agg, "trial_id_binned", "accuracy", "LM Cat. Accuracy") +
+  coord_cartesian(ylim = c(-.2, .2))
 
 # stat analysis
 
@@ -175,15 +176,9 @@ pls_moves_catlearn <- arrangeGrob(
   nrow = 1
 )
 
-save_my_pdf(
+save_my_pdf_and_tiff(
   pls_moves_catlearn,
   "experiments/2022-02-category-learning/data/figures/moves-compilation.pdf",
-  13, 4.5
-)
-
-save_my_tiff(
-  pls_moves_catlearn,
-  "experiments/2022-02-category-learning/data/figures/moves-compilation.tiff",
   13, 4.5
 )
 
