@@ -2029,13 +2029,14 @@ separate_cat_and_sim <- function(tbl_cat_sim) {
 }
 
 
-after_vs_before <- function(tbl_cr) {
+after_vs_before <- function(tbl_cr, nr_cats = 4) {
   #' subtract distances to category means after from those before
   #' 
   #' @description calculates for each stimulus and participant the movement
   #' towards the respective category center
   #' 
   #' @param tbl_cr the tbl df with by-trial and by-participant cr responses
+  #' @param nr_cats number of categories in the category learning task
   #' 
   #' @return tbl df with only half of the rows as the input provides
   
@@ -2050,7 +2051,7 @@ after_vs_before <- function(tbl_cr) {
     ) %>%
     ungroup() %>%
     mutate(
-      n_categories = factor(n_categories, labels = c("Similarity", "4 Categories"))
+      n_categories = factor(n_categories, labels = c("Similarity", str_c(nr_cats, " Categories")))
     ) %>%
     dplyr::filter(!is.na(d_closest_before_abs)) %>%
     group_by(participant_id) %>%

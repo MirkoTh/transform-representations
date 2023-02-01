@@ -1043,6 +1043,7 @@ plot_movement_outliers <-
                        color = "white",
                        aes(fill = flag_outlier))
     }
+    if (is.null(tbl_labels$mean)) tbl_labels$mean <- 99.999
     pl +
       geom_vline(
         xintercept = 0,
@@ -1063,11 +1064,11 @@ plot_movement_outliers <-
 
 
 
-plot_group_rts_against_session <- function(tbl_cr) {
+plot_group_rts_against_session <- function(tbl_cr, nr_cats = 4) {
   pd <- position_dodge(width = .2)
   grouped_agg(tbl_cr, c(n_categories, session), rt) %>% ungroup() %>%
     mutate(
-      n_categories = factor(n_categories, labels = c("Similarity", "4 Categories")),
+      n_categories = factor(n_categories, labels = c("Similarity", str_c(nr_cats, " Categories"))),
       mean_rt = mean_rt / 1000,
       se_rt = se_rt / 1000
     ) %>%
