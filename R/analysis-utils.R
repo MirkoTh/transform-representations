@@ -2415,7 +2415,7 @@ compare_rsqs <- function(l_results_cityblock, l_results_euclidean) {
     scale_fill_viridis_d(guide = "none") +
     facet_wrap(~ name) +
     theme_bw() +
-    labs(x = "R Squared", y = "Nr. Data Points")
+    labs(x = "Squared Error", y = "Nr. Data Points")
   
   l_out <- list(
     tbl_rsq = tbl_rsq,

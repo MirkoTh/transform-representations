@@ -169,7 +169,9 @@ plot_distances_to_centers(tbl_cr)
 
 pl_groupmeans <- plot_groupmeans_against_session(
   tbl_cr %>% mutate(n_categories = factor(n_categories, labels = c("Similarity Judgment", "Category Learning")))
-  ) + theme(legend.position = "bottom")
+) + theme(legend.position = "bottom") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.02, .02)))
 save_my_tiff(pl_groupmeans, "experiments/2022-07-category-learning-II/data/means-sqrt-tf.tiff", 5, 4)
 
 # analysis of the means suggests that there may be an interaction effect
@@ -325,7 +327,9 @@ tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categorie
 # a speed up in rts is at least consistent with this idea
 
 
-plot_group_rts_against_session(tbl_cr)
+plot_group_rts_against_session(tbl_cr) + theme(legend.position = "bottom") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.02, .02)))
 
 
 l_data_mixture_groups <- list(
@@ -347,7 +351,7 @@ fit_move_mixture <- move_model_mixture_group$sample(
   save_warmup = FALSE
 )
 
-fit_or_read <- "read"
+fit_or_read <- "fit"
 file_loc_mixture_groups <- str_c(
   "experiments/2022-07-category-learning-II/data/cr-move-mixture-fixed-groups-predict-model.RDS"
 )
@@ -368,7 +372,7 @@ tbl_draws$theta_meandiff_prob <- inv_logit(tbl_draws$`mu_theta[1]`) - inv_logit(
 tbl_summary <- fit_move_mixture$summary(variables = pars_interest)
 
 # in probability space
-tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) %>%
+pl_prop_gamma <- tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) %>%
   mutate(theta_diff = theta_cat_prob - theta_sim_prob) %>%
   pivot_longer(c(theta_cat_prob, theta_sim_prob, theta_diff)) %>%
   mutate(
@@ -378,10 +382,20 @@ tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) %>%
       labels = c("4 Categories", "Similarity", "Difference"))
   ) %>%
   ggplot(aes(value)) +
-  geom_histogram(color = "white", fill = "#66CCFF", aes(y = ..density..)) +
+  geom_histogram(color = "white", fill = "#440154", aes(y = ..density..)) +
   facet_wrap(~ name) +
   theme_bw() +
-  labs(x = "Proportion Categorical", y = "Posterior Density")
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  ) +
+  labs(x = "Proportion Categorical", y = "Posterior Density") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+save_my_pdf_and_tiff(pl_prop_gamma, "experiments/2022-07-category-learning-II/data/figures/prop-gamma", 8, 3)
+
+
 
 params_bf <- "Group Difference Theta"
 tbl_posterior <- tbl_draws %>% 
@@ -422,10 +436,14 @@ pl_outliers_posteriors <- plot_movement_outliers(
   l_outliers_posterior$tbl_labels %>% left_join(map_prop_gamma, by = c("participant_id")), 
   "Three Individual Participants", 
   nrcols = 5, as_outlier = FALSE
+) + theme(
+  strip.background =element_rect(fill="white"), 
+  strip.text = element_text(colour = 'black'), 
+  legend.position = "bottom"
 )
 pl_outliers_posteriors
 
-save_my_tiff(pl_outliers_posteriors, "experiments/2022-07-category-learning-II/data/figures/random-3-mixture.tiff", 6, 3.5)
+save_my_pdf_and_tiff(pl_outliers_posteriors, "experiments/2022-07-category-learning-II/data/figures/random-3-mixture", 6, 3.5)
 
 l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
@@ -433,21 +451,12 @@ tbl_post_preds <- l_combined$tbl_post_preds
 levels(tbl_empirical$n_categories) <- c("Similarity", "4 Categories")
 tbl_empirical$n_categories <- fct_relevel(tbl_empirical$n_categories, "Similarity", after = 1)
 pl_pp_mixture <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
-  ggtitle("Normal-Gamma Mixture")
-
-pl_ppred <- arrangeGrob(
-  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d(),
-  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
-  nrow = 1, ncol = 2)
-pl_poutliers <- pl_outliers_posteriors + coord_cartesian(xlim = c(-60, 110))
-
-pl_all <- arrangeGrob(pl_psychonomics_means + ggtitle("Empirical Means") + theme(plot.title = element_text(size = 14, face = "plain")), pl_ppred, pl_poutliers, nrow = 1)
-save_my_tiff(
-  pl_all, 
-  "experiments/2022-07-category-learning-II/data/figures/posterior-predictions-and-outliers.tiff",
-  18, 3.75
-)
-
+  ggtitle("Normal-Gamma Mixture") +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  )
 
 
 # model having a parameter shifting group mean of categorization group 
@@ -497,21 +506,57 @@ l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_dr
 tbl_empirical <- l_combined$tbl_empirical
 tbl_post_preds <- l_combined$tbl_post_preds
 pl_pp_shift <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
-  ggtitle("Shift Normal")
-
-grid.draw(arrangeGrob(
-  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d() ,
-  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
-  nrow = 1, ncol = 2))
-
-save_my_tiff(
-  arrangeGrob(
-  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d(),
-  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d(),
-  nrow = 1, ncol = 2), 
-  "experiments/2022-07-category-learning-II/data/posterior-predictions-comparison.tiff",
-  7.5, 3.5
+  ggtitle("Shift Normal") +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
   )
+
+# only predictions
+save_my_pdf_and_tiff(
+  arrangeGrob(
+    pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d() + 
+      scale_x_continuous(expand = c(0, 0)) + 
+      scale_y_continuous(expand = expansion(add = c(0, .002))),
+    pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d() + 
+      scale_x_continuous(expand = c(0, 0)) + 
+      scale_y_continuous(expand = expansion(add = c(0, .002))),
+    nrow = 1, ncol = 2), 
+  "experiments/2022-07-category-learning-II/data/posterior-predictions-comparison",
+  7.5, 3.5
+)
+
+# predictions and a few outliers
+pl_ppred <- arrangeGrob(
+  pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d() + 
+    scale_x_continuous(expand = c(0, 0)) + 
+    scale_y_continuous(expand = expansion(add = c(0, .002))),
+  pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d() + 
+    scale_x_continuous(expand = c(0, 0)) + 
+    scale_y_continuous(expand = expansion(add = c(0, .002))),
+  nrow = 1, ncol = 2)
+pl_poutliers <- pl_outliers_posteriors + coord_cartesian(xlim = c(-60, 110)) + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = expansion(add = c(0, .002))) +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  )
+
+pl_all <- arrangeGrob(
+  # pl_psychonomics_means + ggtitle("Empirical Means") + 
+  #   theme(plot.title = element_text(size = 14, face = "plain")), 
+  pl_ppred, 
+  pl_poutliers, 
+  nrow = 1
+)
+save_my_pdf_and_tiff(
+  pl_all, 
+  "experiments/2022-07-category-learning-II/data/figures/posterior-predictions-and-outliers",
+  18, 3.75
+)
 
 file_loc_loo_mixture_group <- str_c(
   "experiments/2022-07-category-learning-II/data/mixture-group-loo.RDS")
