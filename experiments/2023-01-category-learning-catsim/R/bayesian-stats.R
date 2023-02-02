@@ -1,3 +1,7 @@
+with_outliers <- FALSE
+pl_suffix <- ifelse(with_outliers, "-outliers", "no-outliers")
+
+
 # Import Packages ---------------------------------------------------------
 
 library(tidyverse)
@@ -25,10 +29,10 @@ walk(files, source)
 
 # Load Data ---------------------------------------------------------------
 
-tbl_simult <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps.rds")
-tbl_simult_move <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps.rds")
-tbl_cat <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps.rds")
-tbl_seq <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps.rds")
+tbl_simult <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps", pl_suffix, ".rds"))
+tbl_simult_move <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps", pl_suffix, ".rds"))
+tbl_cat <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps", pl_suffix, ".rds"))
+tbl_seq <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps", pl_suffix, ".rds"))
 
 
 # Category Learning -------------------------------------------------------
@@ -77,7 +81,7 @@ fit_cat <- mod_cat$sample(
   data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 1
 )
 
-file_loc <- str_c("experiments/2023-01-category-learning-catsim/data/cat-model.RDS")
+file_loc <- str_c("experiments/2023-01-category-learning-catsim/data/cat-model", pl_suffix, ".rds")
 fit_cat$save_object(file = file_loc)
 pars_interest <- c("mu_tf")
 tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
@@ -99,7 +103,7 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 save_my_pdf(
   plot_posterior(params_bf[2], tbl_posterior, tbl_thx, bfs),
-  "experiments/2023-01-category-learning-catsim/data/figures/posterior-catlearn-trial.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/posterior-catlearn-trial-", pl_suffix),
   4, 3.5
 )
 
@@ -143,7 +147,7 @@ fit_sim <- mod_sim$sample(
   data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 1
 )
 
-file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model.RDS")
+file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model", pl_suffix, ".RDS")
 fit_sim$save_object(file = file_loc)
 pars_interest <- c("mu_tf")
 tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
@@ -166,9 +170,9 @@ tbl_thx <- l[[2]]
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
-save_my_pdf(
+save_my_pdf_and_tiff(
   plot_posterior(params_bf[2], tbl_posterior, tbl_thx, bfs),
-  "experiments/2023-01-category-learning-catsim/data/figures/posterior-seqcomp-distance.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/posterior-seqcomp-distance-", pl_suffix),
   4, 3.5
 )
 
@@ -187,13 +191,19 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
   geom_line(aes(color = n_categories), position = dg) +
   geom_point(color = "white", size = 4, position = dg) +
   geom_point(aes(color = n_categories), position = dg) +
-  scale_color_viridis_d(name = "Group") +
+  scale_color_viridis_d(name = "Group")  +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = .01, .01)) +
   theme_bw() +
   labs(
     x = "Category Comparison",
     y = "Rating After - Before"
   )
-save_my_pdf(pl_groupmeans, "experiments/2023-01-category-learning-catsim/data/figures/mean-moves.pdf", 6, 4)
+save_my_pdf_and_tiff(
+  pl_groupmeans,
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/mean-moves-no-outliers-", pl_suffix),
+  6, 4
+)
 
 
 # Mean Effects ------------------------------------------------------------
@@ -234,11 +244,11 @@ fit_simult_move_rs <- mod_simult_move_rs$sample(
   chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
-file_loc_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-model.RDS")
+file_loc_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-model", pl_suffix, ".RDS")
 fit_simult_move_rs$save_object(file = file_loc_rs, compress = "gzip")
 
 # fit_simult_move_rs <- readRDS(file_loc_rs)
-file_loc_loo_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-loo.RDS")
+file_loc_loo_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-loo", pl_suffix, ".RDS")
 loo_rs <- fit_simult_move_rs$loo(variables = "log_lik_pred")
 saveRDS(loo_rs, file = file_loc_loo_rs)
 # loo_rs <- readRDS(file_loc_loo_rs)
@@ -251,11 +261,11 @@ fit_simult_move_ri <- mod_simult_move_ri$sample(
 pars_interest <- c("b", "mu")
 tbl_summary_ri <- fit_simult_move_ri$summary(variables = pars_interest)
 
-file_loc_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-model.RDS")
+file_loc_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-model", pl_suffix, ".RDS")
 fit_simult_move_ri$save_object(file = file_loc_ri)
 
 # fit_simult_move_ri <- readRDS(file_loc_ri)
-file_loc_loo_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-loo.RDS")
+file_loc_loo_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-loo", pl_suffix, ".RDS")
 loo_ri <- fit_simult_move_ri$loo(variables = "log_lik_pred")
 saveRDS(loo_ri, file = file_loc_loo_ri)
 # loo_ri <- readRDS(file_loc_loo_ri)
@@ -282,7 +292,11 @@ tbl_thx <- l[[2]]
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 pl_arrangement <- grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
-save_my_tiff(pl_arrangement, "experiments/2023-01-category-learning-catsim/data/figures/posteriors-rs.tiff", 10, 6)
+save_my_pdf_and_tiff(
+  pl_arrangement, 
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/posteriors-rs-", pl_suffix),
+  10, 6
+)
 
 pl_arrangement2 <- grid.arrange(
   pl_preds_ds + ggtitle("Predictions"),

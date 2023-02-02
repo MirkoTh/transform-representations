@@ -1,4 +1,9 @@
 rm(list = ls())
+
+
+with_outliers <- FALSE
+pl_suffix <- ifelse(with_outliers, "-outliers", "no-outliers")
+
 # Some Notes
 
 # for simulation f_stretch <- 1, f_shift <- 0
@@ -95,8 +100,11 @@ l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat_min)
 # 
 
 
-l_cases$l_outliers$keep$tbl_simult <- rbind(l_cases$l_outliers$keep$tbl_simult, l_cases$l_outliers$drop$tbl_simult)
-l_cases$l_outliers$keep$tbl_cat_sim <- rbind(l_cases$l_outliers$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
+if (with_outliers) {
+  l_cases$l_outliers$keep$tbl_simult <- rbind(l_cases$l_outliers$keep$tbl_simult, l_cases$l_outliers$drop$tbl_simult)
+  l_cases$l_outliers$keep$tbl_cat_sim <- rbind(l_cases$l_outliers$keep$tbl_cat_sim, l_cases$l_outliers$drop$tbl_cat_sim)
+  
+}
 
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
 tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat_sim
@@ -162,8 +170,8 @@ tbl_cor_outliers$participant_id <- factor(tbl_cor_outliers$participant_id)
 
 ggplotly(
   ggplot(tbl_cor_outliers, aes(cor, group = as.numeric(participant_id))) +
-  geom_histogram(aes(fill = as.numeric(participant_id))) +
-  facet_grid(session ~ comparison_pool_binary)
+    geom_histogram(aes(fill = as.numeric(participant_id))) +
+    facet_grid(session ~ comparison_pool_binary)
 )
 
 ggplot(tbl_cor_outliers, aes(session, cor, group = as.numeric(participant_id))) +
@@ -177,18 +185,18 @@ tbl_changers <- tbl_cor_outliers %>%
   pivot_wider(
     id_cols = c(participant_id, comparison_pool_binary), 
     names_from = session, values_from = cor
-    ) %>%
+  ) %>%
   filter(sign(`1`) != sign(`2`)) %>%
   pivot_longer(cols = c(`1`, `2`)) %>%
   rename(session = name, cor = value)
 
 ggplotly(
   ggplot(tbl_changers, aes(session, cor, group = as.factor(participant_id))) +
-  geom_line(aes(color = as.factor(participant_id))) +
-  geom_point(aes(color = as.factor(participant_id))) +
-  facet_wrap(~ comparison_pool_binary) +
-  theme_bw() +
-  scale_color_viridis_d(name = "ID")
+    geom_line(aes(color = as.factor(participant_id))) +
+    geom_point(aes(color = as.factor(participant_id))) +
+    facet_wrap(~ comparison_pool_binary) +
+    theme_bw() +
+    scale_color_viridis_d(name = "ID")
 )
 
 tbl_simult$session <- factor(tbl_simult$session)
@@ -205,10 +213,10 @@ tbl_simult <- tbl_simult %>% filter(trial_id < n_consider | session == "Before T
 tbl_simult_move <- delta_simultaneous(tbl_simult)
 
 # save data sets for statistical analyses
-saveRDS(tbl_simult, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps.rds"))
-saveRDS(tbl_simult_move, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps.rds"))
-saveRDS(tbl_cat, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps.rds"))
-saveRDS(tbl_seq, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps.rds"))
+saveRDS(tbl_simult, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps", pl_suffix, ".rds"))
+saveRDS(tbl_simult_move, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps", pl_suffix, ".rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps", pl_suffix, ".rds"))
+saveRDS(tbl_seq, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps", pl_suffix, ".rds"))
 
 
 # folder for plots
@@ -251,11 +259,12 @@ pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, response, 
     x = "Comparison",
     y = "Similarity (Scale from 1-8)"
   )
-save_my_pdf(
+
+save_my_pdf_and_tiff(
   pl_lines_simult, 
-  "experiments/2023-01-category-learning-catsim/data/figures/simult-avg-comparison.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/simult-avg-comparison", pl_suffix),
   6, 4
-  )
+)
 
 # tbl_simult_move %>%
 #   group_by(participant_id, n_categories, comparison_pool_binary) %>%
@@ -274,9 +283,9 @@ pl_move_mass <- ggplot(tbl_simult_move, aes(move_response, group = comparison_po
   theme_bw() +
   labs(x = "Move After - Before", y = "Probability Mass")
 
-save_my_pdf(
+save_my_pdf_and_tiff(
   pl_move_mass, 
-  "experiments/2023-01-category-learning-catsim/data/figures/simult-move-mass.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/simult-move-mass", pl_suffix), 
   6.5, 3.5
 )
 
@@ -297,18 +306,18 @@ pl_rating_mass2 <- ggplot(tbl_simult, aes(response, group = session)) +
   theme_bw() +
   labs(x = "Similarity Rating (Scale 1-8)", y = "Probability Mass")
 
-save_my_pdf(
+save_my_pdf_and_tiff(
   pl_rating_mass2, 
-  "experiments/2023-01-category-learning-catsim/data/figures/simult-ratings-mass.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/simult-ratings-mass", pl_suffix),  
   8.5, 7.5
 )
 
 l_ribbons <- ribbon_plot(tbl_simult_move)
 l_ribbons[[1]]
 
-save_my_pdf(
-  l_ribbons[[1]], 
-  "experiments/2023-01-category-learning-catsim/data/figures/move-by-distance.pdf",
+save_my_pdf_and_tiff(
+  l_ribbons[[1]],
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/move-by-distance", pl_suffix),
   7, 4.5
 )
 
@@ -320,6 +329,8 @@ grouped_agg(tbl_simult_move, c(participant_id, n_categories, comparison_pool_bin
   facet_grid(comparison_pool_binary ~ n_categories) +
   theme_bw() +
   scale_fill_viridis_d(name = "Condition") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.025, .025))) +
   labs(x = "Mean Move", y = "Nr. Participants") +
   theme(strip.background =element_rect(fill="white"))+
   theme(strip.text = element_text(colour = 'black'))
@@ -347,7 +358,11 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
     x = "Category Comparison",
     y = "Rating After - Before"
   )
-save_my_pdf(pl_groupmeans, "experiments/2023-01-category-learning-catsim/data/figures/mean-moves.pdf", 6, 4)
+save_my_pdf_and_tiff(
+  pl_groupmeans, 
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/mean-moves", pl_suffix),  
+  6, 4
+)
 
 
 # looks like participants find it difficult to differentiate between categories when stimuli come close from boundaries
@@ -378,9 +393,10 @@ l_pl <- plot_categorization_accuracy_against_blocks(
 pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02)))
-save_my_pdf(
+
+save_my_pdf_and_tiff(
   pl_cat_learn_pretty, 
-  "experiments/2023-01-category-learning-catsim/data/figures/category-learning.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/category-learning", pl_suffix),  
   5.5, 3.5
 )
 
@@ -431,9 +447,9 @@ hm_pt_start <- plot_heatmaps_with_representations(l_nb_start, sample_ids, tbl_ca
   ggtitle("Second Half of Training")
 
 
-save_my_pdf(
-  arrangeGrob(hm_pt_start, hm_pt_end), 
-  "experiments/2023-01-category-learning-catsim/data/figures/prototypes-improvement.pdf",
+save_my_pdf_and_tiff(
+  arrangeGrob(hm_pt_start, hm_pt_end),
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/prototypes-improvement", pl_suffix),
   12, 7
 )
 
@@ -455,9 +471,9 @@ grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02)))
-save_my_pdf(
+save_my_pdf_and_tiff(
   pl_sequential_agg, 
-  "experiments/2023-01-category-learning-catsim/data/figures/sequential-comparison.pdf",
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/sequential-comparison", pl_suffix),
   4, 3.5
 )
 
@@ -481,46 +497,81 @@ by_participant_coefs(tbl_seq_agg_subj, "distance_binned", "mean_response", "LM S
 
 # Behavioral Representational Similarity Analysis -------------------------
 
-# calculate delta of pairwise distances for empirical data by participant
-l_rsa_all <- pairwise_distances(tbl_cr)
-# repulsion and attraction taking place at the same time
-# could maybe related to spicer et al. (2022) psych science
+# tbl_simult_move already includes pairwise distances, in similarity metric, though
 
-plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
+tbl_simult_move_agg <- tbl_simult_move %>%
+  group_by(n_categories, stim_id_lo, stim_id_hi) %>%
+  summarize(move_response = mean(move_response)) %>%
+  ungroup()
 
-f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
-f_name <- "data/2022-08-24-grid-search-vary-constrain-space.rds"
+plot_symmetric_moves <- function(tbl_df, ttl) {
+  ggplot(tbl_df) +
+    geom_tile(aes(stim_id_lo, stim_id_hi, fill = move_response)) +
+    geom_tile(aes(stim_id_hi, stim_id_lo, fill = move_response)) +
+    theme_bw() +
+    scale_fill_viridis_c(name = "Euclidean Distance Delta") + #, limits = c(0, 75)) +
+    scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+    scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+    labs(x = "Stimulus ID 1", y = "Stimulus ID 2") +
+    theme(legend.position = "omit") +
+    labs(title = ttl)
+}
+
+pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
+pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
+
+f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
-plot_distance_matrix(tbl_rsa_delta_prediction) +
-  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
+
+# constrain to those comparisons that were actually made by participants
+# and make matrix symmetrical
+tbl_constrain <- tbl_simult_move %>% count(stim_id_lo, stim_id_hi) %>% select(-n)
+tbl_mm <- tbl_rsa_delta_prediction %>% 
+  inner_join(tbl_constrain, by = c("l" = "stim_id_lo", "r" = "stim_id_hi")) %>%
+  rbind(
+    tbl_rsa_delta_prediction %>% 
+      inner_join(tbl_constrain, by = c("r" = "stim_id_lo", "l" = "stim_id_hi")) 
+  )
+
+pl_pred <- plot_distance_matrix(tbl_mm) +
+  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix") +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0))
 
 # correlation between model matrix and delta in responses
-tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
-  filter(l >= r)
-tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
+# tbl_rsa_delta_prediction_lower <- tbl_mm %>% 
+#   filter(l >= r)
+tbl_simult_move_agg %>% 
+  rename(l = stim_id_lo, r = stim_id_hi, d_euclidean_delta = move_response) %>%
+  dplyr::select(n_categories, l, r, d_euclidean_delta) %>%
   left_join(
-    l_rsa_all[["tbl_rsa"]] %>% dplyr::select(l, r, n_categories, d_euclidean_delta),
+    tbl_mm  %>% 
+      filter(l <= r) %>% dplyr::select(l, r, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
   ) %>% group_by(n_categories) %>%
-  summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
+  summarise(
+    corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical),
+    p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
+  )
+pls_rsa <- arrangeGrob(pl_pred, pl_experimental, pl_control, nrow = 1)
+save_my_pdf_and_tiff(
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/rsa-avg-plots", pl_suffix),  
+  12, 4
+)
 
 
 
+# save aggregate plots ----------------------------------------------------
 
 
-# save aggregate plots
 pl <- arrangeGrob(
   pl_cat_learn_pretty, pl_sequential_agg,
   pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
-  )
-save_my_tiff(
+)
+save_my_pdf_and_tiff(
   pl, 
-  "experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview.tiff", 
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview", pl_suffix),  
   13, 3.75
 )
-save_my_pdf(
-  pl, 
-  "experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview.pdf", 
-  13, 3.75
-)
+

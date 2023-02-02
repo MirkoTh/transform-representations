@@ -177,6 +177,8 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
   geom_point(color = "white", size = 4, position = dg) +
   geom_point(aes(color = n_categories), position = dg) +
   scale_color_viridis_d(name = "Group") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = .01, .01)) +
   theme_bw() +
   labs(
     x = "Category Comparison",

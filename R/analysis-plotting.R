@@ -1143,8 +1143,8 @@ save_my_pdf <- function(pl, path_fl, w, h) {
 }
 
 save_my_pdf_and_tiff <- function(pl, path_fl, w, h) {
-  save_my_pdf(pl, path_fl, w, h)
-  save_my_tiff(pl, path_fl, w, h)
+  save_my_pdf(pl, str_c(path_fl, ".pdf"), w, h)
+  save_my_tiff(pl, str_c(path_fl, ".tiff"), w, h)
 }
 
 
@@ -1249,8 +1249,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
     # somehow ggMarginal does not like coord_cartesian...
     # the following excludes some of the responses, though
-    scale_x_continuous(limits = c(-40, 40)) +
-    scale_y_continuous(limits = c(-40, 40)) +
+    scale_x_continuous(limits = c(-40, 40), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(-40, 40), expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
     
@@ -1262,8 +1262,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     #geom_density2d(data = d1, color = "#440154", aes(x1_deviation, x2_deviation)) +
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
-    scale_x_continuous(limits = c(-40, 40)) +
-    scale_y_continuous(limits = c(-40, 40)) +
+    scale_x_continuous(limits = c(-40, 40), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(-40, 40), expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(

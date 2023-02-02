@@ -529,6 +529,7 @@ summary(m_rs_cr_control)
 
 # Behavioral Representational Similarity Analysis -------------------------
 
+
 # calculate delta of pairwise distances for empirical data by participant
 l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
@@ -536,8 +537,20 @@ plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
-plot_distance_matrix(tbl_rsa_delta_prediction) +
-  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
+pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +
+  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix") +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0))
+pl_exp <- l_rsa_all$pl_m_avg_experimental +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0))
+pl_control <- l_rsa_all$pl_m_avg_control +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0))
+
+# color scale: delta after - delta before
+pls_rsa <- arrangeGrob(pl_pred, pl_exp, pl_control, nrow = 1)
+save_my_pdf_and_tiff(pls_rsa, "experiments/2022-02-category-learning/data/figures/rsa-avg-plots", 12, 4)
 
 # correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
@@ -547,9 +560,13 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
     l_rsa_all$tbl_rsa %>% select(l, r, n_categories, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
   ) %>% group_by(n_categories) %>%
-  summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
-l_rsa_all$pl_m_experimental
-l_rsa_all$pl_m_con
+  summarise(
+    corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical),
+    p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
+  )
+
+
+# save some plots ---------------------------------------------------------
 
 
 pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_psychonomics, ncol = 3)
