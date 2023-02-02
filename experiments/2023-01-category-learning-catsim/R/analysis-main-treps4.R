@@ -481,35 +481,71 @@ by_participant_coefs(tbl_seq_agg_subj, "distance_binned", "mean_response", "LM S
 
 # Behavioral Representational Similarity Analysis -------------------------
 
-# calculate delta of pairwise distances for empirical data by participant
-l_rsa_all <- pairwise_distances(tbl_cr)
-# repulsion and attraction taking place at the same time
-# could maybe related to spicer et al. (2022) psych science
+# tbl_simult_move already includes pairwise distances, in similarity metric, though
 
-plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
+tbl_simult_move_agg <- tbl_simult_move %>%
+  group_by(n_categories, stim_id_lo, stim_id_hi) %>%
+  summarize(move_response = mean(move_response)) %>%
+  ungroup()
 
-f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
-f_name <- "data/2022-08-24-grid-search-vary-constrain-space.rds"
+plot_symmetric_moves <- function(tbl_df, ttl) {
+  ggplot(tbl_df) +
+    geom_tile(aes(stim_id_lo, stim_id_hi, fill = move_response)) +
+    geom_tile(aes(stim_id_hi, stim_id_lo, fill = move_response)) +
+    theme_bw() +
+    scale_fill_viridis_c(name = "Euclidean Distance Delta") + #, limits = c(0, 75)) +
+    scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+    scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+    labs(x = "Stimulus ID 1", y = "Stimulus ID 2") +
+    theme(legend.position = "omit") +
+    labs(title = ttl)
+}
+
+pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
+pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
+
+f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
-plot_distance_matrix(tbl_rsa_delta_prediction) +
-  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
+
+# constrain to those comparisons that were actually made by participants
+# and make matrix symmetrical
+tbl_constrain <- tbl_simult_move %>% count(stim_id_lo, stim_id_hi) %>% select(-n)
+tbl_mm <- tbl_rsa_delta_prediction %>% 
+  inner_join(tbl_constrain, by = c("l" = "stim_id_lo", "r" = "stim_id_hi")) %>%
+  rbind(
+    tbl_rsa_delta_prediction %>% 
+      inner_join(tbl_constrain, by = c("r" = "stim_id_lo", "l" = "stim_id_hi")) 
+  )
+
+pl_pred <- plot_distance_matrix(tbl_mm) +
+  labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix") +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0))
 
 # correlation between model matrix and delta in responses
-tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
-  filter(l >= r)
-tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
+# tbl_rsa_delta_prediction_lower <- tbl_mm %>% 
+#   filter(l >= r)
+tbl_simult_move_agg %>% 
+  rename(l = stim_id_lo, r = stim_id_hi, d_euclidean_delta = move_response) %>%
+  dplyr::select(n_categories, l, r, d_euclidean_delta) %>%
   left_join(
-    l_rsa_all[["tbl_rsa"]] %>% dplyr::select(l, r, n_categories, d_euclidean_delta),
+    tbl_mm  %>% 
+      filter(l <= r) %>% dplyr::select(l, r, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
   ) %>% group_by(n_categories) %>%
-  summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
+  summarise(
+    corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical),
+    p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
+  )
+pls_rsa <- arrangeGrob(pl_pred, pl_experimental, pl_control, nrow = 1)
+save_my_pdf_and_tiff(pls_rsa, "experiments/2023-01-category-learning-catsim/data/figures/rsa-avg-plots", 12, 4)
 
 
 
+# save aggregate plots ----------------------------------------------------
 
 
-# save aggregate plots
 pl <- arrangeGrob(
   pl_cat_learn_pretty, pl_sequential_agg,
   pl_groupmeans + theme(plot.title = element_blank()), ncol = 3

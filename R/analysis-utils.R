@@ -1419,6 +1419,10 @@ delta_representational_distance <- function(p_id, tbl_cr) {
   #' @return a tbl_df with the deltas after vs. before
   #'
   timepoints <- sort(unique(tbl_cr$session))
+  if (timepoints[1] == "after") {
+    timepoints[1] <- "before"
+    timepoints[2] <- "after"
+  }
   tbl_rsa_before <- representational_distances(p_id, timepoints[1], tbl_cr)
   tbl_rsa_after <- representational_distances(p_id, timepoints[2], tbl_cr)
   tbl_rsa_delta <- tbl_rsa_before %>% 

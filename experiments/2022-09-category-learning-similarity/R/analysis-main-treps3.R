@@ -421,13 +421,19 @@ tbl_simult_move_agg %>%
     tbl_mm %>% dplyr::select(l, r, d_euclidean_delta),
     by = c("l", "r"), suffix = c("_pred", "_empirical")
   ) %>% group_by(n_categories) %>%
-  summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
+  summarise(
+    corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical),
+    p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
+    )
 
 pls_rsa <- arrangeGrob(pl_pred, pl_experimental, pl_control, nrow = 1)
 save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/data/figures/rsa-avg-plots", 12, 4)
 
 
-# save aggregate plots
+
+# save aggregate plots ----------------------------------------------------
+
+
 pl <- arrangeGrob(
   pl_cat_learn_pretty, l_pl_sim[[3]],
   pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
