@@ -383,17 +383,20 @@ summary(m_rs_cr_control)
 
 # calculate delta of pairwise distances for empirical data by participant
 l_rsa_all <- pairwise_distances(tbl_cr)
-# repulsion and attraction taking place at the same time
-# could maybe related to spicer et al. (2022) psych science
 
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
-f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
-f_name <- "data/2022-08-24-grid-search-vary-constrain-space.rds"
+f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
-plot_distance_matrix(tbl_rsa_delta_prediction) +
+pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +
   labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix")
+pl_exp <- l_rsa_all$pl_m_avg_experimental
+pl_control <- l_rsa_all$pl_m_avg_control
+
+# color scale: delta after - delta before
+pls_rsa <- arrangeGrob(pl_pred, pl_exp, pl_control, nrow = 1)
+save_my_pdf_and_tiff(pls_rsa, "experiments/2022-07-category-learning-II/data/figures/rsa-avg-plots", 12, 4)
 
 # correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
@@ -406,7 +409,11 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
   summarise(corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical))
 
 
-# save aggregate plots
+
+
+# Save some plots ---------------------------------------------------------
+
+
 pl <- arrangeGrob(
   pl_cat_learn_pretty, l_pl_sim[[3]], 
   pl_psychonomics_means + theme(plot.title = element_blank()),

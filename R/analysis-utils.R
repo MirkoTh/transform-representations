@@ -1472,8 +1472,8 @@ pairwise_distances <- function(tbl_cr) {
   l_rsa_delta <- map(tbl_groups$participant_id, delta_representational_distance, tbl_cr = tbl_cr)
   
   # plot distance matrices for sample participants
-  list_ids_control <- tbl_groups$rwn[tbl_groups$n_categories == "Similarity"]
-  list_ids_experimental <- tbl_groups$rwn[tbl_groups$n_categories != "Similarity"]
+  list_ids_control <- tbl_groups$rwn[tbl_groups$n_categories %in% c(1, "Similarity")]
+  list_ids_experimental <- tbl_groups$rwn[!(tbl_groups$n_categories %in% c(1, "Similarity"))]
   l_rsa_delta_control <- map(l_rsa_delta, list_ids_control)
   l_rs_mat_control <- l_rsa_delta[list_ids_control]
   l_rs_mat_experimental <- l_rsa_delta[list_ids_experimental]
@@ -1481,6 +1481,16 @@ pairwise_distances <- function(tbl_cr) {
   l_plot_d_mat_experimental <- map(l_rs_mat_experimental, plot_distance_matrix)
   pl_m_control <- plot_arrangement(l_plot_d_mat_control[sample(1:length(l_plot_d_mat_control), 3, replace = FALSE)], 3, 1)
   pl_m_experimental <- plot_arrangement(l_plot_d_mat_experimental[sample(1:length(l_plot_d_mat_experimental), 3, replace = FALSE)], 3, 1)
+  
+  # plot distance matrices for average participant
+  tbl_rs_mat_control <- reduce(l_rs_mat_control, rbind) %>%
+    group_by(l, r) %>% summarize(d_euclidean_delta = mean(d_euclidean_delta))
+  pl_m_avg_control <- plot_distance_matrix(tbl_rs_mat_control) + 
+    ggtitle("Sequential Comparison")
+  tbl_rs_mat_experimental <- reduce(l_rs_mat_experimental, rbind) %>%
+    group_by(l, r) %>% summarize(d_euclidean_delta = mean(d_euclidean_delta))
+  pl_m_avg_experimental <- plot_distance_matrix(tbl_rs_mat_experimental) + 
+    ggtitle("Category Learning")
   
   # reduce list of by-participant tbl_dfs into one larger tbl_df
   tbl_rsa <- reduce(l_rsa_delta, rbind) %>% 
@@ -1493,7 +1503,9 @@ pairwise_distances <- function(tbl_cr) {
   
   return(list(
     l_rsa_delta = l_rsa_delta, tbl_rsa = tbl_rsa, 
-    pl_m_control = pl_m_control, pl_m_experimental = pl_m_experimental
+    pl_m_control = pl_m_control, pl_m_experimental = pl_m_experimental,
+    pl_m_avg_control = pl_m_avg_control,
+    pl_m_avg_experimental = pl_m_avg_experimental
   ))
 }
 
