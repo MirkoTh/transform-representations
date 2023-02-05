@@ -1,3 +1,39 @@
+timeout_and_returns_e1 <- function() {
+  #' manually assign prolific returns and submissions
+  #' 
+  c(
+    "5f7c576b5888ee052e9377f7",
+    "5e8cacbdd541a4057c580588",
+    "612553b19191648882438db1",
+    "5ea0ab674e66b409a8bf6b2f",
+    "5cf5190ffc94fd0001197e22",
+    "5f4e76eff69af505fa21da55",
+    "603f6e643234e512fc197ae1",
+    "61028366f356084aba212e40",
+    "6167e763015c13b2b087b9df",
+    "61274c5d48457b27bb106961",
+    "60c5a05a8015a0a73d03a99d",
+    "5fc8aaa41a1f842422484db2",
+    "616823f498b414afa4fb4c71",
+    "60e6e0af4a78e1589ca09d4f",
+    "5ff5a2e6a89e1b02557a29bf",
+    "615164a489588e22d2bd33df",
+    "5fb1bdd5dc59737020cdfb5e",
+    "616f94cd9cd003d37c9db38c",
+    "5ee35bd68326e102273173ee",
+    "5f8c0f0018ada633f6d834e9",
+    "6139f08d5ad17f719138935f",
+    "61315b1ab3c739cc59d4840b",
+    "61225f246a12b5e2a1977ba9",
+    "611cda328d1907654f6097c2",
+    "61029c7b9333b958acfc91a3",
+    "61139ce2816e4bffeed452f9",
+    "6166eb40f3fdb397f7333849",
+    "5fac647436421623d15dfcf5",
+    "616e7879455c454872403556" 
+  )
+}
+
 timeout_and_returns_e2 <- function() {
   #' manually assign prolific returns and submissions
   #' 
@@ -211,7 +247,7 @@ load_data_e1 <- function(path_data) {
   tbl_cat <- read_csv(str_c(path_data, "tbl_cat.csv"))
   tbl_cr$stim_id <- (floor(tbl_cr$x1_true/9) - 1) * 10 + (floor(tbl_cr$x2_true/9) - 1) + 1
   tbl_cr$session <- as.numeric(tbl_cr$session)
-
+  
   factors <- c("participant_id", "session", "cat_true", "n_categories")
   numerics <- c("trial_id", "x1_true", "x2_true", "x1_response", "x2_response", "rt")
   tbl_cr <- fix_data_types(tbl_cr, factors, numerics)
@@ -224,7 +260,7 @@ load_data_e1 <- function(path_data) {
 
 
 # check for each participant which file has more data and select that one
-hash_ids_e1 <- function(path_data, participants_returned) {
+hash_ids_e1_e2 <- function(path_data, participants_returned, expt) {
   #' save continuous reproduction ("cr") and category learning ("cat") data
   #' with prolific ids replaced by random identifiers
   #' 
@@ -232,6 +268,7 @@ hash_ids_e1 <- function(path_data, participants_returned) {
   #' prolific ids replaced by random ids; writes hash table to csv as well
   #' @param path_data sub-folder with batch data
   #' @param participants_returned list with returned and rejected prolific
+  #' @param expt e1 or e2
   
   #'  
   #' @return nothing, just writes
@@ -277,6 +314,25 @@ hash_ids_e1 <- function(path_data, participants_returned) {
   tbl_cr <- reduce(map(l_paths[["cr"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
   tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
   
+  
+  # add gender
+  if (expt == 1) {
+    tbl_1 <- read_delim("experiments/2022-02-category-learning/data/prolific_export_625ffe800817766aefd67ebd.csv", delim = ",")
+    tbl_2 <- read_delim("experiments/2022-02-category-learning/data/prolific_export_626100cf3d93e6112cd2a64d.csv", delim = ",")
+    tbl_prolific <- rbind(tbl_1, tbl_2) %>% filter(Status == "APPROVED")
+    tbl_cr <- tbl_cr %>% 
+      left_join(tbl_prolific[, c("Participant id", "Sex")], by = c("participant_id" = "Participant id"))
+    
+  } else if (expt == 2) {
+    fls_all <- list.files("experiments/2022-07-category-learning-II/data/")
+    fl_start <- "prolific_export"
+    pth <- str_c("experiments/2022-07-category-learning-II/data/", fls_all[startsWith(fls_all, fl_start)])
+    l <- map(pth, read_csv)
+    tbl_prolific <- reduce(l, rbind)
+    tbl_cr <- tbl_cr %>% 
+      left_join(tbl_prolific[, c("Participant id", "Sex")], by = c("participant_id" = "Participant id"))
+  }
+  
   # create a lookup table mapping prolific ids to random ids
   tbl_ids_lookup <- tibble(participant_id = unique(tbl_cr$participant_id))
   tbl_ids_lookup <- tbl_ids_lookup %>%
@@ -294,7 +350,7 @@ hash_ids_e1 <- function(path_data, participants_returned) {
   
   write_csv(tbl_cr, str_c(path_data, "tbl_cr.csv"))
   write_csv(tbl_cat, str_c(path_data, "tbl_cat.csv"))
-
+  
 }
 
 
@@ -336,7 +392,7 @@ load_data_e3 <- function(path_data) {
   return(l_data)
 }
 
-hash_ids_e3 <- function(path_data, participants_returned) {
+hash_ids_e3_e4 <- function(path_data, participants_returned, expt) {
   #' save simultaneous comparison ("simult") and secondary task ("cat") data
   #' with prolific ids replaced by random identifiers
   #' 
@@ -344,6 +400,7 @@ hash_ids_e3 <- function(path_data, participants_returned) {
   #' prolific ids replaced by random ids; writes hash table to csv as well
   #' @param path_data sub-folder with batch data
   #' @param participants_returned list with returned and rejected prolific
+  #' @param expt e3 or e4
   
   # check for each participant which file has more data and select that one
   files_dir <- dir(path_data)
@@ -383,6 +440,25 @@ hash_ids_e3 <- function(path_data, participants_returned) {
   tbl_simult <- reduce(map(l_paths[["sim_simult"]], json_to_tibble), rbind) %>% filter(session %in% c(1, 2))
   tbl_cat <- reduce(map(l_paths[["cat"]], json_to_tibble), rbind)
   
+  if (expt == 3) {
+    fls_all <- list.files("experiments/2022-09-category-learning-similarity/data/")
+    fl_start <- "prolific_export"
+    pth <- str_c("experiments/2022-09-category-learning-similarity/data/", fls_all[startsWith(fls_all, fl_start)])
+    l <- map(pth, read_csv)
+    tbl_prolific <- reduce(l, rbind)
+    tbl_simult <- tbl_simult %>% 
+      left_join(tbl_prolific[, c("Participant id", "Sex")], by = c("participant_id" = "Participant id"))
+  } else if (expt == 4) {
+    fls_all <- list.files("experiments/2023-01-category-learning-catsim/data/")
+    fl_start <- "prolific_export"
+    pth <- str_c("experiments/2023-01-category-learning-catsim/data/", fls_all[startsWith(fls_all, fl_start)])
+    l <- map(pth, read_csv)
+    tbl_prolific <- reduce(l, rbind)
+    tbl_simult <- tbl_simult %>% 
+      left_join(tbl_prolific[, c("Participant id", "Sex")], by = c("participant_id" = "Participant id"))
+  }
+  
+  
   # create a lookup table mapping prolific ids to random ids
   tbl_ids_lookup <- tibble(participant_id = unique(tbl_simult$participant_id))
   tbl_ids_lookup <- tbl_ids_lookup %>%
@@ -402,7 +478,7 @@ hash_ids_e3 <- function(path_data, participants_returned) {
   write_csv(tbl_simult, str_c(path_data, "tbl_simult.csv"))
   write_csv(tbl_cat, str_c(path_data, "tbl_cat.csv"))
   
-
+  
 }
 
 assign_comparison_pool <- function(tbl_df) {
@@ -550,7 +626,7 @@ cor_ratings_distances_time_pool <- function(tbl_simult) {
   l_simult <- split(
     tbl_simult[, c("d_euclidean", "response")], 
     interaction(tbl_simult$participant_id, tbl_simult$session, tbl_simult$comparison_pool_binary)
-    )
+  )
   v_cor_simult <- map_dbl(l_simult, ~ cor(.x$d_euclidean, .x$response))
   tbl_cor_simult <- tibble(participant_id = names(v_cor_simult), cor = v_cor_simult)
   tbl_cor_simult$session <- as.numeric(str_match(tbl_cor_simult$participant_id, "^.*\\.([1-2])")[, 2])
@@ -2327,7 +2403,7 @@ summarize_model_results <- function(l, tbl_design) {
   
   # E3: this participant used responses 1 and 2 for > 90%
   if ("5ff9dae550f0663236a53c19" %in% tbl_design$participant_id) {
-      tbl_design <- tbl_design %>% filter(participant_id != "5ff9dae550f0663236a53c19")
+    tbl_design <- tbl_design %>% filter(participant_id != "5ff9dae550f0663236a53c19")
   }
   
   hist_w <- ggplot(tbl_design, aes(w1)) +
@@ -2338,7 +2414,7 @@ summarize_model_results <- function(l, tbl_design) {
     labs(x = expr(w[1]), y = "Nr. Participants") + 
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0))
-
+  
   tbl_results_agg <- summarySEwithin(
     tbl_design, "c", 
     withinvars = c("session", "comparison_pool"), 

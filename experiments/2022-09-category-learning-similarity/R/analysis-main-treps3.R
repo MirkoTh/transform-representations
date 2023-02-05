@@ -56,7 +56,7 @@ returned_timeout <- timeout_and_returns_e3()
 
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
-#walk(path_data, hash_ids_e3, participants_returned = returned_timeout)
+# walk(path_data, hash_ids_e3, participants_returned = returned_timeout, expt = 3)
 
 l_tbls_data <- map(path_data, load_data_e3)
 l_tbl_data <-
@@ -84,6 +84,23 @@ drops$l_outliers %>% print(n = 4)
 keeps <- map(l_cases, participants_ntrials, stage = "keep")$l_outliers
 keeps %>% arrange(desc(n_seq))
 keeps %>% arrange(desc(n_simult))
+
+rbind(
+  l_cases$l_outliers$drop$tbl_simult, l_cases$l_guessing$drop$tbl_simult, l_cases$l_incomplete$drop$tbl_simult
+) %>% rbind(tbl_simult) %>% group_by(participant_id) %>% count(Sex) %>% ungroup() %>% count(Sex)
+cat(str_c("dropouts: ", length(unique(l_cases$l_incomplete$drop$tbl_simult$participant_id))))
+cat(str_c("outliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_simult$participant_id))))
+
+repeats <- keeps %>% filter(n_seq > n_resp_cat | n_simult > n_resp_simult) %>% select(participant_id) %>% as_vector() %>% unname()
+tbl_simult <- tbl_simult %>% filter(!(participant_id %in% repeats))
+tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats))
+cat(str_c("restarts: ", length(repeats)))
+
+
+# ns per group
+tbl_simult %>% group_by(participant_id, n_categories) %>% count() %>% 
+  group_by(n_categories) %>% count()
+
 
 # some participants seem to  have restarted the experiment
 # exclude them from the data sets by hand

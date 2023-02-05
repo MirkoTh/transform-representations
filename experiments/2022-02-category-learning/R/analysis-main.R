@@ -46,7 +46,8 @@ path_data <- c(
 
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
-# walk(path_data[2:3], hash_ids_e1, participants_returned = c())
+# returned_timeout <- timeout_and_returns_e1()
+# walk(path_data[2:3], hash_ids_e1_e2, participants_returned = timeout_and_returns_e1(), expt = 1)
 
 l_tbls_data <- map(path_data[2:3], load_data_e1)
 l_tbl_data <-
@@ -84,19 +85,34 @@ excl_guessing <-
     unique(l_cases$l_guessing$drop[[1]]$participant_id),
     unique(l_cases$l_guessing$drop[[2]]$participant_id)
   )
-# inclusions
-cat(str_c("final N analyzed: ", length(unique(
-  tbl_cr$participant_id
-)), "\n"))
+
+
 same_n <-
   length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
 cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
 
+
+# inclusions
+cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
+
+# exclusions
+cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing) + nrow(repeats)))
+
+rbind(
+  l_cases$l_outliers$drop$tbl_cr, l_cases$l_guessing$drop$tbl_cr, l_cases$l_incomplete$drop$tbl_cr
+) %>% rbind(tbl_cr) %>% group_by(participant_id) %>% count(Sex) %>% ungroup() %>% count(Sex)
+cat(str_c("dropouts: ", length(unique(l_cases$l_incomplete$drop$tbl_cr$participant_id))))
+cat(str_c("outliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_cr$participant_id))))
+
 repeats <- tbl_cr %>% count(participant_id) %>% arrange(desc(n)) %>% filter(n >= 235)
 tbl_cr <- tbl_cr %>% filter(!(participant_id %in% repeats$participant_id))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats$participant_id))
+
+# ns per group
+tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>% 
+  group_by(n_categories) %>% count()
 
 saveRDS(tbl_cr, "experiments/2022-02-category-learning/data/tbl_cr.rds")
 saveRDS(tbl_cat_sim, "experiments/2022-02-category-learning/data/tbl_cat_sim.rds")
@@ -236,12 +252,12 @@ l_movement[[2]]
 
 plot_categorization_heatmaps(
   tbl_cat_grid %>% filter(participant_id %in% sample_ids), 2, "Mode"
-  ) + geom_contour(
-    data = tbl_preds_nb %>% filter(participant_id %in% substr(sample_ids, 1, 6)),
-    aes(x1, x2, z = density, alpha = density),
-    color = "black"
-  ) + geom_point(
-    data = tibble(x = 50, y = 50), aes(x, y), color = "#FF3333", size = 3.5)
+) + geom_contour(
+  data = tbl_preds_nb %>% filter(participant_id %in% substr(sample_ids, 1, 6)),
+  aes(x1, x2, z = density, alpha = density),
+  color = "black"
+) + geom_point(
+  data = tibble(x = 50, y = 50), aes(x, y), color = "#FF3333", size = 3.5)
 
 
 
