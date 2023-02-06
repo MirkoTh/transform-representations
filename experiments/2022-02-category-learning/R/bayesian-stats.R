@@ -30,6 +30,7 @@ tbl_cr <- read_rds("experiments/2022-02-category-learning/data/tbl_cr.rds")
 tbl_cat_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_cat_sim.rds")
 tbl_cat <- tbl_cat_sim %>% filter(n_categories == 2)
 tbl_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_sim.rds")
+tbl_moves <- read_csv("experiments/2022-02-category-learning/data/movements-catacc.csv")
 
 
 # Category Learning -------------------------------------------------------
@@ -144,7 +145,7 @@ fit_sim <- mod_sim$sample(
   data = l_data, iter_sampling = 1000, iter_warmup = 1000, chains = 1
 )
 
-file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model.RDS")
+file_loc <- str_c("experiments/2022-02-category-learning/data/sim-model.RDS")
 fit_sim$save_object(file = file_loc)
 pars_interest <- c("mu_tf")
 tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
@@ -265,4 +266,125 @@ tbl_thx <- l[[2]]
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
+
+
+# individual differences in movements -------------------------------------
+
+tbl_moves <- tbl_moves %>% filter(n_categories == "Category Learning")
+
+tbl_moves %>%
+  pivot_longer(cols = c(mean_accuracy, mean_delta_accuracy)) %>%
+  mutate(name = factor(name, labels = c("Average Final Accuracy", "Average Improvement"))) %>%
+  ggplot(aes(value, movement, group = name)) +
+  geom_point(aes(color = name)) +
+  geom_smooth(aes(color = name), method = "lm") +
+  theme_bw() +
+  facet_grid(category ~ name, scales = "free") +
+  scale_color_viridis_d(name = "Measurement") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = "Value", y = "Movement Towards Category Center")
+
+
+
+move_model <- stan_move()
+mod_move <- cmdstan_model(move_model)
+
+# use final accuracy
+mm_move_finalacc <- model.matrix(
+  movement ~ category, data = tbl_moves
+) %>% as_tibble()
+mm_move_finalacc[, 2] <- mm_move_finalacc[, 2] - .5
+mm_move_finalacc[, 3] <- scale(tbl_moves$mean_accuracy, scale = FALSE)[, 1]
+mm_move_finalacc[, 4] <- mm_move_finalacc[, 2] * mm_move_finalacc[, 3]
+
+l_data <- list(
+  n_data = nrow(tbl_moves),
+  response = tbl_moves$movement,
+  x = as.matrix(mm_move_finalacc)
+)
+
+fit_move_finalacc <- mod_move$sample(
+  data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3
+)
+
+file_loc <- str_c("experiments/2022-02-category-learning/data/move-model-finalacc.RDS")
+fit_move_finalacc$save_object(file = file_loc)
+pars_interest <- c("mu_tf")
+tbl_draws <- fit_move_finalacc$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_finalacc$summary(variables = pars_interest)
+
+
+params_bf <- c("Intercept", "Category", "Final Accuracy", "Category x Final Accuracy")
+
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(starts_with(c("mu")), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter, labels = params_bf))
+
+l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1/2)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+map(as.list(params_bf[c(2, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+l <- sd_bfs(tbl_posterior, params_bf[c(3)], sqrt(2)/4)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
+
+# use delta in categorization accuracy
+mm_move_deltaacc <- model.matrix(
+  movement ~ category, data = tbl_moves
+) %>% as_tibble()
+mm_move_deltaacc[, 2] <- mm_move_deltaacc[, 2] - .5
+mm_move_deltaacc[, 3] <- scale(tbl_moves$mean_delta_accuracy, scale = FALSE)[, 1]
+mm_move_deltaacc[, 4] <- mm_move_deltaacc[, 2] * mm_move_deltaacc[, 3]
+
+l_data <- list(
+  n_data = nrow(tbl_moves),
+  response = tbl_moves$movement,
+  x = as.matrix(mm_move_deltaacc)
+)
+
+fit_move_deltaacc <- mod_move$sample(
+  data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3
+)
+
+file_loc <- str_c("experiments/2022-02-category-learning/data/move-model-deltaacc.RDS")
+fit_move_deltaacc$save_object(file = file_loc)
+pars_interest <- c("mu_tf")
+tbl_draws <- fit_move_deltaacc$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_deltaacc$summary(variables = pars_interest)
+
+
+params_bf <- c("Intercept", "Category", "Final Accuracy", "Category x Fin. Accuracy")
+
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(starts_with(c("mu")), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter, labels = params_bf))
+
+l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1/2)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+map(as.list(params_bf[c(2, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+l <- sd_bfs(tbl_posterior, params_bf[c(3)], sqrt(2)/4)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
 

@@ -205,6 +205,8 @@ tbl_cat_agg <-
 l_movement_gt <-
   movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest", sim_center)
 tbl_movement_gt <- l_movement_gt[[1]]
+write_csv(tbl_movement_gt, "experiments/2022-07-category-learning-II/data/movements-catacc.csv")
+
 
 # plot movement towards category center against task2 accuracy
 marrangeGrob(list(

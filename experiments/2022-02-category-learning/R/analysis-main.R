@@ -244,6 +244,8 @@ l_movement <-
     sim_center = sim_center
   )
 tbl_movement <- l_movement[[1]]
+write_csv(tbl_movement, "experiments/2022-02-category-learning/data/movements-catacc.csv")
+
 l_movement[[2]]
 
 # can we also include variability in the representations
