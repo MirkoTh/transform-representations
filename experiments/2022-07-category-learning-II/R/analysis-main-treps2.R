@@ -217,6 +217,19 @@ marrangeGrob(
   list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last), nrow = 1, ncol = 2
 )
 
+pls_moves_catlearn <- arrangeGrob(
+  l_movement_gt[[2]]$hist_movements,
+  l_movement_gt[[2]]$pl_delta,
+  l_movement_gt[[2]]$pl_last,
+  nrow = 1
+)
+
+save_my_pdf_and_tiff(
+  pls_moves_catlearn,
+  "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
+  13, 4.5
+)
+
 # exclude initial trials from following analyses
 n_start_exclude <- 200
 tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, n_start_exclude)

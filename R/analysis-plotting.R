@@ -410,7 +410,11 @@ movement_towards_category_center <-
         ))
       ) %>%
       filter(!is.na(mean_distance_before))
-    tbl_movement$category <- factor(tbl_movement$category, labels = c("Bukil", "Venak"))
+    if (sim_center == "ellipse") {
+      tbl_movement$category <- factor(tbl_movement$category, labels = c("Bukil", "Venak"))
+    } else if (sim_center == "square") {
+      tbl_movement$category <- factor(tbl_movement$category, labels = c("Any Category"))
+    }
     levels(tbl_movement$n_categories) <- c("Sequential Comparison", "Category Learning")
     
     pl_last <- ggplot() +
