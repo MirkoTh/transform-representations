@@ -56,10 +56,14 @@ sim_center <- "square"
 # Load Data ---------------------------------------------------------------
 
 
+
+
+
+
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
-# returned_timeout <- timeout_and_returns_e2()
-# walk(path_data, hash_ids_e1, participants_returned = returned_timeout)
+returned_timeout <- timeout_and_returns_e2()
+walk(path_data, hash_ids_e1_e2, participants_returned = returned_timeout, expt = 2)
 
 l_tbls_data <- map(path_data, load_data_e1)
 l_tbl_data <-
@@ -107,6 +111,15 @@ cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
 
 # exclusions
 cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing)))
+
+rbind(
+  l_cases$l_outliers$drop$tbl_cr, l_cases$l_guessing$drop$tbl_cr, l_cases$l_incomplete$drop$tbl_cr
+) %>% rbind(tbl_cr) %>% group_by(participant_id) %>% count(Sex) %>% ungroup() %>% count(Sex)
+cat(str_c("dropouts: ", length(unique(l_cases$l_incomplete$drop$tbl_cr$participant_id))))
+cat(str_c("outliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_cr$participant_id))))
+
+repeats <- tbl_cr %>% count(participant_id) %>% arrange(desc(n)) %>% arrange(desc(n))
+# none of remaining participants did restart experiment
 
 same_n <-
   length(unique(tbl_cr$participant_id)) == length(unique(tbl_cat_sim$participant_id))
