@@ -1166,7 +1166,7 @@ wrap_sum_of_distances <- function(tp, cat1, cat2, tbl_df) {
 }
 
 
-sum_of_pairwise_distances <- function(tbl_posterior) {
+sum_of_pairwise_distances <- function(tbl_posterior, sim_center) {
   #' compute sum of pairwise distances
   #' 
   #' @description sum of pairwise distances for within-category and between-category pairs
@@ -1176,7 +1176,8 @@ sum_of_pairwise_distances <- function(tbl_posterior) {
   #' @return a tbl with the sum of distances and the absolute change and its proportion
   #' 
   # design tbl to compute distances before and after
-  tbl_comparisons <- tibble(
+  if (sim_center == "square") {
+    tbl_comparisons <- tibble(
     tp = factor(
       rep(c("Before Training", "After Training"), 8), 
       levels = c("Before Training", "After Training"), ordered = TRUE
@@ -1190,6 +1191,18 @@ sum_of_pairwise_distances <- function(tbl_posterior) {
     ),
     comparison = rep(rep(c("Within", "Between"), each = 2), 4)
   )
+  } else if (sim_center == "ellipses") {
+    tbl_comparisons <- tibble(
+      tp = factor(
+        rep(c("Before Training", "After Training"), 4), 
+        levels = c("Before Training", "After Training"), ordered = TRUE
+      ),
+      cat1 = rep(1:2, each = 4),
+      cat2 = c(1, 1, 2, 2, 2, 2, 1, 1),
+      comparison = rep(rep(c("Within", "Between"), each = 2), 2)
+    )
+  }
+  
   # compute actual distances
   tmp <- pmap(
     tbl_comparisons %>% select(-comparison), 

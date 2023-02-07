@@ -19,7 +19,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 5000
+nruns <- 100
 
 # constant
 l_info_prep <- list(
@@ -29,11 +29,18 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- crossing(
-  n_categories = c(4L), cat_type = c("prototype", "exemplar", "rule"), #, 
+  cat_type = c("prototype", "exemplar", "rule"), #, 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
-  constrain_space = c(TRUE, FALSE), category_shape = c("square"),
+  constrain_space = c(TRUE, FALSE), category_shape = c("square", "ellipses"),
   is_reward = FALSE
 )
+
+tbl_vary$n_categories <- rep(c(2, 4), nrow(tbl_vary)/2)
+tbl_vary <- tbl_vary %>% relocate(n_categories, .before = cat_type)
+
+filter_out <- tbl_vary$category_shape == "ellipses" & tbl_vary$cat_type == "rule"
+tbl_vary <- tbl_vary[!filter_out, ]
+
 l_info <- pmap(
   tbl_vary, ~ append(
     l_info_prep, 
@@ -45,8 +52,9 @@ l_info <- pmap(
   )
 )
 
+tbl_vary_seq <- tbl_vary %>% filter(cat_type == "exemplar") %>% mutate(cat_type == "no category")
 l_info_seq <- pmap(
-  tbl_vary %>% filter(cat_type == "exemplar") %>% mutate(cat_type == "no category") %>% unique(), ~ append(
+  tbl_vary_seq %>% unique(), ~ append(
     l_info_prep, 
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
@@ -87,7 +95,7 @@ l_seq_results <- future_map(
 
 
 
-read_write <- "read"
+read_write <- "write"
 
 td <- lubridate::today()
 
@@ -95,7 +103,7 @@ if (read_write == "write") {
   saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
   saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
 } else if (read_write == "read") {
-  l_category_results <- readRDS(file = "data/2023-01-27-grid-search-vary-constrain-space.rds")
+  l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds") # "data/2023-01-27-grid-search-vary-constrain-space.rds"
   l_seq_results <- readRDS(file = "data/2023-01-30-grid-search-sequential-comparison.rds")
 }
 
@@ -105,10 +113,10 @@ if (read_write == "write") {
 
 # Post Processing & Plotting ----------------------------------------------
 if (read_write == "write") {
-  l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = "square", is_simulation = TRUE)
-  l_results_plots_seq <- map(l_seq_results, diagnostics_seq, sim_center = "square", is_simulation = TRUE)
-  saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
-  saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
+  l_results_plots <- map2(l_category_results, tbl_vary$category_shape, diagnostic_plots, is_simulation = TRUE)
+  l_results_plots_seq <- map2(l_seq_results, tbl_info_seq$category_shape, diagnostics_seq, is_simulation = TRUE)
+  # saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
+  # saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
 } else if (read_write == "read") {
   l_results_plots <- readRDS(str_c("data/2023-01-28-category-learning-result-plots.RDS"))
   l_results_plots_seq <- readRDS(str_c("data/2023-01-28-sequential-comparison-result-plots.RDS"))
@@ -116,9 +124,11 @@ if (read_write == "write") {
 
 dg <- position_dodge(width = .9)
 
-pl_pred_delta <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+# ellipse category structure example prediction
+pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
   l_results_plots_seq[[1]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
-) %>% ggplot(aes(session, d_closest_sqrt, group = condition)) +
+) %>% mutate(category = c("Bukil", "Venak")[category]) %>%
+  ggplot(aes(session, d_closest_sqrt, group = condition)) +
   geom_col(aes(fill = condition), position = dg) +
   scale_fill_viridis_d(name = "Condition") +
   theme_bw() +
@@ -126,42 +136,40 @@ pl_pred_delta <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition 
   theme(strip.text = element_text(colour = 'black'))+
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
-  labs(x = "Time Point", y = "Distance To Closest Center")
+  labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
-
-# tbl_bef_aft$x1_aft[is.na(tbl_bef_aft$x1_aft)] <- tbl_bef_aft$x1_bef[is.na(tbl_bef_aft$x1_aft)]
-# tbl_bef_aft$x2_aft[is.na(tbl_bef_aft$x2_aft)] <- tbl_bef_aft$x2_bef[is.na(tbl_bef_aft$x2_aft)]
-# 
-# ggplot(tbl_bef_aft, aes(x1_aft, x2_aft, group = category)) + geom_point(aes(color = category))
-
-grid.draw(arrangeGrob(
-  l_results_plots[[3]][[2]][[1]], l_results_plots[[3]][[2]][[4]]$pl, 
-  l_results_plots[[5]][[2]][[1]], l_results_plots[[5]][[2]][[4]]$pl,
-  l_results_plots[[9]][[2]][[1]], l_results_plots[[9]][[2]][[4]]$pl, nrow = 3, ncol = 2, 
-  layout_matrix = matrix(seq(1, 6, by = 1), byrow = TRUE, nrow = 3, ncol = 2)
-))
-pl_pred <- l_results_plots[[5]][[2]][[1]] +
+pl_pred_ellipse <- l_results_plots[[5]][[2]][[1]] +
   theme(strip.background = element_rect(fill="white"))+
   theme(strip.text = element_text(colour = 'black'))
 
-tbl_preds <- crossing(
-  group = c("Category Learning", "Similarity Judgment"),
-  timepoint = factor(c("Before Training", "After Training"), c("Before Training", "After Training"), ordered = TRUE)
-)
-tbl_preds$d_closest <- c(2, 1.75, 2, 2)
-dg <- position_dodge(width = .8)
-# pl_pred_delta <- ggplot(tbl_preds, aes(timepoint, d_closest, group = group)) +
-#   geom_col(aes(fill = group), position = dg) +
-#   theme_bw() +
-#   scale_fill_viridis_d(name = "Group") +
-#   labs(x = "Time Point", y = "Distance to Closest Center")
-save_my_tiff(arrangeGrob(pl_pred + theme(plot.title = element_blank()), pl_pred_delta, nrow = 1), "figures/model-predictions.tiff", 12, 3.5)
-save_my_pdf(arrangeGrob(pl_pred + theme(plot.title = element_blank()), pl_pred_delta, nrow = 1), "figures/model-predictions.pdf", 12, 3.5)
+save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
+
+
+# square category example prediction
+pl_pred_delta_square <- l_results_plots[[2]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+  l_results_plots_seq[[2]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
+) %>% mutate(category = c("Any Category")[category]) %>%
+  ggplot(aes(session, d_closest_sqrt, group = condition)) +
+  geom_col(aes(fill = condition), position = dg) +
+  scale_fill_viridis_d(name = "Condition") +
+  theme_bw() +
+  theme(strip.background =element_rect(fill="white"))+
+  theme(strip.text = element_text(colour = 'black'))+
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
+
+pl_pred_square <- l_results_plots[[6]][[2]][[1]] +
+  theme(strip.background = element_rect(fill="white"))+
+  theme(strip.text = element_text(colour = 'black'))
+
+save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-squares", 12, 3.5)
+
 
 # extract sum of distances between prior and posterior
 # in category learning
 l_posteriors_cat <- map(map(l_results_plots, 1), "tbl_posterior")
-l_sum_of_distances_cat <- map(l_posteriors_cat, sum_of_pairwise_distances)
+l_sum_of_distances_cat <- map2(l_posteriors_cat, tbl_vary$category_shape, sum_of_pairwise_distances)
 
 # in sequential comparison
 l_posteriors_seq <- map(
@@ -169,11 +177,11 @@ l_posteriors_seq <- map(
     group_by(stim_id, cat_type, category, timepoint) %>%
     summarize(x1_true = mean(x1), x2_true = mean(x2)) %>% ungroup()
   )
-l_sum_of_distances_seq <- map(l_posteriors_seq, sum_of_pairwise_distances)
+l_sum_of_distances_seq <- map2(l_posteriors_seq, tbl_vary_seq$category_shape, sum_of_pairwise_distances)
 
 
-l_conds <- split(tbl_info[, c("cat_type", "prior_sd", "sampling", "constrain_space")], tbl_info$condition_id)
-l_conds_rep <- map(l_conds, ~ slice(.x, rep(1:n(), each = 4)))
+l_conds <- split(tbl_info[, c("cat_type", "prior_sd", "sampling", "constrain_space", "category_shape")], tbl_info$condition_id)
+l_conds_rep <- map2(l_conds, l_sum_of_distances_cat, ~ slice(.x, rep(1:n(), each = nrow(.y))))
 
 l_sum_of_distances_cat <- map2(
   l_sum_of_distances_cat, 
@@ -182,8 +190,8 @@ l_sum_of_distances_cat <- map2(
 )
 
 
-l_conds <- split(tbl_info_seq[, c("cat_type", "prior_sd", "sampling", "constrain_space")], tbl_info_seq$condition_id)
-l_conds_rep <- map(l_conds, ~ slice(.x, rep(1:n(), each = 4)))
+l_conds <- split(tbl_info_seq[, c("cat_type", "prior_sd", "sampling", "constrain_space", "category_shape")], tbl_info_seq$condition_id)
+l_conds_rep <- map2(l_conds, l_sum_of_distances_seq, ~ slice(.x, rep(1:n(), each = nrow(.y))))
 
 l_sum_of_distances_seq <- map2(
   l_sum_of_distances_seq,
@@ -200,7 +208,7 @@ tbl_sum_of_distances <- rbind(tbl_sum_of_distances, tmp)
 
 tbl_ds_agg <- tbl_sum_of_distances %>%
   filter(tp == "After Training") %>%
-  group_by(task, cat_type, comparison, sampling, constrain_space, n_comparisons) %>%
+  group_by(task, cat_type, comparison, sampling, constrain_space, category_shape, n_comparisons) %>%
   summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop)) %>%
   ungroup()
 tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "Prototype", "Rule"))
@@ -208,7 +216,7 @@ tbl_ds_agg$sampling <- factor(tbl_ds_agg$sampling, labels = c("Improvement", "Me
 tbl_ds_agg$constrain_space <- factor(tbl_ds_agg$constrain_space, labels = c("No Space Constraints", "Space Constrained"))
 
 dg <- position_dodge(width = .9)
-pl_preds_ds <- ggplot(tbl_ds_agg, aes(comparison, avg_ds_prop, group = cat_type)) +
+pl_preds_ds_square <- ggplot(tbl_ds_agg %>% filter(category_shape == "square"), aes(comparison, avg_ds_prop, group = cat_type)) +
   geom_col(aes(fill = cat_type), position = dg, color = "black") +
   geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
   facet_grid(task ~ interaction(constrain_space, sampling, sep = " & \n")) +
@@ -219,6 +227,22 @@ pl_preds_ds <- ggplot(tbl_ds_agg, aes(comparison, avg_ds_prop, group = cat_type)
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom"
     ) +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_viridis_d(name = "Category Learning Model") +
+  labs(x = "Comparison", y = "Prop. Change of Pairwise Distances")
+
+pl_preds_ds_ellipses <- ggplot(tbl_ds_agg %>% filter(category_shape == "ellipses"), aes(comparison, avg_ds_prop, group = cat_type)) +
+  geom_col(aes(fill = cat_type), position = dg, color = "black") +
+  geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
+  facet_grid(task ~ interaction(constrain_space, sampling, sep = " & \n")) +
+  #facet_wrap(~ task) +
+  theme_bw() +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   scale_fill_viridis_d(name = "Category Learning Model") +

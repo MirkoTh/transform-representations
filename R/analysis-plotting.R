@@ -352,7 +352,6 @@ movement_towards_category_center <-
     #' (c) histograms of (a) and (b)
     #'
     
-    # note. do not use by category accuracy to average over potential response biases
     tbl_cat_sim_last <- tbl_cat_sim %>%
       mutate(category = cat_true) %>%
       group_by(participant_id) %>%
@@ -372,7 +371,7 @@ movement_towards_category_center <-
       .5
     # movement across square categories can be collapsed (not as in ellipse condition)
     # because movement should be towards closest category center for all categories
-    if (sim_center == "ellipse") {
+    if (sim_center == "ellipses") {
       tbl_cr_no_sq <- tbl_cr %>% filter(n_categories != 4)
       tbl_cr_sq <- tbl_cr %>% filter(n_categories == 4)
       
@@ -410,7 +409,7 @@ movement_towards_category_center <-
         ))
       ) %>%
       filter(!is.na(mean_distance_before))
-    if (sim_center == "ellipse") {
+    if (sim_center == "ellipses") {
       tbl_movement$category <- factor(tbl_movement$category, labels = c("Bukil", "Venak"))
     } else if (sim_center == "square") {
       tbl_movement$category <- factor(tbl_movement$category, labels = c("Any Category"))
@@ -552,7 +551,7 @@ movement_towards_category_center <-
 
 plot_distance_to_category_center <-
   function(tbl_cr, sim_center, l_info = NULL) {
-    if (sim_center == "ellipse") {
+    if (sim_center == "ellipses") {
       tbl_cr_sq <-
         tbl_cr %>% filter(n_categories %in% c("4 Categories", 4))
       tbl_ell <-
@@ -682,7 +681,7 @@ plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins, sim_center) {
   if (sim_center == "square") {
     tbl_cr_d$d2boundary_stim_cut <- tbl_cr_d$d2boundary_stim
     tbl_cr_d$category[tbl_cr_d$n_categories != 2] <- 2
-  } else if (sim_center == "ellipse") {
+  } else if (sim_center == "ellipses") {
     tbl_cr_d <- tbl_cr_d %>% 
       filter(
         n_categories == "Similarity" | 
