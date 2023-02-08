@@ -33,7 +33,7 @@ files <- c(
 walk(files, source)
 
 
-sim_center <- "ellipse"
+sim_center <- "ellipses"
 
 
 # Load Data and Preprocess Data -------------------------------------------
@@ -94,12 +94,6 @@ cat(str_c("same n participants in cat and cr data sets: ", same_n, "\n"))
 tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
 
 
-# inclusions
-cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
-
-# exclusions
-cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing) + nrow(repeats)))
-
 rbind(
   l_cases$l_outliers$drop$tbl_cr, l_cases$l_guessing$drop$tbl_cr, l_cases$l_incomplete$drop$tbl_cr
 ) %>% rbind(tbl_cr) %>% group_by(participant_id) %>% count(Sex) %>% ungroup() %>% count(Sex)
@@ -109,6 +103,14 @@ cat(str_c("outliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_cr$parti
 repeats <- tbl_cr %>% count(participant_id) %>% arrange(desc(n)) %>% filter(n >= 235)
 tbl_cr <- tbl_cr %>% filter(!(participant_id %in% repeats$participant_id))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats$participant_id))
+
+
+# inclusions
+cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
+
+# exclusions
+cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + length(excl_guessing) + nrow(repeats)))
+
 
 # ns per group
 tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>% 
@@ -177,28 +179,6 @@ summary(m_rs)
 anova(m_rs)
 tbl_cat_agg$preds <- predict(m_rs, tbl_cat_agg)
 
-l_movement <-
-  movement_towards_category_center(
-    tbl_cat_sim, tbl_cr, "d_closest", sim_center = "ellipse"
-  )
-tbl_movement <- l_movement[[1]]
-# plot movement towards category center against task2 accuracy
-l_movement[[2]]$hist_movements
-l_movement[[2]]$pl_delta
-l_movement[[2]]$pl_last
-
-pls_moves_catlearn <- arrangeGrob(
-  l_movement[[2]]$hist_movements,
-  l_movement[[2]]$pl_delta,
-  l_movement[[2]]$pl_last,
-  nrow = 1
-)
-
-save_my_pdf_and_tiff(
-  pls_moves_catlearn,
-  "experiments/2022-02-category-learning/data/figures/moves-compilation.pdf",
-  13, 4.5
-)
 
 tbl_cat_grid <- aggregate_category_responses_by_x1x2(tbl_cat, 241)
 sample_ids <- tbl_cat_grid %>% group_by(participant_id) %>%
@@ -209,20 +189,6 @@ sample_ids <-
   as.character(sample_ids[select_ids, "participant_id"] %>% as_vector() %>% unname())
 plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), 2)
 
-ggplot(tbl_movement,
-       aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
-  geom_point() +
-  geom_smooth(method = "lm", alpha = .2) +
-  facet_wrap( ~ n_categories) +
-  labs(x = "Delta Categorization Accuracy", y = "Final Categorization Accuracy") +
-  theme_bw() +
-  theme(
-    strip.background =element_rect(fill="white"), 
-    strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom"
-  )  +
-  scale_x_continuous(expand = c(0, 0)) + 
-  scale_y_continuous(expand = c(0, 0))
 # model fits
 ## prototype model
 
@@ -238,15 +204,52 @@ l_m_nb_pds <- map(l_nb, 1) %>% map("tables")
 names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
 tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
-l_movement <-
-  movement_towards_category_center(
-    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1],
-    sim_center = sim_center
-  )
-tbl_movement <- l_movement[[1]]
-write_csv(tbl_movement, "experiments/2022-02-category-learning/data/movements-catacc.csv")
 
-l_movement[[2]]
+gt_or_reps <- "gt" # ground-truth center or representational center?
+if (gt_or_reps == "gt") {
+  l_movement <- movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
+  )
+} else if (gt_or_reps == "reps") {
+  l_movement <- movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
+  )
+}
+
+tbl_movement <- l_movement[[1]]
+# plot movement towards category center against task2 accuracy
+
+pls_moves_catlearn <- arrangeGrob(
+  l_movement[[2]]$hist_movements,
+  l_movement[[2]]$pl_delta,
+  l_movement[[2]]$pl_last,
+  nrow = 1
+)
+
+grid.draw(pls_moves_catlearn)
+
+save_my_pdf_and_tiff(
+  pls_moves_catlearn,
+  "experiments/2022-02-category-learning/data/figures/moves-compilation.pdf",
+  13, 4.5
+)
+write_csv(tbl_movement, str_c("experiments/2022-02-category-learning/data/movements-catacc-", gt_or_reps, ".csv"))
+
+ggplot(tbl_movement,
+       aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
+  geom_point() +
+  geom_smooth(method = "lm", alpha = .2) +
+  facet_wrap( ~ n_categories) +
+  labs(x = "Delta Categorization Accuracy", y = "Final Categorization Accuracy") +
+  theme_bw() +
+  theme(
+    strip.background =element_rect(fill="white"), 
+    strip.text = element_text(colour = 'black'), 
+    legend.position = "bottom"
+  )  +
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0))
+
 
 # can we also include variability in the representations
 # i.e. people with preciser category representations
@@ -418,16 +421,16 @@ pl_heamaps <-
 pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 
-tbl_cr$n_categories <-
-  factor(tbl_cr$n_categories,
-         labels = c("Similarity", "2 Categories"))
+tbl_cr$n_categories <- factor(tbl_cr$n_categories, labels = c("Similarity", "2 Categories"))
 l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
-l_empirical$pl + facet_wrap(~ category) +
+pl_d_by_category <- l_empirical$pl + facet_wrap(~ factor(category, labels = c("Bukil", "Venak"))) +
   theme(
     strip.background =element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom"
   )  +
+  scale_fill_viridis_d(name = "Group") +
+  scale_color_viridis_d() +
   scale_x_discrete(expand = c(0, 0)) + 
   scale_y_continuous(expand = expansion(add = c(0, .1)))
 
@@ -552,7 +555,7 @@ summary(m_rs_cr_control)
 l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
-f_name <- "data/2022-06-13-grid-search-vary-constrain-space.rds"
+f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +
@@ -587,14 +590,9 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
 # save some plots ---------------------------------------------------------
 
 
-pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_psychonomics, ncol = 3)
-save_my_tiff(
+pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_by_category, ncol = 3)
+save_my_pdf_and_tiff(
   pl, 
-  "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview.tiff", 
-  13, 3.75
-)
-save_my_pdf(
-  pl, 
-  "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview.pdf", 
+  "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview", 
   13, 3.75
 )

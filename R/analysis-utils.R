@@ -888,8 +888,8 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
   }
   
   # for the baseline condition either the midpoint of the grid 
-  # can be used as the "category center"; sim_center == "ellipse"
-  if (sim_center == "ellipse") {
+  # can be used as the "category center"; sim_center == "ellipses"
+  if (sim_center == "ellipses") {
     tbl_d1 <- pmap(l_cat_mns_ellipses[[1]][, c("x_mn", "y_mn")], euclidian_distance_to_center, tbl = l_tbl_cr[["1"]], is_response = TRUE) %>%
       unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
     colnames(tbl_d1) <- c("d_closest")
@@ -1415,7 +1415,7 @@ add_distance_to_nearest_boundary <- function(tbl_df, l_centers, allocate_sim) {
   #' @return a vector with distances
   #'
   l_tbl_df <- split(tbl_df, tbl_df$n_categories)
-  if(allocate_sim == "ellipse") {
+  if(allocate_sim == "ellipses") {
     v_cats_ell <- c("1", "2")
     v_cats_sq <- c("4")
   } else if (allocate_sim == "square") {
