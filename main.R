@@ -96,7 +96,7 @@ l_seq_results <- future_map(
 
 
 
-read_write <- "write"
+read_write <- "read"
 
 td <- lubridate::today()
 
@@ -104,8 +104,8 @@ if (read_write == "write") {
   saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
   saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
 } else if (read_write == "read") {
-  l_category_results <- readRDS(file = "data/2022-06-13-grid-search-vary-constrain-space.rds") # "data/2023-01-27-grid-search-vary-constrain-space.rds"
-  l_seq_results <- readRDS(file = "data/2023-01-30-grid-search-sequential-comparison.rds")
+  l_category_results <- readRDS(file = "data/2023-02-08-grid-search-vary-constrain-space.rds")
+  l_seq_results <- readRDS(file = "data/2023-02-08-grid-search-sequential-comparison.rds")
 }
 
 
@@ -116,8 +116,8 @@ if (read_write == "write") {
   saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
   saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
 } else if (read_write == "read") {
-  l_results_plots <- readRDS(str_c("data/2023-01-28-category-learning-result-plots.RDS"))
-  l_results_plots_seq <- readRDS(str_c("data/2023-01-28-sequential-comparison-result-plots.RDS"))
+  l_results_plots <- readRDS(str_c("data/2023-02-08-category-learning-result-plots.RDS"))
+  l_results_plots_seq <- readRDS(str_c("data/2023-02-08-sequential-comparison-result-plots.RDS"))
 }
 
 dg <- position_dodge(width = .9)
