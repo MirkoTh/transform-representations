@@ -963,7 +963,7 @@ plot_distances_to_centers <- function(tbl_cr) {
 
 
 plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square") {
-  pd <- position_dodge(width = .2)
+  pd <- position_dodge(width = .9)
   if(sim_center == "square") {
     vars <- c("n_categories")
   } else if (sim_center == "ellipses") {
@@ -975,20 +975,15 @@ plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square") {
       labels = c("Before Category Learning", "After Category Learning")
     )) %>%
     ggplot(aes(session, d_closest_sqrt, group = n_categories)) +
-    geom_errorbar(
-      aes(
+    geom_col(aes(fill = n_categories), position = pd, show.legend = FALSE) +
+    geom_errorbar(aes(
         ymin = d_closest_sqrt - ci,
         ymax = d_closest_sqrt + ci,
-        color = n_categories
-      ),
-      width = .2,
-      position = pd
-    ) + geom_line(aes(color = n_categories), position = pd) +
-    geom_point(size = 3,
-               color = "white",
-               position = pd) +
+      ), color = "black", width = .2, position = pd
+    ) + geom_point(size = 3, color = "white", position = pd) +
     geom_point(aes(color = n_categories), position = pd) +
     scale_color_viridis_d(name = "Nr. Categories") +
+    scale_fill_viridis_d() +
     theme_bw() +
     labs(x = "Timepoint",
          y = "Distance to Closest Center")
