@@ -355,7 +355,7 @@ l_data <- list(
 )
 
 fit_move_deltaacc <- mod_move$sample(
-  data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3
+  data = l_data, iter_sampling = 10000, iter_warmup = 5000, chains = 3
 )
 
 file_loc <- str_c("experiments/2022-02-category-learning/data/move-model-deltaacc.RDS")
@@ -373,14 +373,14 @@ tbl_posterior <- tbl_draws %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
-l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1/2)
+l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(2, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
-l <- sd_bfs(tbl_posterior, params_bf[c(3)], sqrt(2)/4)
+l <- sd_bfs(tbl_posterior, params_bf[c(3)], 1)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
