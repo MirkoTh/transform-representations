@@ -30,7 +30,10 @@ tbl_cr <- read_rds("experiments/2022-02-category-learning/data/tbl_cr.rds")
 tbl_cat_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_cat_sim.rds")
 tbl_cat <- tbl_cat_sim %>% filter(n_categories == 2)
 tbl_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_sim.rds")
-tbl_moves <- read_csv("experiments/2022-02-category-learning/data/movements-catacc.csv")
+tbl_moves_agg <- read_csv("experiments/2022-02-category-learning/data/movements-catacc.csv")
+
+
+
 
 
 # Category Learning -------------------------------------------------------
@@ -170,38 +173,31 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 # Movements Towards Centers -----------------------------------------------
 
+
+
 # sqrt tf on d_closest
 tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
+# equal categories across groups
+tbl_category_lookup <- tbl_cr %>% filter(n_categories == 2) %>%
+  count(stim_id, category) %>% select(-n)
 
-plot_distances_to_centers(tbl_cr) + facet_wrap(name ~ category)
-
-pl_groupmeans <- plot_groupmeans_against_session(
-  tbl_cr %>% mutate(n_categories = factor(n_categories, labels = c("Similarity Judgment", "Category Learning")))
-  ) + theme(legend.position = "bottom")
-save_my_tiff(pl_groupmeans, "experiments/2022-02-category-learning/data/means-sqrt-tf.tiff", 5, 4)
-
-# analysis of the means suggests that there may be an interaction effect
-# note, cis are within-participant cis
-
-# the following plots suggest a different option
-# i.e., deltas could represent a mixture between visuo-spatial responses
-# and categorical respones
-# what should be analyzed is whether the proportion of categorical respones
-# differs between groups
+tbl_cr <- tbl_cr %>% select(-category)
+tbl_cr <- tbl_cr %>% left_join(tbl_category_lookup, by = "stim_id")
 
 
-plot_mean_deltas(tbl_cr)
+plot_mean_deltas_ellipse(tbl_cr, 15)
 tbl_cr_moves <- after_vs_before(tbl_cr, 2)
-l_outliers <- extract_movement_outliers(tbl_cr_moves, 1, "Not Transformed")
-tbl_outliers <- l_outliers$tbl_outliers
-tbl_labels <- l_outliers$tbl_labels
-pl_outliers_prior <- plot_movement_outliers(
-  tbl_outliers, 
-  tbl_labels, 
-  "Outliers above/below 1 sd of the Mean"
-)
-pl_outliers_prior
 
+plot_groupmeans_against_session(
+  tbl_cr %>% 
+    mutate(
+      n_categories = factor(n_categories, labels = c("Similarity Judgment", "Category Learning")),
+      n_categories = fct_rev(n_categories), 
+      category = factor(category, labels = c("Bukil", "Venak"))
+      ), sim_center = "ellipses"
+  ) + theme(legend.position = "bottom") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.02, .02)))
 
 # make sure tbl_cr_d1 and tbl_cr_moves are ordered in exactly the same way
 tbl_cr_d1 <- tbl_cr %>% filter(session == 1)
@@ -215,47 +211,51 @@ tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categorie
 plot_group_rts_against_session(tbl_cr, 2)
 
 
-l_data_mixture_groups <- list(
+# prediction can be formulated as 3-way ia on ds or 2-way ia on movements
+# ds ~ timepoint x group x category
+# dmove ~ group x category
+
+
+mm <- model.matrix(d_move_abs ~ category + n_categories, data = tbl_cr_moves)
+mm[, 2] <- mm[, 2] - 1.5
+mm[, 3] <- mm[, 3] - .5
+mm <- cbind(mm, mm[, 2] * mm[, 3])
+
+
+l_data_moves <- list(
   n_data = nrow(tbl_cr_moves),
   n_subj = length(unique(tbl_cr_moves$participant_id)),
-  n_groups = length(unique(tbl_cr_moves$n_categories)),
   d_moved = tbl_cr_moves$d_move_abs,
   subj = fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric(),
-  group = as.numeric(tbl_participants_lookup$n_categories)
+  x = mm
 )
 
-# model having a parameter shifting group mean of categorization group 
-# whereas mean of similarity group is only fixed at zero
+move_model <- stan_move_e1()
+move_model <- cmdstan_model(move_model)
 
-
-move_model_shift_normal <- stan_move_shift_normal()
-move_model_shift_normal <- cmdstan_model(move_model_shift_normal)
-
-fit_move_shift_normal <- move_model_shift_normal$sample(
-  data = l_data_mixture_groups, iter_sampling = 500, iter_warmup = 200,
+fit_move <- move_model$sample(
+  data = l_data_moves, iter_sampling = 5000, iter_warmup = 1000,
   chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
 
-file_loc_move_shift_normal <- str_c(
-  "experiments/2022-02-category-learning/data/cr-move-shift-normal-model.RDS"
+file_loc_move <- str_c(
+  "experiments/2022-02-category-learning/data/cr-move-model.RDS"
 )
 
-fit_or_read <- "fit"
-if (fit_or_read == "fit") {
-  fit_move_shift_normal$save_object(file = file_loc_move_shift_normal, compress = "gzip")
+fit_or_read <- "write"
+if (fit_or_read == "write") {
+  fit_move$save_object(file = file_loc_move, compress = "gzip")
 } else if (fit_or_read == "read") {
-  fit_move_shift_normal <- readRDS(file_loc_move_shift_normal)
+  fit_move <- readRDS(file_loc_move)
 }
 
-pars_interest <- c("sigma_subject", "mu", "posterior_prediction") # 
-tbl_draws <- fit_move_shift_normal$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_move_shift_normal$summary(variables = pars_interest)
+pars_interest <- c("mu_tf") # 
+tbl_draws <- fit_move$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move$summary(variables = pars_interest)
 
-params_bf <- c("Mean Similarity", "Mean Categorization", "Mean Difference")
+params_bf <- c("Intercept", "Ellipse Category", "Group", "Ellipse Category x Group")
 tbl_posterior <- tbl_draws %>% 
-  dplyr::select(`mu[1]`, `mu[2]`, .chain) %>%
-  mutate(mu_diff = `mu[2]` - `mu[1]`) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
@@ -265,14 +265,14 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
-grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
 
 
 # individual differences in movements -------------------------------------
 
-tbl_moves <- tbl_moves %>% filter(n_categories == "Category Learning")
+tbl_moves_agg <- tbl_moves_agg %>% filter(n_categories == "Category Learning")
 
-tbl_moves %>%
+tbl_moves_agg %>%
   pivot_longer(cols = c(mean_accuracy, mean_delta_accuracy)) %>%
   mutate(name = factor(name, labels = c("Average Final Accuracy", "Average Improvement"))) %>%
   ggplot(aes(value, movement, group = name)) +
@@ -285,32 +285,33 @@ tbl_moves %>%
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Value", y = "Movement Towards Category Center")
 
+ggplot(tbl_moves_agg, aes(movement)) + geom_histogram() + facet_wrap(~ category)
+ggplot(tbl_moves_agg, aes(mean_accuracy)) + geom_histogram() + facet_wrap(~ category)
 
-
-move_model <- stan_move()
+move_model <- stan_move_by_success()
 mod_move <- cmdstan_model(move_model)
 
 # use final accuracy
 mm_move_finalacc <- model.matrix(
-  movement ~ category, data = tbl_moves
+  movement ~ category, data = tbl_moves_agg
 ) %>% as_tibble()
 mm_move_finalacc[, 2] <- mm_move_finalacc[, 2] - .5
-mm_move_finalacc[, 3] <- scale(tbl_moves$mean_accuracy, scale = FALSE)[, 1]
+mm_move_finalacc[, 3] <- scale(tbl_moves_agg$mean_accuracy, scale = FALSE)[, 1]
 mm_move_finalacc[, 4] <- mm_move_finalacc[, 2] * mm_move_finalacc[, 3]
 
 l_data <- list(
-  n_data = nrow(tbl_moves),
-  response = tbl_moves$movement,
+  n_data = nrow(tbl_moves_agg),
+  response = tbl_moves_agg$movement,
   x = as.matrix(mm_move_finalacc)
 )
 
 fit_move_finalacc <- mod_move$sample(
-  data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3
+  data = l_data, iter_sampling = 10000, iter_warmup = 5000, chains = 3, parallel_chains = 3
 )
 
 file_loc <- str_c("experiments/2022-02-category-learning/data/move-model-finalacc.RDS")
 fit_move_finalacc$save_object(file = file_loc)
-pars_interest <- c("mu_tf")
+pars_interest <- c("mu")
 tbl_draws <- fit_move_finalacc$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_move_finalacc$summary(variables = pars_interest)
 
@@ -323,14 +324,14 @@ tbl_posterior <- tbl_draws %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
-l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1/2)
+l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(2, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
-l <- sd_bfs(tbl_posterior, params_bf[c(3)], sqrt(2)/4)
+l <- sd_bfs(tbl_posterior, params_bf[c(3)], 1)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
@@ -341,15 +342,15 @@ map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 # use delta in categorization accuracy
 mm_move_deltaacc <- model.matrix(
-  movement ~ category, data = tbl_moves
+  movement ~ category, data = tbl_moves_agg
 ) %>% as_tibble()
 mm_move_deltaacc[, 2] <- mm_move_deltaacc[, 2] - .5
-mm_move_deltaacc[, 3] <- scale(tbl_moves$mean_delta_accuracy, scale = FALSE)[, 1]
+mm_move_deltaacc[, 3] <- scale(tbl_moves_agg$mean_delta_accuracy, scale = FALSE)[, 1]
 mm_move_deltaacc[, 4] <- mm_move_deltaacc[, 2] * mm_move_deltaacc[, 3]
 
 l_data <- list(
-  n_data = nrow(tbl_moves),
-  response = tbl_moves$movement,
+  n_data = nrow(tbl_moves_agg),
+  response = tbl_moves_agg$movement,
   x = as.matrix(mm_move_deltaacc)
 )
 

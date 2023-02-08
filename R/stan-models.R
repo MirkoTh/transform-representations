@@ -719,9 +719,9 @@ generated quantities {
 }
 
 
-stan_move <- function() {
+stan_move_by_success <- function() {
   
-  stan_normal_move <- write_stan_file("
+  stan_normal_move_by_success <- write_stan_file("
 data {
   int n_data;
   vector[n_data] response;
@@ -747,7 +747,7 @@ transformed parameters {
   vector[n_data] mn;
 
   for (n in 1:n_data) {
-    mn[n] = mu_tf[1] * x[n, 1] + mu_tf[2] * x[n, 2] + mu_tf[3] * x[n, 3] + mu_tf[4] * x[n, 4];
+    mn[n] = mu[1] * x[n, 1] + mu[2] * x[n, 2] + mu[3] * x[n, 3] + mu[4] * x[n, 4];
   }
 }
 
@@ -758,11 +758,84 @@ model {
   
   sigma ~ uniform(0.001, 10);
   mu[1] ~ normal(0, 1);
-  mu[2] ~ student_t(1, 0, 1);
-  mu[3] ~ student_t(1, 0, 1);
-  mu[4] ~ student_t(1, 0, 1);
+  mu[2] ~ normal(0, 1);
+  mu[3] ~ normal(0, 1);
+  mu[4] ~ normal(0, 1);
 }
 
 ")
-  return(stan_normal_move)
+  return(stan_normal_move_by_success)
+}
+
+
+
+
+stan_move_e1 <- function() {
+  
+  write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  vector[n_data] d_moved;
+  array[n_data] int subj;
+  matrix[n_data, 4] x;
+}
+
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = 1.0/2;
+}
+
+parameters {
+  vector[4] mu; //<lower=0>
+  real<lower=0> sigma;
+  vector<lower=0>[2] sigma_subject;
+  matrix[n_subj, 2] b;
+
+}
+
+transformed parameters {
+  array[4] real mu_tf;
+  mu_tf[1] = mu[1];
+  mu_tf[2] = scale_cat * mu[2];
+  mu_tf[3] = scale_cat * mu[3];
+  mu_tf[4] = scale_cat * mu[4];
+  vector[n_data] mn;
+  
+  for (n in 1:n_data) {
+      mn[n] = b[subj[n], 1] * x[n, 1] + b[subj[n], 2] * x[n, 2] + mu_tf[3] * x[n, 3] + mu_tf[4] * x[n, 4];
+  }
+}
+
+
+model {
+
+  for (n in 1:n_data) {
+      d_moved[n] ~ normal(mn[n], sigma);
+  }
+
+  for (s in 1:n_subj) {
+      
+      b[s, 1] ~ normal(mu_tf[1], sigma_subject[1]);
+      b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
+  }
+  
+  sigma ~ cauchy(0, 1);
+  sigma_subject[1] ~ normal(0, 1);
+  sigma_subject[2] ~ normal(0, 1);
+
+}
+
+
+generated quantities {
+  vector[n_data] log_lik_pred;
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = normal_lpdf(d_moved[n] | mn[n], sigma);
+  }
+  
+}
+
+")
 }

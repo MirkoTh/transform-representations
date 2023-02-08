@@ -1028,7 +1028,7 @@ plot_mean_deltas <- function(tbl_cr) {
     labs(x = "Movement Towards Center", y = "Nr. Participants")
 }
 
-plot_mean_deltas_ellipse <- function(tbl_cr) {
+plot_mean_deltas_ellipse <- function(tbl_cr, nbins = 60) {
   tbl_cr %>% group_by(participant_id, session, n_categories, category) %>%
     summarize(
       d_closest_mn_sqrt = mean(d_closest_sqrt),
@@ -1049,8 +1049,8 @@ plot_mean_deltas_ellipse <- function(tbl_cr) {
     ) %>%
     dplyr::filter(!is.na(d_closest_before_abs)) %>%
     ggplot(aes(d_move_abs)) +
-    geom_histogram(bins = 60,
-                   fill = "#66CCFF",
+    geom_histogram(bins = nbins,
+                   fill = "#440154",
                    color = "white") + # "dodgerblue"
     geom_vline(
       xintercept = 0,
@@ -1060,7 +1060,9 @@ plot_mean_deltas_ellipse <- function(tbl_cr) {
     ) +
     facet_grid(n_categories ~ category, scales = "free_x") +
     theme_bw() +
-    labs(x = "Movement Towards Center", y = "Nr. Participants")
+    labs(x = "Movement Towards Center", y = "Nr. Participants") +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0))
 }
 
 
