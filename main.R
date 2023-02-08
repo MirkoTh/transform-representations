@@ -19,7 +19,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 100
+nruns <- 5000
 
 # constant
 l_info_prep <- list(
@@ -38,6 +38,7 @@ tbl_vary <- crossing(
 tbl_vary$n_categories <- rep(c(2, 4), nrow(tbl_vary)/2)
 tbl_vary <- tbl_vary %>% relocate(n_categories, .before = cat_type)
 
+# rule-based strategy does not work well with ellipse category
 filter_out <- tbl_vary$category_shape == "ellipses" & tbl_vary$cat_type == "rule"
 tbl_vary <- tbl_vary[!filter_out, ]
 
@@ -107,16 +108,13 @@ if (read_write == "write") {
   l_seq_results <- readRDS(file = "data/2023-01-30-grid-search-sequential-comparison.rds")
 }
 
-# approx. 10 min using 10'000 samples when gcm is not re-fitted every time sample is accepted
-
-
 
 # Post Processing & Plotting ----------------------------------------------
 if (read_write == "write") {
   l_results_plots <- map2(l_category_results, tbl_vary$category_shape, diagnostic_plots, is_simulation = TRUE)
   l_results_plots_seq <- map2(l_seq_results, tbl_info_seq$category_shape, diagnostics_seq, is_simulation = TRUE)
-  # saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
-  # saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
+  saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
+  saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
 } else if (read_write == "read") {
   l_results_plots <- readRDS(str_c("data/2023-01-28-category-learning-result-plots.RDS"))
   l_results_plots_seq <- readRDS(str_c("data/2023-01-28-sequential-comparison-result-plots.RDS"))
@@ -163,9 +161,13 @@ pl_pred_square <- l_results_plots[[6]][[2]][[1]] +
   theme(strip.background = element_rect(fill="white"))+
   theme(strip.text = element_text(colour = 'black'))
 
-save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-squares", 12, 3.5)
+save_my_pdf_and_tiff(arrangeGrob(pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square, nrow = 1), "figures/model-predictions-squares", 12, 3.5)
 
-
+save_my_pdf_and_tiff(arrangeGrob(
+  pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse,
+  pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square,
+  nrow = 2
+), "figures/model-predictions-both-designs", 12, 7)
 # extract sum of distances between prior and posterior
 # in category learning
 l_posteriors_cat <- map(map(l_results_plots, 1), "tbl_posterior")
@@ -215,8 +217,11 @@ tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "Proto
 tbl_ds_agg$sampling <- factor(tbl_ds_agg$sampling, labels = c("Improvement", "Metropolis-Hastings"))
 tbl_ds_agg$constrain_space <- factor(tbl_ds_agg$constrain_space, labels = c("No Space Constraints", "Space Constrained"))
 
+
+# predictions for pairwise comparisons only have to be made for the squared category structure
+
 dg <- position_dodge(width = .9)
-pl_preds_ds_square <- ggplot(tbl_ds_agg %>% filter(category_shape == "square"), aes(comparison, avg_ds_prop, group = cat_type)) +
+pl_preds_ds <- ggplot(tbl_ds_agg %>% filter(category_shape == "square"), aes(comparison, avg_ds_prop, group = cat_type)) +
   geom_col(aes(fill = cat_type), position = dg, color = "black") +
   geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
   facet_grid(task ~ interaction(constrain_space, sampling, sep = " & \n")) +
@@ -227,22 +232,6 @@ pl_preds_ds_square <- ggplot(tbl_ds_agg %>% filter(category_shape == "square"), 
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom"
     ) +
-  scale_x_discrete(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  scale_fill_viridis_d(name = "Category Learning Model") +
-  labs(x = "Comparison", y = "Prop. Change of Pairwise Distances")
-
-pl_preds_ds_ellipses <- ggplot(tbl_ds_agg %>% filter(category_shape == "ellipses"), aes(comparison, avg_ds_prop, group = cat_type)) +
-  geom_col(aes(fill = cat_type), position = dg, color = "black") +
-  geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
-  facet_grid(task ~ interaction(constrain_space, sampling, sep = " & \n")) +
-  #facet_wrap(~ task) +
-  theme_bw() +
-  theme(
-    strip.background =element_rect(fill="white"), 
-    strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom"
-  ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   scale_fill_viridis_d(name = "Category Learning Model") +

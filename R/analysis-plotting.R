@@ -421,7 +421,7 @@ movement_towards_category_center <-
         data = tbl_movement %>% 
           filter(n_categories == "Category Learning"),
         aes(mean_accuracy, movement, group = category, color = category)
-        ) +
+      ) +
       geom_smooth(
         data = tbl_movement %>% 
           filter(n_categories == "Category Learning"),
@@ -444,7 +444,7 @@ movement_towards_category_center <-
         strip.background = element_rect(fill="white"),
         strip.text = element_text(colour = 'black'),
         legend.position = "bottom")
-
+    
     pl_delta <- ggplot() +
       geom_point(
         data = tbl_movement %>% 
@@ -477,7 +477,7 @@ movement_towards_category_center <-
         strip.text = element_text(colour = 'black'),
         legend.position = "bottom")
     
-
+    
     hist_movements <- ggplot(tbl_movement, aes(movement, group = fct_rev(n_categories), drop = TRUE)) +
       geom_histogram(aes(
         fill = fct_rev(n_categories), y=(..count..)/tapply(..count..,..PANEL..,sum)[..PANEL..]
@@ -962,9 +962,14 @@ plot_distances_to_centers <- function(tbl_cr) {
 }
 
 
-plot_groupmeans_against_session <- function(tbl_cr) {
+plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square") {
   pd <- position_dodge(width = .2)
-  summarySEwithin(tbl_cr, "d_closest_sqrt", "n_categories", "session") %>%
+  if(sim_center == "square") {
+    vars <- c("n_categories")
+  } else if (sim_center == "ellipses") {
+    vars <- c("n_categories", "category")
+  }
+  pl_default <- summarySEwithin(tbl_cr, "d_closest_sqrt", vars, "session") %>%
     mutate(session = factor(
       session,
       labels = c("Before Category Learning", "After Category Learning")
@@ -983,10 +988,14 @@ plot_groupmeans_against_session <- function(tbl_cr) {
                color = "white",
                position = pd) +
     geom_point(aes(color = n_categories), position = pd) +
-    scale_color_brewer(name = "Nr. Categories", palette = "Set1") +
+    scale_color_viridis_d(name = "Nr. Categories") +
     theme_bw() +
     labs(x = "Timepoint",
          y = "Distance to Closest Center")
+  if(sim_center == "ellipses"){
+    pl_default <- pl_default + facet_wrap(~ category)
+  }
+  return(pl_default)
 }
 
 
@@ -1020,6 +1029,41 @@ plot_mean_deltas <- function(tbl_cr) {
       linetype = "dashed"
     ) +
     facet_wrap(name ~ n_categories, scales = "free_x") +
+    theme_bw() +
+    labs(x = "Movement Towards Center", y = "Nr. Participants")
+}
+
+plot_mean_deltas_ellipse <- function(tbl_cr) {
+  tbl_cr %>% group_by(participant_id, session, n_categories, category) %>%
+    summarize(
+      d_closest_mn_sqrt = mean(d_closest_sqrt),
+      d_closest_mn_abs = mean(d_closest)
+    ) %>%
+    group_by(participant_id, category) %>%
+    arrange(participant_id, category, session) %>%
+    mutate(
+      d_closest_before_sqrt = lag(d_closest_mn_sqrt),
+      d_move_sqrt = d_closest_before_sqrt - d_closest_mn_sqrt,
+      d_closest_before_abs = lag(d_closest_mn_abs),
+      d_move_abs = d_closest_before_abs - d_closest_mn_abs
+    ) %>%
+    ungroup() %>%
+    mutate(
+      n_categories = factor(n_categories, labels = c("Similarity Judgment", "2 Categories")),
+      category = factor(category, labels = c("Bukil", "Venak"))
+    ) %>%
+    dplyr::filter(!is.na(d_closest_before_abs)) %>%
+    ggplot(aes(d_move_abs)) +
+    geom_histogram(bins = 60,
+                   fill = "#66CCFF",
+                   color = "white") + # "dodgerblue"
+    geom_vline(
+      xintercept = 0,
+      color = "grey",
+      size = 1,
+      linetype = "dashed"
+    ) +
+    facet_grid(n_categories ~ category, scales = "free_x") +
     theme_bw() +
     labs(x = "Movement Towards Center", y = "Nr. Participants")
 }
@@ -1280,15 +1324,15 @@ plot_2d_distributions <- function(tbl_combined, save) {
   
   if (save) {
     save_my_pdf(
-    pl_precision,
-    "figures/precision-e1-e2-combined.pdf",
-    9, 5
-  )
-  save_my_tiff(
-    pl_precision,
-    "figures/precision-e1-e2-combined.tiff",
-    9, 5
-  )
+      pl_precision,
+      "figures/precision-e1-e2-combined.pdf",
+      9, 5
+    )
+    save_my_tiff(
+      pl_precision,
+      "figures/precision-e1-e2-combined.tiff",
+      9, 5
+    )
   }
   
   
