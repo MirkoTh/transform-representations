@@ -201,36 +201,6 @@ tbl_cat_agg <-
   ) %>% group_by(cat_true, trial_id_binned) %>%
   mutate(participant_id_num = row_number(participant_id))
 
-# gt for ground truth as compared to representations
-l_movement_gt <-
-  movement_towards_category_center(tbl_cat_sim, tbl_cr, "d_closest", sim_center)
-tbl_movement_gt <- l_movement_gt[[1]]
-write_csv(tbl_movement_gt, "experiments/2022-07-category-learning-II/data/movements-catacc.csv")
-
-
-# plot movement towards category center against task2 accuracy
-marrangeGrob(list(
-  l_movement_gt[[2]][[1]],
-  l_movement_gt[[2]][[2]],
-  l_movement_gt[[2]][[3]]
-), nrow = 1, ncol = 3)
-
-marrangeGrob(
-  list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last), nrow = 1, ncol = 2
-)
-
-pls_moves_catlearn <- arrangeGrob(
-  l_movement_gt[[2]]$hist_movements,
-  l_movement_gt[[2]]$pl_delta,
-  l_movement_gt[[2]]$pl_last,
-  nrow = 1
-)
-
-save_my_pdf_and_tiff(
-  pls_moves_catlearn,
-  "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
-  13, 4.5
-)
 
 # exclude initial trials from following analyses
 n_start_exclude <- 200
@@ -259,14 +229,51 @@ l_tbl_square <- split(tbl_square, tbl_square$participant_id)
 tbl_d2_rep_center <- map2(l_tbl_square, l_nb, d2_rep_center_square) %>% reduce(rbind)
 tbl_cr <- tbl_cr %>% 
   left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
-l_movement_representation <- movement_towards_category_center(
-  tbl_cat_sim, tbl_cr, "d_rep_center", sim_center
+
+
+gt_or_reps <- "gt"
+if (gt_or_reps == "gt") {
+  l_movement <- movement_towards_category_center(
+  tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
 )
-tbl_movement_representation <- l_movement_representation[[1]]
+} else if (gt_or_reps == "reps") {
+  l_movement <- movement_towards_category_center(
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
+  )
+}
+
+tbl_movement <- l_movement[[1]]
 marrangeGrob(list(
-  l_movement_representation[[2]][[1]],
-  l_movement_representation[[2]][[2]]
+  l_movement[[2]][[1]],
+  l_movement[[2]][[2]]
 ), nrow = 1, ncol = 2)
+
+write_csv(tbl_movement, str_c("experiments/2022-07-category-learning-II/data/movements-catacc-", gt_or_reps, ".csv"))
+
+# plot movement towards category center against task2 accuracy
+marrangeGrob(list(
+  l_movement_gt[[2]][[1]],
+  l_movement_gt[[2]][[2]],
+  l_movement_gt[[2]][[3]]
+), nrow = 1, ncol = 3)
+
+marrangeGrob(
+  list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last), nrow = 1, ncol = 2
+)
+
+pls_moves_catlearn <- arrangeGrob(
+  l_movement_gt[[2]]$hist_movements,
+  l_movement_gt[[2]]$pl_delta,
+  l_movement_gt[[2]]$pl_last,
+  nrow = 1
+)
+
+save_my_pdf_and_tiff(
+  pls_moves_catlearn,
+  "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
+  13, 4.5
+)
+
 
 
 tbl_precision <- combine_precision_and_movements(l_nb, participant_ids_4_cat)
