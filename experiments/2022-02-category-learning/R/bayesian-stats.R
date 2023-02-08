@@ -44,10 +44,14 @@ tbl_cat_binned <- tbl_cat %>%
   summarize(n_trials = n(), n_correct = sum(accuracy)) %>%
   ungroup() %>% rename(category = cat_true)
 
+tbl_cat_binned %>% filter(trial_id_binned == max(as.numeric(trial_id_binned))) %>%
+  group_by(category) %>%
+  summarize(n_trials = sum(n_trials), n_correct = sum(n_correct), prop_correct = n_correct/n_trials)
+
 ggplot(
   tbl_cat_binned %>% 
     group_by(category, trial_id_binned) %>% 
-    summarize(n_correct_avg = mean(n_correct)),
+    summarize(n_correct_avg = mean(n_correct/n_trials)),
   aes(trial_id_binned, n_correct_avg, group = category)) +
   geom_line(aes(color = category)) +
   geom_point(size = 4, color = "white") +
