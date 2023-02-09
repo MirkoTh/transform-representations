@@ -1074,16 +1074,22 @@ plot_movement_outliers <-
            nrcols = 6,
            as_outlier = TRUE) {
     if (!as_outlier) {
-      pl <- ggplot(tbl_outliers %>% filter(name == "Not Transformed"),
+      tbl_labels$participant_id <- factor(tbl_labels$participant_id)
+      levels(tbl_labels$participant_id) <- str_c(seq(1, length(unique(tbl_labels$participant_id))), str_match(levels(tbl_labels$participant_id), ", [a-z A-Z 0-9]*")[, 1])
+      levels(tbl_outliers$participant_id) <- str_c(seq(1, length(unique(tbl_outliers$participant_id))), str_match(levels(tbl_outliers$participant_id), ", [a-z A-Z 0-9]*")[, 1])
+      
+      pl <- ggplot(
+        tbl_outliers %>% 
+          filter(name == "Not Transformed"),
                    aes(value)) +
-        geom_histogram(bins = 15,
+        geom_histogram(bins = 30,
                        color = "white", fill = "#440154") #,fill = "#66CCFF"
     } else if (as_outlier) {
       pl <- ggplot(
         tbl_outliers %>% filter(name == "Not Transformed"),
         aes(value, group = flag_outlier)
       ) +
-        geom_histogram(bins = 15,
+        geom_histogram(bins = 30,
                        color = "white",
                        aes(fill = flag_outlier))
     }
@@ -1096,8 +1102,8 @@ plot_movement_outliers <-
         linetype = "dashed"
       ) +
       geom_label(data = tbl_labels, label.padding = unit(0.1, "lines"), aes(
-        x = 25,
-        y = 20,
+        x = 60,
+        y = 12.5,
         label = str_c("Avg. Move = ", round(avg_move, 1), "\nMAP Gamma = ", round(mean, 2))
       )) +
       facet_wrap( ~ participant_id, ncol = nrcols) +

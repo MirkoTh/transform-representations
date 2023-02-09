@@ -316,9 +316,11 @@ assert_that(
   ) == nrow(tbl_cr_d1)
 )
 
-tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, n_categories) %>%
-  count() %>% ungroup() %>% select(-n) %>%
-  mutate(participant_id_num = as.numeric(fct_inorder(factor(participant_id))))
+tbl_cr_moves$participant_id_num <- as.numeric(fct_inorder(factor(tbl_cr_moves$participant_id)))
+
+tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, participant_id_num, n_categories) %>%
+  count() %>% ungroup() %>% select(-n)
+
 
 # story line
 # 1. analysis of means shows that there is a stronger tendency in the experimental group to be attracted by category means than in the control group
@@ -340,7 +342,7 @@ l_data_mixture_groups <- list(
   n_subj = length(unique(tbl_cr_moves$participant_id)),
   n_groups = length(unique(tbl_cr_moves$n_categories)),
   d_moved = tbl_cr_moves$d_move_abs,
-  subj = fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric(),
+  subj = tbl_cr_moves$participant_id_num,
   group = as.numeric(tbl_participants_lookup$n_categories)
 )
 
@@ -424,11 +426,14 @@ tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_n
 # map_prop_gamma <- tbl_mix %>% head(10) %>% rbind(tbl_mix %>% tail(10)) %>%
 #   select(mean, participant_id, n_categories) %>%
 #   mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
-p_ids_to_plot <- sample(tbl_mix$participant_id, 3)
+n_ps <- 3
+p_ids_to_plot <- sample(tbl_mix$participant_id, n_ps)
 
 map_prop_gamma <- tbl_mix %>% filter(participant_id %in% p_ids_to_plot) %>%
   select(mean, participant_id, n_categories) %>%
-  mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
+  mutate(
+    participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories),
+  )
 
 tbl_cr_moves_posterior <- tbl_cr_moves %>% filter(participant_id %in% p_ids_to_plot) #$participant_id
 tbl_cr_moves_posterior$n_categories <- fct_relevel(tbl_cr_moves_posterior$n_categories, "Similarity", after = 1)

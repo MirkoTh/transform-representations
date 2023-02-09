@@ -2180,9 +2180,11 @@ extract_movement_outliers <- function(tbl_cr_moves, n_sds, measurement) {
     arrange(desc(d_move_mn)) %>%
     filter(flag_hi | flag_lo) %>%
     pivot_longer(c(d_move_sqrt, d_move_abs)) %>% 
-    mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
-    mutate(participant_id = fct_inorder(factor(str_c(substr(participant_id, 1, 6), ", ", n_categories))))
-  
+    arrange(participant_id) %>%
+    mutate(
+      name = factor(name, labels = c("Not Transformed", "Square Root")),
+      participant_id = factor(str_c(substr(participant_id, 1, 6), ", ", n_categories)))
+
   tbl_labels <- tbl_outliers %>% filter(name == measurement) %>%
     group_by(participant_id, flag_outlier) %>%
     summarize(avg_move = mean(value)) %>%
@@ -2210,7 +2212,6 @@ combine_data_with_posterior_outliers <- function(tbl_mix, tbl_cr_moves, tbl_draw
     rbind(tbl_mix %>% tail(round(n_outliers / 2)) %>% mutate(outlier = "Lo")) %>%
     select(participant_id_num, mean, outlier)
   tbl_empirical <- tbl_cr_moves %>% 
-    left_join(tbl_participants_lookup[, c("participant_id", "participant_id_num")], by = "participant_id") %>%
     inner_join(tbl_outlier_prob, by = "participant_id_num") %>%
     mutate(
       participant_id = str_c(substr(as.character(participant_id), 1, 6), ", ", n_categories)
