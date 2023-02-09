@@ -369,7 +369,7 @@ tbl_draws <- fit_move_deltaacc$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_move_deltaacc$summary(variables = pars_interest)
 
 
-params_bf <- c("Intercept", "Category", "Final Accuracy", "Category x Fin. Accuracy")
+params_bf <- c("Intercept", "Category", "Delta Accuracy", "Category x Delta Accuracy")
 
 tbl_posterior <- tbl_draws %>% 
   dplyr::select(starts_with(c("mu")), .chain) %>%
