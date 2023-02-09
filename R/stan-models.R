@@ -739,11 +739,7 @@ parameters {
 }
 
 transformed parameters {
-  array[4] real mu_tf;
-  mu_tf[1] = mu[1];
-  mu_tf[2] = scale_cat * mu[2];
-  mu_tf[3] = scale_cont * mu[3];
-  mu_tf[4] = scale_cat * mu[4];
+
   vector[n_data] mn;
 
   for (n in 1:n_data) {
@@ -765,6 +761,48 @@ model {
 
 ")
   return(stan_normal_move_by_success)
+}
+
+
+stan_move_by_success_square <- function() {
+  
+  stan_normal_move_by_success_square <- write_stan_file("
+data {
+  int n_data;
+  vector[n_data] response;
+  matrix[n_data, 2] x; // ic, improvement
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = 1.0/2;
+}
+
+parameters {
+  vector[2] mu;
+  real<lower=0> sigma;
+}
+
+transformed parameters {
+  vector[n_data] mn;
+
+  for (n in 1:n_data) {
+    mn[n] = mu[1] * x[n, 1] + mu[2] * x[n, 2];
+  }
+}
+
+model {
+  for (n in 1:n_data) {
+    response[n] ~ normal(mn[n], sigma);
+  }
+  
+  sigma ~ uniform(0.001, 10);
+  mu[1] ~ normal(0, 1);
+  mu[2] ~ normal(0, 1);
+}
+
+")
+  return(stan_normal_move_by_success_square)
 }
 
 
