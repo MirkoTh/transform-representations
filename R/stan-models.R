@@ -766,3 +766,82 @@ model {
 ")
   return(stan_normal_move)
 }
+
+
+
+stan_sim_city <- function() {
+  
+  stan_sim_city <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  array[n_data] int subj;
+  vector[n_data] distance1;
+  vector[n_data] distance2;
+  vector[n_data] response;
+  matrix[n_data, 5] x; // ic, group, category comparison, time point, 3w-ia
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = 1.0/2;
+}
+
+parameters {
+  vector [5] mu;
+  vector [n_subj] b0;
+  //vector [n_subj] bcc;
+  //vector [n_subj] btp;
+  
+  real<lower=0, upper=1> sigma;
+  real<lower=0, upper=1> sigma_w;
+  vector <lower=0, upper=1> [1] sigma_subject; // [3] if three random effects
+
+  real<lower=0,upper=1> w_group;
+  vector <lower=0,upper=1> [n_subj] w_indiv;
+  
+}
+
+transformed parameters {
+  vector[n_data] mn;
+  real reg;
+
+  for (n in 1:n_data) {
+    reg = b0[subj[n]] * x[n, 1] + mu[2] * x[n, 2] + mu[3] * x[n, 3] + mu[4] * x[n, 4] + mu[5] * x[n, 5];
+    mn[n] = exp(-(reg * (w_indiv[subj[n]] * distance1[n] + (1 - w_indiv[subj[n]]) * distance2[n])));
+  }
+
+}
+
+model {
+  for (n in 1:n_data) {
+    response[n] ~ normal(mn[n], sigma);
+  }
+  
+  for (s in 1:n_subj) {
+    w_indiv[s] ~ normal(w_group, sigma_w);
+    b0[s] ~ normal(mu[1], sigma_subject[1]);
+    //bcc[s] ~ normal(mu[3], sigma_subject[2]);
+    //btp[s] ~ normal(mu[4], sigma_subject[3]);
+    
+  }
+  
+  sigma ~ uniform(0.001, 1);
+  sigma_subject ~ uniform(0.001, 1);
+  sigma_w ~ uniform(0.001, 1);
+  mu[1] ~ normal(3, 1);
+  mu[2] ~ normal(0, 1);
+  mu[3] ~ normal(0, 1);
+  mu[4] ~ normal(0, 1);
+  mu[5] ~ normal(0, 1);
+  
+  w_group ~ beta(1, 1);
+
+}
+
+")
+  return(stan_sim_city)
+}
+
+
+
