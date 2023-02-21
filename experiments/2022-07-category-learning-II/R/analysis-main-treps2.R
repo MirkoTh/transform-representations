@@ -142,9 +142,9 @@ tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
 tbl_cat <- l_cat_sim[["tbl_cat"]]
 tbl_sim <- l_cat_sim[["tbl_sim"]]
 
-# saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds"))
-# saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"))
-# saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds"))
+saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"))
+saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds"))
 
 
 # Categorization ----------------------------------------------------------

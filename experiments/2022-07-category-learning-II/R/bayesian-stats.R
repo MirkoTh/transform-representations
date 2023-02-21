@@ -29,7 +29,7 @@ walk(files, source)
 tbl_cr <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds")
 tbl_cat <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds")
 tbl_sim <- read_rds("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds")
-tbl_moves_agg <- read_csv("experiments/2022-07-category-learning-II/data/movements-catacc.csv")
+tbl_moves_agg <- read_csv("experiments/2022-07-category-learning-II/data/movements-catacc-gt.csv")
 
 
 
@@ -649,9 +649,13 @@ tbl_posterior <- tbl_draws %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
-l <- sd_bfs(tbl_posterior, params_bf[c(1, 2)], 1)
-bfs <- l[[1]]
-tbl_thx <- l[[2]]
+
+library(kde1d)
+kdes <- estimate_kd(tbl_posterior, params_bf)
+par_lims <- limit_axes(kdes)
+bfs <- kdes %>% map_dbl(~(dnorm(0, 0, 1))/dkde1d(0, .))
+tbl_thx <- par_lims
+
 
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(1, 2)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
@@ -688,16 +692,10 @@ tbl_posterior <- tbl_draws %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
-l <- sd_bfs(tbl_posterior, params_bf[c(1, 2)], 1)
-bfs <- l[[1]]
-tbl_thx <- l[[2]]
+kdes <- estimate_kd(tbl_posterior, params_bf)
+par_lims <- limit_axes(kdes)
+bfs <- kdes %>% map_dbl(~(dnorm(0, 0, 1))/dkde1d(0, .))
+tbl_thx <- par_lims
 
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(1, 2)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
-
-l <- sd_bfs(tbl_posterior, params_bf[c(3)], 1)
-bfs <- l[[1]]
-tbl_thx <- l[[2]]
-
-# plot the posteriors and the bfs
-map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
