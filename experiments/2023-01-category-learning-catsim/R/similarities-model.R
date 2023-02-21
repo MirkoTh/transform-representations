@@ -1,5 +1,7 @@
 rm(list = ls())
 
+with_outliers <- FALSE
+pl_suffix <- ifelse(with_outliers, "-outliers", "no-outliers")
 
 # Load Packages -----------------------------------------------------------
 
@@ -8,6 +10,7 @@ library(furrr)
 library(parallel)
 library(future)
 library(rutils)
+library(grid)
 library(docstring)
 library(cmdstanr)
 
@@ -25,7 +28,7 @@ files <- c(
 )
 walk(files, source)
 
-tbl_simult <- readRDS("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps.rds")
+tbl_simult <- readRDS(str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps", pl_suffix, ".rds"))
 
 tbl_simult <- tbl_simult %>%
   mutate(
@@ -36,7 +39,7 @@ tbl_simult <- tbl_simult %>%
   )
 
 
-tbl_p1 <- tbl_simult %>% filter(participant_id == as_vector(tbl_simult$participant_id[1]))
+tbl_p1 <- tbl_simult %>% filter(participant_id == sample(unique(tbl_simult$participant_id), 1))
 tbl_data <- tbl_p1
 
 similarity_cityblock(c(.5, .5), tbl_p1)
@@ -92,23 +95,21 @@ l_cityblock <- summarize_model_results(l_results_cityblock, tbl_design)
 # l_euclidean$hist_w
 l_cityblock$hist_w
 
+# l_euclidean$hist_c
+l_cityblock$hist_c
+
 # l_euclidean$pl_c
 l_cityblock$pl_c
 
-save_my_pdf(
-  l_cityblock$pl_c, 
-  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters.pdf",
-  8, 3.25
-)
-save_my_tiff(
-  l_cityblock$pl_c, 
-  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters.tiff",
-  8, 3.25
-)
 
 fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Same", tbl_simult, "euclidean")
 fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Different", tbl_simult, "euclidean")
 
+save_my_pdf_and_tiff(
+  l_cityblock$pl_c, 
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/c-parameters", pl_suffix),
+  8, 3.25
+)
 
 
 # Exemplary Predictions ---------------------------------------------------
@@ -127,6 +128,20 @@ grid.draw(arrangeGrob(
   l_preds_eucl$pl_pred_data +
     ggtitle("Euclidean")
 ))
+
+
+v_outliers <- l_cityblock$tbl_results %>% ungroup() %>%
+  filter(c > 1 | w1 < .02) %>%
+  arrange(participant_id) %>%
+  select(participant_id) %>%
+  as_vector() %>% unique() %>%
+  as.character()
+tbl_simult %>% filter(participant_id %in% v_outliers) %>%
+  grouped_agg(c(participant_id, d_euclidean_cut), response) %>%
+  ggplot(aes(d_euclidean_cut, mean_response), group = participant_id) +
+  geom_point(aes(size = n)) +
+  facet_wrap(~ participant_id)
+
 
 
 # run Bayesian model ------------------------------------------------------
@@ -154,8 +169,6 @@ l_data <- list(
   x = mm[, 1:5]
 )
 
-init_fun <- function() list(mu = 3, w_group = .5)
-
 fit_sim_city <- mod_sim_city$sample(
   data = l_data, iter_sampling = 2500, iter_warmup = 1000, chains = 3, parallel_chains = 3#, init = init_fun
 )
@@ -164,9 +177,9 @@ fit_sim_city <- mod_sim_city$sample(
 pars_interest <- c("mu", "w_group", "sigma")
 tbl_draws <- fit_sim_city$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_sim_city$summary(variables = pars_interest)
-saveRDS(tbl_draws, "experiments/2022-09-category-learning-similarity/data/similarity-model-stan.RDS")
+saveRDS(tbl_draws, "experiments/2023-01-category-learning-catsim/data/similarity-model-stan.RDS")
 
-#tbl_draws <- readRDS("experiments/2022-09-category-learning-similarity/data/similarity-model-stan.RDS")
+
 lbls <- c("Intercept", "Group", "Category Comparison", "Time Point", "3-way IA", "w_group", "sigma")
 #lbls <- c("Intercept", "w_group", "sigma")
 
