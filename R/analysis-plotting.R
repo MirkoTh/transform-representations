@@ -434,7 +434,7 @@ movement_towards_category_center <-
                  linetype = "dotdash",
                  alpha = .5) +
       facet_wrap( ~ category) +
-      scale_color_viridis_d(name = "Category") +
+      scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
       theme_bw() +
       labs(x = "Categorization Accuracy Last Block",
            y = "Movement Towards Category Center") +
@@ -466,7 +466,7 @@ movement_towards_category_center <-
       ) +
       geom_hline(yintercept = 0, linetype = "dotdash", alpha = .5) +
       facet_wrap( ~ category) +
-      scale_color_viridis_d(name = "Category") +
+      scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
       theme_bw() +
       labs(x = "Delta Categorization Accuracy",
            y = "Movement Towards Category Center") +
@@ -840,12 +840,13 @@ plot_similarity_against_distance <-
           distance_binned,
           ymin = response - ci,
           ymax = response + ci,
-          width = .2
+          width = .2,
+          color = n_categories
         )
       ) + geom_point(data = tbl_tmp,
                      aes(distance_binned, response), size = 2, color = "white") +
       geom_point(data = tbl_tmp,
-                 aes(distance_binned, response)) +
+                 aes(distance_binned, response, color = n_categories)) +
       theme_bw() +
       theme(legend.position = "bottom") +
       scale_x_continuous(breaks = seq(2, 10, by = 2)) +

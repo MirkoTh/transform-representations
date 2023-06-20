@@ -62,8 +62,8 @@ sim_center <- "square"
 
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
-returned_timeout <- timeout_and_returns_e2()
-walk(path_data, hash_ids_e1_e2, participants_returned = returned_timeout, expt = 2)
+# returned_timeout <- timeout_and_returns_e2()
+# walk(path_data, hash_ids_e1_e2, participants_returned = returned_timeout, expt = 2)
 
 l_tbls_data <- map(path_data, load_data_e1)
 l_tbl_data <-
@@ -164,12 +164,13 @@ l_histogram <- histograms_accuracies_rts(tbl_cat_overview)
 l_histogram[[1]] + coord_cartesian(xlim = c(.4, 1))
 l_histogram[[2]] + coord_cartesian(xlim = c(750, 2000))
 
-
+tbl_cat$cat_true <- as.numeric(tbl_cat$cat_true)
 l_pl <- plot_categorization_accuracy_against_blocks(
   tbl_cat,# %>% filter(!(participant_id %in% tbl_dropouts$participant_id)), 
   show_errorbars = TRUE
 )
-pl_cat_learn_pretty <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
+pl_cat_learn_pretty <- l_pl[[1]] + 
+  scale_color_manual(values = c("#A4D3EE", "#CD4F39", "#CE7E72", "#C3A9AF"), name = "Category") +
   theme(legend.position = "bottom") + scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(.01, .01)))
 # overall trajectory
@@ -212,7 +213,6 @@ select_ids <- round(seq(1, nrow(sample_ids), length.out = 4))
 sample_ids <-
   as.character(sample_ids[select_ids, "participant_id"] %>% as_vector() %>% unname())
 plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_ids), c(2, 4))
-mean_against_delta_cat_accuracy(tbl_movement_gt)
 
 
 # prototype analyses ------------------------------------------------------
@@ -223,7 +223,8 @@ participant_ids_4_cat <-
 l_nb <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
 
 # distance to representational centers and precision of representations
-tbl_square <- tbl_cr %>% filter(as.numeric(n_categories) == 4)
+levels(tbl_cr$n_categories) <- c(4, 1)
+tbl_square <- tbl_cr %>% filter(n_categories == 4)
 tbl_square$participant_id <- factor(tbl_square$participant_id)
 l_tbl_square <- split(tbl_square, tbl_square$participant_id)
 tbl_d2_rep_center <- map2(l_tbl_square, l_nb, d2_rep_center_square) %>% reduce(rbind)
@@ -234,8 +235,9 @@ tbl_cr <- tbl_cr %>%
 gt_or_reps <- "gt"
 if (gt_or_reps == "gt") {
   l_movement <- movement_towards_category_center(
-  tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
-)
+    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
+  )
+  tbl_movement_gt <- l_movement[[1]]
 } else if (gt_or_reps == "reps") {
   l_movement <- movement_towards_category_center(
     tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
@@ -243,6 +245,8 @@ if (gt_or_reps == "gt") {
 }
 
 tbl_movement <- l_movement[[1]]
+mean_against_delta_cat_accuracy(tbl_movement)
+
 marrangeGrob(list(
   l_movement[[2]][[1]],
   l_movement[[2]][[2]]
@@ -252,25 +256,31 @@ write_csv(tbl_movement, str_c("experiments/2022-07-category-learning-II/data/mov
 
 # plot movement towards category center against task2 accuracy
 marrangeGrob(list(
-  l_movement_gt[[2]][[1]],
-  l_movement_gt[[2]][[2]],
-  l_movement_gt[[2]][[3]]
+  l_movement[[2]][[1]],
+  l_movement[[2]][[2]],
+  l_movement[[2]][[3]]
 ), nrow = 1, ncol = 3)
 
 marrangeGrob(
-  list(l_pl[[1]], l_movement_gt[[2]]$hist_delta_last), nrow = 1, ncol = 2
+  list(l_pl[[1]], l_movement[[2]]$hist_delta_last), nrow = 1, ncol = 2
 )
 
 pls_moves_catlearn <- arrangeGrob(
-  l_movement_gt[[2]]$hist_movements,
-  l_movement_gt[[2]]$pl_delta,
-  l_movement_gt[[2]]$pl_last,
+  l_movement[[2]]$hist_movements,
+  l_movement[[2]]$pl_delta,
+  l_movement[[2]]$pl_last,
   nrow = 1
 )
 
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
   "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
+  13, 4.5
+)
+
+save_my_pdf_and_tiff(
+  pls_moves_catlearn,
+  "figures/moves-compilation-e2",
   13, 4.5
 )
 
@@ -297,6 +307,12 @@ tbl_sim_ci$distance_binned <-
 sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1, 3.5))
+l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_color_manual(values = "#FDE725FF", name = "Group")
+save_my_pdf_and_tiff(
+  pls_moves_catlearn,
+  "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
+  13, 4.5
+)
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 
 grid.arrange(pl_cat_agg, l_pl_sim[[2]], nrow = 1)
@@ -381,6 +397,62 @@ save_my_tiff(
 
 plot_distance_from_decision_boundary(tbl_cr, 10)
 
+
+tbl_cr_stim <- grouped_agg(
+  tbl_cr, c(session, n_categories, x1_true, x2_true), c(x1_response, x2_response)
+) %>% ungroup()
+ggplot(data = tbl_cr_stim) +
+  geom_point(aes(mean_x1_response, mean_x2_response), color = "lightblue") +
+  geom_point(aes(x1_true, x2_true), color = "black") +
+  geom_segment(aes(
+    x = x1_true, xend = mean_x1_response, y = x2_true, yend = mean_x2_response
+  ),
+  arrow = grid::arrow(length = unit(0.02, "npc")), color = "grey80") +
+  facet_grid(n_categories ~ session) + 
+  theme_bw() +
+  scale_x_continuous(expand = c(0.02, 0.02)) +
+  scale_y_continuous(expand = c(0.02, 0.02)) +
+  labs(x = expression(x[1]), y = expression(x[2])) + 
+  theme(strip.background = element_rect(fill = "white")) + 
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
+
+
+tbl_cr_move <- tbl_cr_stim %>% filter(session == 1) %>%
+  left_join(
+    tbl_cr_stim %>% 
+      filter(session == 2) %>% 
+      dplyr::select(n_categories, x1_true, x2_true, mean_x1_response, mean_x2_response),
+    by = c("n_categories", "x1_true", "x2_true"), suffix = c("_bef", "_aft")
+  ) %>% mutate(
+    x1_move = mean_x1_response_aft - mean_x1_response_bef,
+    x2_move = mean_x2_response_aft - mean_x2_response_bef
+  )
+
+
+pl_2d_moves <- ggplot(data = tbl_cr_move) +
+  geom_point(aes(x1_true, x2_true), color = "black") +
+  geom_segment(aes(
+    x = mean_x1_response_bef, xend = mean_x1_response_bef + x1_move, 
+    y = mean_x2_response_bef, yend = mean_x2_response_bef + x2_move
+  ),
+  arrow = grid::arrow(length = unit(0.02, "npc")), color = "grey60") +
+  geom_segment(aes(
+    x = x1_true, xend = mean_x1_response_bef, 
+    y = x2_true, yend = mean_x2_response_bef
+  ), color = "grey90", linetype = "dotdash"
+  ) + facet_wrap(~ n_categories) + 
+  theme_bw() +
+  scale_x_continuous(expand = c(0.02, 0.02)) +
+  scale_y_continuous(expand = c(0.02, 0.02)) +
+  labs(x = expression(x[1]), y = expression(x[2])) + 
+  theme(strip.background = element_rect(fill = "white")) + 
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
+save_my_pdf_and_tiff(
+  pl_2d_moves,
+  "figures/2d-moves-e2",
+  8, 4.25
+)
+
 # 
 # marrangeGrob(list(pl_avg_move, pl_empirical),
 #              nrow = 1,
@@ -461,14 +533,14 @@ pl <- arrangeGrob(
   pl_cat_learn_pretty, l_pl_sim[[3]], 
   pl_psychonomics_means + theme(plot.title = element_blank()),
   ncol = 3
-  )
-save_my_tiff(
+)
+save_my_pdf_and_tiff(
   pl, 
-  "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview.tiff", 
+  "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview", 
   13, 3.75
 )
-save_my_pdf(
+save_my_pdf_and_tiff(
   pl, 
-  "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview.pdf", 
+  "figures/three-tasks-agg-overview-e2", 
   13, 3.75
 )

@@ -403,7 +403,8 @@ l_pl <- plot_categorization_accuracy_against_blocks(
 # overall trajectory
 pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = expansion(add = c(0, .02)))
+  scale_y_continuous(expand = expansion(add = c(0, .02))) +
+  scale_color_manual(values = c("#A4D3EE", "#CD4F39", "#CE7E72", "#C3A9AF"), name = "Category")
 
 save_my_pdf_and_tiff(
   pl_cat_learn_pretty, 
@@ -481,7 +482,9 @@ l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = expansion(add = c(0, .02)))
+  scale_y_continuous(expand = expansion(add = c(0, .02))) + 
+  scale_color_manual(values = "#FDE725FF", name = "Group")
+
 save_my_pdf_and_tiff(
   pl_sequential_agg, 
   str_c("experiments/2023-01-category-learning-catsim/data/figures/sequential-comparison", pl_suffix),
@@ -585,4 +588,8 @@ save_my_pdf_and_tiff(
   str_c("experiments/2023-01-category-learning-catsim/data/figures/three-tasks-agg-overview", pl_suffix),  
   13, 3.75
 )
-
+save_my_pdf_and_tiff(
+  pl, 
+  str_c("figures/three-tasks-agg-overview-e4", pl_suffix),  
+  13, 3.75
+)

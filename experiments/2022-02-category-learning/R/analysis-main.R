@@ -137,7 +137,7 @@ tbl_chance2 <- tbl_cat_overview %>% group_by(n_categories) %>%
 histograms_accuracies_rts(tbl_cat_overview)
 l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
-pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_viridis_d(name = "Category") +
+pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
   theme(legend.position = "bottom") + scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), breaks = seq(.5, .8, by = .1)) +
   coord_cartesian(ylim = c(.5, .85))
@@ -230,7 +230,12 @@ grid.draw(pls_moves_catlearn)
 
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
-  "experiments/2022-02-category-learning/data/figures/moves-compilation.pdf",
+  "experiments/2022-02-category-learning/data/figures/moves-compilation",
+  13, 4.5
+)
+save_my_pdf_and_tiff(
+  pls_moves_catlearn,
+  "figures/moves-compilation-e1",
   13, 4.5
 )
 write_csv(tbl_movement, str_c("experiments/2022-02-category-learning/data/movements-catacc-", gt_or_reps, ".csv"))
@@ -338,7 +343,9 @@ l_pl_sim <- plot_similarity_against_distance(
   tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1.5, 3)
 )
 l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_x_continuous(expand = c(0, 0)) + 
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_color_manual(values = c("#FDE725FF"), name = "")
+  
 
 pl_sim_psychonomics <- ggplot() +
   geom_line(
@@ -422,7 +429,7 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 
 tbl_cr$n_categories <- factor(tbl_cr$n_categories, labels = c("Similarity", "2 Categories"))
-l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+l_empirical <- plot_distance_to_category_center(tbl_cr %>% mutate(n_categories = fct_rev(n_categories)), sim_center = sim_center)
 pl_d_by_category <- l_empirical$pl + facet_wrap(~ factor(category, labels = c("Bukil", "Venak"))) +
   theme(
     strip.background =element_rect(fill="white"), 
@@ -594,5 +601,10 @@ pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_by_category, nc
 save_my_pdf_and_tiff(
   pl, 
   "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview", 
+  13, 3.75
+)
+save_my_pdf_and_tiff(
+  pl, 
+  "figures/three-tasks-agg-overview-e1", 
   13, 3.75
 )
