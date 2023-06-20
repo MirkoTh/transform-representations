@@ -138,7 +138,8 @@ pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(co
 
 pl_pred_ellipse <- l_results_plots[[5]][[2]][[1]] +
   theme(strip.background = element_rect(fill="white"))+
-  theme(strip.text = element_text(colour = 'black'))
+  theme(strip.text = element_text(colour = 'black')) +
+  scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
 
 save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
 
@@ -159,7 +160,16 @@ pl_pred_delta_square <- l_results_plots[[2]][[2]][[4]]$tbl_cr_agg %>% mutate(con
 
 pl_pred_square <- l_results_plots[[6]][[2]][[1]] +
   theme(strip.background = element_rect(fill="white"))+
-  theme(strip.text = element_text(colour = 'black'))
+  theme(strip.text = element_text(colour = 'black')) +
+  scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
+
+
+# get plot build
+build <- ggplot_build(pl_pred_square)
+
+# select hex value and x-value data
+hex_df <- build$data[[1]][, c("colour", "x")]
+unique(hex_df$colour)
 
 save_my_pdf_and_tiff(arrangeGrob(pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square, nrow = 1), "figures/model-predictions-squares", 12, 3.5)
 

@@ -296,7 +296,8 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") + 
+  scale_color_manual(values = c("#A4D3EE", "#CD4F39", "#CE7E72", "#C3A9AF"), name = "Category") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02)))
 save_my_pdf(
@@ -357,7 +358,7 @@ sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-pl_sim <- l_pl_sim[[3]] + scale_color_viridis_d(name = "Category") +
+pl_sim <- l_pl_sim[[3]] + scale_color_manual(values = "#FDE725FF", name = "Group") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
 save_my_pdf(
@@ -452,16 +453,16 @@ save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/
 
 
 pl <- arrangeGrob(
-  pl_cat_learn_pretty, l_pl_sim[[3]],
+  pl_cat_learn_pretty, pl_sim,
   pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
 )
-save_my_tiff(
+save_my_pdf_and_tiff(
   pl, 
-  "experiments/2022-09-category-learning-similarity/data/figures/three-tasks-agg-overview.tiff", 
+  "experiments/2022-09-category-learning-similarity/data/figures/three-tasks-agg-overview", 
   13, 3.75
 )
-save_my_pdf(
+save_my_pdf_and_tiff(
   pl, 
-  "experiments/2022-09-category-learning-similarity/data/figures/three-tasks-agg-overview.pdf", 
+  "figures/three-tasks-agg-overview-e3", 
   13, 3.75
 )
