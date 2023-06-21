@@ -37,25 +37,31 @@ sim_center <- "ellipses"
 
 
 # Load Data and Preprocess Data -------------------------------------------
+# 
+# path_data <- c(
+#   "experiments/2022-02-category-learning/data/2022-03-30-treps1-pilot-1/",
+#   "experiments/2022-02-category-learning/data/2022-04-20-treps1-pilot-2/",
+#   "experiments/2022-02-category-learning/data/2022-04-21-treps1-experiment/"
+# )
+# 
+# # hash prolific ids and load data
+# # only hashed ids are uploaded on osf
+# # returned_timeout <- timeout_and_returns_e1()
+# # walk(path_data[2:3], hash_ids_e1_e2, participants_returned = timeout_and_returns_e1(), expt = 1)
+# 
+# l_tbls_data <- map(path_data[2:3], load_data_e1)
+# l_tbl_data <-
+#   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+# 
+# # these are the files uploaded on osf
+# write_csv(l_tbl_data[[1]], "experiments/2022-02-category-learning/data/continuous-reproduction.csv")
+# write_csv(l_tbl_data[[2]], "experiments/2022-02-category-learning/data/secondary-task.csv")
+# 
 
-path_data <- c(
-  "experiments/2022-02-category-learning/data/2022-03-30-treps1-pilot-1/",
-  "experiments/2022-02-category-learning/data/2022-04-20-treps1-pilot-2/",
-  "experiments/2022-02-category-learning/data/2022-04-21-treps1-experiment/"
-)
 
-# hash prolific ids and load data
-# only hashed ids are uploaded on osf
-# returned_timeout <- timeout_and_returns_e1()
-# walk(path_data[2:3], hash_ids_e1_e2, participants_returned = timeout_and_returns_e1(), expt = 1)
-
-l_tbls_data <- map(path_data[2:3], load_data_e1)
-l_tbl_data <-
-  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-
-# these are the files uploaded on osf
-write_csv(l_tbl_data[[1]], "experiments/2022-02-category-learning/data/continuous-reproduction.csv")
-write_csv(l_tbl_data[[2]], "experiments/2022-02-category-learning/data/secondary-task.csv")
+l_tbl_data <- list()
+l_tbl_data[[1]] <- read_csv("experiments/2022-02-category-learning/data/continuous-reproduction.csv")
+l_tbl_data[[2]] <- read_csv("experiments/2022-02-category-learning/data/secondary-task.csv")
 
 # add deviation from response to stimulus
 l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)

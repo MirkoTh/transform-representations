@@ -42,10 +42,10 @@ walk(files, source)
 
 # Load Data and Preprocess Data -------------------------------------------
 
-path_data <- c(
-  #"experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/",
-  "experiments/2023-01-category-learning-catsim/data/2023-01-17-treps4-experiment/"
-)
+# path_data <- c(
+#   #"experiments/2023-01-category-learning-catsim/data/2023-01-15-treps4-pilot-1/",
+#   "experiments/2023-01-category-learning-catsim/data/2023-01-17-treps4-experiment/"
+# )
 
 # flag defining whether distance to category center in similarity condition
 # is computed using ellipse center (i.e., middle of feature space) or
@@ -55,23 +55,23 @@ sim_center <- "square"
 
 # Load Data ---------------------------------------------------------------
 
-returned_timeout <- timeout_and_returns_e4()
+# returned_timeout <- timeout_and_returns_e4()
+# 
+# # hash prolific ids and load data
+# # only hashed ids are uploaded on osf
+# # walk(path_data, hash_ids_e3_e4, participants_returned = returned_timeout, expt = 4)
+# 
+# l_tbls_data <- map(path_data, load_data_e3)
+# l_tbl_data <-
+#   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
+# # 
+# # # these are the files uploaded on osf
+# write_csv(l_tbl_data[[1]], "experiments/2023-01-category-learning-catsim/data/simult-comparison.csv")
+# write_csv(l_tbl_data[[2]], "experiments/2023-01-category-learning-catsim/data/secondary-task.csv")
 
-# load_data_e3 function works for e4 as well
-l_tbls_data <- map(path_data, load_data_e3, participants_returned = returned_timeout)
-l_tbl_data <-
-  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-
-
-# hash prolific ids and load data
-# only hashed ids are uploaded on osf
-# walk(path_data, hash_ids_e3_e4, participants_returned = returned_timeout, expt = 4)
-
-l_tbls_data <- map(path_data, load_data_e3)
-l_tbl_data <-
-  list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-
-
+l_tbl_data <- list()
+l_tbl_data[[1]] <- read_csv("experiments/2023-01-category-learning-catsim/data/simult-comparison.csv")
+l_tbl_data[[2]] <- read_csv("experiments/2023-01-category-learning-catsim/data/secondary-task.csv")
 
 # Set Exclusion Criteria Appropriately ------------------------------------
 n_resp_simult <- 200
