@@ -59,7 +59,7 @@ sim_center <- "square"
 # 
 # # hash prolific ids and load data
 # # only hashed ids are uploaded on osf
-# # walk(path_data, hash_ids_e3_e4, participants_returned = returned_timeout, expt = 4)
+# walk(path_data, hash_ids_e3_e4, participants_returned = returned_timeout, expt = 4)
 # 
 # l_tbls_data <- map(path_data, load_data_e3)
 # l_tbl_data <-
@@ -339,7 +339,7 @@ grouped_agg(tbl_simult_move, c(participant_id, n_categories, comparison_pool_bin
   geom_histogram(aes(fill = n_categories), color = "white") +
   facet_grid(comparison_pool_binary ~ n_categories) +
   theme_bw() +
-  scale_fill_viridis_d(name = "Condition") +
+  scale_fill_viridis_c(name = "Condition") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(.025, .025))) +
   labs(x = "Mean Move", y = "Nr. Participants") +
@@ -352,6 +352,7 @@ tbl_simult_agg <- summarySEwithin(
   tbl_simult_move, "move_response", "n_categories", 
   "comparison_pool_binary", "participant_id"
 )
+levels(tbl_simult_agg$n_categories) <- c("Similarity", "4 Categories")
 tbl_simult_agg$n_categories <- fct_relevel(tbl_simult_agg$n_categories, "4 Categories", "Similarity")
 dg <- position_dodge(width = .2)
 pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_response, group = n_categories)) +
@@ -506,7 +507,10 @@ summary(m_rs_sim)
 anova(m_rs_sim)
 tbl_seq_agg_subj$preds <- predict(m_rs_sim, tbl_seq_agg_subj)
 
-by_participant_coefs(tbl_seq_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
+by_participant_coefs(
+  tbl_seq_agg_subj %>% mutate(n_categories = as.factor(n_categories)), 
+  "distance_binned", "mean_response", "LM Sim. Ratings"
+  )
 
 
 # Behavioral Representational Similarity Analysis -------------------------
@@ -534,7 +538,7 @@ plot_symmetric_moves <- function(tbl_df, ttl) {
 pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
 pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
 
-f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
+f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 
