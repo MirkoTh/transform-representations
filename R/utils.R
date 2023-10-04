@@ -42,6 +42,12 @@ categorize_stimuli <- function(l_info) {
     # while(l_x$stim_id_cur != 1){}
     l_x <- perceive_stimulus(tbl_new, l_info)
     
+    # manual code for modeling figure
+    # l_x$stim_id_cur <- 58
+    # l_x$X[nrow(l_x$X), ] <- tibble(x1=5.45, x2=6.9)# tibble(x1=4.55, x2=7.1) #
+    # l_x$X_new <-tibble(x1=5.45, x2=6.9)# tibble(x1=4.55, x2=7.1) # 
+    # l_x$cat_cur <- 4
+    
     # propose a new posterior
     if (l_info$cat_type == "rule") {
       posterior_new <- pmap(
