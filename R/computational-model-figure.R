@@ -82,7 +82,7 @@ tbl_star <- tibble(
 plt_prior_stim <- ggplot(tbl_prior, aes(x1, x2)) +
   geom_raster(aes(fill = density), interpolate = TRUE, show.legend = FALSE) +
   geom_contour(aes(z = density), color = "white", binwidth = .005) +
-  geom_star(data = tbl_star, aes(x1, x2, color = lbl), size = 4, starstroke = 3, show.legend = FALSE) +
+  geom_star(data = tbl_star, aes(x1, x2, color = lbl), size = 4, starstroke = 2, show.legend = FALSE) +
   ggrepel::geom_label_repel(data = tbl_star, aes(x1, x2, label = lbl), color = "black") +
   scale_fill_gradient(low = "black", high = "white") +
   scale_color_manual(values = c("skyblue2", "tomato3"), name = "Sampled Stimulus") +
@@ -136,8 +136,5 @@ plt_acceptance <- ggplot(tbl_acceptance, aes(stim_sample, value, group = stim_sa
   labs(x = "Stimulus Sample", y = "Acceptance Probability", title = "Acceptance Algorithms") +
   theme(strip.background = element_rect(fill = "white"))
   
-
-
-
-grid.draw(arrangeGrob(plt_prior_stim, plt_categories, plt_acceptance, nrow = 1))
-  
+pl_arrangement <- arrangeGrob(plt_prior_stim, plt_categories, plt_acceptance, nrow = 1)
+save_my_pdf_and_tiff(pl_arrangement, "figures/model-stages", 10, 3.5)
