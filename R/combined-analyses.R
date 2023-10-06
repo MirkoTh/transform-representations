@@ -30,13 +30,21 @@ walk(files, source)
 tbl_cr1 <- read_rds("experiments/2022-02-category-learning/data/tbl_cr.rds")
 tbl_cr2 <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds")
 cols_required <- c("participant_id", "n_categories", "session", "x1_deviation", "x2_deviation")
-tbl_combined <- tbl_cr1[, cols_required] %>% rbind(tbl_cr2[, cols_required])
+tbl_combined <- tbl_cr1[, cols_required] %>% mutate(n_categories = as.numeric(n_categories)) %>% 
+  rbind(tbl_cr2[, cols_required]) %>% mutate(n_categories = as.numeric(n_categories))
 tbl_combined$n_categories <- as.numeric(as.character(tbl_combined$n_categories))
 tbl_combined$n_categories[tbl_combined$n_categories > 1] <- 2
 tbl_combined$n_categories <- factor(tbl_combined$n_categories, labels = c("seqcomp", "cat"))
 # plot 2d distributions before and after training (collapsed across groups)
-pl_precision <- plot_2d_distributions(tbl_combined, save = TRUE)
-grid.draw(pl_precision)
+# hardcoded x and y limits, which leads to the exclusion of some data points in the plot
+
+levels(tbl_combined$session) <- c("Before", "After")
+levels(tbl_combined$n_categories) <- c("Sequential Comparison", "Category Learning")
+l_precision <- plot_2d_distributions(tbl_combined, save = TRUE)
+grid.draw(l_precision[[1]])
+grid.draw(l_precision[[2]])
+
+
 
 combined_model <- stan_cr_2d_nested()
 mod_2d <- cmdstan_model(combined_model)
@@ -82,7 +90,7 @@ tbl_posterior <- tbl_draws %>%
   mutate(
     parameter = factor(parameter),
     parameter = fct_inorder(parameter)
-    )
+  )
 levels(tbl_posterior$parameter) <- lbls
 
 # params_bf <- c("SD (Head)", "SD (Belly)", "Corr(1)")

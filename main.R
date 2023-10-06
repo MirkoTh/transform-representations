@@ -53,7 +53,7 @@ l_info <- pmap(
   )
 )
 
-tbl_vary_seq <- tbl_vary %>% filter(cat_type == "exemplar") %>% mutate(cat_type == "no category")
+tbl_vary_seq <- tbl_vary %>% filter(cat_type == "exemplar") %>% mutate(cat_type = "no category")
 l_info_seq <- pmap(
   tbl_vary_seq %>% unique(), ~ append(
     l_info_prep, 

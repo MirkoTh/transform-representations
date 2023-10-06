@@ -1293,8 +1293,9 @@ ribbon_plot <- function(tbl_simult_move) {
 
 
 plot_2d_distributions <- function(tbl_combined, save) {
-  d1 <- tbl_combined %>% filter(session == 1)
-  d2 <- tbl_combined %>% filter(session == 2)
+  d1 <- tbl_combined %>% filter(session == "Before")
+  d2 <- tbl_combined %>% filter(session == "After")
+  
   pl1 <- ggplot(data = d1, aes(x1_deviation, x2_deviation)) +
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
@@ -1304,11 +1305,12 @@ plot_2d_distributions <- function(tbl_combined, save) {
     scale_y_continuous(limits = c(-40, 40), expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
-    
     labs(
       x = "Head Spikiness",
-      y = "Belly Size"
+      y = "Belly Size",
+      caption = "Session 1"
     )
+  
   pl2 <- ggplot(data = d2, aes(x1_deviation, x2_deviation)) +
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     #geom_density2d(data = d1, color = "#440154", aes(x1_deviation, x2_deviation)) +
@@ -1319,26 +1321,65 @@ plot_2d_distributions <- function(tbl_combined, save) {
     theme(legend.position = "bottom") +
     labs(
       x = "Head Spikiness",
-      y = "Belly Size"
+      y = "Belly Size",
+      caption = "Session 2"
     )
   pl_precision <- arrangeGrob(
-    ggMarginal(pl1, type = "histogram", fill = "#440154"), 
-    ggMarginal(pl2, type = "histogram", fill = "#fde725"),
+    ggMarginal(pl1, type = "density", fill = "#440154", size = 3), 
+    ggMarginal(pl2, type = "density", fill = "#fde725", size = 3),
     nrow = 1)
   
+  
+  tbl_sds_agg <- tbl_combined %>% 
+    group_by(n_categories, session) %>% 
+    summarize(m_x1 = mean(x1_deviation), m_x2 = mean(x2_deviation),
+              sd_x1 = sd(x1_deviation), sd_x2 = sd(x2_deviation), 
+              cov_x1x2 = cor(x1_deviation, x2_deviation),
+              ) %>%
+    ungroup()
+  
+  knitr::kable(tbl_sds_agg)
+  
+  pl_marginal_x1 <- ggplot(tbl_combined, aes(x1_deviation, group = session)) +
+    geom_density(aes(color = session), size = 1) +
+    geom_label(data = tbl_sds_agg, aes(20, .035 + (3 - as.numeric(session)) * .0035, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session)) +
+    facet_wrap(~ n_categories) +
+    coord_cartesian(xlim = c(-38, 38), ylim = c(0, .047)) + 
+    theme_bw() +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(x = "", y = "Probability Density", title = "Head Spikiness") + 
+    theme(strip.background = element_rect(fill = "white")) + 
+    scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
+  
+  pl_marginal_x2 <- ggplot(tbl_combined, aes(x2_deviation, group = session)) +
+    geom_density(aes(color = session), size = 1) +
+    geom_label(data = tbl_sds_agg, aes(20, .035 + (3 - as.numeric(session)) * .0035, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session)) +
+    facet_wrap(~ n_categories) +
+    coord_cartesian(xlim = c(-38, 38), ylim = c(0, .047)) +
+    theme_bw() +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(x = "", y = "Probability Density", title = "Belly Size") + 
+    theme(strip.background = element_rect(fill = "white")) + 
+    scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
+  
+  pl_marginals <- arrangeGrob(pl_marginal_x1, pl_marginal_x2, nrow = 2)
+  
   if (save) {
-    save_my_pdf(
+    save_my_pdf_and_tiff(
       pl_precision,
-      "figures/precision-e1-e2-combined.pdf",
+      "figures/precision-e1-e2-combined",
       9, 5
     )
-    save_my_tiff(
-      pl_precision,
-      "figures/precision-e1-e2-combined.tiff",
-      9, 5
+    save_my_pdf_and_tiff(
+      pl_marginals,
+      "figures/marginal-densities",
+      6, 7.5
     )
+
   }
   
   
-  return(pl_precision)
+  return(list(pl_precision, pl_marginals))
 }
