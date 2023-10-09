@@ -65,7 +65,9 @@ sim_center <- "square"
 # returned_timeout <- timeout_and_returns_e2()
 # walk(path_data, hash_ids_e1_e2, participants_returned = returned_timeout, expt = 2)
 
-l_tbls_data <- map(path_data, load_data_e1)
+# l_tbls_data <- map(path_data, load_data_e1)
+saveRDS(l_tbls_data, file = "experiments/2022-07-category-learning-II/data/l_tbls_data.rds")
+l_tbls_data <- readRDS("experiments/2022-07-category-learning-II/data/l_tbls_data.rds")
 # l_tbl_data <-
 #   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
 # 
