@@ -378,7 +378,7 @@ pl_heamaps <- plot_2d_binned_heatmaps(
 pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 
-tbl_cr$n_categories <- fct_inseq(tbl_cr$n_categories)
+tbl_cr$n_categories <- fct_inseq(factor(tbl_cr$n_categories))
 levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
 tbl_cr$n_categories <- fct_relevel(tbl_cr$n_categories, "Similarity", after = 1)
 l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)

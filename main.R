@@ -223,7 +223,8 @@ tbl_ds_agg <- tbl_sum_of_distances %>%
   group_by(task, cat_type, comparison, sampling, constrain_space, category_shape, n_comparisons) %>%
   summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop)) %>%
   ungroup()
-tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "Prototype", "Rule"))
+tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "None", "Prototype", "Rule"))
+tbl_ds_agg$cat_type <- fct_inorder(tbl_ds_agg$cat_type)
 tbl_ds_agg$sampling <- factor(tbl_ds_agg$sampling, labels = c("Improvement", "Metropolis-Hastings"))
 tbl_ds_agg$constrain_space <- factor(tbl_ds_agg$constrain_space, labels = c("No Space Constraints", "Space Constrained"))
 
@@ -231,14 +232,17 @@ tbl_ds_agg$constrain_space <- factor(tbl_ds_agg$constrain_space, labels = c("No 
 # predictions for pairwise comparisons only have to be made for the squared category structure
 
 dg <- position_dodge(width = .9)
-pl_preds_ds <- ggplot(tbl_ds_agg %>% filter(category_shape == "square"), aes(comparison, avg_ds_prop, group = cat_type)) +
+pl_preds_ds <- ggplot(
+  tbl_ds_agg %>% 
+    filter(category_shape == "square" & constrain_space == "No Space Constraints" & sampling == "Improvement")
+  , aes(comparison, avg_ds_prop, group = cat_type)) +
   geom_col(aes(fill = cat_type), position = dg, color = "black") +
   geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
   facet_grid(task ~ interaction(constrain_space, sampling, sep = " & \n")) +
   #facet_wrap(~ task) +
   theme_bw() +
   theme(
-    strip.background =element_rect(fill="white"), 
+    strip.background = element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom"
     ) +
@@ -247,8 +251,8 @@ pl_preds_ds <- ggplot(tbl_ds_agg %>% filter(category_shape == "square"), aes(com
   scale_fill_viridis_d(name = "Category Learning Model") +
   labs(x = "Comparison", y = "Prop. Change of Pairwise Distances")
 
-save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 9, 4.5)
-save_my_pdf(pl_preds_ds, "figures/model-predictions-distances.pdf", 9, 4.5)
+save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 5.5, 4.5)
+save_my_pdf(pl_preds_ds, "figures/model-predictions-distances.pdf", 5.5, 4.5)
 
 
 # Plot Prior Means & Posterior Means --------------------------------------
