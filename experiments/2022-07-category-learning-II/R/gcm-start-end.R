@@ -1,3 +1,5 @@
+rm(list = ls())
+
 library(tidyverse)
 library(grid)
 library(gridExtra)
@@ -11,7 +13,7 @@ upper_and_lower_bounds_revert <- function(par, lo, hi) {
 }
 
 upper_and_lower_constrain_bias <- function(bias) {
-  bias[4] <- 1 - (bias[1] + bias[2] + bias[3])
+  bias[4] <- .9999999 - (bias[1] + bias[2] + bias[3])
   bias_out <- c()
   bias_out[1] <- upper_and_lower_bounds(bias[1], 0, 1)
   bias_out[2] <- upper_and_lower_bounds(bias[2], 0, 1 - bias[1])
@@ -61,7 +63,8 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   #' @return negative 2 * summed log likelihood
   #' 
   params_untf <- pmap(list(x[1:2], lo, hi), upper_and_lower_bounds_revert)
-  bias_untf <- upper_and_lower_unconstrain_bias(x$bias)
+  names(params_untf) <- c("c", "w")
+  bias_untf <- upper_and_lower_unconstrain_bias(x[3:6])
   params_untf$bias <- bias_untf
   params_untf$w[2] <- 1 - params_untf$w[1] 
   
@@ -78,8 +81,7 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   )
   tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>% mutate(response = tbl_transfer$response)
   tbl_probs$prob_correct <- pmap_dbl(
-    tbl_probs[, c("1", "2", "3", "4", "response")],
-    ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
+    tbl_probs, ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
   )
   return(tbl_probs)
 }
@@ -130,49 +132,65 @@ f_similarity_cat <- function(x, w, c, delta, x_new, d_measure) {
 
 tbl_secondary <- read_csv(
   file = "experiments/2022-07-category-learning-II/data/secondary-task.csv"
-)
+) %>% rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
+  arrange(participant_id, trial_id)
 
-tbl_one_participant <- tbl_secondary %>% 
-  filter(participant_id == "359aac2b4cc28c9eeffd5dfeec5b029c") %>%
-  rename(x1 = x1_true, x2 = x2_true, category = cat_true)
+tbl_start <- tbl_secondary %>% filter(trial_id < 100)
+l_start <- tbl_start %>% split(.$participant_id)
+tbl_end <- tbl_secondary %>% filter(trial_id >= 300)
+l_end <- tbl_end %>% split(.$participant_id)
 
-tbl_start <- tbl_one_participant %>% filter(trial_id < 10)
+r_test <- fit_gcm_one_participant(l_end[[2]])
 
-
-params <- list(c = 1, w = .5)
-lo <- c(0, .0001)
-hi <- c(10, .9999)
-params <- pmap(list(params, lo, hi), upper_and_lower_bounds)
-bias <- rep(.25, 3)
-bias_constrained <- upper_and_lower_constrain_bias(bias)
-params$bias <- bias_constrained
-params_init_tf <- x <- params
-
-n_feat <- 2
-d_measure <- 2
-
-
-
-results_start <- optim(
-  params_init_tf,
-  gcm_likelihood_no_forgetting,
-  tbl_transfer = tbl_start,
-  tbl_x = tbl_start, 
-  n_feat = n_feat,
-  d_measure = d_measure,
-  lo = lo,
-  hi = hi
-)
-gcm_likelihood_no_forgetting(params_init_tf, tbl_start, tbl_start, n_feat, d_measure, lo, hi)
-
-
-tbl_probs %>% 
-  mutate(
-    trial_id = seq_along(response),
-    trial_cut = cut(trial_id, 2)
-    ) %>% group_by(trial_cut) %>%
-  summarize(mean(prob_correct))
+fit_gcm_one_participant <- function(tbl_1p) {
+  #' fit plain-vanilla GCM to data from one participant
+  #' 
+  #' @description classical GCM implementation; for current purposes,
+  #' uses same data set as train set and test set (i.e., no generalization)
+  #' @param tbl_1p a tibble with by-trial data from one participant
+  #' @return list with elements -2*ll, fitted params, and if converged
   
+  params <- c(1, .5)
+  lo <- c(0, .0001)
+  hi <- c(10, .9999)
+  params <- pmap_dbl(list(params, lo, hi), upper_and_lower_bounds)
+  bias <- rep(.2499999, 3)
+  bias_constrained <- upper_and_lower_constrain_bias(bias)
+  params <- c(params, bias_constrained)
+  params_init_tf <- x <- params
+  
+  n_feat <- 2
+  d_measure <- 2
+  
+  results <- optim(
+    params_init_tf,
+    gcm_likelihood_no_forgetting,
+    tbl_transfer = tbl_1p,
+    tbl_x = tbl_1p, 
+    n_feat = n_feat,
+    d_measure = d_measure,
+    lo = lo,
+    hi = hi
+  )
+  
+  l_out <- list(
+    params = results_start$par,
+    neg2ll = results_start$value,
+    is_converged = results_start$convergence == 0
+  )
+  
+  return(l_out)
+  
+}
+
+
+
+gcm_likelihood_no_forgetting(params_init_tf, tbl_1p, tbl_1p, n_feat, d_measure, lo, hi)
+
+
+
+c_and_w_unconstrained <- pmap_dbl(list(results_start$par[1:2], lo, hi), upper_and_lower_bounds_revert)
+bias_unconstrained <- upper_and_lower_unconstrain_bias(results_start$par[3:6])
 
 
 
