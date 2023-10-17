@@ -78,8 +78,8 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   )
   tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>% mutate(response = tbl_transfer$response)
   tbl_probs$prob_correct <- pmap_dbl(
-    tbl_probs[, c("0", "1", "response")],
-    ~ c(..1, ..2)[as.numeric(as.character(..3)) + 1]
+    tbl_probs[, c("1", "2", "3", "4", "response")],
+    ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
   )
   return(tbl_probs)
 }
@@ -136,8 +136,8 @@ tbl_one_participant <- tbl_secondary %>%
   filter(participant_id == "359aac2b4cc28c9eeffd5dfeec5b029c") %>%
   rename(x1 = x1_true, x2 = x2_true, category = cat_true)
 
-tbl_transfer <- tbl_one_participant
-tbl_x <- tbl_one_participant
+tbl_start <- tbl_one_participant %>% filter(trial_id < 10)
+
 
 params <- list(c = 1, w = .5)
 lo <- c(0, .0001)
@@ -152,18 +152,29 @@ n_feat <- 2
 d_measure <- 2
 
 
-params_init <- params
 
-
-
-optim(
+results_start <- optim(
   params_init_tf,
   gcm_likelihood_no_forgetting,
-  tbl_transfer = tbl_transfer,
-  tbl_x = tbl_x, 
+  tbl_transfer = tbl_start,
+  tbl_x = tbl_start, 
   n_feat = n_feat,
   d_measure = d_measure,
   lo = lo,
   hi = hi
 )
+gcm_likelihood_no_forgetting(params_init_tf, tbl_start, tbl_start, n_feat, d_measure, lo, hi)
+
+
+tbl_probs %>% 
+  mutate(
+    trial_id = seq_along(response),
+    trial_cut = cut(trial_id, 2)
+    ) %>% group_by(trial_cut) %>%
+  summarize(mean(prob_correct))
+  
+
+
+
+
 bias_unconstrained <- upper_and_lower_unconstrain_bias(bias_constrained)
