@@ -4,6 +4,21 @@ library(tidyverse)
 library(grid)
 library(gridExtra)
 
+
+
+
+tbl_secondary <- read_csv(
+  file = "experiments/2022-07-category-learning-II/data/secondary-task.csv"
+) %>% rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
+  arrange(participant_id, trial_id)
+
+tbl_start <- tbl_secondary %>% filter(trial_id < 100)
+l_start <- tbl_start %>% split(.$participant_id)
+tbl_end <- tbl_secondary %>% filter(trial_id >= 300)
+l_end <- tbl_end %>% split(.$participant_id)
+
+r_test <- fit_gcm_one_participant(l_end[[2]])
+
 upper_and_lower_bounds <- function(par, lo, hi) {
   log(((par - lo) / (hi - lo)) / (1 - (par - lo) / (hi - lo)))
 }
@@ -130,18 +145,6 @@ f_similarity_cat <- function(x, w, c, delta, x_new, d_measure) {
 
 
 
-tbl_secondary <- read_csv(
-  file = "experiments/2022-07-category-learning-II/data/secondary-task.csv"
-) %>% rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
-  arrange(participant_id, trial_id)
-
-tbl_start <- tbl_secondary %>% filter(trial_id < 100)
-l_start <- tbl_start %>% split(.$participant_id)
-tbl_end <- tbl_secondary %>% filter(trial_id >= 300)
-l_end <- tbl_end %>% split(.$participant_id)
-
-r_test <- fit_gcm_one_participant(l_end[[2]])
-
 fit_gcm_one_participant <- function(tbl_1p) {
   #' fit plain-vanilla GCM to data from one participant
   #' 
@@ -183,16 +186,15 @@ fit_gcm_one_participant <- function(tbl_1p) {
   
 }
 
-
-
-gcm_likelihood_no_forgetting(params_init_tf, tbl_1p, tbl_1p, n_feat, d_measure, lo, hi)
-
-
-
-c_and_w_unconstrained <- pmap_dbl(list(results_start$par[1:2], lo, hi), upper_and_lower_bounds_revert)
-bias_unconstrained <- upper_and_lower_unconstrain_bias(results_start$par[3:6])
-
-
-
-
-bias_unconstrained <- upper_and_lower_unconstrain_bias(bias_constrained)
+unconstrain_all_params <- function(r) {
+  #' @description bring all parameters back into unconstrained space
+  #' ordering is: c, w, bias
+  c_and_w_unconstrained <- pmap_dbl(list(r$par[1:2], lo, hi), upper_and_lower_bounds_revert)
+  bias_unconstrained <- upper_and_lower_unconstrain_bias(r$par[3:6])
+  l_out <- list(
+    c = c_and_w_unconstrained[1],
+    w = c_and_w_unconstrained[2],
+    bias = bias_unconstrained
+  )
+  return(l_out)
+}
