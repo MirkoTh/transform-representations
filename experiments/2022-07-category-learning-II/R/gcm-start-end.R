@@ -12,7 +12,8 @@ walk(home_grown, source)
 tbl_secondary <- read_csv(
   file = "experiments/2022-07-category-learning-II/data/secondary-task.csv"
 ) %>% rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
-  arrange(participant_id, trial_id)
+  arrange(participant_id, trial_id) %>%
+  filter(n_categories == 4)
 
 tbl_start <- tbl_secondary %>% filter(trial_id < 100)
 l_start <- tbl_start %>% split(.$participant_id)
