@@ -1,9 +1,33 @@
+library(tidyverse)
+library(grid)
+library(gridExtra)
+
 upper_and_lower_bounds <- function(par, lo, hi) {
   log(((par - lo) / (hi - lo)) / (1 - (par - lo) / (hi - lo)))
 }
 
 upper_and_lower_bounds_revert <- function(par, lo, hi) {
   lo + ((hi - lo) / (1 + exp(-par)))
+}
+
+upper_and_lower_constrain_bias <- function(bias) {
+  bias[4] <- 1 - (bias[1] + bias[2] + bias[3])
+  bias_out <- c()
+  bias_out[1] <- upper_and_lower_bounds(bias[1], 0, 1)
+  bias_out[2] <- upper_and_lower_bounds(bias[2], 0, 1 - bias[1])
+  bias_out[3] <- upper_and_lower_bounds(bias[3], 0, 1 - (bias[1] + bias[2]))
+  bias_out[4] <- upper_and_lower_bounds(bias[4], 0, 1 - (bias[1] + bias[2] + bias[3]))
+  return(bias_out)
+}
+
+
+upper_and_lower_unconstrain_bias <- function(bias_constrained) {
+  bias_remap <- c()
+  bias_remap[1] <- upper_and_lower_bounds_revert(bias_constrained[1], 0, 1)
+  bias_remap[2] <- upper_and_lower_bounds_revert(bias_constrained[2], 0, (1 - bias_remap[1]))
+  bias_remap[3] <- upper_and_lower_bounds_revert(bias_constrained[3], 0, (1 - (bias_remap[1] + bias_remap[2])))
+  bias_remap[4] <- upper_and_lower_bounds_revert(bias_constrained[4], 0, (1 - (bias_remap[1] + bias_remap[2] + bias_remap[3])))
+  return(bias_remap)
 }
 
 
@@ -36,9 +60,22 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   #' @param hi vector with upper bounds of parameters
   #' @return negative 2 * summed log likelihood
   #' 
-  x <- pmap(list(x, lo, hi), upper_and_lower_bounds_revert)
+  params_untf <- pmap(list(x[1:2], lo, hi), upper_and_lower_bounds_revert)
+  bias_untf <- upper_and_lower_unconstrain_bias(x$bias)
+  params_untf$bias <- bias_untf
+  params_untf$w[2] <- 1 - params_untf$w[1] 
+  
   l_transfer_x <- split(tbl_transfer[, c("x1", "x2")], 1:nrow(tbl_transfer))
-  l_category_probs <- map(l_transfer_x, gcm_base, tbl_x = tbl_x, n_feat = n_feat, c = x[["c"]], w = x[["w"]], bias = x[["bias"]], delta = ifelse(is.null(x[["delta"]]), 0, x[["delta"]]), d_measure = d_measure)
+  l_category_probs <- map(
+    l_transfer_x, gcm_base, 
+    tbl_x = tbl_x, 
+    n_feat = n_feat, 
+    c = params_untf[["c"]], 
+    w = params_untf[["w"]], 
+    bias = params_untf[["bias"]], 
+    delta = ifelse(is.null(params_untf[["delta"]]), 0, params_untf[["delta"]]),
+    d_measure = d_measure
+  )
   tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>% mutate(response = tbl_transfer$response)
   tbl_probs$prob_correct <- pmap_dbl(
     tbl_probs[, c("0", "1", "response")],
@@ -62,8 +99,6 @@ gcm_base <- function(x_new, tbl_x, n_feat, c, w, bias, delta, d_measure = 1){
   #' @param delta forgetting rate (if delta == 0, no forgetting)
   #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
   #' @return a vector with the class probabilities for the new item
-  w <- c(w, 1 - w)
-  bias <- c(bias, 1 - bias)
   l_x_cat <- split(tbl_x, tbl_x$category)
   sims_cat <- map(l_x_cat, f_similarity_cat, w, c, delta, x_new, d_measure)
   sims_cat_sum <- map_dbl(sims_cat, sum)
@@ -92,25 +127,43 @@ f_similarity_cat <- function(x, w, c, delta, x_new, d_measure) {
 }
 
 
-optim(
-  params_init_tf,
-  gcm_likelihood_no_forgetting,
-  tbl_transfer = tbl_generate,
-  tbl_x = l_tbl_train_strat[[i]] %>% mutate(trial_id = sample(1:nrow(.), nrow(.), replace = FALSE)), 
-  n_feat = n_feat,
-  d_measure = d_measure,
-  lo = lo[1:3],
-  hi = hi[1:3]
-)
-
 
 tbl_secondary <- read_csv(
   file = "experiments/2022-07-category-learning-II/data/secondary-task.csv"
-  )
+)
 
-params <- c(c = 1, w = .5, bias = .5, delta = .5)
+tbl_one_participant <- tbl_secondary %>% 
+  filter(participant_id == "359aac2b4cc28c9eeffd5dfeec5b029c") %>%
+  rename(x1 = x1_true, x2 = x2_true, category = cat_true)
 
-lo <- c(0, .01, .0001, 1e-10)
-hi <- c(10, .99, .9999, .999999999)
-params <- pmap(list(params[1:3], lo[1:3], hi[1:3]), upper_and_lower_bounds)
+tbl_transfer <- tbl_one_participant
+tbl_x <- tbl_one_participant
+
+params <- list(c = 1, w = .5)
+lo <- c(0, .0001)
+hi <- c(10, .9999)
+params <- pmap(list(params, lo, hi), upper_and_lower_bounds)
+bias <- rep(.25, 3)
+bias_constrained <- upper_and_lower_constrain_bias(bias)
+params$bias <- bias_constrained
+params_init_tf <- x <- params
+
+n_feat <- 2
+d_measure <- 2
+
+
 params_init <- params
+
+
+
+optim(
+  params_init_tf,
+  gcm_likelihood_no_forgetting,
+  tbl_transfer = tbl_transfer,
+  tbl_x = tbl_x, 
+  n_feat = n_feat,
+  d_measure = d_measure,
+  lo = lo,
+  hi = hi
+)
+bias_unconstrained <- upper_and_lower_unconstrain_bias(bias_constrained)
