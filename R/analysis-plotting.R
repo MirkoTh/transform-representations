@@ -403,7 +403,7 @@ movement_towards_category_center <-
         # category = fct_relabel(
         #   category, ~ ifelse(.x == 1, "Residual Category", "Closed Category")
         # ),
-        n_categories = fct_inseq(n_categories),
+        n_categories = fct_inseq(factor(n_categories)),
         n_categories = fct_relabel(n_categories, ~ ifelse(
           .x == 1, "Control (Similarity)", str_c("Nr. Categories = ", .x)
         ))
@@ -437,13 +437,15 @@ movement_towards_category_center <-
       scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
       theme_bw() +
       labs(x = "Categorization Accuracy Last Block",
-           y = "Movement Towards Category Center") +
+           y = "Movement Towards Center") +
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
       theme(
         strip.background = element_rect(fill="white"),
         strip.text = element_text(colour = 'black'),
-        legend.position = "bottom")
+        legend.position = "bottom",
+        text = element_text(size = 16)) +
+      guides(color = guide_legend(nrow=2,byrow=TRUE))
     
     pl_delta <- ggplot() +
       geom_point(
@@ -469,13 +471,15 @@ movement_towards_category_center <-
       scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
       theme_bw() +
       labs(x = "Delta Categorization Accuracy",
-           y = "Movement Towards Category Center") +
+           y = "Movement Towards Center") +
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
       theme(
         strip.background =element_rect(fill="white"),
         strip.text = element_text(colour = 'black'),
-        legend.position = "bottom")
+        legend.position = "bottom",
+        text = element_text(size = 16)) +
+      guides(color = guide_legend(nrow=2,byrow=TRUE))
     
     
     hist_movements <- ggplot(tbl_movement, aes(movement, group = fct_rev(n_categories), drop = TRUE)) +
@@ -486,13 +490,15 @@ movement_towards_category_center <-
       scale_fill_viridis_d(name = "Group") +
       facet_grid(fct_rev(n_categories) ~ category) +
       theme_bw() +
-      labs(x = "Movement Towards Category Center", y = "Proportion Participants per Group") +
+      labs(x = "Movement Towards Center", y = "Prop. Participants per Group") +
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = expansion(add = c(.0005, .0005))) +
       theme(
         strip.background =element_rect(fill="white"),
         strip.text = element_text(colour = 'black'),
-        legend.position = "bottom")
+        legend.position = "bottom",
+        text = element_text(size = 16)) +
+      guides(fill = guide_legend(nrow=2,byrow=TRUE))
     
     
     tbl_data_improve <- tbl_movement %>%
@@ -581,7 +587,7 @@ plot_distance_to_category_center <-
     ) %>%
       mutate(session = factor(
         session,
-        labels = c("Before Training", "After Training")
+        labels = c("Before", "After")
       ))
     dg <- position_dodge(width = .9)
     pl <- ggplot() +
@@ -613,7 +619,7 @@ plot_distance_to_category_center <-
       scale_fill_brewer(name = "Group", palette = "Set1") +
       scale_color_brewer(palette = "Set1") +
       labs(x = "Time Point",
-           y = "Distance to Closest Category Center") +
+           y = "Dist. to Closest Center") +
       theme(plot.title = element_text(size = 14, face = "bold"))
     
     if (!is.null(l_info)) {
@@ -800,7 +806,7 @@ plot_similarity_against_distance <-
       scale_color_viridis_c(name = "Participant ID") +
       scale_size_continuous(name = "Nr. Similarity Judgments") +
       labs(x = "Euclidean Distance (Binned)",
-           y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")"),
+           y = "Average Similarity",
            title = "Sample Participants")
     
     # aggregate scatter plot and line plot
@@ -825,7 +831,7 @@ plot_similarity_against_distance <-
       scale_x_continuous(breaks = seq(2, 10, by = 2)) +
       coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
-           y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")")) # ,title = "Mean Effect"
+           y = "Average Similarity") # ,title = "Mean Effect"
     
     tbl_tmp <- tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13)))
     tbl_tmp$n_categories <- factor(tbl_tmp$n_categories)
@@ -853,7 +859,7 @@ plot_similarity_against_distance <-
       scale_color_viridis_d(name = "Group") +
       coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
-           y = str_c("Average Similarity (Range: ", min(tbl_sim$response), " - ", max(tbl_sim$response), ")"))
+           y = "Average Similarity")
     
     return(list(pl_sample = pl_sample, pl_agg = pl_agg, pl_agg_lines = pl_agg_lines))
   }

@@ -87,6 +87,7 @@ plt_prior_stim <- ggplot(tbl_prior, aes(x1, x2)) +
   scale_fill_gradient(low = "black", high = "white") +
   scale_color_manual(values = c("skyblue2", "tomato3"), name = "Sampled Stimulus") +
   theme_bw() +
+  theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) +
   scale_x_continuous(breaks = seq(0, 8, by = 2), expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(0, 8, by = 2), expand = c(0, 0)) +
   coord_cartesian(xlim = c(-1, 10), ylim = c(-1, 10)) +
@@ -104,9 +105,9 @@ plt_categories <- ggplot() +
   geom_star(data = tbl_star, aes(x1, x2, fill = lbl), color = "black", size = 4, show.legend = FALSE) +
   ggrepel::geom_label_repel(data = tbl_star, aes(x1, x2, label = lbl), color = "black", show.legend = FALSE) +
   theme_bw() +
+  theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) +
   scale_color_viridis_d(name = "Category") +
   scale_fill_manual(values = c("skyblue2", "tomato3"), name = "Sampled Stimulus") +
-  theme_bw() +
   scale_x_continuous(breaks = seq(0, 8, by = 2), expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(0, 8, by = 2), expand = c(0, 0)) +
   coord_cartesian(xlim = c(-1, 10), ylim = c(-1, 10)) +
@@ -134,7 +135,7 @@ plt_acceptance <- ggplot(tbl_acceptance, aes(stim_sample, value, group = stim_sa
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Stimulus Sample", y = "Acceptance Probability", title = "Acceptance Algorithms") +
-  theme(strip.background = element_rect(fill = "white"))
+  theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16))
   
 pl_arrangement <- arrangeGrob(plt_prior_stim, plt_categories, plt_acceptance, nrow = 1)
-save_my_pdf_and_tiff(pl_arrangement, "figures/model-stages", 10, 3.5)
+save_my_pdf_and_tiff(pl_arrangement, "figures/model-stages", 13, 4.5)
