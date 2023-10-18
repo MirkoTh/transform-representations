@@ -129,16 +129,25 @@ pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(co
   ggplot(aes(session, d_closest_sqrt, group = condition)) +
   geom_col(aes(fill = condition), position = dg) +
   scale_fill_viridis_d(name = "Condition") +
-  theme_bw() +
-  theme(strip.background =element_rect(fill="white"))+
-  theme(strip.text = element_text(colour = 'black'))+
+  theme_bw()  +
+  theme(
+    strip.background = element_rect(fill="white"),
+    strip.text = element_text(colour = 'black'),
+    text = element_text(size = 16),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(size = 10),
+    legend.position = c(.75, .84)
+  ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
 pl_pred_ellipse <- l_results_plots[[5]][[2]][[1]] +
-  theme(strip.background = element_rect(fill="white"))+
-  theme(strip.text = element_text(colour = 'black')) +
+  theme(
+    strip.background = element_rect(fill="white"),
+    strip.text = element_text(colour = 'black'),
+    text = element_text(size = 16)
+  ) +
   scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
 
 save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
@@ -150,17 +159,24 @@ pl_pred_delta_square <- l_results_plots[[2]][[2]][[4]]$tbl_cr_agg %>% mutate(con
 ) %>% mutate(category = c("Any Category")[category]) %>%
   ggplot(aes(session, d_closest_sqrt, group = condition)) +
   geom_col(aes(fill = condition), position = dg) +
-  scale_fill_viridis_d(name = "Condition") +
-  theme_bw() +
-  theme(strip.background =element_rect(fill="white"))+
-  theme(strip.text = element_text(colour = 'black'))+
+  scale_fill_viridis_d(name = "Condition")  +
+  theme_bw() + 
+  theme(
+    strip.background = element_rect(fill="white"),
+    strip.text = element_text(colour = 'black'),
+    text = element_text(size = 16),
+    legend.position = "none"
+  ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
-pl_pred_square <- l_results_plots[[6]][[2]][[1]] +
-  theme(strip.background = element_rect(fill="white"))+
-  theme(strip.text = element_text(colour = 'black')) +
+pl_pred_square <- l_results_plots[[6]][[2]][[1]]  +
+  theme(
+    strip.background = element_rect(fill="white"),
+    strip.text = element_text(colour = 'black'),
+    text = element_text(size = 16)
+  ) +
   scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
 
 
@@ -177,7 +193,7 @@ save_my_pdf_and_tiff(arrangeGrob(
   pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse,
   pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square,
   nrow = 2
-), "figures/model-predictions-both-designs", 12, 7)
+), "figures/model-predictions-both-designs", 11.25, 7.5)
 # extract sum of distances between prior and posterior
 # in category learning
 l_posteriors_cat <- map(map(l_results_plots, 1), "tbl_posterior")
@@ -188,7 +204,7 @@ l_posteriors_seq <- map(
   l_seq_results, ~ .x$tbl_new %>%
     group_by(stim_id, cat_type, category, timepoint) %>%
     summarize(x1_true = mean(x1), x2_true = mean(x2)) %>% ungroup()
-  )
+)
 l_sum_of_distances_seq <- map2(l_posteriors_seq, tbl_vary_seq$category_shape, sum_of_pairwise_distances)
 
 
@@ -245,7 +261,7 @@ pl_preds_ds <- ggplot(
     strip.background = element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom"
-    ) +
+  ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   scale_fill_viridis_d(name = "Category Learning Model") +

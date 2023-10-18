@@ -1388,7 +1388,7 @@ fit_gcm_one_participant <- function(tbl_1p) {
   )
   
   l_out <- list(
-    params = unconstrain_all_params(results$par),
+    params = unconstrain_all_params(results),
     neg2ll = results$value,
     is_converged = results$convergence == 0
   )
@@ -1412,14 +1412,14 @@ unconstrain_all_params <- function(r) {
 
 post_process_gcm_fits <- function(l_results) {
   n_converged <- map_df(
-    l_results, 
+    map(l_results, "result"), 
     ~ list(c = sum(.x$is_converged), not_c = length(.x$is_converged) - sum(.x$is_converged))
   ) %>% colSums()
   cat("converged ", n_converged[1])
   cat("\nnot converged ", n_converged[2])
   cat("\n")
   
-  l_params <- map(l_results, "params")
+  l_params <- map(map(l_results, "result"), "params")
   participant_ids <- names(l_params)
   tbl_params <- as.data.frame(reduce(l_params, rbind))
   colnames(tbl_params) <- c("c", "w", "bias1", "bias2", "bias3", "bias4")
