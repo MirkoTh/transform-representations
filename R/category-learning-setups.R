@@ -72,7 +72,8 @@ plt_categories_ellipse <- ggplot() +
     x = "Spikiness of Head",
     y = "Fill of Belly",
     #title = "Category Structure"
-  ) + theme(legend.position = "bottom")
+  ) + theme(legend.position = "bottom", text = element_text(size = 16)) +
+  guides(color = guide_legend(nrow=2,byrow=TRUE))
 
 plt_categories_square <- ggplot() +
   geom_point(data = l_stimuli[[2]][[1]], aes(x1, x2, color = category), size = 4) +
@@ -88,17 +89,18 @@ plt_categories_square <- ggplot() +
     x = "Spikiness of Head",
     y = "Fill of Belly",
     #title = "Category Structure"
-  ) + theme(legend.position = "bottom")
+  ) + theme(legend.position = "bottom", text = element_text(size = 16)) +
+  guides(color = guide_legend(nrow=2,byrow=TRUE))
   
 
 save_my_tiff(
-  grid.draw(arrangeGrob(plt_categories_ellipse, plt_categories_square, nrow = 1)),
-  "figures/category-learning-setup.tiff", 8, 4.4
+    grid.draw(arrangeGrob(plt_categories_ellipse, plt_categories_square, nrow = 1)),
+  "figures/category-learning-setup.tiff", 8.5, 5
 )
 
 save_my_pdf(
   grid.draw(arrangeGrob(plt_categories_ellipse, plt_categories_square, nrow = 1)),
-  "figures/category-learning-setup.pdf", 8, 4.4
+  "figures/category-learning-setup.pdf", 8.5, 5
 )
 
 # Category Structure ------------------------------------------------------
