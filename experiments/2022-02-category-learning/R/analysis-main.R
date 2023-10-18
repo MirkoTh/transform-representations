@@ -144,7 +144,7 @@ histograms_accuracies_rts(tbl_cat_overview)
 l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 # overall trajectory
 pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
-  theme(legend.position = "bottom", text = element_text(size = 16)) + scale_x_continuous(expand = c(0, 0)) +
+  theme(legend.position = "bottom", text = element_text(size = 22)) + scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), breaks = seq(.5, .8, by = .1)) +
   coord_cartesian(ylim = c(.5, .85))
 # by-participant trajectories
@@ -351,7 +351,7 @@ l_pl_sim <- plot_similarity_against_distance(
 l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_x_continuous(expand = c(0, 0)) + 
   scale_y_continuous(expand = c(0, .1)) +
   scale_color_manual(values = c("#FDE725FF"), name = "") +
-  theme(text = element_text(size = 16))
+  theme(text = element_text(size = 22))
   
 
 pl_sim_psychonomics <- ggplot() +
@@ -387,7 +387,7 @@ pl_sim_psychonomics <- ggplot() +
   labs(x = "Euclidean Distance",
        y = "Average Similarity") +
   scale_color_viridis_d(name = "Group") +
-  theme(legend.position = "bottom", text = element_text(size = 16))
+  theme(legend.position = "bottom", text = element_text(size = 22))
 
 tbl_sim_agg_subj <- tbl_sim %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
@@ -442,7 +442,7 @@ pl_d_by_category <- l_empirical$pl + facet_wrap(~ factor(category, labels = c("B
     strip.background =element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom",
-    text = element_text(size = 16)
+    text = element_text(size = 22)
   )  +
   scale_fill_viridis_d(name = "Group") +
   scale_color_viridis_d() +

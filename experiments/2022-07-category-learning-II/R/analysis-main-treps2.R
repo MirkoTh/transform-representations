@@ -177,8 +177,9 @@ l_pl <- plot_categorization_accuracy_against_blocks(
 )
 pl_cat_learn_pretty <- l_pl[[1]] + 
   scale_color_manual(values = c("#A4D3EE", "#CD4F39", "#CE7E72", "#C3A9AF"), name = "Category") +
-  theme(legend.position = "bottom") + scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = expansion(add = c(.01, .01)))
+  theme(legend.position = "bottom", text = element_text(size = 22)) + scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(add = c(.01, .01))) +
+  guides(color = guide_legend(nrow=2,byrow=TRUE))
 # overall trajectory
 pl_cat_agg <- l_pl[[1]] + labs(x = "Block of 20 Trials", y = "Categorization Accuracy") + # , caption = ""
   scale_color_viridis_d(name = "Category")
@@ -281,13 +282,13 @@ pls_moves_catlearn <- arrangeGrob(
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
   "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
-  13, 4.5
+  13, 5.75
 )
 
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
   "figures/moves-compilation-e2",
-  13, 4.5
+  13, 5.75
 )
 
 
@@ -313,7 +314,9 @@ tbl_sim_ci$distance_binned <-
 sample_ids_sim <-
   unique(tbl_sim$participant_id)[seq(1, length(unique(tbl_sim$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_sim, tbl_sim_ci, sample_ids_sim, sim_edges = c(1, 3.5))
-l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_color_manual(values = "#FDE725FF", name = "Group")
+l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_color_manual(values = "#FDE725FF", name = "Group") +
+  theme(text = element_text(size = 22))  +
+  guides(color = guide_legend(nrow=2,byrow=TRUE))
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
   "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
@@ -388,12 +391,12 @@ pl_psychonomics_means <- l_empirical$pl +
   #       axis.text.x=element_blank(),
   #       axis.ticks.x=element_blank()) +
   labs(title = str_c("Distance in Similarity Condition = ", sim_center)) +
-  theme(
-    legend.position = "bottom") +
+  theme(legend.position = "bottom", text = element_text(size = 22)) +
   scale_fill_viridis_d(name = "Session") +
   scale_color_viridis_d() +
   scale_x_discrete(expand = c(0, 0)) +
-  scale_y_continuous(expand = expansion(add = c(0, .2)))
+  scale_y_continuous(expand = expansion(add = c(0, .2))) +
+  guides(fill = guide_legend(nrow=2,byrow=TRUE))
 
 save_my_tiff(
   pl_psychonomics_means, 
@@ -543,10 +546,10 @@ pl <- arrangeGrob(
 save_my_pdf_and_tiff(
   pl, 
   "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview", 
-  13, 3.75
+  15.5, 5
 )
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e2", 
-  13, 3.75
+  15.5, 5
 )

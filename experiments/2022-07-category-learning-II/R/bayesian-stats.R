@@ -393,12 +393,14 @@ pl_prop_gamma <- tbl_draws %>% dplyr::select(c(theta_cat_prob, theta_sim_prob)) 
   theme(
     strip.background =element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom"
+    legend.position = "bottom",
+    text = element_text(size = 16)
   ) +
   labs(x = "Proportion Categorical", y = "Posterior Density") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
-save_my_pdf_and_tiff(pl_prop_gamma, "experiments/2022-07-category-learning-II/data/figures/prop-gamma", 8, 3)
+save_my_pdf_and_tiff(pl_prop_gamma, "experiments/2022-07-category-learning-II/data/figures/prop-gamma-e2", 8, 3)
+save_my_pdf_and_tiff(pl_prop_gamma, "figures/prop-gamma-e2", 8, 3)
 
 
 
@@ -427,7 +429,8 @@ tbl_mix <- tbl_mix %>% left_join(tbl_participants_lookup, by = "participant_id_n
 #   select(mean, participant_id, n_categories) %>%
 #   mutate(participant_id = str_c(substr(participant_id, 1, 6), ", ", n_categories))
 n_ps <- 3
-p_ids_to_plot <- sample(tbl_mix$participant_id, n_ps)
+# p_ids_to_plot <- sample(tbl_mix$participant_id, n_ps)
+p_ids_to_plot <- c( "7903d5946cfbb088dad0bdc08e7f3c5b", "1e649ff8b7bbc5f1eeaf928d44353401", "cb9741361e5b34be202b686d9a2ec3a1")
 
 map_prop_gamma <- tbl_mix %>% filter(participant_id %in% p_ids_to_plot) %>%
   select(mean, participant_id, n_categories) %>%
@@ -447,7 +450,8 @@ pl_outliers_posteriors <- plot_movement_outliers(
 ) + theme(
   strip.background =element_rect(fill="white"), 
   strip.text = element_text(colour = 'black'), 
-  legend.position = "bottom"
+  legend.position = "bottom",
+  text = element_text(size = 16)
 )
 pl_outliers_posteriors
 
@@ -461,9 +465,10 @@ tbl_empirical$n_categories <- fct_relevel(tbl_empirical$n_categories, "Similarit
 pl_pp_mixture <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds, facet_by = "group") +
   ggtitle("Normal-Gamma Mixture") +
   theme(
-    strip.background =element_rect(fill="white"), 
+    strip.background = element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom"
+    legend.position = "bottom",
+    text = element_text(size = 16)
   )
 
 
@@ -518,7 +523,8 @@ pl_pp_shift <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_preds,
   theme(
     strip.background =element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom"
+    legend.position = "bottom",
+    text = element_text(size = 16)
   )
 
 # only predictions
@@ -538,10 +544,10 @@ save_my_pdf_and_tiff(
 # predictions and a few outliers
 pl_ppred <- arrangeGrob(
   pl_pp_shift + theme(legend.position = "none") + scale_fill_viridis_d() + 
-    scale_x_continuous(expand = c(0, 0)) + 
+    scale_x_continuous(expand = c(.1, .1)) + 
     scale_y_continuous(expand = expansion(add = c(0, .002))),
   pl_pp_mixture + theme(legend.position = "none") + scale_fill_viridis_d() + 
-    scale_x_continuous(expand = c(0, 0)) + 
+    scale_x_continuous(expand = c(.1, .1)) + 
     scale_y_continuous(expand = expansion(add = c(0, .002))),
   nrow = 1, ncol = 2)
 pl_poutliers <- pl_outliers_posteriors + coord_cartesian(xlim = c(-60, 110)) + 
@@ -562,8 +568,13 @@ pl_all <- arrangeGrob(
 )
 save_my_pdf_and_tiff(
   pl_all, 
-  "experiments/2022-07-category-learning-II/data/figures/posterior-predictions-and-outliers",
-  18, 3.75
+  "experiments/2022-07-category-learning-II/data/figures/posterior-predictions-and-outliers-e2",
+  20, 3.75
+)
+save_my_pdf_and_tiff(
+  pl_all, 
+  "figures/posterior-predictions-and-outliers-e2",
+  20, 3.75
 )
 
 file_loc_loo_mixture_group <- str_c(

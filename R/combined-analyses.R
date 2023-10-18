@@ -35,8 +35,10 @@ tbl_combined <- tbl_cr1[, cols_required] %>% mutate(n_categories = as.numeric(n_
 tbl_combined$n_categories <- as.numeric(as.character(tbl_combined$n_categories))
 tbl_combined$n_categories[tbl_combined$n_categories > 1] <- 2
 tbl_combined$n_categories <- factor(tbl_combined$n_categories, labels = c("seqcomp", "cat"))
+tbl_combined$session <- factor(tbl_combined$session)
 # plot 2d distributions before and after training (collapsed across groups)
 # hardcoded x and y limits, which leads to the exclusion of some data points in the plot
+
 
 levels(tbl_combined$session) <- c("Before", "After")
 levels(tbl_combined$n_categories) <- c("Sequential Comparison", "Category Learning")

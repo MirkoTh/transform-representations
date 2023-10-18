@@ -411,15 +411,18 @@ movement_towards_category_center <-
       filter(!is.na(mean_distance_before))
     if (sim_center == "ellipses") {
       tbl_movement$category <- factor(tbl_movement$category, labels = c("Bukil", "Venak"))
+      levels(tbl_movement$n_categories) <- c("Sequential Comparison", "Category Learning")
+      
     } else if (sim_center == "square") {
       tbl_movement$category <- factor(tbl_movement$category, labels = c("Any Category"))
+      levels(tbl_movement$n_categories) <- c("Category Learning", "Sequential Comparison")
+      
     }
-    levels(tbl_movement$n_categories) <- c("Sequential Comparison", "Category Learning")
     
     pl_last <- ggplot() +
       geom_point(
         data = tbl_movement %>% 
-          filter(n_categories == "Category Learning"),
+          filter(n_categories %in% c("Category Learning", "Nr. Categories = 4")),
         aes(mean_accuracy, movement, group = category, color = category)
       ) +
       geom_smooth(
@@ -450,7 +453,7 @@ movement_towards_category_center <-
     pl_delta <- ggplot() +
       geom_point(
         data = tbl_movement %>% 
-          filter(n_categories == "Category Learning"),
+          filter(n_categories %in% c("Category Learning", "Nr. Categories = 4")),
         aes(
           mean_delta_accuracy,
           movement,
@@ -460,7 +463,7 @@ movement_towards_category_center <-
       ) +
       geom_smooth(
         data = tbl_movement %>% 
-          filter(n_categories == "Category Learning"),
+          filter(n_categories %in% c("Category Learning", "Nr. Categories = 4")),
         method = "lm",
         se = TRUE, level = .95, 
         aes(mean_delta_accuracy, movement, color = category),
@@ -1110,9 +1113,9 @@ plot_movement_outliers <-
       ) +
       geom_label(data = tbl_labels, label.padding = unit(0.1, "lines"), aes(
         x = 60,
-        y = 12.5,
+        y = 17,
         label = str_c("Avg. Move = ", round(avg_move, 1), "\nMAP Gamma = ", round(mean, 2))
-      )) +
+      ), size = 5) +
       facet_wrap( ~ participant_id, ncol = nrcols) +
       theme_bw() +
       scale_fill_brewer(palette = "Set1", name = "Outlier") +
@@ -1348,26 +1351,26 @@ plot_2d_distributions <- function(tbl_combined, save) {
   
   pl_marginal_x1 <- ggplot(tbl_combined, aes(x1_deviation, group = session)) +
     geom_density(aes(color = session), size = 1) +
-    geom_label(data = tbl_sds_agg, aes(20, .035 + (3 - as.numeric(session)) * .0035, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session)) +
+    geom_label(data = tbl_sds_agg, aes(20, .03 + (3 - as.numeric(session)) * .0055, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session), size = 5) +
     facet_wrap(~ n_categories) +
     coord_cartesian(xlim = c(-38, 38), ylim = c(0, .047)) + 
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
     labs(x = "", y = "Probability Density", title = "Head Spikiness") + 
-    theme(strip.background = element_rect(fill = "white")) + 
+    theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) + 
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
   
   pl_marginal_x2 <- ggplot(tbl_combined, aes(x2_deviation, group = session)) +
     geom_density(aes(color = session), size = 1) +
-    geom_label(data = tbl_sds_agg, aes(20, .035 + (3 - as.numeric(session)) * .0035, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session)) +
+    geom_label(data = tbl_sds_agg, aes(20, .03 + (3 - as.numeric(session)) * .0055, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session), size = 5) +
     facet_wrap(~ n_categories) +
     coord_cartesian(xlim = c(-38, 38), ylim = c(0, .047)) +
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
     labs(x = "", y = "Probability Density", title = "Belly Size") + 
-    theme(strip.background = element_rect(fill = "white")) + 
+    theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) + 
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
   
   pl_marginals <- arrangeGrob(pl_marginal_x1, pl_marginal_x2, nrow = 2)
