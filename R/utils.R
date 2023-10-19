@@ -1365,9 +1365,9 @@ fit_gcm_one_participant <- function(tbl_1p) {
   #' @return list with elements -2*ll, fitted params, and if converged
   
   params <- c(1, .5)
-  lo <- c(0, .0001)
-  hi <- c(10, .9999)
-  params <- pmap_dbl(list(params, lo, hi), upper_and_lower_bounds)
+  lo_bd <- c(0, .0001)
+  hi_bd <- c(10, .9999)
+  params <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
   bias <- rep(.2499999, 3)
   bias_constrained <- upper_and_lower_constrain_bias(bias)
   params <- c(params, bias_constrained)
@@ -1383,12 +1383,13 @@ fit_gcm_one_participant <- function(tbl_1p) {
     tbl_x = tbl_1p, 
     n_feat = n_feat,
     d_measure = d_measure,
-    lo = lo,
-    hi = hi
+    lo = lo_bd,
+    hi = hi_bd,
+    control = list(maxit = 1000)
   )
   
   l_out <- list(
-    params = unconstrain_all_params(results),
+    params = unconstrain_all_params(results, lo_bd, hi_bd),
     neg2ll = results$value,
     is_converged = results$convergence == 0
   )
@@ -1397,7 +1398,7 @@ fit_gcm_one_participant <- function(tbl_1p) {
   
 }
 
-unconstrain_all_params <- function(r) {
+unconstrain_all_params <- function(r, lo, hi) {
   #' @description bring all parameters back into unconstrained space
   #' ordering is: c, w, bias
   c_and_w_unconstrained <- pmap_dbl(list(r$par[1:2], lo, hi), upper_and_lower_bounds_revert)
@@ -1420,9 +1421,12 @@ post_process_gcm_fits <- function(l_results) {
   cat("\n")
   
   l_params <- map(map(l_results, "result"), "params")
+  df_bias <- reduce(map(l_params, "bias"), rbind)
+  colnames(df_bias) <- c("bias1", "bias2", "bias3", "bias4")
+  df_c_w <- reduce(map(l_params, ~ c(.x$c, .x$w)), rbind)
+  colnames(df_c_w) <- c("c", "w")
+  tbl_params <- as_tibble(cbind(df_c_w, df_bias))
   participant_ids <- names(l_params)
-  tbl_params <- as.data.frame(reduce(l_params, rbind))
-  colnames(tbl_params) <- c("c", "w", "bias1", "bias2", "bias3", "bias4")
   tbl_params$participant_id <- participant_ids
   
   return(tbl_params)

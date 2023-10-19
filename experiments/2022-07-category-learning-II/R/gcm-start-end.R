@@ -14,12 +14,13 @@ tbl_secondary <- readRDS(
 ) %>% rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
   arrange(participant_id, trial_id)
 
-tbl_start <- tbl_secondary %>% filter(trial_id < 100)
+tbl_start <- tbl_secondary %>% filter(trial_id < 100) #100
 l_start <- tbl_start %>% split(.$participant_id)
-tbl_end <- tbl_secondary %>% filter(trial_id >= 300)
+tbl_end <- tbl_secondary %>% filter(trial_id >= 300) #300
 l_end <- tbl_end %>% split(.$participant_id)
 
 is_fit <- TRUE
+
 
 if (is_fit) {
   plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
@@ -54,7 +55,16 @@ rownames(tbl_params_end) <- NULL
 tbl_params_both <- rbind(tbl_params_start, tbl_params_end)
 
 ggplot(tbl_params_both, aes(w, group = t)) +
-  geom_density(aes(color = t))
+  geom_freqpoly(aes(color = t), binwidth = .1)+ 
+  theme_bw() +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = "", y = "") +
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 16)
+  ) +
+  scale_color_viridis_d(name = "Time Point")
 
 
 
