@@ -260,15 +260,17 @@ pl_preds_ds <- ggplot(
   theme(
     strip.background = element_rect(fill="white"), 
     strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom"
+    legend.position = "bottom",
+    text = element_text(size = 16)
   ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   scale_fill_viridis_d(name = "Category Learning Model") +
-  labs(x = "Comparison", y = "Prop. Change of Pairwise Distances")
+  labs(x = "Comparison", y = "Prop. Change of Pairwise Distances") +
+  guides(fill = guide_legend(nrow=2,byrow=TRUE))
 
-save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 5.5, 4.5)
-save_my_pdf(pl_preds_ds, "figures/model-predictions-distances.pdf", 5.5, 4.5)
+save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 5.5, 6)
+save_my_pdf(pl_preds_ds, "figures/model-predictions-distances.pdf", 5.5, 6)
 
 
 # Plot Prior Means & Posterior Means --------------------------------------
