@@ -5,7 +5,7 @@ library(grid)
 library(gridExtra)
 library(furrr)
 
-home_grown <- c("R/utils.R")
+home_grown <- c("R/utils.R", "R\analysis-plotting.R")
 walk(home_grown, source)
 
 
@@ -54,18 +54,18 @@ rownames(tbl_params_end) <- NULL
 
 tbl_params_both <- rbind(tbl_params_start, tbl_params_end)
 
-ggplot(tbl_params_both, aes(w, group = t)) +
+pl_dist_w <- ggplot(tbl_params_both, aes(w, group = t)) +
   geom_freqpoly(aes(color = t), binwidth = .1)+ 
   theme_bw() +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
-  labs(x = "", y = "") +
+  labs(x = "w(Head Spikiness)", y = "Prop. Participants") +
   theme(
     strip.background = element_rect(fill = "white"),
     text = element_text(size = 16)
   ) +
   scale_color_viridis_d(name = "Time Point")
-
+save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
 
 
 
