@@ -1646,13 +1646,25 @@ load_predictions <- function(f_name, sim_center, is_simulation){
   
   # calculate delta of pairwise distances for model predictions aka model matrix
   l_category_results <- readRDS(file = f_name)
-  l_results_plots <- map(l_category_results, diagnostic_plots, sim_center = sim_center, is_simulation = is_simulation)
-  tbl_design <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
-    select(stim_id, x1_true, x2_true)
-  tmp_before <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
-    select(stim_id, x1_response, x2_response)
-  tmp_after <- l_results_plots[[5]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
-    select(stim_id, x1_response, x2_response)
+  v_sim_center <- map_chr(map(l_category_results, "l_info"), "category_shape")
+  
+  if(sim_center == "ellipses") {
+    l_results_plots <- map2(l_category_results, v_sim_center, diagnostic_plots, is_simulation = is_simulation)
+    tbl_design <- l_results_plots[[1]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+      select(stim_id, x1_true, x2_true)
+    tmp_before <- l_results_plots[[1]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+      select(stim_id, x1_response, x2_response)
+    tmp_after <- l_results_plots[[1]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
+      select(stim_id, x1_response, x2_response)
+  } else if (sim_center == "square") {
+    l_results_plots <- map2(l_category_results, v_sim_center, diagnostic_plots, is_simulation = is_simulation)
+    tbl_design <- l_results_plots[[2]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+      select(stim_id, x1_true, x2_true)
+    tmp_before <- l_results_plots[[2]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
+      select(stim_id, x1_response, x2_response)
+    tmp_after <- l_results_plots[[2]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
+      select(stim_id, x1_response, x2_response)
+  }
   
   tbl_before <- tbl_design %>% left_join(tmp_before, on = "stim_id") %>% mutate(session = "before")
   tbl_after <- tbl_design %>% left_join(tmp_after, on = "stim_id") %>% mutate(session = "after")
@@ -2184,7 +2196,7 @@ extract_movement_outliers <- function(tbl_cr_moves, n_sds, measurement) {
     mutate(
       name = factor(name, labels = c("Not Transformed", "Square Root")),
       participant_id = factor(str_c(substr(participant_id, 1, 6), ", ", n_categories)))
-
+  
   tbl_labels <- tbl_outliers %>% filter(name == measurement) %>%
     group_by(participant_id, flag_outlier) %>%
     summarize(avg_move = mean(value)) %>%

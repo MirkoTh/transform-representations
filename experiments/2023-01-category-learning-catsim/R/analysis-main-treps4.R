@@ -249,6 +249,8 @@ move_agg <- summarySEwithin(
   idvar = "participant_id"
 )
 
+levels(tbl_simult_agg$n_categories) <- c("Similarity", "4 Categories")
+
 
 dg <- position_dodge(.2)
 pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, response, group = session)) +
@@ -263,7 +265,8 @@ pl_lines_simult <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, response, 
   theme_bw() +
   theme(
     axis.text.x = element_text(angle = 90),
-    legend.position = "bottom"
+    legend.position = "bottom",
+    text = element_text(size = 16)
   ) +
   scale_color_viridis_d(name = "Time Point") +
   labs(
@@ -365,7 +368,7 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(.025, .025))) +
   theme_bw() +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "bottom", text = element_text(size = 16)) +
   labs(
     x = "Category Comparison",
     y = "Rating After - Before"
@@ -402,7 +405,7 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") +
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom", text = element_text(size = 16)) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02))) +
   scale_color_manual(values = c("#A4D3EE", "#CD4F39", "#CE7E72", "#C3A9AF"), name = "Category")
@@ -481,7 +484,7 @@ sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
 l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
-pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom") +
+pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom", text = element_text(size = 16)) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02))) + 
   scale_color_manual(values = "#FDE725FF", name = "Group")
@@ -535,6 +538,8 @@ plot_symmetric_moves <- function(tbl_df, ttl) {
     labs(title = ttl)
 }
 
+tbl_simult_move_agg$n_categories <- factor(tbl_simult_move_agg$n_categories, labels = c("Similarity", "4 Categories"))
+
 pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
 pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
 
@@ -572,20 +577,31 @@ tbl_simult_move_agg %>%
     corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical),
     p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
   )
-pls_rsa <- arrangeGrob(pl_pred, pl_experimental, pl_control, nrow = 1)
+pls_rsa <- arrangeGrob(
+  pl_pred + theme(text = element_text(size = 16)), 
+  pl_experimental + theme(text = element_text(size = 16)), 
+  pl_control + theme(text = element_text(size = 16)), 
+  nrow = 1)
 save_my_pdf_and_tiff(
-  str_c("experiments/2023-01-category-learning-catsim/data/figures/rsa-avg-plots", pl_suffix),  
+  pls_rsa,
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/rsa-avg-plots-e4", pl_suffix),  
   12, 4
 )
-
+save_my_pdf_and_tiff(
+  pls_rsa,
+  str_c("figures/rsa-avg-plots-e4"),  
+  12, 4
+)
 
 
 # save aggregate plots ----------------------------------------------------
 
 
 pl <- arrangeGrob(
-  pl_cat_learn_pretty, pl_sequential_agg,
-  pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
+  pl_cat_learn_pretty + guides(color = guide_legend(nrow=2,byrow=TRUE)),
+  pl_sequential_agg + guides(color = guide_legend(nrow=2,byrow=TRUE)),
+  pl_groupmeans + theme(plot.title = element_blank()) + guides(color = guide_legend(nrow=2,byrow=TRUE)),
+  ncol = 3
 )
 save_my_pdf_and_tiff(
   pl, 

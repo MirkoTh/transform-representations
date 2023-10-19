@@ -160,6 +160,7 @@ n_consider <- 100
 tbl_simult <- tbl_simult %>% filter(trial_id < n_consider | session == "Before Training")
 
 # create data set with movements
+tbl_simult$session <- factor(tbl_simult$session, labels = c("Before Training", "After Training"))
 tbl_simult_move <- delta_simultaneous(tbl_simult)
 
 # save data sets for statistical analyses
@@ -168,7 +169,8 @@ saveRDS(tbl_simult_move, file = str_c("experiments/2022-09-category-learning-sim
 saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps.rds"))
 saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps.rds"))
 
-
+tbl_simult$n_categories <- factor(tbl_simult$n_categories, labels = c("Similarity", "4 Categories"))
+tbl_simult_move$n_categories <- factor(tbl_simult_move$n_categories, labels = c("Similarity", "4 Categories"))
 
 # Simultaneous Comparison Task --------------------------------------------
 
@@ -272,7 +274,7 @@ pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_respons
   geom_point(aes(color = n_categories), position = dg) +
   scale_color_viridis_d(name = "Group") +
   theme_bw() +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "bottom", text = element_text(size = 16)) +
   scale_x_discrete(expand = c(0, 0)) +
   labs(
     x = "Category Comparison",
@@ -304,7 +306,7 @@ l_pl <- plot_categorization_accuracy_against_blocks(
   show_errorbars = TRUE
 )
 # overall trajectory
-pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom") + 
+pl_cat_learn_pretty <- l_pl[[1]] + theme(legend.position = "bottom", text = element_text(size = 16)) + 
   scale_color_manual(values = c("#A4D3EE", "#CD4F39", "#CE7E72", "#C3A9AF"), name = "Category") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(0, .02)))
@@ -368,7 +370,8 @@ l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 pl_sim <- l_pl_sim[[3]] + scale_color_manual(values = "#FDE725FF", name = "Group") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(text = element_text(size = 16))
 save_my_pdf(
   l_pl_sim[[3]], 
   "experiments/2022-09-category-learning-similarity/data/figures/sequential-comparison.pdf",
@@ -418,7 +421,9 @@ plot_symmetric_moves <- function(tbl_df, ttl) {
 pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
 pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
 
-f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
+#f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
+f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
+
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 
@@ -452,8 +457,14 @@ tbl_simult_move_agg %>%
     p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
     )
 
-pls_rsa <- arrangeGrob(pl_pred, pl_experimental, pl_control, nrow = 1)
-save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/data/figures/rsa-avg-plots", 12, 4)
+pls_rsa <- arrangeGrob(
+  pl_pred + theme(text = element_text(size = 16)), 
+  pl_experimental + theme(text = element_text(size = 16)), 
+  pl_control + theme(text = element_text(size = 16)), 
+  nrow = 1)
+
+save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/data/figures/rsa-avg-plots-e3", 12, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e3", 12, 4)
 
 
 
@@ -461,8 +472,10 @@ save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/
 
 
 pl <- arrangeGrob(
-  pl_cat_learn_pretty, pl_sim,
-  pl_groupmeans + theme(plot.title = element_blank()), ncol = 3
+  pl_cat_learn_pretty + guides(color = guide_legend(nrow=2,byrow=TRUE)), 
+  pl_sim + guides(color = guide_legend(nrow=2,byrow=TRUE)),
+  pl_groupmeans + theme(plot.title = element_blank()) + guides(color = guide_legend(nrow=2,byrow=TRUE)),
+  ncol = 3
 )
 save_my_pdf_and_tiff(
   pl, 

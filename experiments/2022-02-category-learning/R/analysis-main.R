@@ -585,8 +585,13 @@ pl_control <- l_rsa_all$pl_m_avg_control +
   scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0))
 
 # color scale: delta after - delta before
-pls_rsa <- arrangeGrob(pl_pred, pl_exp, pl_control, nrow = 1)
+pls_rsa <- arrangeGrob(
+  pl_pred + theme(text = element_text(size = 16)), 
+  pl_exp + theme(text = element_text(size = 16)), 
+  pl_control + theme(text = element_text(size = 16)), 
+  nrow = 1)
 save_my_pdf_and_tiff(pls_rsa, "experiments/2022-02-category-learning/data/figures/rsa-avg-plots", 12, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e1", 12, 4)
 
 # correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 

@@ -29,6 +29,8 @@ files <- c(
 walk(files, source)
 
 tbl_simult <- readRDS(str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps", pl_suffix, ".rds"))
+tbl_simult$n_categories <- factor(tbl_simult$n_categories)
+levels(tbl_simult$n_categories) <- c("Similarity", "4 Categories")
 
 tbl_simult <- tbl_simult %>%
   mutate(
@@ -106,11 +108,15 @@ fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Same", tbl_simult
 fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Different", tbl_simult, "euclidean")
 
 save_my_pdf_and_tiff(
-  l_cityblock$pl_c, 
+  l_cityblock$pl_c + theme(text = element_text(size = 16)), 
   str_c("experiments/2023-01-category-learning-catsim/data/figures/c-parameters", pl_suffix),
   8, 3.25
 )
-
+save_my_pdf_and_tiff(
+  l_cityblock$pl_c + theme(text = element_text(size = 16)), 
+  str_c("figures/c-parameters", pl_suffix),
+  8, 3.25
+)
 
 # Exemplary Predictions ---------------------------------------------------
 
@@ -178,6 +184,8 @@ pars_interest <- c("mu", "w_group", "sigma")
 tbl_draws <- fit_sim_city$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_sim_city$summary(variables = pars_interest)
 saveRDS(tbl_draws, "experiments/2023-01-category-learning-catsim/data/similarity-model-stan.RDS")
+
+tbl_draws <- readRDS("experiments/2023-01-category-learning-catsim/data/similarity-model-stan.RDS")
 
 
 lbls <- c("Intercept", "Group", "Category Comparison", "Time Point", "3-way IA", "w_group", "sigma")

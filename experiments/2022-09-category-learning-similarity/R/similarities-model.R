@@ -26,6 +26,7 @@ files <- c(
 walk(files, source)
 
 tbl_simult <- readRDS("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps.rds")
+tbl_simult$n_categories <- factor(tbl_simult$n_categories, labels = c("Similarity", "4 Categories"))
 
 tbl_simult <- tbl_simult %>%
   mutate(
@@ -95,14 +96,15 @@ l_cityblock$hist_w
 # l_euclidean$pl_c
 l_cityblock$pl_c
 
-save_my_pdf(
-  l_cityblock$pl_c, 
-  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters.pdf",
+save_my_pdf_and_tiff(
+  l_cityblock$pl_c + theme(text = element_text(size = 16)), 
+  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters",
   8, 3.25
 )
-save_my_tiff(
-  l_cityblock$pl_c, 
-  "experiments/2022-09-category-learning-similarity/data/figures/c-parameters.tiff",
+
+save_my_pdf_and_tiff(
+  l_cityblock$pl_c + theme(text = element_text(size = 16)), 
+  "figures/c-parameters-e3",
   8, 3.25
 )
 
@@ -115,6 +117,8 @@ fit_one_subset("5aff33bae55f90000139f664", "Before Training", "Different", tbl_s
 
 p_id <- "5d3587a13e11900001093ae8"
 l_results <- l_cityblock
+
+tbl_simult$n_categories <- factor(tbl_simult$n_categories)
 
 tmp <- tbl_simult %>% group_by(participant_id) %>% count()
 random_id <- as_vector(tmp[ceiling(runif(1, 1, nrow(tmp))), "participant_id"])
