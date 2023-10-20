@@ -59,7 +59,7 @@ pl_dist_w <- ggplot(tbl_params_both, aes(w, group = t)) +
   theme_bw() +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
-  labs(x = "w(Head Spikiness)", y = "Prop. Participants") +
+  labs(x = "w(Head Spikiness)", y = "Nr. Participants") +
   theme(
     strip.background = element_rect(fill = "white"),
     text = element_text(size = 16)
