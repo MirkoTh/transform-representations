@@ -50,6 +50,7 @@ tbl_cat_binned %>% filter(trial_id_binned == max(as.numeric(trial_id_binned))) %
 
 ggplot(
   tbl_cat_binned %>% 
+    mutate(category = factor(category)) %>%
     group_by(category, trial_id_binned) %>% 
     summarize(n_correct_avg = mean(n_correct/n_trials)),
   aes(trial_id_binned, n_correct_avg, group = category)) +

@@ -67,7 +67,7 @@ l_tbl_data[[2]] <- read_csv("experiments/2022-02-category-learning/data/secondar
 l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_cases <- preprocess_data(l_tbl_data, 192, 600, n_sds = 1)
+l_cases <- preprocess_data(l_tbl_data, 192, 600, n_sds = 3)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -320,7 +320,7 @@ bins_distance <-
   c(seq(-1, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
 tbl_sim$distance_binned <-
   cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
-tbl_sim$distance_binned %>% unique()
+tbl_sim$distance_binned %>% unique() %>% sort()
 
 saveRDS(tbl_sim, "experiments/2022-02-category-learning/data/tbl_sim.rds")
 

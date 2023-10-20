@@ -51,7 +51,7 @@ plot_1d_marginals <- function(tbl) {
   #' @return the plot
   #'
   # read individual performance
-  tbl %>% filter(session %in% c(1, 2)) %>%
+  tbl %>% filter(session %in% c(1, 2)) %>% ungroup() %>%
     pivot_longer(c(x1_deviation, x2_deviation),
                  names_to = "var_deviation",
                  values_to = "val_deviation") %>%

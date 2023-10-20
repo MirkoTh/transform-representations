@@ -1149,7 +1149,8 @@ exclude_guessing_participants <- function(l_tbl, n_trials_cat) {
   thx_guessing_excl_two <- qbinom(.999, n_trials_cat, .5)
   thx_guessing_excl_four <- qbinom(.999, n_trials_cat, .25)
   # this has to be moved to exclusion functions
-  participants_guess_2 <- tbl_cat %>% filter(n_categories == 2) %>%
+  participants_guess_2 <- tbl_cat %>%
+    filter(n_categories == 2 & trial_id >= 40) %>% # exclude initial 40 trials with only target category
     group_by(participant_id) %>%
     summarize(count_true = sum(accuracy)) %>% ungroup() %>%
     arrange(count_true) %>% filter(count_true <= thx_guessing_excl_two) %>%
