@@ -419,12 +419,6 @@ parameters {
 
 }
 
-
-transformed parameters {
-
-}
-
-
 model {
 
   for (n in 1:n_data) {
@@ -454,6 +448,63 @@ generated quantities {
   
   for (s in 1:n_subj) {
     posterior_prediction[s] = normal_rng(b[subj[s]], sigma_subject[s]);
+  }
+}
+
+")
+}
+
+
+stan_move_exgaussian <- function() {
+  
+  write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  int n_groups;
+  vector[n_data] d_moved;
+  array[n_data] int subj;
+  array[n_subj] int group;
+}
+
+
+parameters {
+  vector<lower=0>[n_subj] sigma_subject;
+  vector<lower=0>[n_subj] tau_subject;
+  vector<lower=0>[n_groups] sigma_tau;
+  vector<lower=0>[n_groups] mu_tau;
+}
+
+
+model {
+
+  for (n in 1:n_data) {
+    d_moved[n] ~ exp_mod_normal(0, sigma_subject[subj[n]], tau_subject[subj[n]]);
+  }
+
+  for (s in 1:n_subj) {
+      sigma_subject[s] ~ normal(20, 5);
+      tau_subject[s] ~ normal(mu_tau[group[s]], sigma_tau[group[s]]);
+  }
+  
+  for (g in 1:n_groups) {
+      mu_tau[g] ~ normal(0, 1);
+      sigma_tau[g] ~ normal(.5, .2);
+  }
+}
+
+
+generated quantities {
+  vector[n_data] log_lik_pred;
+  vector[n_subj] posterior_prediction;
+
+
+  for (n in 1:n_data) {
+      log_lik_pred[n] = exp_mod_normal_lpdf(d_moved[n] | 0, sigma_subject[subj[n]], tau_subject[subj[n]]);
+  }
+  
+  for (s in 1:n_subj) {
+    posterior_prediction[s] = exp_mod_normal_rng(0, sigma_subject[s], tau_subject[s]);
   }
 }
 
