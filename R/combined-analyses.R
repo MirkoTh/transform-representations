@@ -68,9 +68,16 @@ l_data <- list(
   )),
   x = mm[, 2:3]
 )
-init_fun <- function() list(muGroup = 0, muTime = 0, muIA = 0)
+init_fun <- function() list(
+  muGroup = rnorm(2, .2, .01), 
+  muTime = rnorm(2, .2, .01), 
+  muIA = rnorm(2, .2, .01), 
+  mu0 = rnorm(2, .2, .01), 
+  b0 = matrix(rnorm(2*178, .2, .01), nrow = 178), 
+  sdsubj = c(.1, .1)
+)
 fit_2d <- mod_2d$sample(
-  data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3, init = init_fun, parallel_chains = 3
+  data = l_data, iter_sampling = 50, iter_warmup = 20, chains = 1, init = init_fun, parallel_chains = 1
 )
 
 # file_loc <- str_c("data/cr-e1-e2-combined-2d-regression-on-prec.RDS")
@@ -96,7 +103,8 @@ tbl_posterior <- tbl_draws %>%
 levels(tbl_posterior$parameter) <- lbls
 
 # params_bf <- c("SD (Head)", "SD (Belly)", "Corr(1)")
-params_bf <- unique(tbl_posterior$parameter)params_bf <- params_bf %>% filter(r)
+params_bf <- unique(tbl_posterior$parameter)
+params_bf <- params_bf %>% filter(r)
 l <- sd_bfs(tbl_posterior, params_bf, .5)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
