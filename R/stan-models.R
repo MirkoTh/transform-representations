@@ -471,8 +471,10 @@ data {
 parameters {
   vector<lower=0>[n_subj] sigma_subject;
   vector<lower=0>[n_subj] tau_subject;
-  vector<lower=0>[n_groups] sigma_tau;
+  //vector<lower=0>[n_groups] sigma_tau;
+  real<lower=0> sigma_tau;
   vector<lower=0>[n_groups] mu_tau;
+  //real<lower=0> mu_tau;
 }
 
 
@@ -483,13 +485,17 @@ model {
   }
 
   for (s in 1:n_subj) {
-      sigma_subject[s] ~ normal(20, 5);
-      tau_subject[s] ~ normal(mu_tau[group[s]], sigma_tau[group[s]]);
+      // if sigma_subject is drawn from normal prior with too large mean i.e., 20 or too large sd i.e., 5, model does not converge
+      sigma_subject[s] ~ normal(0, 1);
+      tau_subject[s] ~ normal(mu_tau[group[s]], sigma_tau);
+      //tau_subject[s] ~ normal(mu_tau, sigma_tau);
   }
+  sigma_tau ~ normal(0, 1);
+  //mu_tau ~ normal(0, 2);
   
   for (g in 1:n_groups) {
-      mu_tau[g] ~ normal(0, 1);
-      sigma_tau[g] ~ normal(.5, .2);
+      mu_tau[g] ~ normal(0, 2);
+      //sigma_tau[g] ~ normal(0, 1);
   }
 }
 

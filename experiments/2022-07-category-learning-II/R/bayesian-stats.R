@@ -7,6 +7,7 @@ library(gridExtra)
 library(docstring)
 library(rutils)
 library(cmdstanr)
+library(kde1d)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -281,7 +282,8 @@ anova(m_rs)
 
 
 
-# Mixture Modeling --------------------------------------------------------
+
+# Normal-Gamma Mixture Modeling -------------------------------------------
 
 
 # the following plots suggest a different option
@@ -472,8 +474,9 @@ pl_pp_mixture <- plot_predictions_with_data_mixture(tbl_empirical, tbl_post_pred
   )
 
 
-# model having a parameter shifting group mean of categorization group 
-# whereas mean of similarity group is only fixed at zero
+
+# Normal Model with Different Group Means ---------------------------------
+
 
 
 move_model_shift_normal <- stan_move_shift_normal()
@@ -577,22 +580,6 @@ save_my_pdf_and_tiff(
   20, 3.75
 )
 
-file_loc_loo_mixture_group <- str_c(
-  "experiments/2022-07-category-learning-II/data/mixture-group-loo.RDS")
-loo_mixture_group <- fit_move_mixture$loo(variables = "log_lik_pred")
-saveRDS(loo_mixture_group, file = file_loc_loo_mixture_group)
-# loo_mixture_group <- readRDS(file_loc_loo_mixture_group)
-
-file_loc_loo_move_shift_normal <- str_c(
-  "experiments/2022-07-category-learning-II/data/move-shift-normal-loo.RDS")
-loo_move_shift_normal <- fit_move_shift_normal$loo(variables = "log_lik_pred")
-saveRDS(loo_move_shift_normal, file = file_loc_loo_move_shift_normal)
-# loo_move_shift_normal <- readRDS(file_loc_loo_move_shift_normal)
-
-loo::loo_model_weights(
-  list(loo_mixture_group, loo_move_shift_normal), 
-  method = "stacking"
-)
 
 
 l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
@@ -710,3 +697,83 @@ tbl_thx <- par_lims
 
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(1, 2)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
+
+# Ex-Gaussian -------------------------------------------------------------
+
+l_data_exgaussian <- list(
+  n_data = nrow(tbl_cr_moves),
+  n_subj = length(unique(tbl_cr_moves$participant_id)),
+  n_groups = length(unique(tbl_cr_moves$n_categories)),
+  d_moved = tbl_cr_moves$d_move_abs,
+  #d_moved = d_moved,
+  subj = tbl_cr_moves$participant_id_num,
+  group = as.numeric(tbl_participants_lookup$n_categories)
+)
+
+
+move_model_exgaussian <- stan_move_exgaussian()
+move_model_exgaussian <- cmdstan_model(move_model_exgaussian)
+
+init_fun <- function() list(
+  mu_tau = rnorm(2, .2, .01),
+  sigma_tau = rnorm(1, .4, .05),
+  sigma_subject = rnorm(l_data_exgaussian$n_subj, 20, 2),
+  tau_subject = rnorm(l_data_exgaussian$n_subj, .4, .02)
+)
+
+fit_move_exgaussian <- move_model_exgaussian$sample(
+  data = l_data_exgaussian, iter_sampling = 2000, iter_warmup = 1000,
+  chains = 3, parallel_chains = 3,
+  save_warmup = FALSE, init = init_fun
+)
+
+pars_interest <- c("mu_tau", "sigma_tau")
+tbl_draws <- fit_move_exgaussian$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_exgaussian$summary(variables = pars_interest)
+
+
+params_bf <- c("mu_tau_diff", "mu_tau[1]", "mu_tau[2]", "sigma_tau")
+
+tbl_posterior <- tbl_draws %>% 
+  # select(c("sigma", "tau", ".chain")) %>%
+  mutate(mu_tau_diff = `mu_tau[1]` - `mu_tau[2]`) %>%
+  dplyr::select(all_of(params_bf), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(all_of(params_bf), names_to = "parameter", values_to = "value") %>%
+  # pivot_longer(c("sigma", "tau"), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter))
+
+kdes <- estimate_kd(tbl_posterior, params_bf)
+par_lims <- limit_axes(kdes)
+bfs <- kdes %>% map_dbl(~(dnorm(0, 0, 1))/dkde1d(0, .))
+tbl_thx <- par_lims
+
+# plot the posteriors and the bfs
+map(as.list(params_bf[c(1, 2, 3, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
+
+file_loc_loo_mixture_group <- str_c(
+  "experiments/2022-07-category-learning-II/data/mixture-group-loo.RDS")
+loo_mixture_group <- fit_move_mixture$loo(variables = "log_lik_pred")
+saveRDS(loo_mixture_group, file = file_loc_loo_mixture_group)
+# loo_mixture_group <- readRDS(file_loc_loo_mixture_group)
+
+file_loc_loo_move_shift_normal <- str_c(
+  "experiments/2022-07-category-learning-II/data/move-shift-normal-loo.RDS")
+loo_move_shift_normal <- fit_move_shift_normal$loo(variables = "log_lik_pred")
+saveRDS(loo_move_shift_normal, file = file_loc_loo_move_shift_normal)
+# loo_move_shift_normal <- readRDS(file_loc_loo_move_shift_normal)
+
+file_loc_loo_exgaussian <- str_c(
+  "experiments/2022-07-category-learning-II/data/exgaussian-loo.RDS"
+  )
+loo_exgaussian <- fit_move_exgaussian$loo(variables = "log_lik_pred")
+
+loo::loo_model_weights(
+  list(loo_mixture_group, loo_move_shift_normal, loo_exgaussian), 
+  method = "stacking"
+)
+
