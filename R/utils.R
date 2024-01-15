@@ -1312,7 +1312,7 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   return(tbl_probs)
 }
 
-gcm_base <- function(x_new, tbl_x, n_feat, c, w, bias, delta, d_measure = 1){
+gcm_base <- function(x_new, tbl_x, n_feat, c, w, bias, delta, d_measure = 1) {
   #' compute class probabilities with the GCM model
   #' 
   #' @description summed similarity computation with gcm;
@@ -1334,6 +1334,84 @@ gcm_base <- function(x_new, tbl_x, n_feat, c, w, bias, delta, d_measure = 1){
   map_dbl(sims_cat_sum_biased, ~ .x/sum(sims_cat_sum_biased))
 }
 
+
+pt_likelihood <- function(x, tbl_transfer, tbl_x, d_measure, lo, hi) {
+  #' @description -2 * negative log likelihood of transfer set given training data
+  #' and a gcm without a forgetting parameter (i.e., forgetting set to 0)
+  #' @param x parameters
+  #' @param tbl_transfer transfer/test data
+  #' @param tbl_x training data
+  #' @param n_feat number of features
+  #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
+  #' @param lo vector with lower bounds of parameters
+  #' @param hi vector with upper bounds of parameters
+  #' @return negative 2 * summed log likelihood
+  #' 
+  tbl_probs <- category_probs_pt(x, tbl_transfer, tbl_x, d_measure, lo, hi)
+  ll <- log(tbl_probs$prob_correct)
+  neg2llsum <- -2 * sum(ll)
+  return(neg2llsum)
+}
+
+f_similarity_pt <- function(x_pt, x_new, w, c, d_measure) {
+  #' @description calculate similarity from single stimulus to prototype
+  #' using d_measure (1=city-block) (2=euclidean) distance metric
+  distance <- sum(w * (abs(x_pt - x_new)^d_measure))^(1/d_measure)
+  sim <- exp(-c * distance)
+  return(sim)
+}
+
+prototype_base <- function(x_new, tbl_pt, c, w, g, d_measure = 1) {
+  #' compute class probabilities with the multiplicative prototype model
+  #' (Nosofsky et al., 1987, 1992, 2002) 
+  #' 
+  #' @description summed similarity computation;
+  #' using sensitivity, attentional weighting, and guessing parameter;
+  #' @param x_new the x coordinates of the new item
+  #' @param tbl_pt the tbl with the category prototypes
+  #' including a column "category" denoting the true category of that item
+  #' @param c sensitivity
+  #' @param w attentional weighting
+  #' @param g guessing parameter
+  #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
+  #' @return a vector with the class probabilities for the new item
+  #' 
+  cols <- colnames(tbl_pt)[str_starts(colnames(tbl_pt), "x[0-9]+_")]
+  n_cat <- nrow(tbl_pt)
+  sims_pt <- apply(tbl_pt[, cols], 1, FUN = f_similarity_pt, x_new, w, c, d_measure)
+  g / n_cat + (1 - g) * map_dbl(sims_pt, ~ .x/sum(sims_pt))
+}
+
+category_probs_pt <- function(x, tbl_transfer, tbl_x, d_measure, lo, hi) {
+  #' @description calculate category probabilities for every stimulus
+  #' in the transfer set for the multiplicative prototype model
+  #' @param x parameters
+  #' @param tbl_transfer transfer/test data
+  #' @param tbl_x training data
+  #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
+  #' @param lo vector with lower bounds of parameters
+  #' @param hi vector with upper bounds of parameters
+  #' @return negative 2 * summed log likelihood
+  #' 
+  params_untf <- pmap(list(x, lo, hi), upper_and_lower_bounds_revert)
+  names(params_untf) <- c("c", "w", "g")
+  params_untf$w[2] <- 1 - params_untf$w[1] 
+  l_transfer_x <- split(tbl_transfer[, c("x1", "x2")], 1:nrow(tbl_transfer))
+  l_category_probs <- map(
+    l_transfer_x, prototype_base, 
+    tbl_pt = tbl_pt, 
+    c = params_untf[["c"]], 
+    w = params_untf[["w"]], 
+    g = params_untf[["g"]], 
+    d_measure = d_measure
+  )
+  tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>% mutate(response = tbl_transfer$response)
+  tbl_probs$prob_correct <- pmap_dbl(
+    tbl_probs, ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
+  )
+  return(tbl_probs)
+  
+}
 
 f_similarity <- function(x1, x2, w, c, x_new, d_measure) {
   #' @description helper function calculating similarity for one item
@@ -1390,6 +1468,44 @@ fit_gcm_one_participant <- function(tbl_1p) {
   
   l_out <- list(
     params = unconstrain_all_params(results, lo_bd, hi_bd),
+    neg2ll = results$value,
+    is_converged = results$convergence == 0
+  )
+  
+  return(l_out)
+  
+}
+
+
+fit_prototype_one_participant <- function(tbl_1p) {
+  #' fit multiplicative prototype model to data from one participant
+  #' 
+  #' @description implementation by Nosofsky et al. (1987, 1992, 2002);
+  #' for current purposes, uses same data set as train set and test set
+  #' (i.e., no generalization)
+  #' @param tbl_1p a tibble with by-trial data from one participant
+  #' @return list with elements -2*ll, fitted params, and if converged
+  
+  params <- c(1, .5, .1)
+  lo <- c(0, 0, 0)
+  hi <- c(10, 1, 1)
+  params_init_tf <- x <- pmap_dbl(list(params, lo, hi), upper_and_lower_bounds)
+
+  d_measure <- 2
+  
+  results <- optim(
+    params_init_tf,
+    pt_likelihood,
+    tbl_transfer = tbl_1p,
+    tbl_x = tbl_1p, 
+    d_measure = d_measure,
+    lo = lo_bd,
+    hi = hi_bd,
+    control = list(maxit = 1000)
+  )
+  
+  l_out <- list(
+    params = upper_and_lower_bounds_revert(results$par, lo_bd, hi_bd),
     neg2ll = results$value,
     is_converged = results$convergence == 0
   )

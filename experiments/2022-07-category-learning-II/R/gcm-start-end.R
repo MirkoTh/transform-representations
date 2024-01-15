@@ -5,7 +5,7 @@ library(grid)
 library(gridExtra)
 library(furrr)
 
-home_grown <- c("R/utils.R", "R\analysis-plotting.R")
+home_grown <- c("R/utils.R", "R/analysis-plotting.R")
 walk(home_grown, source)
 
 
@@ -20,6 +20,13 @@ tbl_end <- tbl_secondary %>% filter(trial_id >= 300) #300
 l_end <- tbl_end %>% split(.$participant_id)
 
 is_fit <- TRUE
+
+tbl_1p <- tbl_start %>% filter(participant_id == "01747cd1c94b0f8acda3ca7403b1881a")
+tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
+
+
+
+# GCM ---------------------------------------------------------------------
 
 
 if (is_fit) {
@@ -67,5 +74,8 @@ pl_dist_w <- ggplot(tbl_params_both, aes(w, group = t)) +
   scale_color_viridis_d(name = "Time Point")
 save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
 
+
+
+# Multiplicative Prototype Model ------------------------------------------
 
 
