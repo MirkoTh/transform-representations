@@ -21,7 +21,7 @@ l_end <- tbl_end %>% split(.$participant_id)
 
 is_fit <- TRUE
 
-tbl_1p <- tbl_start %>% filter(participant_id == "01747cd1c94b0f8acda3ca7403b1881a")
+tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
 tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
 
 
@@ -46,12 +46,11 @@ if (is_fit) {
   )
   saveRDS(l_end_results, file = "data/gcm-end.rds")
   
+  plan("sequential")
 } else {
   l_start_results <- readRDS("data/gcm-start.rds")
   l_end_results <- readRDS("data/gcm-end.rds")
 }
-
-
 
 
 tbl_params_start <- post_process_gcm_fits(l_start_results) %>% as_tibble() %>% mutate(t = "Start")
@@ -77,5 +76,70 @@ save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
 
 
 # Multiplicative Prototype Model ------------------------------------------
+
+
+if (is_fit) {
+  plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+  
+  # initial trials
+  l_start_results <- future_map(
+    l_start, safely(fit_prototype_one_participant), 
+    .progress = TRUE, .options = furrr_options(seed = TRUE)
+  )
+  saveRDS(l_start_results, file = "data/prototype-start.rds")
+  
+  # final trials
+  l_end_results <- future_map(
+    l_end, safely(fit_prototype_one_participant), 
+    .progress = TRUE, .options = furrr_options(seed = TRUE)
+  )
+  saveRDS(l_end_results, file = "data/prototype-end.rds")
+  
+} else {
+  l_start_results <- readRDS("data/prototype-start.rds")
+  l_end_results <- readRDS("data/prototype-end.rds")
+}
+
+
+
+# rule-based model --------------------------------------------------------
+
+
+tbl_rules <- tibble(
+  category = 1:4,
+  lo = list(c(-100, -100), c(-100, 50), c(50, -100), c(50, 50)),
+  hi = list(c(50, 50), c(50, 200), c(200, 50), c(200, 200))
+)
+
+# model parameters
+sd_x1 <- 5
+sd_x2 <- 5
+x <- c(5, 5)
+lo <- c(0, 0)
+hi <- c(100, 100)
+x <- pmap(list(x, lo, hi), upper_and_lower_bounds)
+tbl_1p[1, c("x1", "x2")]
+
+if (is_fit) {
+  plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+  
+  # initial trials
+  l_start_results <- future_map(
+    l_start, safely(fit_rb_one_participant), 
+    .progress = TRUE, .options = furrr_options(seed = TRUE)
+  )
+  saveRDS(l_start_results, file = "data/rulbased-start.rds")
+  
+  # final trials
+  l_end_results <- future_map(
+    l_end, safely(fit_rb_one_participant), 
+    .progress = TRUE, .options = furrr_options(seed = TRUE)
+  )
+  saveRDS(l_end_results, file = "data/rulebased-end.rds")
+  
+} else {
+  l_start_results <- readRDS("data/rulebased-start.rds")
+  l_end_results <- readRDS("data/rulebased-end.rds")
+}
 
 

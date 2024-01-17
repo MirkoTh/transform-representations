@@ -1292,7 +1292,7 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   names(params_untf) <- c("c", "w")
   bias_untf <- upper_and_lower_unconstrain_bias(x[3:6])
   params_untf$bias <- bias_untf
-  params_untf$w[2] <- 1 - params_untf$w[1] 
+  params_untf$w[2] <- 1 - params_untf$w[1]
   
   l_transfer_x <- split(tbl_transfer[, c("x1", "x2")], 1:nrow(tbl_transfer))
   l_category_probs <- map(
@@ -1382,12 +1382,12 @@ prototype_base <- function(x_new, tbl_pt, c, w, g, d_measure = 1) {
   g / n_cat + (1 - g) * map_dbl(sims_pt, ~ .x/sum(sims_pt))
 }
 
-category_probs_pt <- function(x, tbl_transfer, tbl_x, d_measure, lo, hi) {
+category_probs_pt <- function(x, tbl_transfer, tbl_pt, d_measure, lo, hi) {
   #' @description calculate category probabilities for every stimulus
   #' in the transfer set for the multiplicative prototype model
   #' @param x parameters
   #' @param tbl_transfer transfer/test data
-  #' @param tbl_x training data
+  #' @param tbl_pt feature values of prototype
   #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
   #' @param lo vector with lower bounds of parameters
   #' @param hi vector with upper bounds of parameters
@@ -1487,9 +1487,9 @@ fit_prototype_one_participant <- function(tbl_1p) {
   #' @return list with elements -2*ll, fitted params, and if converged
   
   params <- c(1, .5, .1)
-  lo <- c(0, 0, 0)
-  hi <- c(10, 1, 1)
-  params_init_tf <- x <- pmap_dbl(list(params, lo, hi), upper_and_lower_bounds)
+  lo_bd <- c(0, 0, 0)
+  hi_bd <- c(10, 1, 1)
+  params_init_tf <- x <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
 
   d_measure <- 2
   
@@ -1546,4 +1546,110 @@ post_process_gcm_fits <- function(l_results) {
   tbl_params$participant_id <- participant_ids
   
   return(tbl_params)
+}
+
+
+rule_base <- function(x_new, sds, tbl_rules) {
+  #' compute class probabilities with the rule-based model
+  #' 
+  #' @description integrates a bivariate normal with means set to the
+  #' feature values between lower and upper bounds for every rule
+  #' parameters of the model are sd_x1 and sd_x2
+  #' @param x_new the x coordinates of the new item
+  #' @param sds standard deviation of the representational distribution
+  #' @param tbl_rules tibble with decision bounds
+  #' @return a vector with the class probabilities for the new item
+  
+  n_dim <- length(sds)
+  m_cov <- diag(n_dim) * sds
+  
+  f_pred <- function(lo, hi) { 
+    pmvnorm(
+      lower = lo, upper = hi, 
+      mean = x_new, sigma = m_cov
+    )[1]
+  }
+  
+  cat_probs <- pmap_dbl(tbl_rules[, c("lo", "hi")], f_pred)
+  
+  return(cat_probs)
+}
+
+category_probs_rb <- function(x, tbl_transfer, tbl_rules, lo, hi) {
+  #' @description calculate category probabilities for every stimulus
+  #' in the transfer set for the multiplicative prototype model
+  #' @param x parameters
+  #' @param tbl_transfer transfer/test data
+  #' @param tbl_rules decision bounds of categories
+  #' @param lo vector with lower bounds of parameters
+  #' @param hi vector with upper bounds of parameters
+  #' @return negative 2 * summed log likelihood
+  #' 
+  params_untf <- pmap(list(x, lo, hi), upper_and_lower_bounds_revert)
+  names(params_untf) <- c("sd_x1", "sd_x2")
+  l_transfer_x <- map(
+    split(tbl_transfer[, c("x1", "x2")], 1:nrow(tbl_transfer)),
+    as_vector
+  )
+  l_category_probs <- map(
+    l_transfer_x, rule_base, 
+    sds = c(params_untf[["sd_x1"]], params_untf[["sd_x2"]]),
+    tbl_rules = tbl_rules
+  )
+  tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>%
+    mutate(response = tbl_transfer$response)
+  tbl_probs$prob_correct <- pmap_dbl(
+    tbl_probs, ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
+  )
+  return(tbl_probs)
+  
+}
+
+rb_likelihood <- function(x, tbl_transfer, tbl_rules, lo, hi) {
+  #' @description -2 * negative log likelihood of transfer set given training data
+  #' and a rule-based category learning model
+  #' @param x parameters
+  #' @param tbl_transfer transfer/test data
+  #' @param tbl_rules decision bounds for the different categories
+  #' @param lo vector with lower bounds of parameters
+  #' @param hi vector with upper bounds of parameters
+  #' @return negative 2 * summed log likelihood
+  #' 
+  tbl_probs <- category_probs_rb(x, tbl_transfer, tbl_rules, lo, hi)
+  ll <- log(pmax(tbl_probs$prob_correct, 1e-10))
+  neg2llsum <- -2 * sum(ll)
+  return(neg2llsum)
+}
+
+
+fit_rb_one_participant <- function(tbl_1p) {
+  #' fit rule-based category learning model to data from one participant
+  #' 
+  #' @description implementation as in Donkin et al. (2015) Identifying Strat. Use
+  #' @param tbl_1p a tibble with by-trial data from one participant
+  #' @return list with elements -2*ll, fitted params, and if converged
+  
+  params <- c(5, 5)
+  lo_bd <- c(0, 0)
+  hi_bd <- c(100, 100)
+  params_init_tf <- x <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
+  
+  results <- optim(
+    params_init_tf,
+    rb_likelihood,
+    tbl_transfer = tbl_1p,
+    tbl_rules = tbl_rules, 
+    lo = lo_bd,
+    hi = hi_bd,
+    control = list(maxit = 1000)
+  )
+  
+  l_out <- list(
+    params = upper_and_lower_bounds_revert(results$par, lo_bd, hi_bd),
+    neg2ll = results$value,
+    is_converged = results$convergence == 0
+  )
+  
+  return(l_out)
+  
 }
