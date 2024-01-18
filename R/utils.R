@@ -1563,7 +1563,7 @@ rule_base <- function(x_new, sds, tbl_rules) {
   #' @return a vector with the class probabilities for the new item
   
   n_dim <- length(sds)
-  m_cov <- diag(n_dim) * sds
+  m_cov <- diag(n_dim) * sds^2
   
   f_pred <- function(lo, hi) { 
     pmvnorm(
