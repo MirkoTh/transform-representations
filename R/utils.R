@@ -1335,19 +1335,19 @@ gcm_base <- function(x_new, tbl_x, n_feat, c, w, bias, delta, d_measure = 1) {
 }
 
 
-pt_likelihood <- function(x, tbl_transfer, tbl_x, d_measure, lo, hi) {
+pt_likelihood <- function(x, tbl_transfer, tbl_pt, d_measure, lo, hi) {
   #' @description -2 * negative log likelihood of transfer set given training data
   #' and a gcm without a forgetting parameter (i.e., forgetting set to 0)
   #' @param x parameters
   #' @param tbl_transfer transfer/test data
-  #' @param tbl_x training data
+  #' @param tbl_pt prototypes
   #' @param n_feat number of features
   #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
   #' @param lo vector with lower bounds of parameters
   #' @param hi vector with upper bounds of parameters
   #' @return negative 2 * summed log likelihood
   #' 
-  tbl_probs <- category_probs_pt(x, tbl_transfer, tbl_x, d_measure, lo, hi)
+  tbl_probs <- category_probs_pt(x, tbl_transfer, tbl_pt, d_measure, lo, hi)
   ll <- log(tbl_probs$prob_correct)
   neg2llsum <- -2 * sum(ll)
   return(neg2llsum)
@@ -1477,7 +1477,7 @@ fit_gcm_one_participant <- function(tbl_1p) {
 }
 
 
-fit_prototype_one_participant <- function(tbl_1p) {
+fit_prototype_one_participant <- function(tbl_1p, tbl_pt) {
   #' fit multiplicative prototype model to data from one participant
   #' 
   #' @description implementation by Nosofsky et al. (1987, 1992, 2002);
@@ -1492,17 +1492,19 @@ fit_prototype_one_participant <- function(tbl_1p) {
   params_init_tf <- x <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
 
   d_measure <- 2
-  
+  t_start <- Sys.time()
   results <- optim(
     params_init_tf,
     pt_likelihood,
     tbl_transfer = tbl_1p,
-    tbl_x = tbl_1p, 
+    tbl_pt = tbl_pt, 
     d_measure = d_measure,
     lo = lo_bd,
     hi = hi_bd,
     control = list(maxit = 1000)
   )
+  t_end <- Sys.time()
+  t_end - t_start
   
   l_out <- list(
     params = upper_and_lower_bounds_revert(results$par, lo_bd, hi_bd),
@@ -1622,11 +1624,12 @@ rb_likelihood <- function(x, tbl_transfer, tbl_rules, lo, hi) {
 }
 
 
-fit_rb_one_participant <- function(tbl_1p) {
+fit_rb_one_participant <- function(tbl_1p, tbl_rules) {
   #' fit rule-based category learning model to data from one participant
   #' 
   #' @description implementation as in Donkin et al. (2015) Identifying Strat. Use
   #' @param tbl_1p a tibble with by-trial data from one participant
+  #' @param tbl_rules upper and lower decision bounds for every category and dimension
   #' @return list with elements -2*ll, fitted params, and if converged
   
   params <- c(5, 5)
@@ -1652,4 +1655,15 @@ fit_rb_one_participant <- function(tbl_1p) {
   
   return(l_out)
   
+}
+
+
+extract_from_results <- function(l, what, cnames) {
+  #' @description extract n2ll or parameter values from model fits
+  
+  tmp <- reduce(map(map(l, "result"), what), rbind) %>%
+    as.data.frame() %>%
+    as_tibble()
+  colnames(tmp) <- cnames
+  return(tmp)
 }

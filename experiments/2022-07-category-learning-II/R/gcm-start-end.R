@@ -19,6 +19,8 @@ l_start <- tbl_start %>% split(.$participant_id)
 tbl_end <- tbl_secondary %>% filter(trial_id >= 300) #300
 l_end <- tbl_end %>% split(.$participant_id)
 
+l_all <- tbl_secondary %>% split(.$participant_id)
+
 is_fit <- TRUE
 
 tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
@@ -26,7 +28,10 @@ tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x
 
 
 
-# GCM ---------------------------------------------------------------------
+# Initial Vs. Final Data --------------------------------------------------
+
+
+## GCM ---------------------------------------------------------------------
 
 
 if (is_fit) {
@@ -75,34 +80,49 @@ save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
 
 
 
-# Multiplicative Prototype Model ------------------------------------------
+
+# All Data ----------------------------------------------------------------
+
+
+
+## GCM --------------------------------------------------------------------
 
 
 if (is_fit) {
   plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
   
   # initial trials
-  l_start_results <- future_map(
-    l_start, safely(fit_prototype_one_participant), 
+  l_results_gcm <- future_map(
+    l_all, safely(fit_gcm_one_participant), 
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_start_results, file = "data/prototype-start.rds")
+  saveRDS(l_results_gcm, file = "data/gcm.rds")
   
-  # final trials
-  l_end_results <- future_map(
-    l_end, safely(fit_prototype_one_participant), 
+  plan("sequential")
+} else {
+  l_results_gcm <- readRDS("data/gcm.rds")
+}
+
+
+## Multiplicative Prototype Model -----------------------------------------
+
+
+if (is_fit) {
+  plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+  
+  l_results_pt <- future_map(
+    l_all, safely(fit_prototype_one_participant), 
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_end_results, file = "data/prototype-end.rds")
+  saveRDS(l_results_pt, file = "data/prototype.rds")
   
 } else {
-  l_start_results <- readRDS("data/prototype-start.rds")
-  l_end_results <- readRDS("data/prototype-end.rds")
+  l_results_pt <- readRDS("data/prototype.rds")
 }
 
 
 
-# rule-based model --------------------------------------------------------
+## rule-based model -------------------------------------------------------
 
 
 tbl_rules <- tibble(
@@ -111,35 +131,38 @@ tbl_rules <- tibble(
   hi = list(c(50, 50), c(50, 200), c(200, 50), c(200, 200))
 )
 
-# model parameters
-sd_x1 <- 5
-sd_x2 <- 5
-x <- c(5, 5)
-lo <- c(0, 0)
-hi <- c(100, 100)
-x <- pmap(list(x, lo, hi), upper_and_lower_bounds)
-tbl_1p[1, c("x1", "x2")]
-
 if (is_fit) {
   plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
   
   # initial trials
-  l_start_results <- future_map(
-    l_start, safely(fit_rb_one_participant), 
+  l_results_rb <- future_map(
+    l_all, safely(fit_rb_one_participant), 
+    tbl_rules = tbl_rules,
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_start_results, file = "data/rulbased-start.rds")
+  saveRDS(l_results_rb, file = "data/rulbased.rds")
   
-  # final trials
-  l_end_results <- future_map(
-    l_end, safely(fit_rb_one_participant), 
-    .progress = TRUE, .options = furrr_options(seed = TRUE)
-  )
-  saveRDS(l_end_results, file = "data/rulebased-end.rds")
   
 } else {
-  l_start_results <- readRDS("data/rulebased-start.rds")
-  l_end_results <- readRDS("data/rulebased-end.rds")
+  l_results_rb <- readRDS("data/rulebased.rds")
 }
+
+
+# Compare Models ----------------------------------------------------------
+
+
+
+
+tbl_params_gcm <- post_process_gcm_fits(l_results_gcm) %>% as_tibble()
+
+
+tbl_params_rb <- extract_from_results(l_results_rb, "params", c("sd_x1", "sd_x2"))
+tbl_params_pt <- extract_from_results(l_results_pt, "params", c("c", "w", "g"))
+
+
+tbl_ll_gcm <- extract_from_results(l_results_gcm, "neg2ll", "neg2ll")
+tbl_ll_pt <- extract_from_results(l_results_pt, "neg2ll", "neg2ll")
+tbl_ll_rb <- extract_from_results(l_results_rb, "neg2ll", "neg2ll")
+
 
 
