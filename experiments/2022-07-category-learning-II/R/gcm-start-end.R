@@ -19,7 +19,7 @@ l_start <- tbl_start %>% split(.$participant_id)
 tbl_end <- tbl_secondary %>% filter(trial_id >= 300) #300
 l_end <- tbl_end %>% split(.$participant_id)
 
-l_all <- tbl_secondary %>% split(.$participant_id)
+l_all <- tbl_secondary %>% filter(trial_id >= 100) %>% split(.$participant_id)
 
 is_fit <- TRUE
 
@@ -96,10 +96,12 @@ if (is_fit) {
     l_all, safely(fit_gcm_one_participant), 
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_results_gcm, file = "data/gcm.rds")
+  saveRDS(l_results_gcm, file = "data/gcm-300-trials.rds")
   plan("sequential")
 } else {
-  l_results_gcm <- readRDS("data/gcm.rds")
+  l_results_gcm <- readRDS("data/gcm-300-trials.rds")
+  #l_results_gcm <- readRDS("data/gcm.rds")
+  
 }
 
 
@@ -114,11 +116,13 @@ if (is_fit) {
     tbl_pt = tbl_pt,
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_results_pt, file = "data/prototype.rds")
+  saveRDS(l_results_pt, file = "data/prototype-300-trials.rds")
   plan("sequential")
   
 } else {
-  l_results_pt <- readRDS("data/prototype.rds")
+  l_results_pt <- readRDS("data/prototype-300-trials.rds")
+  #l_results_pt <- readRDS("data/prototype.rds")
+
 }
 
 
@@ -141,11 +145,13 @@ if (is_fit) {
     tbl_rules = tbl_rules,
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_results_rb, file = "data/rulbased.rds")
+  saveRDS(l_results_rb, file = "data/rulbased-300-trials.rds")
   plan("sequential")
   
 } else {
-  l_results_rb <- readRDS("data/rulebased.rds")
+  l_results_rb <- readRDS("data/rulebased-300-trials.rds")
+  #l_results_rb <- readRDS("data/rulebased.rds")
+  
 }
 
 
