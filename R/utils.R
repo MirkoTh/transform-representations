@@ -1667,3 +1667,71 @@ extract_from_results <- function(l, what, cnames) {
   colnames(tmp) <- cnames
   return(tmp)
 }
+
+
+aic_and_bic <- function(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb) {
+  #' @description compute aic and bic, and winning models 
+  #' according to aic and bic
+  
+  tbl_ll <- cbind(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb)
+  colnames(tbl_ll) <- c("gcm", "pt", "rb")
+  tbl_ll$id <- 1:nrow(tbl_ll)
+  
+  tbl_ll <- tbl_ll %>%
+    mutate(
+      bic_gcm = gcm + 5*log(map_dbl(l_all, nrow)),
+      bic_pt = pt + 3*log(map_dbl(l_all, nrow)),
+      bic_rb = rb + 2*log(map_dbl(l_all, nrow)),
+      aic_gcm = gcm + 10,
+      aic_pt = pt + 6,
+      aic_rb = rb + 4
+    )
+  tbl_ll$winner_bic <- c("GCM", "PT", "RB")[
+    pmap_dbl(
+      tbl_ll[, c("bic_gcm", "bic_pt", "bic_rb")], ~ which.min(c(..1, ..2, ..3))
+    ) %>% as.factor()
+  ]
+  tbl_ll$winner_aic <- c("GCM", "PT", "RB")[
+    pmap_dbl(
+      tbl_ll[, c("aic_gcm", "aic_pt", "aic_rb")], ~ which.min(c(..1, ..2, ..3))
+    )
+  ]
+  return(tbl_ll)
+}
+
+plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
+  #' @description plot heatmap of aic or bic
+  #' grouped by winning models and rank-ordered 
+  #' according to aic/bic within each group
+  
+  tbl_ll_plot <- tbl_ll %>% 
+    pivot_longer({{v}}) %>%
+    group_by({{win}}) %>%
+    arrange({{win}}, value)
+  
+  tbl_ll_plot$name <- factor(tbl_ll_plot$name, labels = c("GCM", "PT", "RB"))
+  
+  tbl_lookup <- tibble(
+    id = unique(tbl_ll_plot$id),
+    id_sorted = 1:length(l_all)
+  )
+  
+  tbl_ll_plot %>% left_join(tbl_lookup, by = c("id")) %>%
+    arrange({{win}}) %>%
+    ggplot(aes(name, id_sorted)) +
+    geom_tile(aes(fill = {{win}}, alpha = value)) +
+    guides(alpha = "none") +
+    theme_bw() +
+    scale_x_discrete(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(x = "Model", y = "Participant ID", title = str_c("E2: ", ttl)) + 
+    theme(
+      strip.background = element_rect(fill = "white"),
+      text = element_text(size = 22),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 15),
+      legend.position = "bottom"
+    ) + 
+    scale_fill_manual(values = c("skyblue2", "tomato4", "forestgreen"), name = ttl)
+  
+}

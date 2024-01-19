@@ -97,7 +97,6 @@ if (is_fit) {
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
   saveRDS(l_results_gcm, file = "data/gcm.rds")
-  
   plan("sequential")
 } else {
   l_results_gcm <- readRDS("data/gcm.rds")
@@ -112,9 +111,11 @@ if (is_fit) {
   
   l_results_pt <- future_map(
     l_all, safely(fit_prototype_one_participant), 
+    tbl_pt = tbl_pt,
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
   saveRDS(l_results_pt, file = "data/prototype.rds")
+  plan("sequential")
   
 } else {
   l_results_pt <- readRDS("data/prototype.rds")
@@ -141,7 +142,7 @@ if (is_fit) {
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
   saveRDS(l_results_rb, file = "data/rulbased.rds")
-  
+  plan("sequential")
   
 } else {
   l_results_rb <- readRDS("data/rulebased.rds")
@@ -151,11 +152,7 @@ if (is_fit) {
 # Compare Models ----------------------------------------------------------
 
 
-
-
 tbl_params_gcm <- post_process_gcm_fits(l_results_gcm) %>% as_tibble()
-
-
 tbl_params_rb <- extract_from_results(l_results_rb, "params", c("sd_x1", "sd_x2"))
 tbl_params_pt <- extract_from_results(l_results_pt, "params", c("c", "w", "g"))
 
@@ -164,5 +161,13 @@ tbl_ll_gcm <- extract_from_results(l_results_gcm, "neg2ll", "neg2ll")
 tbl_ll_pt <- extract_from_results(l_results_pt, "neg2ll", "neg2ll")
 tbl_ll_rb <- extract_from_results(l_results_rb, "neg2ll", "neg2ll")
 
+tbl_ll <- aic_and_bic(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb)
 
+pl_hm_bic <- plot_grouped_and_ranked_models(
+  tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, "Winner BIC"
+)
+pl_hm_aic <- plot_grouped_and_ranked_models(
+  tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, "Winner AIC"
+)
 
+grid.draw(arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1))
