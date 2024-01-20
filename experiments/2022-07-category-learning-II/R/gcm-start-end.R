@@ -21,7 +21,7 @@ l_end <- tbl_end %>% split(.$participant_id)
 
 l_all <- tbl_secondary %>% filter(trial_id >= 100) %>% split(.$participant_id)
 
-is_fit <- TRUE
+is_fit <- FALSE#TRUE
 
 tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
 tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
@@ -145,7 +145,7 @@ if (is_fit) {
     tbl_rules = tbl_rules,
     .progress = TRUE, .options = furrr_options(seed = TRUE)
   )
-  saveRDS(l_results_rb, file = "data/rulbased-300-trials.rds")
+  saveRDS(l_results_rb, file = "data/rulebased-300-trials.rds")
   plan("sequential")
   
 } else {
@@ -170,10 +170,10 @@ tbl_ll_rb <- extract_from_results(l_results_rb, "neg2ll", "neg2ll")
 tbl_ll <- aic_and_bic(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb)
 
 pl_hm_bic <- plot_grouped_and_ranked_models(
-  tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, "Winner BIC"
+  tbl_ll, c(bic_pt, bic_rb), winner_bic, "Winner BIC"
 )
 pl_hm_aic <- plot_grouped_and_ranked_models(
-  tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, "Winner AIC"
+  tbl_ll, c(aic_pt, aic_rb), winner_aic, "Winner AIC"
 )
 
 grid.draw(arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1))

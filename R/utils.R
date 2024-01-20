@@ -1709,7 +1709,11 @@ plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
     group_by({{win}}) %>%
     arrange({{win}}, value)
   
-  tbl_ll_plot$name <- factor(tbl_ll_plot$name, labels = c("GCM", "PT", "RB"))
+  lbls <- str_extract(unique(tbl_ll_plot$name), "_([a-z]*)$")
+  tbl_ll_plot$name <- factor(
+    tbl_ll_plot$name, 
+    labels = lbls#c("GCM", "PT", "RB")
+  )
   
   tbl_lookup <- tibble(
     id = unique(tbl_ll_plot$id),
