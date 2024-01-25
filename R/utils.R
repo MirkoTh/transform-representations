@@ -1669,7 +1669,7 @@ extract_from_results <- function(l, what, cnames) {
 }
 
 
-aic_and_bic <- function(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb) {
+aic_and_bic <- function(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb, ntrials) {
   #' @description compute aic and bic, and winning models 
   #' according to aic and bic
   
@@ -1679,9 +1679,9 @@ aic_and_bic <- function(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb) {
   
   tbl_ll <- tbl_ll %>%
     mutate(
-      bic_gcm = gcm + 5*log(map_dbl(l_all, nrow)),
-      bic_pt = pt + 3*log(map_dbl(l_all, nrow)),
-      bic_rb = rb + 2*log(map_dbl(l_all, nrow)),
+      bic_gcm = gcm + 5*log(ntrials),
+      bic_pt = pt + 3*log(ntrials),
+      bic_rb = rb + 2*log(ntrials),
       aic_gcm = gcm + 10,
       aic_pt = pt + 6,
       aic_rb = rb + 4
@@ -1709,7 +1709,7 @@ plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
     group_by({{win}}) %>%
     arrange({{win}}, value)
   
-  lbls <- str_extract(unique(tbl_ll_plot$name), "_([a-z]*)$")
+  lbls <- toupper(str_match(unique(tbl_ll_plot$name), "_([a-z]*)$")[, 2])
   tbl_ll_plot$name <- factor(
     tbl_ll_plot$name, 
     labels = lbls#c("GCM", "PT", "RB")
@@ -1717,7 +1717,7 @@ plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
   
   tbl_lookup <- tibble(
     id = unique(tbl_ll_plot$id),
-    id_sorted = 1:length(l_all)
+    id_sorted = 1:nrow(tbl_ll)
   )
   
   tbl_ll_plot %>% left_join(tbl_lookup, by = c("id")) %>%

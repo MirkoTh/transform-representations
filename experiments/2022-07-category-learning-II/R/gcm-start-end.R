@@ -22,7 +22,8 @@ l_end <- tbl_end %>% split(.$participant_id)
 
 l_all <- tbl_secondary %>% filter(trial_id >= 100) %>% split(.$participant_id)
 
-is_fit <- FALSE#TRUE
+is_fit <- TRUE#FALSE#
+n_it <- 3
 
 tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
 tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
@@ -100,66 +101,99 @@ tbl_secondary_e4 <- readRDS(
 l_all_e2 <- tbl_secondary_e2 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e3 <- tbl_secondary_e3 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e4 <- tbl_secondary_e4 %>% filter(trial_id >= 100) %>% split(.$participant_id)
+l_all_e234 <- list(l_all_e2, l_all_e3, l_all_e4)
+
 
 
 ## GCM --------------------------------------------------------------------
 
 
-l_all_e234 <- list(l_all_e2, l_all_e3, l_all_e4)
 
-if (is_fit) {
+for (it in 1:n_it) {
   
-  for (i in 1:length(l_all_e234)) {
+  if (is_fit) {
     
-    l_all <- l_all_e234[[i]]
-    filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
-    l_all <- l_all[filter_cat]
-    plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+    for (i in 1:length(l_all_e234)) {
+      
+      l_all <- l_all_e234[[i]]
+      filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
+      l_all <- l_all[filter_cat]
+      plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+      
+      l_results_gcm <- future_map(
+        l_all, safely(fit_gcm_one_participant), 
+        .progress = TRUE, .options = furrr_options(seed = TRUE)
+      )
+      saveRDS(l_results_gcm, file = str_c("data/", c("e2", "e3", "e4")[i], "-gcm-300-trials-it-", it, ".rds"))
+      plan("sequential")
+    }
     
-    l_results_gcm <- future_map(
-      l_all, safely(fit_gcm_one_participant), 
-      .progress = TRUE, .options = furrr_options(seed = TRUE)
-    )
-    saveRDS(l_results_gcm, file = str_c("data/", c("e2", "e3", "e4")[i], "-gcm-300-trials.rds"))
-    plan("sequential")
+  } else {
+    l_results_gcm_e2[[it]] <- readRDS(str_c("data/e2-gcm-300-trials-it-", it, ".rds"))
+    l_results_gcm_e3[[it]] <- readRDS(str_c("data/e3-gcm-300-trials-it-", it, ".rds"))
+    l_results_gcm_e4[[it]] <- readRDS(str_c("data/e4-gcm-300-trials-it-", it, ".rds"))
+    
   }
-  
-} else {
-  l_results_gcm_e2 <- readRDS("data/e2-gcm-300-trials.rds")
-  l_results_gcm_e3 <- readRDS("data/e3-gcm-300-trials.rds")
-  l_results_gcm_e4 <- readRDS("data/e4-gcm-300-trials.rds")
-  
 }
 
+# post-process gcm
+# take best fits across iterations
+
+extract_best_fit <- function(l_in) {
+  #' @description extract fitting iteration with lowest ll
+  #' @return shrunk list only containing best iteration per participant
+  #' 
+  tbl_ll_gcm_it <- reduce(map(l_in, ~ map_dbl(map(.x, "result"), "neg2ll")), cbind) %>%
+  as.data.frame()
+  colnames(tbl_ll_gcm_it) <- 1:ncol(tbl_ll_gcm_it)
+  tbl_ll_gcm_it <- as_tibble(tbl_ll_gcm_it)
+  tbl_ll_gcm_it$"1" <- tbl_ll_gcm_it$"1" + rnorm(nrow(tbl_ll_gcm_it))
+  tbl_ll_gcm_it$"2" <- tbl_ll_gcm_it$"2" + rnorm(nrow(tbl_ll_gcm_it))
+  lowest_ll_gcm_ids <- pmap_dbl(tbl_ll_gcm_it, ~ which.max(c(..1, ..2, ..3)))
+  
+  map(lowest_ll_gcm_ids, ~ l_in[[..1]])
+}
+
+
+l_results_gcm_e2 <- extract_best_fit(l_results_gcm_e2)
+l_results_gcm_e3 <- extract_best_fit(l_results_gcm_e3)
+l_results_gcm_e4 <- extract_best_fit(l_results_gcm_e4)
 
 
 ## Multiplicative Prototype Model -----------------------------------------
 
-
-if (is_fit) {
-  for (i in 1:length(l_all_e234)) {
-    l_all <- l_all_e234[[i]]
-    filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
-    l_all <- l_all[filter_cat]
+for (it in 1:n_it) {
+  
+  if (is_fit) {
+    for (i in 1:length(l_all_e234)) {
+      l_all <- l_all_e234[[i]]
+      filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
+      l_all <- l_all[filter_cat]
+      
+      plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+      
+      l_results_pt <- future_map(
+        l_all, safely(fit_prototype_one_participant), 
+        tbl_pt = tbl_pt,
+        .progress = TRUE, .options = furrr_options(seed = TRUE)
+      )
+      saveRDS(l_results_pt, file = str_c("data/", c("e2", "e3", "e4")[i], "-prototype-300-trials-it-", it, ".rds"))
+      plan("sequential")
+    }
     
-    plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+  } else {
+    l_results_pt_e2 <- readRDS(str_c("data/e2-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e3 <- readRDS(str_c("data/e3-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e4 <- readRDS(str_c("data/e4-prototype-300-trials-it-", it, ".rds"))
     
-    l_results_pt <- future_map(
-      l_all, safely(fit_prototype_one_participant), 
-      tbl_pt = tbl_pt,
-      .progress = TRUE, .options = furrr_options(seed = TRUE)
-    )
-    saveRDS(l_results_pt, file = str_c("data/", c("e2", "e3", "e4")[i], "-prototype-300-trials.rds"))
-    plan("sequential")
   }
-  
-} else {
-  l_results_pt_e2 <- readRDS("data/e2-prototype-300-trials.rds")
-  l_results_pt_e3 <- readRDS("data/e3-prototype-300-trials.rds")
-  l_results_pt_e4 <- readRDS("data/e4-prototype-300-trials.rds")
-  
 }
 
+# post-process pt
+# take best fits across iterations
+l_results_pt_e2 <- extract_best_fit(l_results_pt_e2)
+l_results_pt_e3 <- extract_best_fit(l_results_pt_e3)
+l_results_pt_e4 <- extract_best_fit(l_results_pt_e4)
 
 
 ## rule-based model -------------------------------------------------------
@@ -171,36 +205,45 @@ tbl_rules <- tibble(
   hi = list(c(50, 50), c(50, 200), c(200, 50), c(200, 200))
 )
 
-if (is_fit) {
-  for (i in 1:length(l_all_e234)) {
-    l_all <- l_all_e234[[i]]
-    filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
-    l_all <- l_all[filter_cat]
+
+for (it in 1:n_it) {
+  
+  if (is_fit) {
+    for (i in 1:length(l_all_e234)) {
+      l_all <- l_all_e234[[i]]
+      filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
+      l_all <- l_all[filter_cat]
+      
+      plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+      
+      l_results_rb <- future_map(
+        l_all, safely(fit_rb_one_participant), 
+        tbl_rules = tbl_rules,
+        .progress = TRUE, .options = furrr_options(seed = TRUE)
+      )
+      saveRDS(l_results_rb, file = str_c("data/", c("e2", "e3", "e4")[i], "-rulebased-300-trials-it-", it, ".rds"))
+      plan("sequential")
+    }
     
-    plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+  } else {
+    l_results_rb_e2 <- readRDS(str_c("data/e2-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e3 <- readRDS(str_c("data/e3-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e4 <- readRDS(str_c("data/e4-rulebased-300-trials-it-", it, ".rds"))
     
-    l_results_rb <- future_map(
-      l_all, safely(fit_rb_one_participant), 
-      tbl_rules = tbl_rules,
-      .progress = TRUE, .options = furrr_options(seed = TRUE)
-    )
-    saveRDS(l_results_rb, file = str_c("data/", c("e2", "e3", "e4")[i], "-rulebased-300-trials.rds"))
-    plan("sequential")
   }
-  
-} else {
-  l_results_rb_e2 <- readRDS("data/e2-rulebased-300-trials.rds")
-  l_results_rb_e3 <- readRDS("data/e3-rulebased-300-trials.rds")
-  l_results_rb_e4 <- readRDS("data/e4-rulebased-300-trials.rds")
-  
 }
+
+
+# post-process rb
+# take best fits across iterations
+
+l_results_rb_e2 <- extract_best_fit(l_results_rb_e2)
+l_results_rb_e3 <- extract_best_fit(l_results_rb_e3)
+l_results_rb_e4 <- extract_best_fit(l_results_rb_e4)
 
 
 # Compare Models ----------------------------------------------------------
 
-
-# save tbls with params
-# save tbl with ll, aic, and bic
 
 
 compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials) {
