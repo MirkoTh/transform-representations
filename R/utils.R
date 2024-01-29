@@ -1739,3 +1739,81 @@ plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
     scale_fill_manual(values = c("skyblue2", "tomato4", "forestgreen"), name = ttl)
   
 }
+
+
+read_out_params_3e <- function(tbl_e2, tbl_e3, tbl_e4) {
+  #' @description read out tibbles with fitted parameters for all three experiments
+  #' 
+  tbl_e2 %>%
+    mutate(E = 2, id = 1:nrow(tbl_e2)) %>%
+    rbind(
+      tbl_e3 %>%
+        mutate(E = 3, id = 1:nrow(tbl_e3))
+    ) %>%
+    rbind(
+      tbl_e4 %>%
+        mutate(E = 4, id = 1:nrow(tbl_e4))
+    ) 
+}
+
+
+horizontal_and_vertical_moves <- function(tbl_secondary) {
+  #' @description add variables coding for horizontal and vertical category confusions
+  #' nb. ignores cross category confusions, because both feature values are mis-attributed
+  #' 
+  tbl_secondary$is_move_horizontal <- 0
+  tbl_secondary$is_move_vertical <- 0
+  
+  tbl_secondary$is_move_horizontal[tbl_secondary$category == 1 & tbl_secondary$response == 3] <- 1
+  tbl_secondary$is_move_horizontal[tbl_secondary$category == 3 & tbl_secondary$response == 1] <- 1
+  tbl_secondary$is_move_horizontal[tbl_secondary$category == 2 & tbl_secondary$response == 4] <- 1
+  tbl_secondary$is_move_horizontal[tbl_secondary$category == 4 & tbl_secondary$response == 2] <- 1
+  
+  tbl_secondary$is_move_vertical[tbl_secondary$category == 1 & tbl_secondary$response == 2] <- 1
+  tbl_secondary$is_move_vertical[tbl_secondary$category == 2 & tbl_secondary$response == 1] <- 1
+  tbl_secondary$is_move_vertical[tbl_secondary$category == 3 & tbl_secondary$response == 4] <- 1
+  tbl_secondary$is_move_vertical[tbl_secondary$category == 4 & tbl_secondary$response == 3] <- 1
+  
+  return(tbl_secondary)
+}
+
+
+compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials) {
+  #' @description compare gcm, pt, and rb using aic and bic
+  #' @return list with comparison metrics, plot of metrics, and
+  #' list with parameters for each model
+  #' 
+  filter_cat <- map_lgl(l_results_gcm, ~ !(is.null(.x$result)))
+  l_results_gcm <- l_results_gcm[filter_cat]
+  
+  
+  tbl_params_gcm <- post_process_gcm_fits(l_results_gcm) %>% as_tibble()
+  tbl_params_rb <- extract_from_results(l_results_rb, "params", c("sd_x1", "sd_x2"))
+  tbl_params_pt <- extract_from_results(l_results_pt, "params", c("c", "w", "g"))
+  
+  
+  tbl_ll_gcm <- extract_from_results(l_results_gcm, "neg2ll", "neg2ll")
+  tbl_ll_pt <- extract_from_results(l_results_pt, "neg2ll", "neg2ll")
+  tbl_ll_rb <- extract_from_results(l_results_rb, "neg2ll", "neg2ll")
+  
+  tbl_ll <- aic_and_bic(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb, ntrials)
+  
+  pl_hm_bic <- plot_grouped_and_ranked_models(
+    tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, "Winner BIC"
+  )
+  pl_hm_aic <- plot_grouped_and_ranked_models(
+    tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, "Winner AIC"
+  )
+  
+  pl_comp <- arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1)
+  
+  return(list(
+    tbl_ll = tbl_ll, 
+    pl_comp = pl_comp, 
+    l_tbl_params = list(
+      tbl_params_gcm = tbl_params_gcm,
+      tbl_params_pt = tbl_params_pt,
+      tbl_params_rb = tbl_params_rb
+    )
+  ))
+}
