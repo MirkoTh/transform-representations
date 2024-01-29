@@ -22,7 +22,8 @@ l_end <- tbl_end %>% split(.$participant_id)
 
 l_all <- tbl_secondary %>% filter(trial_id >= 100) %>% split(.$participant_id)
 
-is_fit <- TRUE#FALSE#
+is_fit <- FALSE#TRUE#
+is_fit_init_end <- FALSE
 n_it <- 3
 
 tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
@@ -36,7 +37,7 @@ tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x
 ## GCM ---------------------------------------------------------------------
 
 
-if (is_fit) {
+if (is_fit_init_end) {
   plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
   
   # initial trials
@@ -108,6 +109,10 @@ l_all_e234 <- list(l_all_e2, l_all_e3, l_all_e4)
 ## GCM --------------------------------------------------------------------
 
 
+l_results_gcm_e2 <- list()
+l_results_gcm_e3 <- list()
+l_results_gcm_e4 <- list()
+
 
 for (it in 1:n_it) {
   
@@ -118,11 +123,11 @@ for (it in 1:n_it) {
       l_all <- l_all_e234[[i]]
       filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
       l_all <- l_all[filter_cat]
-      plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+      plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
       
       l_results_gcm <- future_map(
         l_all, safely(fit_gcm_one_participant), 
-        .progress = TRUE, .options = furrr_options(seed = TRUE)
+        .progress = TRUE, .options = furrr_options(seed = FALSE)
       )
       saveRDS(l_results_gcm, file = str_c("data/", c("e2", "e3", "e4")[i], "-gcm-300-trials-it-", it, ".rds"))
       plan("sequential")
@@ -143,15 +148,14 @@ extract_best_fit <- function(l_in) {
   #' @description extract fitting iteration with lowest ll
   #' @return shrunk list only containing best iteration per participant
   #' 
-  tbl_ll_gcm_it <- reduce(map(l_in, ~ map_dbl(map(.x, "result"), "neg2ll")), cbind) %>%
-  as.data.frame()
-  colnames(tbl_ll_gcm_it) <- 1:ncol(tbl_ll_gcm_it)
-  tbl_ll_gcm_it <- as_tibble(tbl_ll_gcm_it)
-  tbl_ll_gcm_it$"1" <- tbl_ll_gcm_it$"1" + rnorm(nrow(tbl_ll_gcm_it))
-  tbl_ll_gcm_it$"2" <- tbl_ll_gcm_it$"2" + rnorm(nrow(tbl_ll_gcm_it))
-  lowest_ll_gcm_ids <- pmap_dbl(tbl_ll_gcm_it, ~ which.max(c(..1, ..2, ..3)))
+  tbl_ll_it <- reduce(map(l_in, ~ map_dbl(map(.x, "result"), "neg2ll")), cbind) %>%
+    as.data.frame()
+  colnames(tbl_ll_it) <- 1:ncol(tbl_ll_it)
+  tbl_ll_it <- as_tibble(tbl_ll_it)
+  lowest_ll_gcm_ids <- apply(tbl_ll_it, 1, which.min)
+  id_names <- names(l_in[[1]])
   
-  map(lowest_ll_gcm_ids, ~ l_in[[..1]])
+  map2(lowest_ll_gcm_ids, id_names, ~ l_in[[..1]][[..2]])
 }
 
 
@@ -162,6 +166,11 @@ l_results_gcm_e4 <- extract_best_fit(l_results_gcm_e4)
 
 ## Multiplicative Prototype Model -----------------------------------------
 
+
+l_results_pt_e2 <- list()
+l_results_pt_e3 <- list()
+l_results_pt_e4 <- list()
+
 for (it in 1:n_it) {
   
   if (is_fit) {
@@ -170,7 +179,7 @@ for (it in 1:n_it) {
       filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
       l_all <- l_all[filter_cat]
       
-      plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+      plan(multisession, workers = min(future::availableCores(), length(l_start)))
       
       l_results_pt <- future_map(
         l_all, safely(fit_prototype_one_participant), 
@@ -182,9 +191,9 @@ for (it in 1:n_it) {
     }
     
   } else {
-    l_results_pt_e2 <- readRDS(str_c("data/e2-prototype-300-trials-it-", it, ".rds"))
-    l_results_pt_e3 <- readRDS(str_c("data/e3-prototype-300-trials-it-", it, ".rds"))
-    l_results_pt_e4 <- readRDS(str_c("data/e4-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e2[[i]] <- readRDS(str_c("data/e2-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e3[[i]] <- readRDS(str_c("data/e3-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e4[[i]] <- readRDS(str_c("data/e4-prototype-300-trials-it-", it, ".rds"))
     
   }
 }
@@ -205,6 +214,9 @@ tbl_rules <- tibble(
   hi = list(c(50, 50), c(50, 200), c(200, 50), c(200, 200))
 )
 
+l_results_rb_e2 <- list()
+l_results_rb_e3 <- list()
+l_results_rb_e4 <- list()
 
 for (it in 1:n_it) {
   
@@ -214,7 +226,7 @@ for (it in 1:n_it) {
       filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
       l_all <- l_all[filter_cat]
       
-      plan(multisession, workers = min(future::availableCores() - 1, length(l_start)))
+      plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
       
       l_results_rb <- future_map(
         l_all, safely(fit_rb_one_participant), 
@@ -226,9 +238,9 @@ for (it in 1:n_it) {
     }
     
   } else {
-    l_results_rb_e2 <- readRDS(str_c("data/e2-rulebased-300-trials-it-", it, ".rds"))
-    l_results_rb_e3 <- readRDS(str_c("data/e3-rulebased-300-trials-it-", it, ".rds"))
-    l_results_rb_e4 <- readRDS(str_c("data/e4-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e2[[i]] <- readRDS(str_c("data/e2-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e3[[i]] <- readRDS(str_c("data/e3-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e4[[i]] <- readRDS(str_c("data/e4-rulebased-300-trials-it-", it, ".rds"))
     
   }
 }
@@ -245,61 +257,27 @@ l_results_rb_e4 <- extract_best_fit(l_results_rb_e4)
 # Compare Models ----------------------------------------------------------
 
 
-
-compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials) {
-  #' @description compare gcm, pt, and rb using aic and bic
-  #' @return list with comparison metrics, plot of metrics, and
-  #' list with parameters for each model
-  #' 
-  filter_cat <- map_lgl(l_results_gcm, ~ !(is.null(.x$result)))
-  l_results_gcm <- l_results_gcm[filter_cat]
-  
-  
-  tbl_params_gcm <- post_process_gcm_fits(l_results_gcm) %>% as_tibble()
-  tbl_params_rb <- extract_from_results(l_results_rb, "params", c("sd_x1", "sd_x2"))
-  tbl_params_pt <- extract_from_results(l_results_pt, "params", c("c", "w", "g"))
-  
-  
-  tbl_ll_gcm <- extract_from_results(l_results_gcm, "neg2ll", "neg2ll")
-  tbl_ll_pt <- extract_from_results(l_results_pt, "neg2ll", "neg2ll")
-  tbl_ll_rb <- extract_from_results(l_results_rb, "neg2ll", "neg2ll")
-  
-  tbl_ll <- aic_and_bic(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb, ntrials)
-  
-  pl_hm_bic <- plot_grouped_and_ranked_models(
-    tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, "Winner BIC"
-  )
-  pl_hm_aic <- plot_grouped_and_ranked_models(
-    tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, "Winner AIC"
-  )
-  
-  pl_comp <- arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1)
-  
-  return(list(
-    tbl_ll = tbl_ll, 
-    pl_comp = pl_comp, 
-    l_tbl_params = list(
-      tbl_params_gcm = tbl_params_gcm,
-      tbl_params_pt = tbl_params_pt,
-      tbl_params_rb = tbl_params_rb
-    )
-  ))
-}
-
-
 l_comp_e2 <- compare_models(l_results_gcm_e2, l_results_pt_e2, l_results_rb_e2, ntrials = nrow(l_all_e2[[1]]))
 l_comp_e3 <- compare_models(l_results_gcm_e3, l_results_pt_e3, l_results_rb_e3, ntrials = nrow(l_all_e3[[1]]))
 l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, ntrials = nrow(l_all_e4[[1]]))
 
 
 
-tbl_params_rb %>%
-  mutate(id = 1:nrow(tbl_params_rb)) %>%
-  pivot_longer(-id) %>%
+# Analyze Rule-Based Parameters -------------------------------------------
+
+tbl_rb_params <- read_out_params_3e(
+  l_comp_e2$l_tbl_params$tbl_params_rb,
+  l_comp_e3$l_tbl_params$tbl_params_rb,
+  l_comp_e4$l_tbl_params$tbl_params_rb
+)
+
+tbl_rb_params %>%
+  pivot_longer(-c(E, id)) %>%
   mutate(name = factor(name, labels = c("Head", "Belly"))) %>%
   ggplot(aes(value)) +
   geom_density(aes(color = name), linewidth = 1) +
   theme_bw() +
+  facet_wrap(~ E) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Standard Deviation", y = "Nr. Participants") + 
@@ -309,44 +287,139 @@ tbl_params_rb %>%
   scale_color_manual(values = c("skyblue2", "tomato4"), name = "Dimension")
 
 
-tbl_secondary$is_move_horizontal <- 0
-tbl_secondary$is_move_vertical <- 0
+tbl_secondary <- rbind(
+  tbl_secondary_e2 %>% mutate(E = 2),
+  tbl_secondary_e3 %>% mutate(E = 3),
+  tbl_secondary_e4 %>% mutate(E = 4)
+)
 
-tbl_secondary$is_move_horizontal[tbl_secondary$category == 1 & tbl_secondary$response == 3] <- 1
-tbl_secondary$is_move_horizontal[tbl_secondary$category == 3 & tbl_secondary$response == 1] <- 1
-tbl_secondary$is_move_horizontal[tbl_secondary$category == 2 & tbl_secondary$response == 4] <- 1
-tbl_secondary$is_move_horizontal[tbl_secondary$category == 4 & tbl_secondary$response == 2] <- 1
+tbl_secondary <- horizontal_and_vertical_moves(tbl_secondary)
 
-tbl_secondary$is_move_vertical[tbl_secondary$category == 1 & tbl_secondary$response == 2] <- 1
-tbl_secondary$is_move_vertical[tbl_secondary$category == 2 & tbl_secondary$response == 1] <- 1
-tbl_secondary$is_move_vertical[tbl_secondary$category == 3 & tbl_secondary$response == 4] <- 1
-tbl_secondary$is_move_vertical[tbl_secondary$category == 4 & tbl_secondary$response == 3] <- 1
 
 tbl_rule_swaps <- tbl_secondary %>%
   filter(between(trial_id, 0, 100) | between(trial_id, 300, 400)) %>%
   mutate(expt_progress = trial_id <= 100) %>%
-  group_by(participant_id, expt_progress) %>%
+  group_by(participant_id, E, expt_progress) %>%
   summarize(
     mn_horizontal = mean(is_move_horizontal),
     mn_vertical = mean(is_move_vertical)
   ) %>%
-  grouped_agg(c(expt_progress), c(mn_horizontal, mn_vertical))
+  pivot_longer(c(mn_horizontal, mn_vertical))
+
+tbl_rule_swaps_agg <- summary_se_within(
+  tbl_rule_swaps, 
+  "value", 
+  betweenvars = c("E"),
+  withinvars = c("expt_progress", "name")
+)
 
 
-tbl_rule_swaps$expt_progress <- factor(tbl_rule_swaps$expt_progress, labels = c("End", "Start"))
-tbl_rule_swaps$expt_progress <- fct_relevel(tbl_rule_swaps$expt_progress, "End", after = 2)
-tbl_rule_swaps %>%
-  pivot_longer(c(mean_mn_horizontal, mean_mn_vertical)) %>%
+tbl_rule_swaps_agg$expt_progress <- factor(tbl_rule_swaps_agg$expt_progress, labels = c("End", "Start"))
+tbl_rule_swaps_agg$expt_progress <- fct_relevel(tbl_rule_swaps_agg$expt_progress, "End", after = 2)
+pd <- position_dodge(width = .15)
+tbl_rule_swaps_agg %>%
   mutate(name = factor(name, labels = c("Head", "Belly"))) %>%
   ggplot(aes(expt_progress, value, group = name)) +
-  geom_line(aes(color = name)) +
-  geom_point(color = "white", size = 3) +
-  geom_point(aes(color = name)) +
+  geom_errorbar(aes(ymax = value + ci, ymin = value - ci, color = name), width = .15, position = pd) +
+  geom_line(aes(color = name), position = pd) +
+  geom_point(color = "white", size = 3, position = pd) +
+  geom_point(aes(color = name), position = pd) +
   theme_bw() +
-  scale_x_discrete(expand = c(0.01, 0)) +
+  facet_wrap(~ E) +
+  scale_x_discrete(expand = c(0.05, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
   labs(x = "Progress in Experiment", y = "Prop. Linear Confusions") + 
   theme(
-    strip.background = element_rect(fill = "white"), text = element_text(size = 22)
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22),
+    axis.text.x = element_text(angle = 45, vjust = .5)
   ) + 
   scale_color_manual(values = c("skyblue2", "tomato4"), name = "Dimension")
+
+
+
+
+
+
+# Save Fitted Parameters --------------------------------------------------
+
+tbl_gcm_params <- read_out_params_3e(
+  l_comp_e2$l_tbl_params$tbl_params_gcm,
+  l_comp_e3$l_tbl_params$tbl_params_gcm,
+  l_comp_e4$l_tbl_params$tbl_params_gcm
+)
+
+tbl_pt_params <- read_out_params_3e(
+  l_comp_e2$l_tbl_params$tbl_params_pt,
+  l_comp_e3$l_tbl_params$tbl_params_pt,
+  l_comp_e4$l_tbl_params$tbl_params_pt
+)
+
+
+tbl_gcm_params %>%
+  pivot_longer(c(c, w, starts_with("bias"))) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_grid(E ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters GCM") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22)
+  )
+
+tbl_pt_params %>%
+  pivot_longer(c(c, w, g)) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_grid(E ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22)
+  )
+
+tbl_rb_params %>%
+  rename(
+    "sd(Head)" = sd_x1,
+    "sd(Belly)" = sd_x2
+  ) %>%
+  pivot_longer(c("sd(Head)", "sd(Belly)")) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_grid(E ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0), breaks = seq(0, 20, by = 3)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22)
+  )
+
+
+# params look relatively similar across Es
+gcm_avg_params <- colMeans(tbl_gcm_params %>% select(-c(E, id)))
+
+pt_avg_params <- colMeans(tbl_pt_params %>% select(-c(E, id)))
+
+rb_avg_params <- colMeans(tbl_rb_params %>% select(-c(E, id)))
+
+tbl_avg_params <- tibble(
+  p = names(gcm_avg_params), val = gcm_avg_params, model = "GCM"
+) %>% rbind(
+  tibble(
+    p = names(pt_avg_params), val = pt_avg_params, model = "PT"
+  )
+) %>% rbind(
+  tibble(
+    p = names(rb_avg_params), val = rb_avg_params, model = "RB"
+  )
+)
+
+saveRDS(tbl_avg_params, file = "data/avg-params-all-catlearn-models.rds")
