@@ -1,5 +1,3 @@
-
-
 categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimuli = FALSE) {
   #' main categorization function
   #' 
@@ -25,8 +23,10 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
   
   if(l_info$category_shape == "ellipses") {
     predict_pt <- function(x) tail(predict(l_m$m_nb_update, x[, c("x1", "x2")], "prob"), 1)
+    predict_gcm <- category_probs_2
   } else if(l_info$category_shape == "square") {
     predict_pt <- function(x) category_probs_pt(l_m$params_pt_tf, x, l_m$tbl_pt, 2, l_m$lo, l_m$hi)
+    predict_gcm <- category_probs
   }
   
   # Categorization Simulation -----------------------------------------------
@@ -47,7 +47,7 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
     
     # propose a new posterior
     if (l_info$cat_type == "rule") {
-      posterior_new <- category_probs_rb(l_rb$params_rb_tf, l_x$X_new, l_rb$tbl_rules, l_rb$lo, l_rb$hi)
+      posterior_new <- category_probs_rb(l_m$params_rb_tf, l_x$X_new, l_m$tbl_rules, l_m$lo, l_m$hi)
       # posterior_new <- pmap(
       #   thx_grt, grt_cat_probs, tbl_stim = l_x$X_new, l_info = l_info
       # ) %>% unlist() %>%
@@ -56,10 +56,8 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
     } else if (l_info$cat_type == "prototype") {
       posterior_new <- predict_pt(l_x$X_new[, c("x1", "x2")] %>% mutate(response = 1))
     } else if (l_info$cat_type == "exemplar") {
-      l_info$sens <- l_m$gcm_params[1]
-      l_info$wgh <- l_m$gcm_params[2]
-      posterior_new <- predict_gcm(tbl_new, l_x$X_new, l_info)
-      colnames(posterior_new) <- l_info$categories
+      posterior_new <- predict_gcm(l_m$params_gcm_tf, l_x$X_new, tbl_new %>% mutate(response = 1, trial_id = 1:nrow(tbl_new)), 2, 2, l_m$lo, l_m$hi)
+      colnames(posterior_new)[1:l_info$n_categories] <- l_info$categories
     }
     
     post_x_new <- round(as_vector(tail(posterior_new[, l_x$cat_cur], 1)), 3)
@@ -551,6 +549,7 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
   hi_gcm <- c(10, rep(1, 5))[1:length(params_gcm_ul)]
   params_gcm_tf <- pmap(list(params_gcm_ul, lo_gcm, hi_gcm), upper_and_lower_bounds) %>% as_vector()
   l_gcm$params_gcm_tf <- params_gcm_tf
+  l_gcm$params_gcm <- params_gcm
   l_gcm$lo <- lo_gcm
   l_gcm$hi <- hi_gcm
   
@@ -628,7 +627,8 @@ priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FA
     l_out <- list(
       posterior_prior = posterior_prior,
       params_gcm = l_gcm$params_gcm,
-      params_gcm_tf = l_gcm$params_gcm_tf
+      params_gcm_tf = l_gcm$params_gcm_tf,
+      lo = l_gcm$lo, hi = l_gcm$hi
     )
   }
   colnames(l_out$posterior_prior)[1:n_cat] <- l_info$categories
@@ -1631,8 +1631,8 @@ fit_gcm_one_participant <- function(tbl_1p, n_cat = 4) {
     params_init_tf <- x <- params
   } else if (n_cat == 2) {
     params <- c(1, .5, .5)
-    lo_bd <- c(0, 0, 0)
-    hi_bd <- c(10, 1, 1)
+    lo_bd <- c(0, 0, .0001)
+    hi_bd <- c(10, 1, .9999)
     params_init_tf <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
   }
   
