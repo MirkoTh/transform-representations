@@ -1,13 +1,6 @@
-library(tidyverse)
-library(gridExtra)
-library(naivebayes)
-library(tidyverse)
-library(docstring)
-library(ggExtra)
-library(assertthat)
-library(mvtnorm)
 
-categorize_stimuli <- function(l_info) {
+
+categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimuli = FALSE) {
   #' main categorization function
   #' 
   #' @description categorize stimuli, store accepted samples, and visualize results
@@ -17,11 +10,16 @@ categorize_stimuli <- function(l_info) {
   #' visualizations in [[2]]
   #' 
   
-  l_tmp <- make_stimuli(l_info)
+  l_tmp <- make_stimuli(l_info, use_exptl_stimuli)
   tbl <- l_tmp[[1]]
   l_info <- l_tmp[[2]]
+  
   # compute priors
-  l_m <- priors(l_info, tbl)
+  if (!informed_by_data){
+    l_m <- priors(l_info, tbl)
+  } else if (informed_by_data) {
+    l_m <- informed_priors(l_info, tbl)
+  }
   
   # save prior for later and copy original tbl
   l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
@@ -30,9 +28,8 @@ categorize_stimuli <- function(l_info) {
   posterior <- l_m$posterior_prior
   tbl_new <- tbl
   
-  unique_boundaries <- boundaries(tbl, l_info)
-  thx_grt <- thxs(unique_boundaries)
-  
+  # some info required for rb model
+  l_rb <- get_rb_params(l_info, informed_by_data, use_exptl_stimuli)
   
   # Categorization Simulation -----------------------------------------------
   
@@ -41,6 +38,8 @@ categorize_stimuli <- function(l_info) {
     # perceive a randomly sampled stimulus
     # while(l_x$stim_id_cur != 1){}
     l_x <- perceive_stimulus(tbl_new, l_info)
+    l_x$X_new$category <- 1
+    l_x$X_new$response <- 1
     
     # manual code for modeling figure
     # l_x$stim_id_cur <- 58
@@ -50,11 +49,12 @@ categorize_stimuli <- function(l_info) {
     
     # propose a new posterior
     if (l_info$cat_type == "rule") {
-      posterior_new <- pmap(
-        thx_grt, grt_cat_probs, tbl_stim = l_x$X_new, l_info = l_info
-      ) %>% unlist() %>%
-        matrix(nrow = 1) %>%
-        as_tibble(.name_repair = ~ l_info$categories)
+      posterior_new <- category_probs_rb(l_rb$params_rb_tf, l_x$X_new, l_rb$tbl_rules, l_rb$lo, l_rb$hi)
+      # posterior_new <- pmap(
+      #   thx_grt, grt_cat_probs, tbl_stim = l_x$X_new, l_info = l_info
+      # ) %>% unlist() %>%
+      #   matrix(nrow = 1) %>%
+      #   as_tibble(.name_repair = ~ l_info$categories)
     } else if (l_info$cat_type == "prototype") {
       posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
     } else if (l_info$cat_type == "exemplar") {
@@ -216,10 +216,12 @@ compare_subsequent_stimuli <- function(l_info) {
 }
 
 
-make_stimuli <- function(l_info) {
+make_stimuli <- function(l_info, use_exptl_stimuli = FALSE) {
   #' create stimuli from 2D feature space
   #' 
   #' @param l_info list with parameters
+  #' @param use_exptl_stimuli should the features values be important from the 
+  #' actual experiments? defaults to FALSE
   #' @return a list with a tbl containing the stimulus set and 
   #' the parameter list with the added infos
   #' 
@@ -235,6 +237,12 @@ make_stimuli <- function(l_info) {
     l <- create_ellipse_categories(tbl, l_info$n_categories)
     tbl <- l[[1]]
     l_info$tbl_ellipses <- l[[2]]
+  }
+  
+  if (use_exptl_stimuli) {
+    tbl$x1 <- 9 * (tbl$x1 + 1) + 1
+    tbl$x2 <- 9 * (tbl$x2 + 1) + 1
+    l_info$space_edges <- c(0, 100)
   }
   
   l_info$feature_names <- c("x1", "x2")
@@ -499,6 +507,93 @@ priors <- function(l_info, tbl) {
   }
   return(l_out)
 }
+
+get_rb_params <- function(l_info, informed_by_data, use_exptl_stimuli) {
+  #' @description get parameters for rule-based model
+  #' either use avg fitted parameters or use default values
+  
+  if (use_exptl_stimuli) {
+    tbl_rules <- tibble(
+      category = 1:4,
+      lo = list(c(-100, -100), c(50, -100), c(-100, 50), c(50, 50)),
+      hi = list(c(50, 50), c(200, 50), c(50, 200), c(200, 200))
+    )
+  } else if (!use_exptl_stimuli) {
+    unique_boundaries <- boundaries(tbl, l_info)
+    thx_grt <- thxs(unique_boundaries)
+    tbl_rules <- tibble(
+      category = 1:4,
+      lo = list(c(thx_grt$x1_lower[1], thx_grt$x2_lower[1]), c(thx_grt$x1_lower[2], thx_grt$x2_lower[2]), c(thx_grt$x1_lower[3], thx_grt$x2_lower[3]), c(thx_grt$x1_lower[4], thx_grt$x2_lower[4])),
+      hi = list(c(thx_grt$x1_upper[1], thx_grt$x2_upper[1]), c(thx_grt$x1_upper[2], thx_grt$x2_upper[2]), c(thx_grt$x1_upper[3], thx_grt$x2_upper[3]), c(thx_grt$x1_upper[4], thx_grt$x2_upper[4]))
+    )
+  }
+  if (informed_by_data) {
+    tbl_avg_params <- readRDS("data/avg-params-all-catlearn-models.rds")
+  } else if (!informed_by_data) {
+    tbl_avg_params <- tibble(
+      p = c("sd_x1", "sd_x2"),
+      val = l_info$prior_sd,
+      model = "RB"
+    )
+  }
+  
+  lo <- c(0, 0)
+  hi <- c(100, 100)
+
+  params_rb <- tbl_avg_params %>% filter(model == "RB") %>% select(val) %>% as_vector()
+  params_rb_tf <- pmap(list(params_rb, lo, hi), upper_and_lower_bounds) %>% as_vector()
+  
+  return(list(
+    params_rb = params_rb,
+    params_rb_tf = params_rb_tf,
+    tbl_rules = tbl_rules,
+    lo = lo,
+    hi = hi
+  ))
+}
+
+informed_priors <- function(l_info, tbl) {
+  #' use average parameters from fitted models as model parameters
+  #' 
+  #' @param l_info parameter list
+  #' @param tbl \code{tibble} containing the two features and the category as columns
+  #' @return the stimuli priors
+  #' 
+  
+  if (l_info$cat_type == "rule"){
+    
+    l_rb <- get_rb_params(l_info, informed_by_data = TRUE, use_exptl_stimuli = TRUE)
+    tbl$response <- tbl$category
+    posterior_prior <- category_probs_rb(l_rb$params_rb_tf, tbl, l_rb$tbl_rules, l_rb$lo, l_rb$hi)[, c(1:4)]
+    colnames(posterior_prior) <- l_info$categories
+    l_out <- list(posterior_prior = posterior_prior)
+    
+  } else if (l_info$cat_type == "prototype") {
+    fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
+    m_nb_initial <- naive_bayes(fml, data = tbl)
+    m_nb_update <- m_nb_initial
+    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
+    l_out <- list(
+      posterior_prior = posterior_prior, fml = fml,
+      m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
+    )
+    
+  } else if (l_info$cat_type == "exemplar"){
+    fit_gcm <- optim(
+      f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
+      l_info = l_info, tbl_stim = tbl, method = "L-BFGS-B"
+    )
+    l_info$sens <- fit_gcm$par[1]
+    l_info$wgh <- fit_gcm$par[2]
+    posterior_prior <- predict_gcm(tbl, tbl, l_info) %>%
+      as_tibble(.name_repair = ~ l_info$categories)
+    l_out <- list(
+      posterior_prior = posterior_prior,
+      gcm_params = c(l_info$sens, l_info$wgh))
+  }
+  return(l_out)
+}
+
 
 
 perceive_stimulus <- function(tbl_new, l_info, is_reward = FALSE) {
@@ -1598,7 +1693,7 @@ category_probs_rb <- function(x, tbl_transfer, tbl_rules, lo, hi) {
     sds = c(params_untf[["sd_x1"]], params_untf[["sd_x2"]]),
     tbl_rules = tbl_rules
   )
-  tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>%
+  tbl_probs <- as.data.frame(matrix(reduce(l_category_probs, rbind), ncol = nrow(tbl_rules))) %>%
     mutate(response = tbl_transfer$response)
   tbl_probs$prob_correct <- pmap_dbl(
     tbl_probs, ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]

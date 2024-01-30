@@ -8,6 +8,9 @@ library(grid)
 library(ggExtra)
 library(furrr)
 library(catlearn)
+library(gridExtra)
+library(assertthat)
+library(mvtnorm)
 
 files <- c(
   "R/utils.R", "R/plotting.R", 
@@ -86,6 +89,8 @@ plan(multisession, workers = min(future::availableCores() - 4, length(l_info)))
 
 l_category_results <- future_map(
   l_info, categorize_stimuli, 
+  informed_by_data = TRUE, # used parameters from experimental fits?
+  use_exptl_stimuli = TRUE, # used stimuli from prolific experiments?
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
@@ -94,7 +99,7 @@ l_seq_results <- future_map(
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
-
+plan("sequential")
 
 read_write <- "read"
 
