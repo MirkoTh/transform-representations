@@ -16,7 +16,6 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
   
   # compute priors
   l_m <- priors(l_info, tbl, informed_by_data, use_exptl_stimuli)
-  
   # save prior for later and copy original tbl
   l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
   tbl_prior_long <- l_prior_prep[[1]]
@@ -24,8 +23,11 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
   posterior <- l_m$posterior_prior
   tbl_new <- tbl
   
-  # some info required for rb model
-  l_rb <- get_rb_params(l_info, informed_by_data, use_exptl_stimuli)
+  if(l_info$category_shape == "ellipses") {
+    predict_pt <- function(x) tail(predict(l_m$m_nb_update, x[, c("x1", "x2")], "prob"), 1)
+  } else if(l_info$category_shape == "square") {
+    predict_pt <- function(x) category_probs_pt(l_m$params_pt_tf, x, l_m$tbl_pt, 2, l_m$lo, l_m$hi)
+  }
   
   # Categorization Simulation -----------------------------------------------
   
@@ -52,7 +54,7 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
       #   matrix(nrow = 1) %>%
       #   as_tibble(.name_repair = ~ l_info$categories)
     } else if (l_info$cat_type == "prototype") {
-      posterior_new <- tail(predict(l_m$m_nb_update, l_x$X, "prob"), 1)
+      posterior_new <- predict_pt(l_x$X_new[, c("x1", "x2")] %>% mutate(response = 1))
     } else if (l_info$cat_type == "exemplar") {
       l_info$sens <- l_m$gcm_params[1]
       l_info$wgh <- l_m$gcm_params[2]
@@ -460,89 +462,177 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
-get_rb_params <- function(l_info, informed_by_data, use_exptl_stimuli) {
-  #' @description get parameters for rule-based model
-  #' either use avg fitted parameters or use default values
+get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimuli) {
+  #' @description get model parameters and model objects
+  #' either use avg fitted parameters or use optimal parameters
   
+  l_rb <- list()
+  l_pt <- list()
+  l_gcm <- list()
+  params_pt <- c(.5, .5, .5) # populate with some values
+  params_gcm <- rep(.5, 6)
+  if (l_info$category_shape == "square") {
+    n_cat <- 4
+  } else if (l_info$category_shape == "ellipses") {
+    n_cat <- 2
+  }
+  
+  # pts as the average feature value
+  tbl_pt <- tbl_cat %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
+  
+  # rules depend on feature dimensions (i.e., 0-9 or 0-100)
   if (use_exptl_stimuli) {
     tbl_rules <- tibble(
       category = 1:4,
-      lo = list(c(-100, -100), c(50, -100), c(-100, 50), c(50, 50)),
-      hi = list(c(50, 50), c(200, 50), c(50, 200), c(200, 200))
+      lo = list(c(-Inf, -Inf), c(50, -Inf), c(-Inf, 50), c(50, 50)),
+      hi = list(c(50, 50), c(Inf, 50), c(50, Inf), c(Inf, Inf))
     )
+    
   } else if (!use_exptl_stimuli) {
     unique_boundaries <- boundaries(tbl, l_info)
     thx_grt <- thxs(unique_boundaries)
     tbl_rules <- tibble(
       category = 1:4,
-      lo = list(c(thx_grt$x1_lower[1], thx_grt$x2_lower[1]), c(thx_grt$x1_lower[2], thx_grt$x2_lower[2]), c(thx_grt$x1_lower[3], thx_grt$x2_lower[3]), c(thx_grt$x1_lower[4], thx_grt$x2_lower[4])),
-      hi = list(c(thx_grt$x1_upper[1], thx_grt$x2_upper[1]), c(thx_grt$x1_upper[2], thx_grt$x2_upper[2]), c(thx_grt$x1_upper[3], thx_grt$x2_upper[3]), c(thx_grt$x1_upper[4], thx_grt$x2_upper[4]))
+      lo = list(
+        c(thx_grt$x1_lower[1], thx_grt$x2_lower[1]), c(thx_grt$x1_lower[2], thx_grt$x2_lower[2]), 
+        c(thx_grt$x1_lower[3], thx_grt$x2_lower[3]), c(thx_grt$x1_lower[4], thx_grt$x2_lower[4])
+      ),
+      hi = list(
+        c(thx_grt$x1_upper[1], thx_grt$x2_upper[1]), c(thx_grt$x1_upper[2], thx_grt$x2_upper[2]), 
+        c(thx_grt$x1_upper[3], thx_grt$x2_upper[3]), c(thx_grt$x1_upper[4], thx_grt$x2_upper[4])
+      )
     )
   }
+  
   if (informed_by_data) {
+    # load average fitted parameter values for the three models
     tbl_avg_params <- readRDS("data/avg-params-all-catlearn-models.rds")
+    params_rb <- tbl_avg_params %>% filter(model == "RB") %>% select(val) %>% as_vector()
+    params_pt <- tbl_avg_params %>% filter(model == "PT") %>% select(val) %>% as_vector()
+    params_gcm <- tbl_avg_params %>% filter(model == "GCM") %>% select(val) %>% as_vector()
+    
   } else if (!informed_by_data) {
-    tbl_avg_params <- tibble(
-      p = c("sd_x1", "sd_x2"),
-      val = l_info$prior_sd,
-      model = "RB"
-    )
+    cat("extract parameters for RB model\n")
+    params_rb <- rep(l_info$prior_sd, 2)
+    names(params_rb) <- c("sd_x1", "sd_x2")
+    
+    if (l_info$cat_type == "prototype") {
+      # fit pt model on ground truth
+      if (l_info$category_shape == "square") {
+        cat("fitting similarity-based prototype model\n")
+        l_pt_fit <- fit_prototype_one_participant(tbl_cat %>% mutate(response = category), tbl_pt)
+        params_pt <- l_pt_fit$params
+      } else if (l_info$category_shape == "ellipses") {
+        cat("fitting naive Bayes prototype model\n")
+        l_pt$fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
+        l_pt$m_nb_initial <- naive_bayes(l_pt$fml, data = tbl_cat)
+        l_pt$m_nb_update <- l_pt$m_nb_initial
+      }
+    }
+    
+    if (l_info$cat_type == "exemplar") {
+      # fit gcm model on ground truth
+      cat("fitting GCM\n")
+      l_gcm_fit <- fit_gcm_one_participant(tbl_cat %>% mutate(response = category, trial_id = 1:nrow(tbl)), n_cat = n_cat)
+      params_gcm <- l_gcm_fit$params
+    }
   }
   
-  lo <- c(0, 0)
-  hi <- c(100, 100)
-
-  params_rb <- tbl_avg_params %>% filter(model == "RB") %>% select(val) %>% as_vector()
-  params_rb_tf <- pmap(list(params_rb, lo, hi), upper_and_lower_bounds) %>% as_vector()
+  lo_pt <- c(0, 0, 0)
+  hi_pt <- c(10, 1, 1)
+  params_pt_tf <- pmap(list(params_pt, lo_pt, hi_pt), upper_and_lower_bounds) %>% as_vector()
+  l_pt$params_pt_tf <- params_pt_tf
+  l_pt$lo <- lo_pt
+  l_pt$hi <- hi_pt
+  l_pt$tbl_pt <- tbl_pt
   
-  return(list(
+  params_gcm_ul <- unlist(params_gcm)
+  lo_gcm <- rep(0, 6)[1:length(params_gcm_ul)]
+  hi_gcm <- c(10, rep(1, 5))[1:length(params_gcm_ul)]
+  params_gcm_tf <- pmap(list(params_gcm_ul, lo_gcm, hi_gcm), upper_and_lower_bounds) %>% as_vector()
+  l_gcm$params_gcm_tf <- params_gcm_tf
+  l_gcm$lo <- lo_gcm
+  l_gcm$hi <- hi_gcm
+  
+  lo_rb <- c(0, 0)
+  hi_rb <- c(100, 100)
+  params_rb_tf <- pmap(list(params_rb, lo_rb, hi_rb), upper_and_lower_bounds) %>% as_vector()
+  l_rb <- list(
     params_rb = params_rb,
     params_rb_tf = params_rb_tf,
     tbl_rules = tbl_rules,
-    lo = lo,
-    hi = hi
+    lo = lo_rb,
+    hi = hi_rb
+  )
+  
+  return(list(
+    l_rb = l_rb, l_pt = l_pt, l_gcm = l_gcm
   ))
 }
 
 priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FALSE) {
   #' use average parameters from fitted models as model parameters
+  #' or parameters from models fitted on ground truth (!informed_by_data)
   #' 
   #' @param l_info parameter list
   #' @param tbl \code{tibble} containing the two features and the category as columns
   #' @return the stimuli priors
   #' 
   
+  tbl$response <- tbl$category
+  tbl$trial_id <- 1:nrow(tbl)
+  l_params <- get_fitted_params(l_info, tbl, informed_by_data, use_exptl_stimuli)
+  l_rb <- l_params$l_rb
+  l_pt <- l_params$l_pt
+  l_gcm <- l_params$l_gcm
+  n_cat <- length(unique(tbl$category))
+  if (informed_by_data & n_cat == 2) stop("models only fitted on square category structure\nchange nr categories to 4")
+
   if (l_info$cat_type == "rule"){
     
-    l_rb <- get_rb_params(l_info, informed_by_data = informed_by_data, use_exptl_stimuli = use_exptl_stimuli)
-    tbl$response <- tbl$category
     posterior_prior <- category_probs_rb(l_rb$params_rb_tf, tbl, l_rb$tbl_rules, l_rb$lo, l_rb$hi)[, c(1:4)]
-    colnames(posterior_prior) <- l_info$categories
     l_out <- list(posterior_prior = posterior_prior)
     
   } else if (l_info$cat_type == "prototype") {
-    fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
-    m_nb_initial <- naive_bayes(fml, data = tbl)
-    m_nb_update <- m_nb_initial
-    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
-    l_out <- list(
-      posterior_prior = posterior_prior, fml = fml,
-      m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
-    )
+    
+    # use nb model on ellipse structure, but similarity-based one on square structure
+    if (l_info$category_shape == "ellipses") {
+      posterior_prior <- predict(l_pt$m_nb_initial, tbl[, c("x1", "x2")], "prob")
+      l_out <- list(
+        posterior_prior = posterior_prior, 
+        fml = l_pt$fml,
+        m_nb_initial = l_pt$m_nb_initial,
+        m_nb_update = l_pt$m_nb_update
+      )
+    } else if (l_info$category_shape == "square") {
+      posterior_prior <- category_probs_pt(l_pt$params_pt_tf, tbl, l_pt$tbl_pt, 2, l_pt$lo, l_pt$hi)
+      l_out <- list(
+        posterior_prior = posterior_prior, 
+        params_pt_tf = l_pt$params_pt_tf,
+        tbl_pt = l_pt$tbl_pt, 
+        lo = l_pt$lo, hi = l_pt$hi
+      )
+    }
     
   } else if (l_info$cat_type == "exemplar"){
-    fit_gcm <- optim(
-      f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
-      l_info = l_info, tbl_stim = tbl, method = "L-BFGS-B"
-    )
-    l_info$sens <- fit_gcm$par[1]
-    l_info$wgh <- fit_gcm$par[2]
-    posterior_prior <- predict_gcm(tbl, tbl, l_info) %>%
-      as_tibble(.name_repair = ~ l_info$categories)
+    
+    l_info$sens <- l_gcm$params_gcm[1]
+    l_info$wgh <- l_gcm$params_gcm[2]
+    
+    if (n_cat == 4) {
+      posterior_prior <- category_probs(l_gcm$params_gcm_tf, tbl, tbl, 2, 2, l_gcm$lo, l_gcm$hi)
+    } else if (n_cat == 2) {
+      posterior_prior <- category_probs_2(l_gcm$params_gcm_tf, tbl, tbl, 2, 2, l_gcm$lo, l_gcm$hi)
+    }
+    
     l_out <- list(
       posterior_prior = posterior_prior,
-      gcm_params = c(l_info$sens, l_info$wgh))
+      params_gcm = l_gcm$params_gcm,
+      params_gcm_tf = l_gcm$params_gcm_tf
+    )
   }
+  colnames(l_out$posterior_prior)[1:n_cat] <- l_info$categories
+  
   return(l_out)
 }
 
@@ -1231,19 +1321,19 @@ sum_of_pairwise_distances <- function(tbl_posterior, sim_center) {
   # design tbl to compute distances before and after
   if (sim_center == "square") {
     tbl_comparisons <- tibble(
-    tp = factor(
-      rep(c("Before Training", "After Training"), 8), 
-      levels = c("Before Training", "After Training"), ordered = TRUE
-    ),
-    cat1 = rep(1:4, each = 4),
-    cat2 = c(
-      1, 1, list(c(2, 3, 4)), list(c(2, 3, 4)),
-      2, 2, list(c(1, 3, 4)), list(c(1, 3, 4)),
-      3, 3, list(c(1, 2, 4)), list(c(1, 2, 4)),
-      4, 4, list(c(1, 2, 3)), list(c(1, 2, 3))
-    ),
-    comparison = rep(rep(c("Within", "Between"), each = 2), 4)
-  )
+      tp = factor(
+        rep(c("Before Training", "After Training"), 8), 
+        levels = c("Before Training", "After Training"), ordered = TRUE
+      ),
+      cat1 = rep(1:4, each = 4),
+      cat2 = c(
+        1, 1, list(c(2, 3, 4)), list(c(2, 3, 4)),
+        2, 2, list(c(1, 3, 4)), list(c(1, 3, 4)),
+        3, 3, list(c(1, 2, 4)), list(c(1, 2, 4)),
+        4, 4, list(c(1, 2, 3)), list(c(1, 2, 3))
+      ),
+      comparison = rep(rep(c("Within", "Between"), each = 2), 4)
+    )
   } else if (sim_center == "ellipses") {
     tbl_comparisons <- tibble(
       tp = factor(
@@ -1306,7 +1396,7 @@ upper_and_lower_unconstrain_bias <- function(bias_constrained) {
 }
 
 
-gcm_likelihood_no_forgetting <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
+gcm_likelihood_no_forgetting <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi, n_cat = 4) {
   #' @description -2 * negative log likelihood of transfer set given training data
   #' and a gcm without a forgetting parameter (i.e., forgetting set to 0)
   #' @param x parameters
@@ -1318,7 +1408,11 @@ gcm_likelihood_no_forgetting <- function(x, tbl_transfer, tbl_x, n_feat, d_measu
   #' @param hi vector with upper bounds of parameters
   #' @return negative 2 * summed log likelihood
   #' 
-  tbl_probs <- category_probs(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi)
+  if (n_cat == 4) {
+    tbl_probs <- category_probs(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi)
+  } else if (n_cat == 2) {
+    tbl_probs <- category_probs_2(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi)
+  }
   ll <- log(tbl_probs$prob_correct)
   neg2llsum <- -2 * sum(ll)
   return(neg2llsum)
@@ -1335,7 +1429,7 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
   #' @param hi vector with upper bounds of parameters
   #' @return negative 2 * summed log likelihood
   #' 
-  params_untf <- pmap(list(x[1:2], lo, hi), upper_and_lower_bounds_revert)
+  params_untf <- pmap(list(x[1:2], lo[1:2], hi[1:2]), upper_and_lower_bounds_revert)
   names(params_untf) <- c("c", "w")
   bias_untf <- upper_and_lower_unconstrain_bias(x[3:6])
   params_untf$bias <- bias_untf
@@ -1352,9 +1446,45 @@ category_probs <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
     delta = ifelse(is.null(params_untf[["delta"]]), 0, params_untf[["delta"]]),
     d_measure = d_measure
   )
-  tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>% mutate(response = tbl_transfer$response)
+  tbl_probs <- as.data.frame(matrix(reduce(l_category_probs, rbind), ncol = length(params_untf$bias))) %>% 
+    mutate(response = tbl_transfer$response)
   tbl_probs$prob_correct <- pmap_dbl(
     tbl_probs, ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
+  )
+  return(tbl_probs)
+}
+
+category_probs_2 <- function(x, tbl_transfer, tbl_x, n_feat, d_measure, lo, hi) {
+  #' @description calculate category probabilities for every stimulus in the transfer set
+  #' @param x parameters
+  #' @param tbl_transfer transfer/test data
+  #' @param tbl_x training data
+  #' @param n_feat number of features
+  #' @param d_measure distance measure, 1 for city-block, 2 for euclidean
+  #' @param lo vector with lower bounds of parameters
+  #' @param hi vector with upper bounds of parameters
+  #' @return negative 2 * summed log likelihood
+  #' 
+  params_untf <- pmap(list(x, lo, hi), upper_and_lower_bounds_revert)
+  names(params_untf) <- c("c", "w", "bias")
+  params_untf$bias[2] <- 1 - params_untf$bias
+  params_untf$w[2] <- 1 - params_untf$w[1]
+  
+  l_transfer_x <- split(tbl_transfer[, c("x1", "x2")], 1:nrow(tbl_transfer))
+  l_category_probs <- map(
+    l_transfer_x, gcm_base, 
+    tbl_x = tbl_x, 
+    n_feat = n_feat, 
+    c = params_untf[["c"]], 
+    w = params_untf[["w"]], 
+    bias = params_untf[["bias"]], 
+    delta = ifelse(is.null(params_untf[["delta"]]), 0, params_untf[["delta"]]),
+    d_measure = d_measure
+  )
+  tbl_probs <- as.data.frame(matrix(reduce(l_category_probs, rbind), ncol = length(params_untf$bias))) %>% 
+    mutate(response = tbl_transfer$response)
+  tbl_probs$prob_correct <- pmap_dbl(
+    tbl_probs, ~ c(..1, ..2)[as.numeric(as.character(..3))]
   )
   return(tbl_probs)
 }
@@ -1452,7 +1582,8 @@ category_probs_pt <- function(x, tbl_transfer, tbl_pt, d_measure, lo, hi) {
     g = params_untf[["g"]], 
     d_measure = d_measure
   )
-  tbl_probs <- as.data.frame(reduce(l_category_probs, rbind)) %>% mutate(response = tbl_transfer$response)
+  tbl_probs <- as.data.frame(matrix(reduce(l_category_probs, rbind), ncol = nrow(tbl_pt))) %>% 
+    mutate(response = tbl_transfer$response)
   tbl_probs$prob_correct <- pmap_dbl(
     tbl_probs, ~ c(..1, ..2, ..3, ..4)[as.numeric(as.character(..5))]
   )
@@ -1481,7 +1612,7 @@ f_similarity_cat <- function(x, w, c, delta, x_new, d_measure) {
 
 
 
-fit_gcm_one_participant <- function(tbl_1p) {
+fit_gcm_one_participant <- function(tbl_1p, n_cat = 4) {
   #' fit plain-vanilla GCM to data from one participant
   #' 
   #' @description classical GCM implementation; for current purposes,
@@ -1489,14 +1620,22 @@ fit_gcm_one_participant <- function(tbl_1p) {
   #' @param tbl_1p a tibble with by-trial data from one participant
   #' @return list with elements -2*ll, fitted params, and if converged
   
-  params <- c(1, .5)
-  lo_bd <- c(0, .0001)
-  hi_bd <- c(10, .9999)
-  params <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
-  bias <- rep(.2499999, 3)
-  bias_constrained <- upper_and_lower_constrain_bias(bias)
-  params <- c(params, bias_constrained)
-  params_init_tf <- x <- params
+  if (n_cat == 4) {
+    params <- c(1, .5)
+    lo_bd <- c(0, .0001)
+    hi_bd <- c(10, .9999)
+    params <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
+    bias <- rep(.2499999, 3)
+    bias_constrained <- upper_and_lower_constrain_bias(bias)
+    params <- c(params, bias_constrained)
+    params_init_tf <- x <- params
+  } else if (n_cat == 2) {
+    params <- c(1, .5, .5)
+    lo_bd <- c(0, 0, 0)
+    hi_bd <- c(10, 1, 1)
+    params_init_tf <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
+  }
+  
   
   n_feat <- 2
   d_measure <- 2
@@ -1510,11 +1649,18 @@ fit_gcm_one_participant <- function(tbl_1p) {
     d_measure = d_measure,
     lo = lo_bd,
     hi = hi_bd,
+    n_cat = n_cat,
     control = list(maxit = 1000)
   )
   
+  if (n_cat == 4) {
+    ps <- unconstrain_all_params(results, lo_bd, hi_bd)
+  } else if (n_cat == 2) {
+    ps <- pmap_dbl(list(results$par, lo_bd, hi_bd), upper_and_lower_bounds_revert)
+  }
+  
   l_out <- list(
-    params = unconstrain_all_params(results, lo_bd, hi_bd),
+    params = ps,
     neg2ll = results$value,
     is_converged = results$convergence == 0
   )
@@ -1537,7 +1683,7 @@ fit_prototype_one_participant <- function(tbl_1p, tbl_pt) {
   lo_bd <- c(0, 0, 0)
   hi_bd <- c(10, 1, 1)
   params_init_tf <- x <- pmap_dbl(list(params, lo_bd, hi_bd), upper_and_lower_bounds)
-
+  
   d_measure <- 2
   t_start <- Sys.time()
   results <- optim(
