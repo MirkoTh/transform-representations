@@ -15,11 +15,7 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
   l_info <- l_tmp[[2]]
   
   # compute priors
-  if (!informed_by_data){
-    l_m <- priors(l_info, tbl)
-  } else if (informed_by_data) {
-    l_m <- informed_priors(l_info, tbl)
-  }
+  l_m <- priors(l_info, tbl, informed_by_data, use_exptl_stimuli)
   
   # save prior for later and copy original tbl
   l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
@@ -464,50 +460,6 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
-priors <- function(l_info, tbl) {
-  #' calculate category priors for one of the three different categorization types
-  #' 
-  #' @param l_info parameter list
-  #' @param tbl \code{tibble} containing the two features and the category as columns
-  #' @return the stimuli priors
-  #' 
-  if (l_info$cat_type == "rule"){
-    l_info$n_categories <- length(l_info$categories)
-    unique_boundaries <- boundaries(tbl, l_info)
-    thx_grt <- thxs(unique_boundaries)
-    posterior_prior <- pmap(
-      thx_grt, grt_cat_probs, tbl_stim = tbl, l_info = l_info
-    ) %>% unlist() %>%
-      matrix(nrow = nrow(tbl)) %>%
-      as_tibble(.name_repair = ~ l_info$categories)
-    l_out <- list(posterior_prior = posterior_prior)
-    
-  } else if (l_info$cat_type == "prototype") {
-    fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
-    m_nb_initial <- naive_bayes(fml, data = tbl)
-    m_nb_update <- m_nb_initial
-    posterior_prior <- predict(m_nb_initial, tbl[, c("x1", "x2")], "prob")
-    l_out <- list(
-      posterior_prior = posterior_prior, fml = fml,
-      m_nb_initial = m_nb_initial, m_nb_update = m_nb_update
-    )
-    
-  } else if (l_info$cat_type == "exemplar"){
-    fit_gcm <- optim(
-      f = ll_gcm, c(3, .5), lower = c(0, 0), upper = c(10, 1),
-      l_info = l_info, tbl_stim = tbl, method = "L-BFGS-B"
-    )
-    l_info$sens <- fit_gcm$par[1]
-    l_info$wgh <- fit_gcm$par[2]
-    posterior_prior <- predict_gcm(tbl, tbl, l_info) %>%
-      as_tibble(.name_repair = ~ l_info$categories)
-    l_out <- list(
-      posterior_prior = posterior_prior,
-      gcm_params = c(l_info$sens, l_info$wgh))
-  }
-  return(l_out)
-}
-
 get_rb_params <- function(l_info, informed_by_data, use_exptl_stimuli) {
   #' @description get parameters for rule-based model
   #' either use avg fitted parameters or use default values
@@ -552,7 +504,7 @@ get_rb_params <- function(l_info, informed_by_data, use_exptl_stimuli) {
   ))
 }
 
-informed_priors <- function(l_info, tbl) {
+priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FALSE) {
   #' use average parameters from fitted models as model parameters
   #' 
   #' @param l_info parameter list
@@ -562,7 +514,7 @@ informed_priors <- function(l_info, tbl) {
   
   if (l_info$cat_type == "rule"){
     
-    l_rb <- get_rb_params(l_info, informed_by_data = TRUE, use_exptl_stimuli = TRUE)
+    l_rb <- get_rb_params(l_info, informed_by_data = informed_by_data, use_exptl_stimuli = use_exptl_stimuli)
     tbl$response <- tbl$category
     posterior_prior <- category_probs_rb(l_rb$params_rb_tf, tbl, l_rb$tbl_rules, l_rb$lo, l_rb$hi)[, c(1:4)]
     colnames(posterior_prior) <- l_info$categories
