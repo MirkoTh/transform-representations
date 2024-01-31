@@ -36,6 +36,7 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
     # perceive a randomly sampled stimulus
     # while(l_x$stim_id_cur != 1){}
     l_x <- perceive_stimulus(tbl_new, l_info)
+    # irrelevant
     l_x$X_new$category <- 1
     l_x$X_new$response <- 1
     
@@ -48,11 +49,6 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
     # propose a new posterior
     if (l_info$cat_type == "rule") {
       posterior_new <- category_probs_rb(l_m$params_rb_tf, l_x$X_new, l_m$tbl_rules, l_m$lo, l_m$hi)
-      # posterior_new <- pmap(
-      #   thx_grt, grt_cat_probs, tbl_stim = l_x$X_new, l_info = l_info
-      # ) %>% unlist() %>%
-      #   matrix(nrow = 1) %>%
-      #   as_tibble(.name_repair = ~ l_info$categories)
     } else if (l_info$cat_type == "prototype") {
       posterior_new <- predict_pt(l_x$X_new[, c("x1", "x2")] %>% mutate(response = 1))
     } else if (l_info$cat_type == "exemplar") {
@@ -469,6 +465,7 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
   l_gcm <- list()
   params_pt <- c(.5, .5, .5) # populate with some values
   params_gcm <- rep(.5, 6)
+  params_rb <- rep(99, 2)
   if (l_info$category_shape == "square") {
     n_cat <- 4
   } else if (l_info$category_shape == "ellipses") {
@@ -505,9 +502,28 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
   if (informed_by_data) {
     # load average fitted parameter values for the three models
     tbl_avg_params <- readRDS("data/avg-params-all-catlearn-models.rds")
-    params_rb <- tbl_avg_params %>% filter(model == "RB") %>% select(val) %>% as_vector()
-    params_pt <- tbl_avg_params %>% filter(model == "PT") %>% select(val) %>% as_vector()
-    params_gcm <- tbl_avg_params %>% filter(model == "GCM") %>% select(val) %>% as_vector()
+    
+    if (l_info$category_shape == "square") {
+      params_pt <- tbl_avg_params %>% 
+        filter(model == "PT" & cat_structure ==  "square") %>% 
+        select(val) %>% as_vector()
+      params_rb <- tbl_avg_params %>% 
+        filter(model == "RB" & cat_structure == "square") %>% 
+        select(val) %>% as_vector()
+      params_gcm <- tbl_avg_params %>%
+        filter(model == "GCM" & cat_structure == "square") %>% 
+        select(val) %>% as_vector()
+      
+    } else if (l_info$category_shape == "ellipses") {
+      m_nb <- readRDS("data/e1-nb-pt-avg-fit.rds")
+      l_pt$fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
+      l_pt$m_nb_initial <- m_nb
+      l_pt$m_nb_update <- l_pt$m_nb_initial
+      
+      params_gcm <- tbl_avg_params %>%
+        filter(model == "GCM" & cat_structure == "ellipses") %>% 
+        select(val) %>% as_vector()
+    }
     
   } else if (!informed_by_data) {
     cat("extract parameters for RB model\n")
@@ -585,8 +601,10 @@ priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FA
   l_pt <- l_params$l_pt
   l_gcm <- l_params$l_gcm
   n_cat <- length(unique(tbl$category))
-  if (informed_by_data & n_cat == 2) stop("models only fitted on square category structure\nchange nr categories to 4")
-
+  if (n_cat == 2 & l_info$cat_type == "rule") {
+    stop("rule model not available for ellipse category structure")
+  }
+  
   if (l_info$cat_type == "rule"){
     
     posterior_prior <- category_probs_rb(l_rb$params_rb_tf, tbl, l_rb$tbl_rules, l_rb$lo, l_rb$hi)[, c(1:4)]
@@ -1892,7 +1910,7 @@ aic_and_bic <- function(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb, ntrials) {
   return(tbl_ll)
 }
 
-plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
+plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl, lg_pos = "bottom") {
   #' @description plot heatmap of aic or bic
   #' grouped by winning models and rank-ordered 
   #' according to aic/bic within each group
@@ -1921,13 +1939,14 @@ plot_grouped_and_ranked_models <- function(tbl_ll, v, win, ttl) {
     theme_bw() +
     scale_x_discrete(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    labs(x = "Model", y = "Participant ID", title = str_c("E2: ", ttl)) + 
+    labs(x = "Model", y = "Participant ID", title = ttl) + 
     theme(
       strip.background = element_rect(fill = "white"),
       text = element_text(size = 22),
       legend.text = element_text(size = 15),
       legend.title = element_text(size = 15),
-      legend.position = "bottom"
+      legend.position = lg_pos,
+      title = element_blank()
     ) + 
     scale_fill_manual(values = c("skyblue2", "tomato4", "forestgreen"), name = ttl)
   
@@ -1971,14 +1990,13 @@ horizontal_and_vertical_moves <- function(tbl_secondary) {
 }
 
 
-compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials) {
+compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials, expt_nr, lg_pos = "bottom") {
   #' @description compare gcm, pt, and rb using aic and bic
   #' @return list with comparison metrics, plot of metrics, and
   #' list with parameters for each model
   #' 
   filter_cat <- map_lgl(l_results_gcm, ~ !(is.null(.x$result)))
   l_results_gcm <- l_results_gcm[filter_cat]
-  
   
   tbl_params_gcm <- post_process_gcm_fits(l_results_gcm) %>% as_tibble()
   tbl_params_rb <- extract_from_results(l_results_rb, "params", c("sd_x1", "sd_x2"))
@@ -1992,10 +2010,10 @@ compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials) {
   tbl_ll <- aic_and_bic(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb, ntrials)
   
   pl_hm_bic <- plot_grouped_and_ranked_models(
-    tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, "Winner BIC"
+    tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, str_c("E", expt_nr, ": Winner BIC"), lg_pos
   )
   pl_hm_aic <- plot_grouped_and_ranked_models(
-    tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, "Winner AIC"
+    tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, str_c("E", expt_nr, ": Winner AIC"), lg_pos
   )
   
   pl_comp <- arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1)
