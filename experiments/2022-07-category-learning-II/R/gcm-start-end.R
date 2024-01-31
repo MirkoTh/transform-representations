@@ -84,9 +84,10 @@ save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
 
 
 
-# All Data ----------------------------------------------------------------
 
-# use all data from E2 - E4
+# All Data E2 - E4 --------------------------------------------------------
+
+
 tbl_secondary_e2 <- tbl_secondary
 tbl_secondary_e3 <- readRDS(
   file = "experiments/2022-09-category-learning-similarity/data/tbl_cat-treps.rds"
@@ -254,22 +255,107 @@ l_results_rb_e3 <- extract_best_fit(l_results_rb_e3)
 l_results_rb_e4 <- extract_best_fit(l_results_rb_e4)
 
 
-# Compare Models ----------------------------------------------------------
+## Compare Models ----------------------------------------------------------
 
 
-l_comp_e2 <- compare_models(l_results_gcm_e2, l_results_pt_e2, l_results_rb_e2, ntrials = nrow(l_all_e2[[1]]))
-l_comp_e3 <- compare_models(l_results_gcm_e3, l_results_pt_e3, l_results_rb_e3, ntrials = nrow(l_all_e3[[1]]))
-l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, ntrials = nrow(l_all_e4[[1]]))
+l_comp_e2 <- compare_models(l_results_gcm_e2, l_results_pt_e2, l_results_rb_e2, "2", ntrials = nrow(l_all_e2[[1]]), lg_pos = "none")
+l_comp_e3 <- compare_models(l_results_gcm_e3, l_results_pt_e3, l_results_rb_e3, "3", ntrials = nrow(l_all_e3[[2]]), lg_pos = "none")
+l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, "4", ntrials = nrow(l_all_e4[[1]]), lg_pos = "none")
 
 
+## Save Fitted Parameters --------------------------------------------------
 
-# Analyze Rule-Based Parameters -------------------------------------------
+tbl_gcm_params <- read_out_params_3e(
+  l_comp_e2$l_tbl_params$tbl_params_gcm,
+  l_comp_e3$l_tbl_params$tbl_params_gcm,
+  l_comp_e4$l_tbl_params$tbl_params_gcm
+)
+
+tbl_pt_params <- read_out_params_3e(
+  l_comp_e2$l_tbl_params$tbl_params_pt,
+  l_comp_e3$l_tbl_params$tbl_params_pt,
+  l_comp_e4$l_tbl_params$tbl_params_pt
+)
+
 
 tbl_rb_params <- read_out_params_3e(
   l_comp_e2$l_tbl_params$tbl_params_rb,
   l_comp_e3$l_tbl_params$tbl_params_rb,
   l_comp_e4$l_tbl_params$tbl_params_rb
 )
+
+
+tbl_gcm_params %>%
+  pivot_longer(c(c, w, starts_with("bias"))) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_grid(E ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters GCM") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    axis.text.x = element_text(angle = 90, vjust = .3)
+  )
+
+tbl_pt_params %>%
+  pivot_longer(c(c, w, g)) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_grid(E ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    axis.text.x = element_text(angle = 90, vjust = .3)
+  )
+
+tbl_rb_params %>%
+  rename(
+    "sd(Head)" = sd_x1,
+    "sd(Belly)" = sd_x2
+  ) %>%
+  pivot_longer(c("sd(Head)", "sd(Belly)")) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_grid(E ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0), breaks = seq(0, 20, by = 3)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    axis.text.x = element_text(angle = 90, vjust = .3)
+  )
+
+
+# params look relatively similar across Es
+gcm_avg_params <- colMeans(tbl_gcm_params %>% select(-c(E, id)))
+pt_avg_params <- colMeans(tbl_pt_params %>% select(-c(E, id)))
+rb_avg_params <- colMeans(tbl_rb_params %>% select(-c(E, id)))
+
+tbl_avg_params <- tibble(
+  p = names(gcm_avg_params), val = gcm_avg_params, model = "GCM"
+) %>% rbind(
+  tibble(
+    p = names(pt_avg_params), val = pt_avg_params, model = "PT"
+  )
+) %>% rbind(
+  tibble(
+    p = names(rb_avg_params), val = rb_avg_params, model = "RB"
+  )
+) %>% mutate(cat_structure = "square")
+
+
+
+## Analyze Rule-Based Parameters -------------------------------------------
+
 
 tbl_rb_params %>%
   pivot_longer(-c(E, id)) %>%
@@ -338,88 +424,146 @@ tbl_rule_swaps_agg %>%
 
 
 
+# All Data E1 -------------------------------------------------------------
+
+tbl_secondary_e1 <- readRDS("experiments/2022-02-category-learning/data/tbl_cat_sim.rds") %>%
+  rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
+  arrange(participant_id, trial_id)
 
 
+l_all_e1 <- tbl_secondary_e1 %>% filter(trial_id >= 340) %>% split(.$participant_id)
 
-# Save Fitted Parameters --------------------------------------------------
 
-tbl_gcm_params <- read_out_params_3e(
-  l_comp_e2$l_tbl_params$tbl_params_gcm,
-  l_comp_e3$l_tbl_params$tbl_params_gcm,
-  l_comp_e4$l_tbl_params$tbl_params_gcm
+filter_cat <- map_lgl(l_all_e1, ~ .x$n_categories[1] == 2)
+l_all_e1 <- l_all_e1[filter_cat]
+
+
+## GCM --------------------------------------------------------------------
+
+
+l_results_gcm_e1 <- list()
+
+for (it in 1:n_it) {
+  if (is_fit) {
+    
+    plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+    
+    l_results_gcm <- future_map(
+      l_all_e1[1:2], safely(fit_gcm_one_participant), 
+      n_cat = 2,
+      .progress = TRUE, .options = furrr_options(seed = FALSE)
+    )
+    saveRDS(l_results_gcm, file = str_c("data/e1-gcm-300-trials-it-", it, ".rds"))
+    plan("sequential")
+  } else {
+    l_results_gcm_e1[[it]] <- readRDS(str_c("data/e1-gcm-300-trials-it-", it, ".rds"))
+  }
+}
+
+l_results_gcm_e1 <- extract_best_fit(l_results_gcm_e1)
+n2ll_gcm_e1 <- map_dbl(map(l_results_gcm_e1, "result"), "neg2ll")
+tbl_gcm_e1_params <- map(map(l_results_gcm_e1, "result"), "params") %>%
+  reduce(rbind) %>% as.data.frame() %>% as_tibble()
+colnames(tbl_gcm_e1_params) <- c("c", "w", "bias")
+
+par_mn_gcm_e1 <- colMeans(tbl_gcm_e1_params)
+tbl_par_gcm_e1 <- tibble(
+  p = names(par_mn_gcm_e1), 
+  val = par_mn_gcm_e1, 
+  model = "GCM",
+  cat_structure = "ellipses")
+tbl_avg_params <- rbind(
+  tbl_avg_params, tbl_par_gcm_e1
 )
-
-tbl_pt_params <- read_out_params_3e(
-  l_comp_e2$l_tbl_params$tbl_params_pt,
-  l_comp_e3$l_tbl_params$tbl_params_pt,
-  l_comp_e4$l_tbl_params$tbl_params_pt
-)
-
-
-tbl_gcm_params %>%
-  pivot_longer(c(c, w, starts_with("bias"))) %>%
-  ggplot(aes(value)) +
-  geom_histogram(color = "black", fill = "skyblue2") +
-  facet_grid(E ~ name) +
-  theme_bw() +
-  scale_x_continuous(expand = c(0.01, 0)) +
-  scale_y_continuous(expand = c(0.01, 0)) +
-  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters GCM") + 
-  theme(
-    strip.background = element_rect(fill = "white"),
-    text = element_text(size = 22)
-  )
-
-tbl_pt_params %>%
-  pivot_longer(c(c, w, g)) %>%
-  ggplot(aes(value)) +
-  geom_histogram(color = "black", fill = "skyblue2") +
-  facet_grid(E ~ name) +
-  theme_bw() +
-  scale_x_continuous(expand = c(0.01, 0)) +
-  scale_y_continuous(expand = c(0.01, 0)) +
-  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
-  theme(
-    strip.background = element_rect(fill = "white"),
-    text = element_text(size = 22)
-  )
-
-tbl_rb_params %>%
-  rename(
-    "sd(Head)" = sd_x1,
-    "sd(Belly)" = sd_x2
-  ) %>%
-  pivot_longer(c("sd(Head)", "sd(Belly)")) %>%
-  ggplot(aes(value)) +
-  geom_histogram(color = "black", fill = "skyblue2") +
-  facet_grid(E ~ name) +
-  theme_bw() +
-  scale_x_continuous(expand = c(0.01, 0)) +
-  scale_y_continuous(expand = c(0.01, 0), breaks = seq(0, 20, by = 3)) +
-  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
-  theme(
-    strip.background = element_rect(fill = "white"),
-    text = element_text(size = 22)
-  )
-
-
-# params look relatively similar across Es
-gcm_avg_params <- colMeans(tbl_gcm_params %>% select(-c(E, id)))
-
-pt_avg_params <- colMeans(tbl_pt_params %>% select(-c(E, id)))
-
-rb_avg_params <- colMeans(tbl_rb_params %>% select(-c(E, id)))
-
-tbl_avg_params <- tibble(
-  p = names(gcm_avg_params), val = gcm_avg_params, model = "GCM"
-) %>% rbind(
-  tibble(
-    p = names(pt_avg_params), val = pt_avg_params, model = "PT"
-  )
-) %>% rbind(
-  tibble(
-    p = names(rb_avg_params), val = rb_avg_params, model = "RB"
-  )
-)
-
 saveRDS(tbl_avg_params, file = "data/avg-params-all-catlearn-models.rds")
+
+
+## Naive Bayes Prototype Model --------------------------------------------
+
+
+n2ll_nb <- function(m, tbl_df) {
+  #' @description negative 2 * log likelihood of naive bayes prototype model
+  #' given model m and data (x1 and x2) in tbl_df to be predicted
+  
+  nb_preds <- predict(m, tbl_df[, c("x1", "x2")], "prob")
+  tbl_nb_preds <- as.data.frame(nb_preds) %>% as_tibble()
+  tbl_nb_preds$response <- tbl_df$response
+  p_corr <- pmap_dbl(tbl_nb_preds, ~ c(..1, ..2)[..3])
+  -2*sum(log(p_corr))
+}
+
+if (is_fit) {
+  plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+  l_results_nb <- future_map(
+    l_all_e1[1:2], ~ naive_bayes(y = as.character(.x$response), x = .x[, c("x1", "x2")]), 
+    .progress = TRUE, .options = furrr_options(seed = FALSE)
+  )
+  n2ll_nb <- future_map2_dbl(
+    l_results_nb, l_all_e1[1:2], n2ll_nb,
+    .progress = TRUE
+  )
+  saveRDS(n2ll_nb, file = str_c("data/e1-pt-nb-300-trials-it-", it, ".rds"))
+  plan("sequential")
+}
+
+ntrials_e1 <- nrow(l_all_e1[[1]])
+l_comp_e1 <- e1_abic_plots(n2ll_gcm_e1, n2ll_nb, ntrials_e1)
+l_comp_e1$tbl_ll_e1
+
+grid.draw(arrangeGrob(
+  l_comp_e1$pl_comp,
+  l_comp_e2$pl_comp,
+  l_comp_e3$pl_comp,
+  l_comp_e4$pl_comp,
+  nrow = 4, ncol = 1
+))
+
+e1_abic_plots <- function(n2ll_gcm_e1, n2ll_nb, ntrials_e1) {
+  tbl_ll_e1 <- tibble(
+    id = 1:2,#length(l_all_e1),
+    n2ll_gcm = n2ll_gcm_e1,
+    n2ll_nb = n2ll_nb,
+    bic_gcm = n2ll_gcm + 3*log(ntrials_e1),
+    bic_pt = n2ll_nb + 4*log(ntrials_e1),
+    aic_gcm = n2ll_gcm + 6,
+    aic_pt = n2ll_nb + 8
+  )
+  tbl_ll_e1$winner_bic <- c("GCM", "PT")[
+    pmap_dbl(
+      tbl_ll_e1[, c("bic_gcm", "bic_pt")], ~ which.min(c(..1, ..2))
+    ) %>% as.factor()
+  ]
+  tbl_ll_e1$winner_aic <- c("GCM", "PT")[
+    pmap_dbl(
+      tbl_ll_e1[, c("aic_gcm", "aic_pt")], ~ which.min(c(..1, ..2))
+    ) %>% as.factor()
+  ]
+  
+  pl_hm_bic <- plot_grouped_and_ranked_models(
+    tbl_ll_e1, c(bic_gcm, bic_pt), winner_bic, "E1: Winner BIC", "none"
+  )
+  pl_hm_aic <- plot_grouped_and_ranked_models(
+    tbl_ll_e1, c(aic_gcm, aic_pt), winner_aic, "E1: Winner AIC", "none"
+  )
+  pl_comp <- arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1)
+  
+  return(list(tbl_ll_e1 = tbl_ll_e1, pl_comp = pl_comp))
+}
+
+
+# average fit
+
+tbl_l_all_e1 <- reduce(l_all_e1, rbind)  %>%
+  mutate(
+    category = as.character(category),
+    response = as.character(response)
+  )
+fml <- formula("response ~ x1 + x2")
+m_nb <- naive_bayes(
+  fml, data = tbl_l_all_e1 %>%
+    mutate(
+      category = as.character(category),
+      response = as.character(response)
+    )
+)
+saveRDS(m_nb, file = "data/e1-nb-pt-avg-fit.rds")
