@@ -5,6 +5,7 @@ library(grid)
 library(gridExtra)
 library(furrr)
 library(rutils)
+library(naivebayes)
 
 home_grown <- c("R/utils.R", "R/analysis-plotting.R")
 walk(home_grown, source)
@@ -192,9 +193,9 @@ for (it in 1:n_it) {
     }
     
   } else {
-    l_results_pt_e2[[i]] <- readRDS(str_c("data/e2-prototype-300-trials-it-", it, ".rds"))
-    l_results_pt_e3[[i]] <- readRDS(str_c("data/e3-prototype-300-trials-it-", it, ".rds"))
-    l_results_pt_e4[[i]] <- readRDS(str_c("data/e4-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e2[[it]] <- readRDS(str_c("data/e2-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e3[[it]] <- readRDS(str_c("data/e3-prototype-300-trials-it-", it, ".rds"))
+    l_results_pt_e4[[it]] <- readRDS(str_c("data/e4-prototype-300-trials-it-", it, ".rds"))
     
   }
 }
@@ -239,9 +240,9 @@ for (it in 1:n_it) {
     }
     
   } else {
-    l_results_rb_e2[[i]] <- readRDS(str_c("data/e2-rulebased-300-trials-it-", it, ".rds"))
-    l_results_rb_e3[[i]] <- readRDS(str_c("data/e3-rulebased-300-trials-it-", it, ".rds"))
-    l_results_rb_e4[[i]] <- readRDS(str_c("data/e4-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e2[[it]] <- readRDS(str_c("data/e2-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e3[[it]] <- readRDS(str_c("data/e3-rulebased-300-trials-it-", it, ".rds"))
+    l_results_rb_e4[[it]] <- readRDS(str_c("data/e4-rulebased-300-trials-it-", it, ".rds"))
     
   }
 }
@@ -285,7 +286,8 @@ tbl_rb_params <- read_out_params_3e(
 )
 
 
-tbl_gcm_params %>%
+hist_gcm_params <- tbl_gcm_params %>%
+  rename("Bias 1" = bias1, "Bias 2" = bias2, "Bias 3" = bias3, "Bias 4" = bias4) %>%
   pivot_longer(c(c, w, starts_with("bias"))) %>%
   ggplot(aes(value)) +
   geom_histogram(color = "black", fill = "skyblue2") +
@@ -300,7 +302,7 @@ tbl_gcm_params %>%
     axis.text.x = element_text(angle = 90, vjust = .3)
   )
 
-tbl_pt_params %>%
+hist_pt_params <- tbl_pt_params %>%
   pivot_longer(c(c, w, g)) %>%
   ggplot(aes(value)) +
   geom_histogram(color = "black", fill = "skyblue2") +
@@ -315,7 +317,7 @@ tbl_pt_params %>%
     axis.text.x = element_text(angle = 90, vjust = .3)
   )
 
-tbl_rb_params %>%
+hist_rb_params <- tbl_rb_params %>%
   rename(
     "sd(Head)" = sd_x1,
     "sd(Belly)" = sd_x2
@@ -333,6 +335,10 @@ tbl_rb_params %>%
     text = element_text(size = 22),
     axis.text.x = element_text(angle = 90, vjust = .3)
   )
+
+save_my_pdf_and_tiff(hist_gcm_params, "figures/gcm-model-params-e234", 12, 7)
+save_my_pdf_and_tiff(hist_pt_params, "figures/pt-model-params-e234", 6, 7)
+save_my_pdf_and_tiff(hist_rb_params, "figures/rb-model-params-e234", 4, 7)
 
 
 # params look relatively similar across Es
@@ -390,7 +396,7 @@ tbl_rule_swaps <- tbl_secondary %>%
     mn_horizontal = mean(is_move_horizontal),
     mn_vertical = mean(is_move_vertical)
   ) %>%
-  pivot_longer(c(mn_horizontal, mn_vertical))
+  pivot_longer(c(mn_horizontal, mn_vertical)) %>% ungroup()
 
 tbl_rule_swaps_agg <- summary_se_within(
   tbl_rule_swaps, 
@@ -449,7 +455,7 @@ for (it in 1:n_it) {
     plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
     
     l_results_gcm <- future_map(
-      l_all_e1[1:2], safely(fit_gcm_one_participant), 
+      l_all_e1, safely(fit_gcm_one_participant), 
       n_cat = 2,
       .progress = TRUE, .options = furrr_options(seed = FALSE)
     )
@@ -466,6 +472,8 @@ tbl_gcm_e1_params <- map(map(l_results_gcm_e1, "result"), "params") %>%
   reduce(rbind) %>% as.data.frame() %>% as_tibble()
 colnames(tbl_gcm_e1_params) <- c("c", "w", "bias")
 
+
+
 par_mn_gcm_e1 <- colMeans(tbl_gcm_e1_params)
 tbl_par_gcm_e1 <- tibble(
   p = names(par_mn_gcm_e1), 
@@ -474,8 +482,26 @@ tbl_par_gcm_e1 <- tibble(
   cat_structure = "ellipses")
 tbl_avg_params <- rbind(
   tbl_avg_params, tbl_par_gcm_e1
-)
+) %>% mutate(representation = "physical-properties")
 saveRDS(tbl_avg_params, file = "data/avg-params-all-catlearn-models.rds")
+
+
+hist_gcm_params_e1 <- tbl_gcm_e1_params %>%
+  rename("Bias" = bias) %>%
+  pivot_longer(c(c, w, Bias)) %>%
+  ggplot(aes(value)) +
+  geom_histogram(color = "black", fill = "skyblue2") +
+  facet_wrap( ~ name) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters GCM") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    axis.text.x = element_text(angle = 90, vjust = .3)
+  )
+save_my_pdf_and_tiff(hist_gcm_params_e1, "figures/gcm-model-params-e1", 6, 7)
 
 
 ## Naive Bayes Prototype Model --------------------------------------------
@@ -495,11 +521,11 @@ n2ll_nb <- function(m, tbl_df) {
 if (is_fit) {
   plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
   l_results_nb <- future_map(
-    l_all_e1[1:2], ~ naive_bayes(y = as.character(.x$response), x = .x[, c("x1", "x2")]), 
+    l_all_e1, ~ naive_bayes(y = as.character(.x$response), x = .x[, c("x1", "x2")]), 
     .progress = TRUE, .options = furrr_options(seed = FALSE)
   )
   n2ll_nb <- future_map2_dbl(
-    l_results_nb, l_all_e1[1:2], n2ll_nb,
+    l_results_nb, l_all_e1, n2ll_nb,
     .progress = TRUE
   )
   saveRDS(n2ll_nb, file = str_c("data/e1-pt-nb-300-trials-it-", it, ".rds"))
@@ -520,7 +546,7 @@ grid.draw(arrangeGrob(
 
 e1_abic_plots <- function(n2ll_gcm_e1, n2ll_nb, ntrials_e1) {
   tbl_ll_e1 <- tibble(
-    id = 1:2,#length(l_all_e1),
+    id = 1:length(l_all_e1),
     n2ll_gcm = n2ll_gcm_e1,
     n2ll_nb = n2ll_nb,
     bic_gcm = n2ll_gcm + 3*log(ntrials_e1),
