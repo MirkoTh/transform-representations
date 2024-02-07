@@ -1,4 +1,4 @@
-categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimuli = FALSE) {
+categorize_stimuli <- function(l_info) {
   #' main categorization function
   #' 
   #' @description categorize stimuli, store accepted samples, and visualize results
@@ -8,12 +8,12 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
   #' visualizations in [[2]]
   #' 
   
-  l_tmp <- make_stimuli(l_info, use_exptl_stimuli)
+  l_tmp <- make_stimuli(l_info)
   tbl <- l_tmp[[1]]
   l_info <- l_tmp[[2]]
   
   # compute priors
-  l_m <- priors(l_info, tbl, informed_by_data, use_exptl_stimuli)
+  l_m <- priors(l_info, tbl)
   # save prior for later and copy original tbl
   l_prior_prep <- extract_posterior(l_m$posterior_prior, tbl)
   tbl_prior_long <- l_prior_prep[[1]]
@@ -49,8 +49,10 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
     # propose a new posterior
     if (l_info$cat_type == "rule") {
       posterior_new <- category_probs_rb(l_m$params_rb_tf, l_x$X_new, l_m$tbl_rules, l_m$lo, l_m$hi)
+      colnames(posterior_new)[1:l_info$n_categories] <- l_info$categories
     } else if (l_info$cat_type == "prototype") {
       posterior_new <- predict_pt(l_x$X_new[, c("x1", "x2")] %>% mutate(response = 1))
+      colnames(posterior_new)[1:l_info$n_categories] <- l_info$categories
     } else if (l_info$cat_type == "exemplar") {
       posterior_new <- predict_gcm(l_m$params_gcm_tf, l_x$X_new, tbl_new %>% mutate(response = 1, trial_id = 1:nrow(tbl_new)), 2, 2, l_m$lo, l_m$hi)
       colnames(posterior_new)[1:l_info$n_categories] <- l_info$categories
@@ -77,7 +79,7 @@ categorize_stimuli <- function(l_info, informed_by_data = FALSE, use_exptl_stimu
       m_onehots <- as_tibble(t(as.matrix(onehots)))
       tbl_new <- rbind(
         tbl_new, tibble(
-          stim_id = l_x$stim_id_cur, l_x$X_new, 
+          stim_id = l_x$stim_id_cur, l_x$X_new[, c("x1", "x2")], 
           m_onehots,
           category = l_x$cat_cur, cat_type = l_info$cat_type
         )
@@ -208,12 +210,10 @@ compare_subsequent_stimuli <- function(l_info) {
 }
 
 
-make_stimuli <- function(l_info, use_exptl_stimuli = FALSE) {
+make_stimuli <- function(l_info) {
   #' create stimuli from 2D feature space
   #' 
   #' @param l_info list with parameters
-  #' @param use_exptl_stimuli should the features values be important from the 
-  #' actual experiments? defaults to FALSE
   #' @return a list with a tbl containing the stimulus set and 
   #' the parameter list with the added infos
   #' 
@@ -231,7 +231,7 @@ make_stimuli <- function(l_info, use_exptl_stimuli = FALSE) {
     l_info$tbl_ellipses <- l[[2]]
   }
   
-  if (use_exptl_stimuli) {
+  if (l_info$use_exptl_stimuli) {
     tbl$x1 <- 9 * (tbl$x1 + 1) + 1
     tbl$x2 <- 9 * (tbl$x2 + 1) + 1
     l_info$space_edges <- c(0, 100)
@@ -456,14 +456,14 @@ create_shepard_categories <- function(tbl, type, dim_anchor){
 }
 
 
-get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimuli) {
+get_fitted_params <- function(l_info, tbl_cat) {
   #' @description get model parameters and model objects
   #' either use avg fitted parameters or use optimal parameters
   
   l_rb <- list()
   l_pt <- list()
   l_gcm <- list()
-  params_pt <- c(.5, .5, .5) # populate with some values
+  params_pt <- c(.5, .5, .5) # initialize with any values
   params_gcm <- rep(.5, 6)
   params_rb <- rep(99, 2)
   if (l_info$category_shape == "square") {
@@ -476,14 +476,14 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
   tbl_pt <- tbl_cat %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
   
   # rules depend on feature dimensions (i.e., 0-9 or 0-100)
-  if (use_exptl_stimuli) {
+  if (l_info$use_exptl_stimuli) {
     tbl_rules <- tibble(
       category = 1:4,
       lo = list(c(-Inf, -Inf), c(50, -Inf), c(-Inf, 50), c(50, 50)),
       hi = list(c(50, 50), c(Inf, 50), c(50, Inf), c(Inf, Inf))
     )
     
-  } else if (!use_exptl_stimuli) {
+  } else if (!l_info$use_exptl_stimuli) {
     unique_boundaries <- boundaries(tbl, l_info)
     thx_grt <- thxs(unique_boundaries)
     tbl_rules <- tibble(
@@ -499,19 +499,19 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
     )
   }
   
-  if (informed_by_data) {
+  if (l_info$informed_by_data) {
     # load average fitted parameter values for the three models
     tbl_avg_params <- readRDS("data/avg-params-all-catlearn-models.rds")
     
     if (l_info$category_shape == "square") {
       params_pt <- tbl_avg_params %>% 
-        filter(model == "PT" & cat_structure ==  "square") %>% 
+        filter(model == "PT" & cat_structure ==  "square" & representation == l_info$representation) %>% 
         select(val) %>% as_vector()
       params_rb <- tbl_avg_params %>% 
-        filter(model == "RB" & cat_structure == "square") %>% 
+        filter(model == "RB" & cat_structure == "square" & representation == l_info$representation) %>% 
         select(val) %>% as_vector()
       params_gcm <- tbl_avg_params %>%
-        filter(model == "GCM" & cat_structure == "square") %>% 
+        filter(model == "GCM" & cat_structure == "square" & representation == l_info$representation) %>% 
         select(val) %>% as_vector()
       
     } else if (l_info$category_shape == "ellipses") {
@@ -521,11 +521,11 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
       l_pt$m_nb_update <- l_pt$m_nb_initial
       
       params_gcm <- tbl_avg_params %>%
-        filter(model == "GCM" & cat_structure == "ellipses") %>% 
+        filter(model == "GCM" & cat_structure == "ellipses" & representation == l_info$representation) %>% 
         select(val) %>% as_vector()
     }
     
-  } else if (!informed_by_data) {
+  } else if (!l_info$informed_by_data) {
     cat("extract parameters for RB model\n")
     params_rb <- rep(l_info$prior_sd, 2)
     names(params_rb) <- c("sd_x1", "sd_x2")
@@ -585,7 +585,7 @@ get_fitted_params <- function(l_info, tbl_cat, informed_by_data, use_exptl_stimu
   ))
 }
 
-priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FALSE) {
+priors <- function(l_info, tbl) {
   #' use average parameters from fitted models as model parameters
   #' or parameters from models fitted on ground truth (!informed_by_data)
   #' 
@@ -596,7 +596,7 @@ priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FA
   
   tbl$response <- tbl$category
   tbl$trial_id <- 1:nrow(tbl)
-  l_params <- get_fitted_params(l_info, tbl, informed_by_data, use_exptl_stimuli)
+  l_params <- get_fitted_params(l_info, tbl)
   l_rb <- l_params$l_rb
   l_pt <- l_params$l_pt
   l_gcm <- l_params$l_gcm
@@ -607,8 +607,14 @@ priors <- function(l_info, tbl, informed_by_data = FALSE, use_exptl_stimuli = FA
   
   if (l_info$cat_type == "rule"){
     
-    posterior_prior <- category_probs_rb(l_rb$params_rb_tf, tbl, l_rb$tbl_rules, l_rb$lo, l_rb$hi)[, c(1:4)]
-    l_out <- list(posterior_prior = posterior_prior)
+    posterior_prior <- category_probs_rb(l_rb$params_rb_tf, tbl, l_rb$tbl_rules, l_rb$lo, l_rb$hi)#[, c(1:4)]
+    l_out <- list(
+      posterior_prior = posterior_prior,
+      params_rb = l_rb$params_rb,
+      params_rb_tf = l_rb$params_rb_tf,
+      lo = l_rb$lo, hi = l_rb$hi,
+      tbl_rules = l_rb$tbl_rules
+      )
     
   } else if (l_info$cat_type == "prototype") {
     

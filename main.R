@@ -35,15 +35,18 @@ tbl_vary <- crossing(
   cat_type = c("prototype", "exemplar", "rule"), #, 
   prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
   constrain_space = c(TRUE, FALSE), category_shape = c("square", "ellipses"),
-  is_reward = FALSE
+  is_reward = FALSE,
+  informed_by_data = c(TRUE),
+  representation = c("physical-properties", "psychological-representation")
 )
 
-tbl_vary$n_categories <- rep(c(2, 4), nrow(tbl_vary)/2)
+tbl_vary$n_categories <- rep(c(2, 2, 4, 4), nrow(tbl_vary)/4)
 tbl_vary <- tbl_vary %>% relocate(n_categories, .before = cat_type)
 
 # rule-based strategy does not work well with ellipse category
 filter_out <- tbl_vary$category_shape == "ellipses" & tbl_vary$cat_type == "rule"
 tbl_vary <- tbl_vary[!filter_out, ]
+tbl_vary$use_exptl_stimuli <- tbl_vary$informed_by_data
 
 l_info <- pmap(
   tbl_vary, ~ append(
@@ -51,7 +54,9 @@ l_info <- pmap(
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5,
-      category_shape = ..6, is_reward = ..7
+      category_shape = ..6, is_reward = ..7,
+      informed_by_data = ..8, representation = ..9, 
+      use_exptl_stimuli = ..10
     )
   )
 )
@@ -63,7 +68,9 @@ l_info_seq <- pmap(
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5,
-      category_shape = ..6, is_reward = ..7
+      category_shape = ..6, is_reward = ..7,
+      informed_by_data = ..8, use_exptl_stimuli = ..9,
+      representation = ..10
     )
   )
 )
@@ -89,8 +96,6 @@ plan(multisession, workers = min(future::availableCores() - 4, length(l_info)))
 
 l_category_results <- future_map(
   l_info, categorize_stimuli, 
-  informed_by_data = TRUE, # used parameters from experimental fits?
-  use_exptl_stimuli = TRUE, # used stimuli from prolific experiments?
   .progress = TRUE, .options = furrr_options(seed = TRUE)
 )
 
@@ -192,7 +197,10 @@ build <- ggplot_build(pl_pred_square)
 hex_df <- build$data[[1]][, c("colour", "x")]
 unique(hex_df$colour)
 
-save_my_pdf_and_tiff(arrangeGrob(pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square, nrow = 1), "figures/model-predictions-squares", 12, 3.5)
+save_my_pdf_and_tiff(arrangeGrob(
+  pl_pred_square + theme(plot.title = element_blank()),
+  pl_pred_delta_square, nrow = 1
+  ), "figures/model-predictions-squares", 12, 3.5)
 
 save_my_pdf_and_tiff(arrangeGrob(
   pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse,
