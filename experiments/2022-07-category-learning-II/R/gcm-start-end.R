@@ -507,7 +507,7 @@ save_my_pdf_and_tiff(hist_gcm_params_e1, "figures/gcm-model-params-e1", 6, 7)
 ## Naive Bayes Prototype Model --------------------------------------------
 
 
-n2ll_nb <- function(m, tbl_df) {
+get_n2ll_nb <- function(m, tbl_df) {
   #' @description negative 2 * log likelihood of naive bayes prototype model
   #' given model m and data (x1 and x2) in tbl_df to be predicted
   
@@ -525,24 +525,14 @@ if (is_fit) {
     .progress = TRUE, .options = furrr_options(seed = FALSE)
   )
   n2ll_nb <- future_map2_dbl(
-    l_results_nb, l_all_e1, n2ll_nb,
+    l_results_nb, l_all_e1, get_n2ll_nb,
     .progress = TRUE
   )
-  saveRDS(n2ll_nb, file = str_c("data/e1-pt-nb-300-trials-it-", it, ".rds"))
+  saveRDS(n2ll_nb, file = str_c("data/e1-pt-nb-300-trials.rds"))
   plan("sequential")
+} else if (!is_fit) {
+  n2ll_nb <- readRDS(file = str_c("data/e1-pt-nb-300-trials.rds"))
 }
-
-ntrials_e1 <- nrow(l_all_e1[[1]])
-l_comp_e1 <- e1_abic_plots(n2ll_gcm_e1, n2ll_nb, ntrials_e1)
-l_comp_e1$tbl_ll_e1
-
-grid.draw(arrangeGrob(
-  l_comp_e1$pl_comp,
-  l_comp_e2$pl_comp,
-  l_comp_e3$pl_comp,
-  l_comp_e4$pl_comp,
-  nrow = 4, ncol = 1
-))
 
 e1_abic_plots <- function(n2ll_gcm_e1, n2ll_nb, ntrials_e1) {
   tbl_ll_e1 <- tibble(
@@ -576,6 +566,17 @@ e1_abic_plots <- function(n2ll_gcm_e1, n2ll_nb, ntrials_e1) {
   return(list(tbl_ll_e1 = tbl_ll_e1, pl_comp = pl_comp))
 }
 
+ntrials_e1 <- nrow(l_all_e1[[1]])
+l_comp_e1 <- e1_abic_plots(n2ll_gcm_e1, n2ll_nb, ntrials_e1)
+l_comp_e1$tbl_ll_e1
+
+grid.draw(arrangeGrob(
+  l_comp_e1$pl_comp,
+  l_comp_e2$pl_comp,
+  l_comp_e3$pl_comp,
+  l_comp_e4$pl_comp,
+  nrow = 4, ncol = 1
+))
 
 # average fit
 
