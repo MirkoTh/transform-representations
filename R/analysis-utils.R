@@ -721,20 +721,33 @@ category_centers <- function(f_stretch, f_shift, l_info) {
   # read individual performance
   x1 <- seq(0, 9, by = 1)
   x2 <- seq(0, 9, by = 1)
-  if (l_info$use_exptl_stimuli) {
-    x1 <- 9 * (x1 + 1) + 1
-    x2 <- 9 * (x2 + 1) + 1
-    if (l_info$representation == "psychological-representation") {
-      tbl_psych <- readRDS("data/psych-representations.rds")
-      x1 <- sort(unique(tbl_psych$x1_psych))
-      x2 <- sort(unique(tbl_psych$x2_psych))
-    }
-  }
+
   tbl_tmp <- crossing(x1, x2)
   tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
+  
   cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
   cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
+  
+  # does it make sense to first create ellipse, and then transform into exptl space (obj/psych)?
+  if (l_info$use_exptl_stimuli) {
+    cat_boundaries_2$x_rotated <- 9 * (cat_boundaries_2$x_rotated + 1) + 1
+    cat_boundaries_2$y_rotated <- 9 * (cat_boundaries_2$y_rotated + 1) + 1
+    
+    cat_boundaries_3$x_rotated <- 9 * (cat_boundaries_3$x_rotated + 1) + 1
+    cat_boundaries_3$y_rotated <- 9 * (cat_boundaries_3$y_rotated + 1) + 1
+  }
+  
+  if (l_info$representation == "psychological-representation") {
+    tbl_psych <- readRDS("data/psych-representations.rds")
+    cat_boundaries_2$x_rotated <- signal::interp1(sort(unique(tbl_psych$x1_obj)), sort(unique(tbl_psych$x1_psych)), cat_boundaries_2$x_rotated)
+    cat_boundaries_2$y_rotated <- signal::interp1(sort(unique(tbl_psych$x2_obj)), sort(unique(tbl_psych$x2_psych)), cat_boundaries_2$y_rotated)
+    
+    cat_boundaries_3$x_rotated <- signal::interp1(sort(unique(tbl_psych$x1_obj)), sort(unique(tbl_psych$x1_psych)), cat_boundaries_3$x_rotated)
+    cat_boundaries_3$y_rotated <- signal::interp1(sort(unique(tbl_psych$x2_obj)), sort(unique(tbl_psych$x2_psych)), cat_boundaries_3$y_rotated)
+    
+  }
+  
   l_ellipses[[1]][[2]] <- cat_boundaries_2
   l_ellipses[[2]][[2]] <- cat_boundaries_3
   
