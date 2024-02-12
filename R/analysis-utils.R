@@ -708,18 +708,28 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
 }
 
 
-category_centers <- function(f_stretch, f_shift) {
+category_centers <- function(f_stretch, f_shift, l_info) {
   #' helper function to define category centers
   #' 
   #' @description returns x1 and x2 means of the ellipse categories (n_categories - 1)
   #' @param f_stretch stretches ellipses, which are drawn from 0-9
   #' @param f_shift shifts ellipses according to the value
+  #' @param l_info simulation parameters and information
   #' 
   #' @return the list with the centers of the 2 and 4 category conditions
   #' 
   # read individual performance
   x1 <- seq(0, 9, by = 1)
   x2 <- seq(0, 9, by = 1)
+  if (l_info$use_exptl_stimuli) {
+    x1 <- 9 * (x1 + 1) + 1
+    x2 <- 9 * (x2 + 1) + 1
+    if (l_info$representation == "psychological-representation") {
+      tbl_psych <- readRDS("data/psych-representations.rds")
+      x1 <- sort(unique(tbl_psych$x1_psych))
+      x2 <- sort(unique(tbl_psych$x2_psych))
+    }
+  }
   tbl_tmp <- crossing(x1, x2)
   tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
@@ -741,20 +751,21 @@ category_centers <- function(f_stretch, f_shift) {
 
 
 
-category_centers_squares <- function(n_cats, is_simulation = FALSE) {
+category_centers_squares <- function(n_cats, tbl_df) {
   #' helper function to define square category centers
   #' 
   #' @description returns x1 and x2 means of the square categories
   #' @param n_cats vector with total number of categories for all square conditions
+  #' @param tbl_df tibble with data points for each category
   #' 
   #' @return a tbl_df with the two dimensional centers of the categories
   #'
   category_centers_one_condition <- function(n_cats) {
-    if (is_simulation) {
-      tbl_borders <- tibble(max_x = 10, min_x = 0)
-    } else {
-      tbl_borders <- tibble(max_x = 100, min_x = 1)
-    }
+    
+    tbl_relevant <- tbl_df %>% filter(session %in% c(1, "Before Training"))
+    tbl_agg <- tbl_relevant %>% summarize(min_x = min(x1_true), max_x = max(x1_true))
+    tbl_borders <- tibble(max_x = tbl_agg$max_x, min_x = tbl_agg$min_x)
+    
     
     n_segments <- sqrt(n_cats)
     x_widths <- rep((tbl_borders$max_x - tbl_borders$min_x) / n_segments, n_segments - 1)
@@ -771,13 +782,11 @@ category_centers_squares <- function(n_cats, is_simulation = FALSE) {
       crossing(x = x_draws, y = x_boundaries_no_edges)
     )
     # calculate means of categories
-    x_cat_means <- map2_dbl(
-      1:(length(x_boundaries)-1), 2:length(x_boundaries), 
-      ~ (x_boundaries[.x] + x_boundaries[.y]) / 2
-    )
-    cat_means <- crossing(x_mn = x_cat_means, y_mn = x_cat_means) %>%
-      mutate(category = seq(1, n_cats, by = 1)) %>%
-      relocate(category, .before = x_mn)
+    cat_means <- tbl_relevant %>% 
+      group_by(category) %>%
+      summarize(x_mn = mean(x1_true), y_mn = mean(x2_true)) %>% 
+      ungroup()
+    
     return(list(cat_means = cat_means, x_boundaries_draws = x_boundaries_draws))    
   }
   

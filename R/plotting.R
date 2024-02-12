@@ -232,12 +232,13 @@ plot_marginals <- function(tbl_new, l_info) {
 }
 
 
-diagnostic_plots <- function(l_categorization, sim_center, is_simulation) {
+diagnostic_plots <- function(l_categorization, sim_center, is_simulation, l_info) {
   #' plots showing qualitative predictions from different models
   #' 
   #' @param l_categorization list with category learning results
   #' @param sim_center category center according to ellipse or square category structure
   #' @param is_simulation is the function used for simulations or empirical data
+  #' @param l_info simulation information and parameters
   #' @return a list with samples (a) from the prior, 
   #' (b) from the category learning period, and (c) with (a) and (b) together
   #' 
@@ -257,10 +258,18 @@ diagnostic_plots <- function(l_categorization, sim_center, is_simulation) {
   
   # add prior to stimulus_ids, which have not been sampled, as posterior = prior for these stimuli
   l_results$tbl_posterior <- adapt_posterior_to_empirical_analysis(l_results$tbl_posterior)
-
-  l_results$tbl_posterior <- distance_to_closest_center_simulation(l_results$tbl_posterior, sim_center, is_simulation)
-    
+  
+  l_out <- distance_to_closest_center_simulation(l_results$tbl_posterior, sim_center, is_simulation, l_info)
+  l_results$tbl_posterior <- l_out$tbl
+  l_results$tbl_posterior$d_boundary <- add_distance_to_boundary(l_results$tbl_posterior, l_out$l_centers, sim_center, l_info)
+  
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
+  
+  tmp <- l_results$tbl_posterior
+  
+  ggplot(tmp, aes(x1_true, x2_true)) +
+    geom_point() +
+    facet_wrap(~ session)
   
   # movement of stimulus representations before vs. after
   pl_centers <- plot_moves(l_results$tbl_posterior, l_info)

@@ -37,16 +37,18 @@ tbl_vary <- crossing(
   constrain_space = c(TRUE, FALSE), category_shape = c("square", "ellipses"),
   is_reward = FALSE,
   informed_by_data = c(TRUE),
-  representation = c("physical-properties", "psychological-representation")
+  representation = c("physical-properties") #, , "psychological-representation"
 )
 
-tbl_vary$n_categories <- rep(c(2, 2, 4, 4), nrow(tbl_vary)/4)
+tbl_vary$n_categories <- rep(c(2, 4), nrow(tbl_vary)/2) # 2, 4, 
 tbl_vary <- tbl_vary %>% relocate(n_categories, .before = cat_type)
 
 # rule-based strategy does not work well with ellipse category
 filter_out <- tbl_vary$category_shape == "ellipses" & tbl_vary$cat_type == "rule"
 tbl_vary <- tbl_vary[!filter_out, ]
 tbl_vary$use_exptl_stimuli <- tbl_vary$informed_by_data
+
+tbl_vary$prior_sd <- tbl_vary$prior_sd * ((tbl_vary$use_exptl_stimuli * 9) + 1)
 
 l_info <- pmap(
   tbl_vary, ~ append(
@@ -91,7 +93,7 @@ walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 
 # Run Category Learning Task ----------------------------------------------
 
-plan(multisession, workers = min(future::availableCores() - 4, length(l_info)))
+plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
 
 
 l_category_results <- future_map(
@@ -114,14 +116,14 @@ if (read_write == "write") {
   saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
   saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
 } else if (read_write == "read") {
-  l_category_results <- readRDS(file = "data/2023-02-08-grid-search-vary-constrain-space.rds")
+  l_category_results <- readRDS(file = "data/2024-02-09-grid-search-vary-constrain-space.rds")
   l_seq_results <- readRDS(file = "data/2023-02-08-grid-search-sequential-comparison.rds")
 }
 
 
 # Post Processing & Plotting ----------------------------------------------
 if (read_write == "write") {
-  l_results_plots <- map2(l_category_results, tbl_vary$category_shape, diagnostic_plots, is_simulation = TRUE)
+  l_results_plots <- map2(l_category_results[c(1, 9, 17)], tbl_vary$category_shape[c(1, 9, 17)], diagnostic_plots, is_simulation = TRUE, l_info[c(1, 9, 17)])
   l_results_plots_seq <- map2(l_seq_results, tbl_info_seq$category_shape, diagnostics_seq, is_simulation = TRUE)
   saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
   saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
@@ -133,7 +135,7 @@ if (read_write == "write") {
 dg <- position_dodge(width = .9)
 
 # ellipse category structure example prediction
-pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+pl_pred_delta_ellipse <- l_results_plots[[3]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
   l_results_plots_seq[[1]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
 ) %>% mutate(category = c("Bukil", "Venak")[category]) %>%
   ggplot(aes(session, d_closest_sqrt, group = condition)) +
@@ -152,7 +154,7 @@ pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(co
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
-pl_pred_ellipse <- l_results_plots[[5]][[2]][[1]] +
+pl_pred_ellipse <- l_results_plots[[3]][[2]][[1]] +
   theme(
     strip.background = element_rect(fill="white"),
     strip.text = element_text(colour = 'black'),

@@ -100,13 +100,24 @@ tbl_secondary_e4 <- readRDS(
   arrange(participant_id, trial_id) %>%
   relocate(participant_id, .before = n_categories)
 
+# add psych representations
+tbl_psych <- readRDS("data/psych-representations.rds")
+tbl_secondary <- tbl_secondary %>% 
+  left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj"))
+tbl_secondary_e2 <- tbl_secondary_e2 %>% 
+  left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj"))
+tbl_secondary_e3 <- tbl_secondary_e3 %>% 
+  left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj"))
+tbl_secondary_e4 <- tbl_secondary_e4 %>% 
+  left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj"))
+
 
 l_all_e2 <- tbl_secondary_e2 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e3 <- tbl_secondary_e3 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e4 <- tbl_secondary_e4 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e234 <- list(l_all_e2, l_all_e3, l_all_e4)
 
-
+is_psychological <- TRUE
 
 ## GCM --------------------------------------------------------------------
 
@@ -125,20 +136,33 @@ for (it in 1:n_it) {
       l_all <- l_all_e234[[i]]
       filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
       l_all <- l_all[filter_cat]
+      if (is_psychological) {
+        l_all <- map(l_all, ~ .x %>% select(-c(x1, x2)) %>% rename(x1 = x1_psych, x2 = x2_psych))
+      }
       plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
       
       l_results_gcm <- future_map(
         l_all, safely(fit_gcm_one_participant), 
         .progress = TRUE, .options = furrr_options(seed = FALSE)
       )
-      saveRDS(l_results_gcm, file = str_c("data/", c("e2", "e3", "e4")[i], "-gcm-300-trials-it-", it, ".rds"))
+      suffix <- c("obj", "psych")[is_psychological + 1]
+      fl_name <- str_c(
+        "data/", c("e2", "e3", "e4")[i], 
+        "-gcm-300-trials-it-", it, "-", suffix, ".rds"
+      )
+      saveRDS(l_results_gcm, file = fl_name)
       plan("sequential")
     }
     
   } else {
-    l_results_gcm_e2[[it]] <- readRDS(str_c("data/e2-gcm-300-trials-it-", it, ".rds"))
-    l_results_gcm_e3[[it]] <- readRDS(str_c("data/e3-gcm-300-trials-it-", it, ".rds"))
-    l_results_gcm_e4[[it]] <- readRDS(str_c("data/e4-gcm-300-trials-it-", it, ".rds"))
+    suffix <- c("obj", "psych")[is_psychological + 1]
+    fl_name <- str_c(
+      "data/", c("e2", "e3", "e4"), 
+      "-gcm-300-trials-it-", it, "-", suffix, ".rds"
+    )
+    l_results_gcm_e2[[it]] <- readRDS(fl_name[1])
+    l_results_gcm_e3[[it]] <- readRDS(fl_name[2])
+    l_results_gcm_e4[[it]] <- readRDS(fl_name[3])
     
   }
 }
@@ -180,6 +204,9 @@ for (it in 1:n_it) {
       l_all <- l_all_e234[[i]]
       filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
       l_all <- l_all[filter_cat]
+      if (is_psychological) {
+        l_all <- map(l_all, ~ .x %>% select(-c(x1, x2)) %>% rename(x1 = x1_psych, x2 = x2_psych))
+      }
       
       plan(multisession, workers = min(future::availableCores(), length(l_start)))
       
@@ -188,14 +215,24 @@ for (it in 1:n_it) {
         tbl_pt = tbl_pt,
         .progress = TRUE, .options = furrr_options(seed = TRUE)
       )
-      saveRDS(l_results_pt, file = str_c("data/", c("e2", "e3", "e4")[i], "-prototype-300-trials-it-", it, ".rds"))
+      suffix <- c("obj", "psych")[is_psychological + 1]
+      fl_name <- str_c(
+        "data/", c("e2", "e3", "e4")[i], 
+        "-prototype-300-trials-it-", it, "-", suffix, ".rds"
+      )
+      saveRDS(l_results_pt, file = fl_name)
       plan("sequential")
     }
     
   } else {
-    l_results_pt_e2[[it]] <- readRDS(str_c("data/e2-prototype-300-trials-it-", it, ".rds"))
-    l_results_pt_e3[[it]] <- readRDS(str_c("data/e3-prototype-300-trials-it-", it, ".rds"))
-    l_results_pt_e4[[it]] <- readRDS(str_c("data/e4-prototype-300-trials-it-", it, ".rds"))
+    suffix <- c("obj", "psych")[is_psychological + 1]
+    fl_name <- str_c(
+      "data/", c("e2", "e3", "e4"), 
+      "-prototype-300-trials-it-", it, "-", suffix, ".rds"
+    )
+    l_results_pt_e2[[it]] <- readRDS(fl_name[1])
+    l_results_pt_e3[[it]] <- readRDS(fl_name[2])
+    l_results_pt_e4[[it]] <- readRDS(fl_name[3])
     
   }
 }
@@ -227,6 +264,9 @@ for (it in 1:n_it) {
       l_all <- l_all_e234[[i]]
       filter_cat <- map_lgl(l_all, ~ nrow(.x) > 0)
       l_all <- l_all[filter_cat]
+      if (is_psychological) {
+        l_all <- map(l_all, ~ .x %>% select(-c(x1, x2)) %>% rename(x1 = x1_psych, x2 = x2_psych))
+      }
       
       plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
       
@@ -235,14 +275,24 @@ for (it in 1:n_it) {
         tbl_rules = tbl_rules,
         .progress = TRUE, .options = furrr_options(seed = TRUE)
       )
-      saveRDS(l_results_rb, file = str_c("data/", c("e2", "e3", "e4")[i], "-rulebased-300-trials-it-", it, ".rds"))
+      suffix <- c("obj", "psych")[is_psychological + 1]
+      fl_name <- str_c(
+        "data/", c("e2", "e3", "e4")[i], 
+        "-rulebased-300-trials-it-", it, "-", suffix, ".rds"
+      )
+      saveRDS(l_results_rb, file = fl_name)
       plan("sequential")
     }
     
   } else {
-    l_results_rb_e2[[it]] <- readRDS(str_c("data/e2-rulebased-300-trials-it-", it, ".rds"))
-    l_results_rb_e3[[it]] <- readRDS(str_c("data/e3-rulebased-300-trials-it-", it, ".rds"))
-    l_results_rb_e4[[it]] <- readRDS(str_c("data/e4-rulebased-300-trials-it-", it, ".rds"))
+    suffix <- c("obj", "psych")[is_psychological + 1]
+    fl_name <- str_c(
+      "data/", c("e2", "e3", "e4"), 
+      "-rulebased-300-trials-it-", it, "-", suffix, ".rds"
+    )
+    l_results_rb_e2[[it]] <- readRDS(fl_name[1])
+    l_results_rb_e3[[it]] <- readRDS(fl_name[2])
+    l_results_rb_e4[[it]] <- readRDS(fl_name[3])
     
   }
 }
@@ -449,6 +499,15 @@ l_all_e1 <- l_all_e1[filter_cat]
 
 l_results_gcm_e1 <- list()
 
+if (is_psychological) {
+  l_all_e1 <- map(
+    l_all_e1, ~ .x %>% 
+      select(-c(x1, x2)) %>% 
+      rename(x1 = x1_psych, x2 = x2_psych)
+    )
+}
+suffix <- c("obj", "psych")[is_psychological + 1]
+
 for (it in 1:n_it) {
   if (is_fit) {
     
@@ -459,10 +518,15 @@ for (it in 1:n_it) {
       n_cat = 2,
       .progress = TRUE, .options = furrr_options(seed = FALSE)
     )
-    saveRDS(l_results_gcm, file = str_c("data/e1-gcm-300-trials-it-", it, ".rds"))
+    
+    fl_name <- str_c(
+      "data/e1-gcm-300-trials-it-", it, "-", suffix, ".rds"
+    )
+    saveRDS(l_results_gcm, file = fl_name)
+    
     plan("sequential")
   } else {
-    l_results_gcm_e1[[it]] <- readRDS(str_c("data/e1-gcm-300-trials-it-", it, ".rds"))
+    l_results_gcm_e1[[it]] <- readRDS(str_c("data/e1-gcm-300-trials-it-", it, "-", suffix, ".rds"))
   }
 }
 

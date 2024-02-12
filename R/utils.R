@@ -797,7 +797,7 @@ center_of_category <- function(l_info, l_m, timepoint_str, tbl_new){
   #' @param timepoint_str a string stating the time point of learning
   #' @param tbl_new tbl with the prior the accepted samples
   #' 
-  if (l_info$cat_type == "prototype") {
+  if (l_info$cat_type == "prototype" & l_info$category_shape == "ellipses") {
     if(timepoint_str == "Before Training") m <- l_m$m_nb_initial
     if(timepoint_str == "After Training") m <- l_m$m_nb_update
     map(m$tables, function(x) x[1, ]) %>% 
@@ -1283,7 +1283,7 @@ adapt_posterior_to_empirical_analysis <- function(tbl) {
   return(tbl)
 }
 
-distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation) {
+distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation, l_info) {
   #' add distance to closest center for sampled representations
   #' 
   #' @description maps simulation results to empirical results and computes distance to closest category center
@@ -1295,12 +1295,60 @@ distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation
   tbl$n_categories <- max(as.numeric(as.character(tbl$category)))
   tbl$x1_response <- tbl$x1_true
   tbl$x2_response <- tbl$x2_true
-  l_centers <- category_centers(f_stretch = 1, f_shift = 0)
-  l_centers[[3]] <- category_centers_squares(n_cats = c(4), is_simulation)
+  tbl$session <- tbl$timepoint
+  l_centers <- category_centers(f_stretch = 1, f_shift = 0, l_info)
+  l_centers[[3]] <- category_centers_squares(c(4), tbl)
   tbl <- add_distance_to_nearest_center(tbl, l_centers, is_simulation = TRUE, sim_center = sim_center)
   tbl$participant_id <- 1
   tbl$session <- tbl$timepoint 
-  return(tbl)
+  return(list(tbl = tbl, l_centers = l_centers))
+}
+
+add_distance_to_boundary <- function(tbl, l_centers, sim_center, l_info) {
+  #' @description compute distance to closest category boundary
+  #' @param tbl tibble with x1/x and x2/y values
+  #' @param l_centers list with category boundary for ellipse structure
+  #' @param sim_center ellipse or square cat structure
+  #' @param l_info simulation information/parameters
+  #' 
+  if (sim_center == "ellipses") {
+    pmap_dbl(
+      tbl[, c("x1_response", "x2_response")], 
+      ~ min(sqrt(
+        (.x - l_centers[[2]][[1]][[2]]$x_rotated) ^ 2 +
+          (.y - l_centers[[2]][[1]][[2]]$y_rotated) ^ 2
+      )
+      ))
+  } else if (sim_center == "square") {
+    if (l_info$representation == "physical-properties"){
+      boundaries_grid <- tibble(
+        x = rep(50, 1000),
+        y = seq(0, 100, length.out = 1000)
+      ) %>% rbind(
+        tibble(
+          x = seq(0, 100, length.out = 1000),
+          y = rep(50, 1000)
+        )
+      )
+    } else if (l_info$representation == "psychological-representation") {
+      boundaries_grid <- tibble(
+        x = rep(3.62161825, 1000),
+        y = seq(0, 7, length.out = 1000)
+      ) %>% rbind(
+        tibble(
+          x = seq(0, 7, length.out = 1000),
+          y = rep(4.362346, 1000)
+        )
+      )
+    }
+    pmap_dbl(
+      tbl[, c("x1_response", "x2_response")], 
+      ~ min(sqrt(
+        (.x - boundaries_grid$x) ^ 2 +
+          (.y - boundaries_grid$y) ^ 2
+      )
+      ))
+  }
 }
 
 
