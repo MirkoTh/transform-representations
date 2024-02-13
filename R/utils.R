@@ -2064,10 +2064,10 @@ compare_models <- function(l_results_gcm, l_results_pt, l_results_rb, ntrials, e
   tbl_ll <- aic_and_bic(tbl_ll_gcm, tbl_ll_pt, tbl_ll_rb, ntrials)
   
   pl_hm_bic <- plot_grouped_and_ranked_models(
-    tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, str_c("E", expt_nr, ": Winner BIC"), lg_pos
+    tbl_ll, c(bic_gcm, bic_pt, bic_rb), winner_bic, str_c("Winner BIC"), lg_pos
   )
   pl_hm_aic <- plot_grouped_and_ranked_models(
-    tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, str_c("E", expt_nr, ": Winner AIC"), lg_pos
+    tbl_ll, c(aic_gcm, aic_pt, aic_rb), winner_aic, str_c("Winner AIC"), lg_pos
   )
   
   pl_comp <- arrangeGrob(pl_hm_bic, pl_hm_aic, nrow = 1)

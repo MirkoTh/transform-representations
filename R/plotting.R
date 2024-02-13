@@ -49,7 +49,7 @@ plot_moves <- function(tbl_results, l_info) {
     tbl_results2 <- tbl_results
   }
   space_edges <- l_info$space_edges
-  xy_breaks <- seq(space_edges[1], space_edges[2], by = 2)
+  xy_breaks <- seq(space_edges[1], space_edges[2], length.out = 5)
   
   ggplot(tbl_results, aes(x1_true, x2_true, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category))) +
@@ -264,12 +264,6 @@ diagnostic_plots <- function(l_categorization, sim_center, is_simulation, l_info
   l_results$tbl_posterior$d_boundary <- add_distance_to_boundary(l_results$tbl_posterior, l_out$l_centers, sim_center, l_info)
   
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
-  
-  tmp <- l_results$tbl_posterior
-  
-  ggplot(tmp, aes(x1_true, x2_true)) +
-    geom_point() +
-    facet_wrap(~ session)
   
   # movement of stimulus representations before vs. after
   pl_centers <- plot_moves(l_results$tbl_posterior, l_info)

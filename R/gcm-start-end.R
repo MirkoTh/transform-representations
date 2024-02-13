@@ -1,3 +1,7 @@
+# Load Packages and Data --------------------------------------------------
+
+
+
 rm(list = ls())
 
 library(tidyverse)
@@ -6,6 +10,7 @@ library(gridExtra)
 library(furrr)
 library(rutils)
 library(naivebayes)
+library(mvtnorm)
 
 home_grown <- c("R/utils.R", "R/analysis-plotting.R")
 walk(home_grown, source)
@@ -25,6 +30,10 @@ l_all <- tbl_secondary %>% filter(trial_id >= 100) %>% split(.$participant_id)
 
 is_fit <- FALSE#TRUE#
 is_fit_init_end <- FALSE
+is_psychological <- TRUE#FALSE#
+suffix <- c("", "-psych")[is_psychological + 1]
+
+
 n_it <- 3
 
 tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
@@ -111,13 +120,22 @@ tbl_secondary_e3 <- tbl_secondary_e3 %>%
 tbl_secondary_e4 <- tbl_secondary_e4 %>% 
   left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj"))
 
+if (is_psychological) {
+  tbl_pt <- tbl_secondary %>% 
+    group_by(category) %>% 
+    summarize(x1_pt = mean(x1_psych), x2_pt = mean(x2_psych))
+} else {
+  tbl_pt <- tbl_secondary %>% 
+    group_by(category) %>% 
+    summarize(x1_pt = mean(x1), x2_pt = mean(x2))
+}
+
 
 l_all_e2 <- tbl_secondary_e2 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e3 <- tbl_secondary_e3 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e4 <- tbl_secondary_e4 %>% filter(trial_id >= 100) %>% split(.$participant_id)
 l_all_e234 <- list(l_all_e2, l_all_e3, l_all_e4)
 
-is_psychological <- TRUE
 
 ## GCM --------------------------------------------------------------------
 
@@ -145,20 +163,18 @@ for (it in 1:n_it) {
         l_all, safely(fit_gcm_one_participant), 
         .progress = TRUE, .options = furrr_options(seed = FALSE)
       )
-      suffix <- c("obj", "psych")[is_psychological + 1]
       fl_name <- str_c(
         "data/", c("e2", "e3", "e4")[i], 
-        "-gcm-300-trials-it-", it, "-", suffix, ".rds"
+        "-gcm-300-trials-it-", it, suffix, ".rds"
       )
       saveRDS(l_results_gcm, file = fl_name)
       plan("sequential")
     }
     
   } else {
-    suffix <- c("obj", "psych")[is_psychological + 1]
     fl_name <- str_c(
       "data/", c("e2", "e3", "e4"), 
-      "-gcm-300-trials-it-", it, "-", suffix, ".rds"
+      "-gcm-300-trials-it-", it, suffix, ".rds"
     )
     l_results_gcm_e2[[it]] <- readRDS(fl_name[1])
     l_results_gcm_e3[[it]] <- readRDS(fl_name[2])
@@ -198,7 +214,6 @@ l_results_pt_e3 <- list()
 l_results_pt_e4 <- list()
 
 for (it in 1:n_it) {
-  
   if (is_fit) {
     for (i in 1:length(l_all_e234)) {
       l_all <- l_all_e234[[i]]
@@ -209,26 +224,23 @@ for (it in 1:n_it) {
       }
       
       plan(multisession, workers = min(future::availableCores(), length(l_start)))
-      
       l_results_pt <- future_map(
         l_all, safely(fit_prototype_one_participant), 
         tbl_pt = tbl_pt,
         .progress = TRUE, .options = furrr_options(seed = TRUE)
       )
-      suffix <- c("obj", "psych")[is_psychological + 1]
       fl_name <- str_c(
         "data/", c("e2", "e3", "e4")[i], 
-        "-prototype-300-trials-it-", it, "-", suffix, ".rds"
+        "-prototype-300-trials-it-", it, suffix, ".rds"
       )
       saveRDS(l_results_pt, file = fl_name)
       plan("sequential")
     }
     
   } else {
-    suffix <- c("obj", "psych")[is_psychological + 1]
     fl_name <- str_c(
       "data/", c("e2", "e3", "e4"), 
-      "-prototype-300-trials-it-", it, "-", suffix, ".rds"
+      "-prototype-300-trials-it-", it, suffix, ".rds"
     )
     l_results_pt_e2[[it]] <- readRDS(fl_name[1])
     l_results_pt_e3[[it]] <- readRDS(fl_name[2])
@@ -246,12 +258,22 @@ l_results_pt_e4 <- extract_best_fit(l_results_pt_e4)
 
 ## rule-based model -------------------------------------------------------
 
+if (is_psychological) {
+  # psych
+  tbl_rules <- tibble(
+    category = 1:4,
+    lo = list(c(-100, -100), c(-100, 4.362346), c(3.62161825, -100), c(3.62161825, 4.362346)),
+    hi = list(c(3.62161825, 4.362346), c(3.62161825, 200), c(200, 4.362346), c(200, 200))
+  )
+} else {
+  # obj
+  tbl_rules <- tibble(
+    category = 1:4,
+    lo = list(c(-100, -100), c(-100, 50), c(50, -100), c(50, 50)),
+    hi = list(c(50, 50), c(50, 200), c(200, 50), c(200, 200))
+  )
+}
 
-tbl_rules <- tibble(
-  category = 1:4,
-  lo = list(c(-100, -100), c(-100, 50), c(50, -100), c(50, 50)),
-  hi = list(c(50, 50), c(50, 200), c(200, 50), c(200, 200))
-)
 
 l_results_rb_e2 <- list()
 l_results_rb_e3 <- list()
@@ -269,26 +291,23 @@ for (it in 1:n_it) {
       }
       
       plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
-      
       l_results_rb <- future_map(
         l_all, safely(fit_rb_one_participant), 
         tbl_rules = tbl_rules,
         .progress = TRUE, .options = furrr_options(seed = TRUE)
       )
-      suffix <- c("obj", "psych")[is_psychological + 1]
       fl_name <- str_c(
         "data/", c("e2", "e3", "e4")[i], 
-        "-rulebased-300-trials-it-", it, "-", suffix, ".rds"
+        "-rulebased-300-trials-it-", it, suffix, ".rds"
       )
       saveRDS(l_results_rb, file = fl_name)
       plan("sequential")
     }
     
   } else {
-    suffix <- c("obj", "psych")[is_psychological + 1]
     fl_name <- str_c(
       "data/", c("e2", "e3", "e4"), 
-      "-rulebased-300-trials-it-", it, "-", suffix, ".rds"
+      "-rulebased-300-trials-it-", it, suffix, ".rds"
     )
     l_results_rb_e2[[it]] <- readRDS(fl_name[1])
     l_results_rb_e3[[it]] <- readRDS(fl_name[2])
@@ -311,7 +330,7 @@ l_results_rb_e4 <- extract_best_fit(l_results_rb_e4)
 
 l_comp_e2 <- compare_models(l_results_gcm_e2, l_results_pt_e2, l_results_rb_e2, "2", ntrials = nrow(l_all_e2[[1]]), lg_pos = "none")
 l_comp_e3 <- compare_models(l_results_gcm_e3, l_results_pt_e3, l_results_rb_e3, "3", ntrials = nrow(l_all_e3[[2]]), lg_pos = "none")
-l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, "4", ntrials = nrow(l_all_e4[[1]]), lg_pos = "none")
+l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, "4", ntrials = nrow(l_all_e4[[1]]), lg_pos = "bottom")
 
 
 ## Save Fitted Parameters --------------------------------------------------
@@ -341,7 +360,7 @@ hist_gcm_params <- tbl_gcm_params %>%
   pivot_longer(c(c, w, starts_with("bias"))) %>%
   ggplot(aes(value)) +
   geom_histogram(color = "black", fill = "skyblue2") +
-  facet_grid(E ~ name) +
+  facet_grid(E ~ name, scales = "free_x") +
   theme_bw() +
   scale_x_continuous(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
@@ -356,7 +375,7 @@ hist_pt_params <- tbl_pt_params %>%
   pivot_longer(c(c, w, g)) %>%
   ggplot(aes(value)) +
   geom_histogram(color = "black", fill = "skyblue2") +
-  facet_grid(E ~ name) +
+  facet_grid(E ~ name, scales = "free_x") +
   theme_bw() +
   scale_x_continuous(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
@@ -379,16 +398,16 @@ hist_rb_params <- tbl_rb_params %>%
   theme_bw() +
   scale_x_continuous(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0), breaks = seq(0, 20, by = 3)) +
-  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters PT") + 
+  labs(x = "Parameter Value", y = "Nr. Participants", title = "Parameters RB") + 
   theme(
     strip.background = element_rect(fill = "white"),
     text = element_text(size = 22),
     axis.text.x = element_text(angle = 90, vjust = .3)
   )
 
-save_my_pdf_and_tiff(hist_gcm_params, "figures/gcm-model-params-e234", 12, 7)
-save_my_pdf_and_tiff(hist_pt_params, "figures/pt-model-params-e234", 6, 7)
-save_my_pdf_and_tiff(hist_rb_params, "figures/rb-model-params-e234", 4, 7)
+save_my_pdf_and_tiff(hist_gcm_params, str_c("figures/gcm-model-params-e234", suffix), 12, 7)
+save_my_pdf_and_tiff(hist_pt_params, str_c("figures/pt-model-params-e234", suffix), 6, 7)
+save_my_pdf_and_tiff(hist_rb_params, str_c("figures/rb-model-params-e234", suffix), 4, 7)
 
 
 # params look relatively similar across Es
@@ -406,7 +425,10 @@ tbl_avg_params <- tibble(
   tibble(
     p = names(rb_avg_params), val = rb_avg_params, model = "RB"
   )
-) %>% mutate(cat_structure = "square")
+) %>% mutate(
+  cat_structure = "square",
+  representation = c("object-properties", "psychological-representation")[is_psychological + 1]
+)
 
 
 
@@ -486,6 +508,8 @@ tbl_secondary_e1 <- readRDS("experiments/2022-02-category-learning/data/tbl_cat_
   rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
   arrange(participant_id, trial_id)
 
+tbl_secondary_e1 <- tbl_secondary_e1 %>% 
+  left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj"))
 
 l_all_e1 <- tbl_secondary_e1 %>% filter(trial_id >= 340) %>% split(.$participant_id)
 
@@ -504,14 +528,13 @@ if (is_psychological) {
     l_all_e1, ~ .x %>% 
       select(-c(x1, x2)) %>% 
       rename(x1 = x1_psych, x2 = x2_psych)
-    )
+  )
 }
-suffix <- c("obj", "psych")[is_psychological + 1]
 
 for (it in 1:n_it) {
   if (is_fit) {
     
-    plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+    plan(multisession, workers = min(future::availableCores(), length(l_start)))
     
     l_results_gcm <- future_map(
       l_all_e1, safely(fit_gcm_one_participant), 
@@ -520,13 +543,13 @@ for (it in 1:n_it) {
     )
     
     fl_name <- str_c(
-      "data/e1-gcm-300-trials-it-", it, "-", suffix, ".rds"
+      "data/e1-gcm-300-trials-it-", it, suffix, ".rds"
     )
     saveRDS(l_results_gcm, file = fl_name)
     
     plan("sequential")
   } else {
-    l_results_gcm_e1[[it]] <- readRDS(str_c("data/e1-gcm-300-trials-it-", it, "-", suffix, ".rds"))
+    l_results_gcm_e1[[it]] <- readRDS(str_c("data/e1-gcm-300-trials-it-", it, suffix, ".rds"))
   }
 }
 
@@ -545,9 +568,11 @@ tbl_par_gcm_e1 <- tibble(
   model = "GCM",
   cat_structure = "ellipses")
 tbl_avg_params <- rbind(
-  tbl_avg_params, tbl_par_gcm_e1
-) %>% mutate(representation = "physical-properties")
-saveRDS(tbl_avg_params, file = "data/avg-params-all-catlearn-models.rds")
+  tbl_avg_params, 
+  tbl_par_gcm_e1 %>% 
+    mutate(representation = c("object-properties", "psychological-representation")[is_psychological + 1])
+)
+saveRDS(tbl_avg_params, file = str_c("data/avg-params-all-catlearn-models-", c("physical-properties", "psychological-representation")[is_psychological + 1], ".rds"))
 
 
 hist_gcm_params_e1 <- tbl_gcm_e1_params %>%
@@ -555,7 +580,7 @@ hist_gcm_params_e1 <- tbl_gcm_e1_params %>%
   pivot_longer(c(c, w, Bias)) %>%
   ggplot(aes(value)) +
   geom_histogram(color = "black", fill = "skyblue2") +
-  facet_wrap( ~ name) +
+  facet_wrap( ~ name, scales = "free_x") +
   theme_bw() +
   scale_x_continuous(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
@@ -565,7 +590,12 @@ hist_gcm_params_e1 <- tbl_gcm_e1_params %>%
     text = element_text(size = 22),
     axis.text.x = element_text(angle = 90, vjust = .3)
   )
-save_my_pdf_and_tiff(hist_gcm_params_e1, "figures/gcm-model-params-e1", 6, 7)
+save_my_pdf_and_tiff(
+  hist_gcm_params_e1, str_c(
+    "figures/gcm-model-params-e1-", 
+    c("object-properties", "psychological-representation")[is_psychological + 1]),
+  6, 7
+)
 
 
 ## Naive Bayes Prototype Model --------------------------------------------
@@ -592,10 +622,10 @@ if (is_fit) {
     l_results_nb, l_all_e1, get_n2ll_nb,
     .progress = TRUE
   )
-  saveRDS(n2ll_nb, file = str_c("data/e1-pt-nb-300-trials.rds"))
+  saveRDS(n2ll_nb, file = str_c("data/e1-pt-nb-300-trials", suffix, ".rds"))
   plan("sequential")
 } else if (!is_fit) {
-  n2ll_nb <- readRDS(file = str_c("data/e1-pt-nb-300-trials.rds"))
+  n2ll_nb <- readRDS(file = str_c("data/e1-pt-nb-300-trials", suffix, ".rds"))
 }
 
 e1_abic_plots <- function(n2ll_gcm_e1, n2ll_nb, ntrials_e1) {
@@ -634,13 +664,21 @@ ntrials_e1 <- nrow(l_all_e1[[1]])
 l_comp_e1 <- e1_abic_plots(n2ll_gcm_e1, n2ll_nb, ntrials_e1)
 l_comp_e1$tbl_ll_e1
 
-grid.draw(arrangeGrob(
+
+plot_m_comp <- arrangeGrob(
   l_comp_e1$pl_comp,
   l_comp_e2$pl_comp,
   l_comp_e3$pl_comp,
   l_comp_e4$pl_comp,
-  nrow = 4, ncol = 1
-))
+  nrow = 4, ncol = 1, heights = c(1, 1, 1, 1.2)
+)
+
+path_m_comp <- str_c("figures/plot-model-comparison-e1-e4", suffix, ".rds")
+save_my_pdf_and_tiff(
+  plot_m_comp, 
+  path_m_comp,
+  7, 11
+)
 
 # average fit
 
@@ -657,4 +695,4 @@ m_nb <- naive_bayes(
       response = as.character(response)
     )
 )
-saveRDS(m_nb, file = "data/e1-nb-pt-avg-fit.rds")
+saveRDS(m_nb, file = str_c("data/e1-nb-pt-avg-fit", suffix, ".rds"))
