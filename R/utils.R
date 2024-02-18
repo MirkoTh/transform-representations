@@ -67,8 +67,8 @@ categorize_stimuli <- function(l_info) {
     is_improvement <- post_x_new > post_x_old
     mh_is_accepted <- p_thx < min(1, post_x_new/post_x_old)
     is_in_shown_space <- (
-      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
-        between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+      between(l_x$X_new$x1, l_info$space_edges$x1[1], l_info$space_edges$x1[2]) & 
+        between(l_x$X_new$x2, l_info$space_edges$x2[1], l_info$space_edges$x2[2])
     )
     if (
       ifelse(l_info$sampling == "improvement", is_improvement, mh_is_accepted) & 
@@ -154,8 +154,8 @@ compare_subsequent_stimuli <- function(l_info) {
     # most likely can be (a) according to prior means and sds
     # or (b) according to sampling algorithm
     is_in_shown_space <- (
-      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
-        between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+      between(l_x$X_new$x1, l_info$space_edges$x1[1], l_info$space_edges$x1[2]) & 
+        between(l_x$X_new$x2, l_info$space_edges$x2[1], l_info$space_edges$x2[2])
     )
     
     v_priormean <- as_vector(l_x$X_old[l_x$stim_id_cur, ])
@@ -217,9 +217,9 @@ make_stimuli <- function(l_info) {
   #' @return a list with a tbl containing the stimulus set and 
   #' the parameter list with the added infos
   #' 
-  l_info$space_edges <- c(0, sqrt(l_info$n_stimuli) - 1)
-  x1 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
-  x2 <- seq(l_info$space_edges[1], l_info$space_edges[2], by = 1)
+  l_info$space_edges <- list(x1 = c(0, sqrt(l_info$n_stimuli) - 1), x2 = c(0, sqrt(l_info$n_stimuli) - 1))
+  x1 <- seq(l_info$space_edges$x1[1], l_info$space_edges$x1[2], by = 1)
+  x2 <- seq(l_info$space_edges$x2[1], l_info$space_edges$x2[2], by = 1)
   features <- crossing(x1, x2)
   tbl <- tibble(stim_id = seq(1, nrow(features)), features)
   if (l_info$category_shape == "square") {
@@ -234,7 +234,7 @@ make_stimuli <- function(l_info) {
   if (l_info$use_exptl_stimuli) {
     tbl$x1 <- 9 * (tbl$x1 + 1) + 1
     tbl$x2 <- 9 * (tbl$x2 + 1) + 1
-    l_info$space_edges <- c(0, 100)
+    l_info$space_edges <- list(x1 = c(0, 100), x2 = c(0, 100))
     if (l_info$representation == "psychological-representation") {
       tbl_psych <- readRDS("data/psych-representations.rds")
       tbl <- tbl %>% 
@@ -242,6 +242,7 @@ make_stimuli <- function(l_info) {
         select(-c(x1, x2)) %>% rename(x1 = x1_psych, x2 = x2_psych) %>%
         relocate(c(x1, x2), .after = stim_id)
     }
+    l_info$space_edges <- list(x1 = c(-0.06579467, 6.75626343), x2 = c(-0.151021, 7.410835))
   }
   
   l_info$feature_names <- c("x1", "x2")
@@ -1220,8 +1221,8 @@ reward_categorization <- function(l_info) {
     is_improvement <- post_x_new > post_x_old
     mh_is_accepted <- p_thx < min(1, post_x_new/post_x_old)
     is_in_shown_space <- (
-      between(l_x$X_new$x1, l_info$space_edges[1], l_info$space_edges[2]) & 
-        between(l_x$X_new$x2, l_info$space_edges[1], l_info$space_edges[2])
+      between(l_x$X_new$x1, l_info$space_edges$x1[1], l_info$space_edges$x1[2]) & 
+        between(l_x$X_new$x2, l_info$space_edges$x2[1], l_info$space_edges$x2[2])
     )
     if (
       is_correct &
