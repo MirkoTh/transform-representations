@@ -22,7 +22,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 5000
+nruns <- 10#5000
 
 # constant
 l_info_prep <- list(
@@ -33,11 +33,11 @@ l_info_prep <- list(
 # variable
 tbl_vary <- crossing(
   cat_type = c("prototype", "exemplar", "rule"), #, 
-  prior_sd = c(.75), sampling = c("improvement", "metropolis-hastings"),
+  sampling = c("improvement", "metropolis-hastings"),
   constrain_space = c(TRUE, FALSE), category_shape = c("square", "ellipses"),
   is_reward = FALSE,
   informed_by_data = c(TRUE),
-  representation = c("physical-properties") #, , "psychological-representation"
+  representation = c("psychological-representation") #, ,   # "object-properties"
 )
 
 tbl_vary$n_categories <- rep(c(2, 4), nrow(tbl_vary)/2) # 2, 4, 
@@ -48,7 +48,17 @@ filter_out <- tbl_vary$category_shape == "ellipses" & tbl_vary$cat_type == "rule
 tbl_vary <- tbl_vary[!filter_out, ]
 tbl_vary$use_exptl_stimuli <- tbl_vary$informed_by_data
 
-tbl_vary$prior_sd <- tbl_vary$prior_sd * ((tbl_vary$use_exptl_stimuli * 9) + 1)
+# these are the only available combinations
+tbl_prior_lookup <- tibble(
+  representation = c("object-properties", "psychological-representation", "object-properties"),
+  use_exptl_stimuli = c(TRUE, TRUE, FALSE),
+  prior_sd = c(7.5, .5, .75)
+)
+tbl_vary <- tbl_vary %>% left_join(
+  tbl_prior_lookup, by = c("representation", "use_exptl_stimuli")
+) %>% relocate(prior_sd, .after = cat_type)
+
+
 
 l_info <- pmap(
   tbl_vary, ~ append(
@@ -96,6 +106,7 @@ walk(map(l_info, .f = function(x) x$cat_type), check_cat_types)
 plan(multisession, workers = min(future::availableCores() - 2, length(l_info)))
 
 
+# problem with rule-based model: idx 19
 l_category_results <- future_map(
   l_info, categorize_stimuli, 
   .progress = TRUE, .options = furrr_options(seed = TRUE)

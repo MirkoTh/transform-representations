@@ -235,6 +235,13 @@ make_stimuli <- function(l_info) {
     tbl$x1 <- 9 * (tbl$x1 + 1) + 1
     tbl$x2 <- 9 * (tbl$x2 + 1) + 1
     l_info$space_edges <- c(0, 100)
+    if (l_info$representation == "psychological-representation") {
+      tbl_psych <- readRDS("data/psych-representations.rds")
+      tbl <- tbl %>% 
+        left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj")) %>%
+        select(-c(x1, x2)) %>% rename(x1 = x1_psych, x2 = x2_psych) %>%
+        relocate(c(x1, x2), .after = stim_id)
+    }
   }
   
   l_info$feature_names <- c("x1", "x2")
@@ -482,6 +489,13 @@ get_fitted_params <- function(l_info, tbl_cat) {
       lo = list(c(-Inf, -Inf), c(50, -Inf), c(-Inf, 50), c(50, 50)),
       hi = list(c(50, 50), c(Inf, 50), c(50, Inf), c(Inf, Inf))
     )
+    if (l_info$informed_by_data) {
+      tbl_rules <- tibble(
+        category = 1:4,
+        lo = list(c(-Inf, -Inf), c(3.62161825, -Inf), c(-Inf, 4.362346), c(3.62161825, 4.362346)),
+        hi = list(c(3.62161825, 4.362346), c(Inf, 4.362346), c(3.62161825, Inf), c(Inf, Inf))
+      )
+    }
     
   } else if (!l_info$use_exptl_stimuli) {
     unique_boundaries <- boundaries(tbl, l_info)
@@ -501,7 +515,9 @@ get_fitted_params <- function(l_info, tbl_cat) {
   
   if (l_info$informed_by_data) {
     # load average fitted parameter values for the three models
-    tbl_avg_params <- readRDS("data/avg-params-all-catlearn-models.rds")
+    tbl_avg_params_obj <- readRDS("data/avg-params-all-catlearn-models-physical-properties.rds")
+    tbl_avg_params_psych <- readRDS("data/avg-params-all-catlearn-models-psychological-representation.rds")
+    tbl_avg_params <- rbind(tbl_avg_params_obj, tbl_avg_params_psych)
     
     if (l_info$category_shape == "square") {
       params_pt <- tbl_avg_params %>% 
@@ -515,7 +531,14 @@ get_fitted_params <- function(l_info, tbl_cat) {
         select(val) %>% as_vector()
       
     } else if (l_info$category_shape == "ellipses") {
-      m_nb <- readRDS("data/e1-nb-pt-avg-fit.rds")
+      m_nb_obj <- readRDS("data/e1-nb-pt-avg-fit.rds")
+      m_nb_psych <- readRDS("data/e1-nb-pt-avg-fit-psych.rds")
+      if (l_info$representation == "psychological-representation") {
+        m_nb <- m_nb_psych
+      } else if (l_info$representation == "object-properties") {
+        m_nb <- m_nb_obj
+      }
+      
       l_pt$fml <- formula(str_c(l_info$label, " ~ ", str_c(l_info$feature_names, collapse = " + ")))
       l_pt$m_nb_initial <- m_nb
       l_pt$m_nb_update <- l_pt$m_nb_initial
