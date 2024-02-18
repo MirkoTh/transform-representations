@@ -49,40 +49,55 @@ plot_moves <- function(tbl_results, l_info) {
     tbl_results2 <- tbl_results
   }
   space_edges <- l_info$space_edges
-  xy_breaks <- seq(space_edges[1], space_edges[2], length.out = 5)
+  x_breaks <- seq(space_edges$x1[1], space_edges$x1[2], length.out = 5)
+  y_breaks <- seq(space_edges$x2[1], space_edges$x2[2], length.out = 5)
   
   ggplot(tbl_results, aes(x1_true, x2_true, group = as.numeric(category))) +
-    geom_point(aes(color = as.numeric(category))) +
-    geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
+    geom_point(aes(color = as.numeric(category)), shape = 8, size = 2) +
+    #geom_point(aes(x1_center, x2_center, color = as.numeric(category)), size = 3) +
     geom_segment(
-      data = tbl_results2, aes(
-        x = x1_true, y = x2_true, xend = x1_center, yend = x2_center, 
+      data = tbl_results %>% 
+        filter(timepoint == "After Training") %>% 
+        select(stim_id, x1_true, x2_true) %>%
+        left_join(
+          tbl_results %>% filter(timepoint == "Before Training"), 
+          by = "stim_id", suffix = c("_aft", "_bef")
+        ) %>%
+        mutate(
+          timepoint = "After Training", 
+          timepoint = factor(timepoint, levels = c("Before Training", "After Training"))
+        ),
+      aes(
+        x = x1_true_bef, xend = x1_true_aft,
+        y = x2_true_bef, yend = x2_true_aft,
         color = as.numeric(category)
-      ),
-      arrow = arrow(length = unit(.1, "inches"))
+        ), 
+      #linetype = "dotdash",
+      arrow = grid::arrow(angle = 50, length = unit(.1, "in"), type = "closed")
     ) +
-    facet_wrap(~ timepoint, scales = "free") +
+    # geom_segment(
+    #   data = tbl_results2, aes(
+    #     x = x1_true, y = x2_true, xend = x1_center, yend = x2_center, 
+    #     color = as.numeric(category)
+    #   ),
+    #   arrow = arrow(length = unit(.1, "inches"))
+    # ) +
+    facet_wrap(~ timepoint) +
     theme_bw() +
-    theme(plot.title = element_text(size=14, face = "bold")) +
+    theme(plot.title = element_text(size = 14, face = "bold")) +
     coord_cartesian(
-      xlim = c(space_edges[1] - 1, space_edges[2] + 1), 
-      ylim = c(space_edges[1] - 1, space_edges[2] + 1)
+      xlim = c(space_edges$x1[1] - 1, space_edges$x1[2] + 1), 
+      ylim = c(space_edges$x2[1] - 1, space_edges$x2[2] + 1)
     ) +
     scale_color_viridis_c(name = "Category", guide = "none") +
-    scale_x_continuous(breaks = xy_breaks) +
-    scale_y_continuous(breaks = xy_breaks) +
+    scale_x_continuous(breaks = x_breaks) +
+    scale_y_continuous(breaks = y_breaks) +
     labs(
       x = "Spikiness of Head",
       y = "Fill of Belly",
-      # title = str_c(
-      #   "Prior SD = ", l_info$prior_sd, ", ",
-      #   "Sampling = ", l_info$sampling, "\n",
-      #   "Constrain Space = ", l_info$constrain_space, ", ",
-      #   "Model = ", l_info$cat_type
-      # )
       title = str_c(l_info$cat_type, ", ", l_info$sampling)
     )
-}
+  }
 
 
 plot_cat_probs <- function(tbl_posteriors, l_info) {

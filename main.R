@@ -22,7 +22,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 10#5000
+nruns <- 5000
 
 # constant
 l_info_prep <- list(
@@ -81,8 +81,8 @@ l_info_seq <- pmap(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5,
       category_shape = ..6, is_reward = ..7,
-      informed_by_data = ..8, use_exptl_stimuli = ..9,
-      representation = ..10
+      informed_by_data = ..8, representation = ..9,
+      use_exptl_stimuli = ..10
     )
   )
 )
@@ -139,7 +139,7 @@ if (read_write == "write") {
   saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
   saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
 } else if (read_write == "read") {
-  l_results_plots <- readRDS(str_c("data/2023-02-08-category-learning-result-plots.RDS"))
+  l_results_plots <- readRDS(str_c("data/2024-02-18-category-learning-result-plots.RDS"))
   l_results_plots_seq <- readRDS(str_c("data/2023-02-08-sequential-comparison-result-plots.RDS"))
 }
 

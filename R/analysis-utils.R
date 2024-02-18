@@ -729,7 +729,7 @@ category_centers <- function(f_stretch, f_shift, l_info) {
   cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
   cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% filter(!is.na(x_rotated) & !is.na(y_rotated)) %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
   
-  # does it make sense to first create ellipse, and then transform into exptl space (obj/psych)?
+  # first create ellipse, and then transform into exptl space (obj/psych)
   if (l_info$use_exptl_stimuli) {
     cat_boundaries_2$x_rotated <- 9 * (cat_boundaries_2$x_rotated + 1) + 1
     cat_boundaries_2$y_rotated <- 9 * (cat_boundaries_2$y_rotated + 1) + 1
@@ -889,7 +889,7 @@ add_distance_to_nearest_center <- function(tbl_cr, l_centers, is_simulation, sim
     unlist() %>% matrix(ncol = 1) %>% as.data.frame() %>% tibble()
   colnames(tbl_d2) <- c("d_closest")
   
-  # the following is not very clean, because it is not implemented for three categories a couple of lines below
+  # the following is not implemented for three categories (couple of lines below)
   if (!is.null(l_tbl_cr[["2"]])) {
     if (is_simulation) {
       l_tbl_cr[["2"]] <- l_tbl_cr[["2"]] %>% cbind(tbl_d2)
