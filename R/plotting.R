@@ -49,8 +49,8 @@ plot_moves <- function(tbl_results, l_info) {
     tbl_results2 <- tbl_results
   }
   space_edges <- l_info$space_edges
-  x_breaks <- seq(space_edges$x1[1], space_edges$x1[2], length.out = 5)
-  y_breaks <- seq(space_edges$x2[1], space_edges$x2[2], length.out = 5)
+  x_breaks <- round(seq(space_edges$x1[1], space_edges$x1[2], length.out = 5), 2)
+  y_breaks <- round(seq(space_edges$x2[1], space_edges$x2[2], length.out = 5), 2)
   
   ggplot(tbl_results, aes(x1_true, x2_true, group = as.numeric(category))) +
     geom_point(aes(color = as.numeric(category)), shape = 8, size = 2) +
@@ -312,9 +312,10 @@ diagnostics_seq <- function(l, sim_center, is_simulation) {
   list2env(l, env)
   
   l_results <- add_centers(tbl_new, l_m, l_info)
-  l_results$tbl_posterior <- distance_to_closest_center_simulation(
-    l_results$tbl_posterior, sim_center, is_simulation
+  l_tmp <- distance_to_closest_center_simulation(
+    l_results$tbl_posterior, sim_center, is_simulation, l_info
   )
+  l_results$tbl_posterior <- l_tmp[["tbl"]]
   pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
   
   tmp <- l$tbl_new

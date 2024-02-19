@@ -127,26 +127,26 @@ if (read_write == "write") {
   saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
   saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
 } else if (read_write == "read") {
-  l_category_results <- readRDS(file = "data/2024-02-09-grid-search-vary-constrain-space.rds")
-  l_seq_results <- readRDS(file = "data/2023-02-08-grid-search-sequential-comparison.rds")
+  l_category_results <- readRDS(file = "data/2024-02-18-grid-search-vary-constrain-space.rds")
+  l_seq_results <- readRDS(file = "data/2024-02-18-grid-search-sequential-comparison.rds")
 }
 
 
 # Post Processing & Plotting ----------------------------------------------
 if (read_write == "write") {
-  l_results_plots <- map2(l_category_results[c(1, 9, 17)], tbl_vary$category_shape[c(1, 9, 17)], diagnostic_plots, is_simulation = TRUE, l_info[c(1, 9, 17)])
+  l_results_plots <- map2(l_category_results, tbl_vary$category_shape, diagnostic_plots, is_simulation = TRUE, l_info)
   l_results_plots_seq <- map2(l_seq_results, tbl_info_seq$category_shape, diagnostics_seq, is_simulation = TRUE)
   saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
   saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
 } else if (read_write == "read") {
   l_results_plots <- readRDS(str_c("data/2024-02-18-category-learning-result-plots.RDS"))
-  l_results_plots_seq <- readRDS(str_c("data/2023-02-08-sequential-comparison-result-plots.RDS"))
+  l_results_plots_seq <- readRDS(str_c("data/2024-02-18-sequential-comparison-result-plots.RDS"))
 }
 
 dg <- position_dodge(width = .9)
 
 # ellipse category structure example prediction
-pl_pred_delta_ellipse <- l_results_plots[[3]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
   l_results_plots_seq[[1]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
 ) %>% mutate(category = c("Bukil", "Venak")[category]) %>%
   ggplot(aes(session, d_closest_sqrt, group = condition)) +
@@ -165,7 +165,7 @@ pl_pred_delta_ellipse <- l_results_plots[[3]][[2]][[4]]$tbl_cr_agg %>% mutate(co
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
-pl_pred_ellipse <- l_results_plots[[3]][[2]][[1]] +
+pl_pred_ellipse <- l_results_plots[[17]][[2]][[1]] +
   theme(
     strip.background = element_rect(fill="white"),
     strip.text = element_text(colour = 'black'),
@@ -213,7 +213,7 @@ unique(hex_df$colour)
 save_my_pdf_and_tiff(arrangeGrob(
   pl_pred_square + theme(plot.title = element_blank()),
   pl_pred_delta_square, nrow = 1
-  ), "figures/model-predictions-squares", 12, 3.5)
+), "figures/model-predictions-squares", 12, 3.5)
 
 save_my_pdf_and_tiff(arrangeGrob(
   pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse,
@@ -355,7 +355,211 @@ ggplot(tbl_test, aes(x1, x2, group = stim_id)) +
 
 
 
+# Simulations for Strategy Mix --------------------------------------------
+
+ids_ellipses_cat <- tbl_info %>% filter(
+  category_shape == "ellipses" & constrain_space &
+    representation == "psychological-representation" &
+    sampling == "improvement"
+) %>% select(
+  condition_id
+) %>% as_vector()
+ids_ellipses_seq <- tbl_info_seq %>% filter(
+  category_shape == "ellipses" & constrain_space &
+    representation == "psychological-representation" &
+    sampling == "improvement"
+) %>% select(
+  condition_id
+) %>% as_vector() %>% rep(length(ids_ellipses_cat))
+
+ids_square_cat <-  tbl_info %>% filter(
+  category_shape == "square" & constrain_space &
+    representation == "psychological-representation" &
+    sampling == "improvement"
+) %>% select(
+  condition_id
+) %>% as_vector()
+ids_square_seq <- tbl_info %>% filter(
+  category_shape == "square" & constrain_space &
+    representation == "psychological-representation" &
+    sampling == "improvement" &
+    cat_type == "exemplar"
+) %>% select(
+  condition_id
+) %>% as_vector() %>% rep(length(ids_square_cat))
+
+
+tbl_model_weights_ellipses <- tibble(
+  cat_type = c("exemplar", "prototype"),
+  prop = c(.613, .387)
+)
+
+tbl_model_weights_square <- tibble(
+  cat_type = c("exemplar", "prototype", "rule"),
+  prop = c(0.496, .479, .025)
+)
+
+averaged_movements_stimuli <- function(tbl_model_weights, ids) {
+  
+  tbl_move <- reduce(map(
+    ids, ~ 
+      l_results_plots[[.x]][[1]]$tbl_posterior %>% mutate(cat_type = tbl_info[.x, ]$cat_type)
+  ), rbind) %>% arrange(
+    stim_id
+  ) %>% left_join(
+    tbl_model_weights, by = c("cat_type")
+  ) %>% mutate(
+    x1_prop = x1_true * prop,
+    x2_prop = x2_true * prop
+  ) %>% group_by(
+    stim_id, category, timepoint
+  ) %>% summarize(
+    x1 = sum(x1_prop), x2 = sum(x2_prop)
+  ) %>% ungroup()
+  
+  if (l_info[[ids[1]]]$informed_by_data) {
+    space_edges <- list(x1 = c(-0.06579467, 6.75626343), x2 = c(-0.151021, 7.410835))
+  } else {
+    space_edges <- list(x1 = c(0, 100), x2 = c(0, 100))
+  }
+  
+  x_breaks <- round(seq(space_edges$x1[1], space_edges$x1[2], length.out = 5), 1)
+  y_breaks <- round(seq(space_edges$x2[1], space_edges$x2[2], length.out = 5), 1)
+  
+  ggplot(tbl_move, aes(x1, x2, group = as.numeric(category))) +
+    geom_point(aes(color = as.numeric(category)), shape = 8, size = 2) +
+    geom_segment(
+      data = tbl_move %>% 
+        filter(timepoint == "After Training") %>% 
+        select(stim_id, x1, x2) %>%
+        left_join(
+          tbl_move %>% filter(timepoint == "Before Training"), 
+          by = "stim_id", suffix = c("_aft", "_bef")
+        ) %>%
+        mutate(
+          timepoint = "After Training", 
+          timepoint = factor(timepoint, levels = c("Before Training", "After Training"))
+        ),
+      aes(
+        x = x1_bef, xend = x1_aft,
+        y = x2_bef, yend = x2_aft,
+        color = as.numeric(category)
+      ), 
+      arrow = grid::arrow(angle = 50, length = unit(.075, "in"), type = "closed")
+    ) +
+    facet_wrap(~ timepoint) +
+    theme_bw() +
+    theme(
+      strip.background = element_rect(fill = "white"), 
+      text = element_text(size = 22),
+      #axis.text.x = element_text(angle = 90, vjust = .5)
+    ) +
+    coord_cartesian(
+      xlim = c(space_edges$x1[1] - 1, space_edges$x1[2] + 1), 
+      ylim = c(space_edges$x2[1] - 1, space_edges$x2[2] + 1)
+    ) +
+    scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3") +
+    scale_x_continuous(breaks = x_breaks) +
+    scale_y_continuous(breaks = y_breaks) +
+    labs(
+      x = "Spikiness of Head",
+      y = "Fill of Belly"
+    )
+  
+}
+
+
+averaged_movements_center <- function(tbl_model_weights, ids_cat, ids_seq) {
+  tbl_move_avg <- reduce(map(
+    ids_cat,
+    ~ l_results_plots[[.x]][[2]][[4]]$tbl_cr_agg %>% 
+      mutate(cat_type = tbl_info[.x, ]$cat_type)), rbind
+  ) %>%
+    left_join(
+      tbl_model_weights, by = "cat_type"
+    ) %>% mutate(
+      d_closest_sqrt = d_closest_sqrt * prop,
+      ci = ci * prop
+    ) %>% group_by(
+      session, category
+    ) %>% summarize(
+      d_closest_sqrt = sum(d_closest_sqrt),
+      ci = sum(ci)
+    ) %>% ungroup() %>% mutate(condition = "Category Learning") %>% rbind(
+      reduce(map(
+        ids_seq,
+        ~ l_results_plots_seq[[.x]]$tbl_avg_move), rbind
+      ) %>% group_by(
+        session, category
+      ) %>% summarize(
+        d_closest_sqrt = mean(d_closest_sqrt),
+        ci = mean(ci)
+      ) %>% ungroup() %>% mutate(condition = "Sequential Comparison")
+    )
+  if (length(unique(tbl_move_avg$category)) == 1) {
+    tbl_move_avg$category <- factor(tbl_move_avg$category, labels = "Any Category")
+  } else {
+    tbl_move_avg$category <- factor(tbl_move_avg$category, labels = c("Bukil", "Venak"))
+  }
+  dg <- position_dodge(width = .9)
+  ggplot() +
+    geom_col(
+      data = tbl_move_avg,
+      aes(session, d_closest_sqrt, group = condition, fill = condition),
+      position = dg,
+      alpha = .5
+    ) +
+    geom_point(
+      data = tbl_move_avg,
+      aes(session, d_closest_sqrt, color = condition),
+      position = dg,
+      show.legend = FALSE
+    ) +
+    geom_errorbar(
+      data = tbl_move_avg,
+      aes(
+        session,
+        ymin = d_closest_sqrt - ci,
+        ymax = d_closest_sqrt + ci,
+        color = condition
+      ),
+      position = dg,
+      width = .25,
+      show.legend = FALSE
+    )  + facet_wrap(~ category) +
+    theme_bw() +
+    theme(
+      strip.background = element_rect(fill = "white"), 
+      text = element_text(size = 22),
+      #axis.text.x = element_text(angle = 90, vjust = .5),
+      legend.position = "none"
+    ) +
+    scale_color_viridis_d() +
+    scale_fill_viridis_d() +
+    labs(x = "Time Point",
+         y = "Dist. to Closest Center") +
+    theme(plot.title = element_text(size = 14, face = "bold"))
+  
+}
 
 
 
+
+pl_stimuli_ell <- averaged_movements_stimuli(tbl_model_weights_ellipses, ids_ellipses_cat)
+pl_stimuli_sq <- averaged_movements_stimuli(tbl_model_weights_square, ids_square_cat)
+
+
+ids_cat <- ids_square_cat
+ids_seq <- ids_square_seq
+tbl_model_weights <- tbl_model_weights_square
+pl_center_ell <- averaged_movements_center(tbl_model_weights_ellipses, ids_ellipses_cat, ids_ellipses_seq)
+pl_center_sq <- averaged_movements_center(tbl_model_weights_square, ids_square_cat, ids_square_seq)
+
+pl_task_imprinting <- arrangeGrob(
+  pl_stimuli_ell, pl_center_ell,
+  pl_stimuli_sq, pl_center_sq,
+  nrow = 2, ncol = 2
+)
+
+save_my_pdf_and_tiff(pl_task_imprinting, "figures-ms/model-predictions-both-designs", 11.25, 7.5)
 

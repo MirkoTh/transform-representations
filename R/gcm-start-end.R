@@ -332,6 +332,11 @@ l_comp_e2 <- compare_models(l_results_gcm_e2, l_results_pt_e2, l_results_rb_e2, 
 l_comp_e3 <- compare_models(l_results_gcm_e3, l_results_pt_e3, l_results_rb_e3, "3", ntrials = nrow(l_all_e3[[2]]), lg_pos = "none")
 l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, "4", ntrials = nrow(l_all_e4[[1]]), lg_pos = "bottom")
 
+table_ic <- l_comp_e2$tbl_ll %>% select(starts_with("winner")) %>% table() +
+  l_comp_e3$tbl_ll %>% select(starts_with("winner")) %>% table() +
+  l_comp_e4$tbl_ll %>% select(starts_with("winner")) %>% table() %>% cbind(c(0, 0, 0))
+ 
+props_agreed <- table_ic / sum(diag(table_ic))
 
 ## Save Fitted Parameters --------------------------------------------------
 
@@ -662,8 +667,8 @@ e1_abic_plots <- function(n2ll_gcm_e1, n2ll_nb, ntrials_e1) {
 
 ntrials_e1 <- nrow(l_all_e1[[1]])
 l_comp_e1 <- e1_abic_plots(n2ll_gcm_e1, n2ll_nb, ntrials_e1)
-l_comp_e1$tbl_ll_e1
-
+table_ic_1 <- l_comp_e1$tbl_ll_e1 %>% select(starts_with("winner")) %>% table() 
+table_ic_1/sum(diag(table_ic_1))
 
 plot_m_comp <- arrangeGrob(
   l_comp_e1$pl_comp,
