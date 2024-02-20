@@ -726,11 +726,15 @@ category_centers <- function(f_stretch, f_shift, l_info) {
   tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
   
+  # "+ 1" is for simulations with feature values ranging from 1 to 10
   cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
   cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% filter(!is.na(x_rotated) & !is.na(y_rotated)) %>% as_tibble() %>% mutate(x_rotated = (x_rotated + 1) * f_stretch + f_shift, y_rotated = (y_rotated + 1) * f_stretch + f_shift)
   
   # first create ellipse, and then transform into exptl space (obj/psych)
   if (l_info$use_exptl_stimuli) {
+    cat_boundaries_2 <- l_ellipses[[1]][[2]] %>% as_tibble() %>% mutate(x_rotated = (x_rotated) * f_stretch + f_shift, y_rotated = (y_rotated) * f_stretch + f_shift)
+    cat_boundaries_3 <- l_ellipses[[2]][[2]] %>% filter(!is.na(x_rotated) & !is.na(y_rotated)) %>% as_tibble() %>% mutate(x_rotated = (x_rotated) * f_stretch + f_shift, y_rotated = (y_rotated) * f_stretch + f_shift)
+    
     cat_boundaries_2$x_rotated <- 9 * (cat_boundaries_2$x_rotated + 1) + 1
     cat_boundaries_2$y_rotated <- 9 * (cat_boundaries_2$y_rotated + 1) + 1
     
@@ -954,6 +958,7 @@ chance_performance_cat <- function(tbl_cat) {
 
 add_deviations <- function(
     l_tbl, sim_center, 
+    l_info,
     subset_ids = NULL, 
     slider_start_postition = NULL
 ) {
@@ -967,6 +972,7 @@ add_deviations <- function(
   #' @param sim_center can be either of "ellipse" or "square" to 
   #' define whether distances in similarity condition are 
   #' computed with regards to ellipse or square categories
+  #' @param l_info info about stimuli etc.
   #' @param subset_ids a subset of participants to filter
   #' @param slider_start_position were sliders in the reproduction task
   #' located in the middle or placed randomly in each trial
@@ -987,8 +993,15 @@ add_deviations <- function(
     tbl_cr$move_sum <- tbl_cr$move_x1 + tbl_cr$move_x2
     tbl_cr <- dplyr::select(tbl_cr, -c(move_x1, move_x2))
   }
-  l_centers <- category_centers(f_stretch = 9, f_shift = 1)
-  l_centers[[3]] <- category_centers_squares(n_cats = c(4))
+  #l_centers <- category_centers(f_stretch = 9, f_shift = 1, l_info)
+  l_centers <- category_centers(f_stretch = 1, f_shift = 0, l_info)
+  tbl_cat <- l_tbl[[2]] %>% 
+    rename(category = cat_true) %>%
+    filter(n_categories != 1) %>%
+    group_by(category, x1_true, x2_true) %>%
+    count() %>% select(-n) %>%
+    mutate(session = 1)
+  l_centers[[3]] <- category_centers_squares(n_cats = c(4), tbl_cat)
   # todo
   # variable indicating whether distance in similarity condition is calculated with regards to 2 or 4 category group
   tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers, is_simulation = FALSE, sim_center = sim_center)
