@@ -71,21 +71,14 @@ plot_moves <- function(tbl_results, l_info) {
         x = x1_true_bef, xend = x1_true_aft,
         y = x2_true_bef, yend = x2_true_aft,
         color = as.numeric(category)
-        ), 
-      #linetype = "dotdash",
+      ), 
       arrow = grid::arrow(angle = 50, length = unit(.1, "in"), type = "closed")
     ) +
-    # geom_segment(
-    #   data = tbl_results2, aes(
-    #     x = x1_true, y = x2_true, xend = x1_center, yend = x2_center, 
-    #     color = as.numeric(category)
-    #   ),
-    #   arrow = arrow(length = unit(.1, "inches"))
-    # ) +
     facet_wrap(~ timepoint) +
     theme_bw() +
-    theme(plot.title = element_text(size = 14, face = "bold")) +
-    coord_cartesian(
+    theme(
+      strip.background = element_rect(fill = "white"), text = element_text(size = 22)
+    ) +     coord_cartesian(
       xlim = c(space_edges$x1[1] - 1, space_edges$x1[2] + 1), 
       ylim = c(space_edges$x2[1] - 1, space_edges$x2[2] + 1)
     ) +
@@ -97,7 +90,7 @@ plot_moves <- function(tbl_results, l_info) {
       y = "Fill of Belly",
       title = str_c(l_info$cat_type, ", ", l_info$sampling)
     )
-  }
+}
 
 
 plot_cat_probs <- function(tbl_posteriors, l_info) {
@@ -107,7 +100,6 @@ plot_cat_probs <- function(tbl_posteriors, l_info) {
     geom_density(aes(y = ..density..), color = "purple", size = 1) +
     facet_wrap(~ timepoint) +
     theme_bw() +
-    theme(plot.title = element_text(size=10)) +
     labs(
       x = "Posterior Probability",
       y = "Probability Density",
@@ -116,6 +108,11 @@ plot_cat_probs <- function(tbl_posteriors, l_info) {
         "Sampling = ", l_info$sampling, "\n",
         "Constrain Space = ", l_info$constrain_space
       )
+    ) +
+    scale_x_continuous(expand = c(0.01, 0)) +
+    scale_y_continuous(expand = c(0.01, 0)) +
+    theme(
+      strip.background = element_rect(fill = "white"), text = element_text(size = 22)
     )
 }
 
@@ -230,7 +227,6 @@ plot_marginals <- function(tbl_new, l_info) {
   pl <- ggplot(tbl_plt, aes(x1, x2, group = Timepoint)) +
     geom_point(aes(color = Timepoint), shape = 1) +
     theme_bw() +
-    theme(plot.title = element_text(size=10)) +
     scale_color_brewer(palette = "Set1") +
     labs(
       x = bquote(x[1]),
@@ -240,8 +236,12 @@ plot_marginals <- function(tbl_new, l_info) {
         "Sampling = ", l_info$sampling, "\n",
         "Constrain Space = ", l_info$constrain_space
       )
+    ) +
+    scale_x_continuous(expand = c(0.01, 0)) +
+    scale_y_continuous(expand = c(0.01, 0)) +
+    theme(
+      strip.background = element_rect(fill = "white"), text = element_text(size = 22)
     )
-  
   pl_marginals <- ggMarginal(pl, groupColour = TRUE, type="density", size=10)
   return(pl_marginals)
 }
@@ -278,7 +278,11 @@ diagnostic_plots <- function(l_categorization, sim_center, is_simulation, l_info
   l_results$tbl_posterior <- l_out$tbl
   l_results$tbl_posterior$d_boundary <- add_distance_to_boundary(l_results$tbl_posterior, l_out$l_centers, sim_center, l_info)
   
-  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info, "center")
+  pl_avg_move_boundary <- plot_distance_to_category_center(
+    l_results$tbl_posterior, sim_center, l_info,
+    "boundary", "Distance to Boundary"
+  )
   
   # movement of stimulus representations before vs. after
   pl_centers <- plot_moves(l_results$tbl_posterior, l_info)
@@ -288,7 +292,8 @@ diagnostic_plots <- function(l_categorization, sim_center, is_simulation, l_info
   pl_marginals <- plot_marginals(tbl_new, l_info)
   # plotting list
   l_plots <- list(
-    pl_centers, pl_post, pl_marginals, pl_avg_move
+    pl_centers, pl_post, pl_marginals, 
+    pl_avg_move, pl_avg_move_boundary
   )
   # list with results and plots
   l_out <- list(
@@ -315,8 +320,14 @@ diagnostics_seq <- function(l, sim_center, is_simulation) {
   l_tmp <- distance_to_closest_center_simulation(
     l_results$tbl_posterior, sim_center, is_simulation, l_info
   )
-  l_results$tbl_posterior <- l_tmp[["tbl"]]
-  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info)
+  l_results$tbl_posterior <- l_tmp$tbl
+  l_results$tbl_posterior$d_boundary <- add_distance_to_boundary(
+    l_results$tbl_posterior, l_tmp$l_centers, sim_center, l_info
+  )
+  
+  pl_avg_move <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info, "center")
+  pl_avg_move_boundary <- plot_distance_to_category_center(l_results$tbl_posterior, sim_center, l_info, "boundary", "Distance to Boundary")
+  
   
   tmp <- l$tbl_new
   l_tmp <- split(tbl_new, tbl_new$timepoint)
@@ -342,13 +353,18 @@ diagnostics_seq <- function(l, sim_center, is_simulation) {
     ) + facet_wrap(~ timepoint) +
     theme_bw() +
     labs(x = expr(x[1]), y = expr(x[2])) +
-    scale_x_continuous(breaks = seq(0, 10, by = 2)) +
-    scale_y_continuous(breaks = seq(0, 10, by = 2))
+    scale_x_continuous(breaks = seq(0, 10, by = 2), expand = c(0.01, 0)) +
+    scale_y_continuous(breaks = seq(0, 10, by = 2), expand = c(0.01, 0)) +
+    theme(
+      strip.background = element_rect(fill = "white"), 
+      text = element_text(size = 22)
+    )
   
-  l_out <- list(
-    pl_movement = pl_movement, pl_avg_move = pl_avg_move$pl,
-    tbl_avg_move = pl_avg_move$tbl_cr_agg
-  )
+    l_out <- list(
+      pl_movement = pl_movement, pl_avg_move = pl_avg_move$pl,
+      pl_avg_move_boundary = pl_avg_move_boundary$pl,
+      tbl_avg_move = pl_avg_move$tbl_cr_agg
+    )
   
   return(l_out)
 }

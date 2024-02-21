@@ -558,7 +558,10 @@ movement_towards_category_center <-
 
 
 plot_distance_to_category_center <-
-  function(tbl_cr, sim_center, l_info = NULL) {
+  function(
+    tbl_cr, sim_center, l_info = NULL, 
+    center_or_boundary = "center", yttl = "Dist. to Closest Center"
+  ) {
     if (sim_center == "ellipses") {
       tbl_cr_sq <-
         tbl_cr %>% filter(n_categories %in% c("4 Categories", 4))
@@ -581,7 +584,11 @@ plot_distance_to_category_center <-
     tbl_cr_sq$category <- 2
     tbl_ell[tbl_ell$n_categories == "Similarity", ]
     tbl_cr <- rbind(tbl_ell, tbl_cr_sq)
-    tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
+    if (center_or_boundary == "center") {
+      tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
+    } else if (center_or_boundary == "boundary") {
+      tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_boundary)
+    }
     
     tbl_cr_agg <- summarySEwithin(
       tbl_cr, "d_closest_sqrt", "n_categories", 
@@ -620,16 +627,20 @@ plot_distance_to_category_center <-
       theme_bw() +
       scale_fill_brewer(name = "Group", palette = "Set1") +
       scale_color_brewer(palette = "Set1") +
-      labs(x = "Time Point",
-           y = "Dist. to Closest Center") +
-      theme(plot.title = element_text(size = 14, face = "bold"))
-    
-    if (!is.null(l_info)) {
-      pl <- pl  +
-        theme(legend.position = c(.7, .7))
-      labs(title = str_c(l_info$cat_type, ", ", l_info$sampling)) +
-        theme(plot.title = element_text(size = 14, face = "bold"))
-    }
+      scale_x_discrete(expand = c(0.01, 0)) +
+      scale_y_continuous(expand = c(0.01, 0)) +
+      labs(x = "Time Point", y = yttl) + 
+      theme(
+        strip.background = element_rect(fill = "white"), 
+        text = element_text(size = 22)
+      )
+      
+      if (!is.null(l_info)) {
+        pl <- pl  +
+          theme(legend.position = c(.7, .7))
+        labs(title = str_c(l_info$cat_type, ", ", l_info$sampling)) +
+          theme(plot.title = element_text(size = 14, face = "bold"))
+      }
     
     return(list(pl = pl, tbl_cr_agg = tbl_cr_agg))
   }

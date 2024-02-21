@@ -146,7 +146,7 @@ if (read_write == "write") {
 dg <- position_dodge(width = .9)
 
 # ellipse category structure example prediction
-pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
+pl_pred_delta_ellipse_center <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(condition = "Category Learning") %>% rbind(
   l_results_plots_seq[[1]]$tbl_avg_move %>% mutate(condition = "Sequential Comparison")
 ) %>% mutate(category = c("Bukil", "Venak")[category]) %>%
   ggplot(aes(session, d_closest_sqrt, group = condition)) +
@@ -166,11 +166,6 @@ pl_pred_delta_ellipse <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mutate(co
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
 pl_pred_ellipse <- l_results_plots[[17]][[2]][[1]] +
-  theme(
-    strip.background = element_rect(fill="white"),
-    strip.text = element_text(colour = 'black'),
-    text = element_text(size = 16)
-  ) +
   scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
 
 save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
@@ -469,10 +464,19 @@ averaged_movements_stimuli <- function(tbl_model_weights, ids) {
 }
 
 
-averaged_movements_center <- function(tbl_model_weights, ids_cat, ids_seq) {
+averaged_movements_center <- function(
+    tbl_model_weights, ids_cat, ids_seq, center_or_boundary = "center"
+) {
+  if(center_or_boundary == "center") {
+    idx_center_or_boundary <- 4
+    yttl <- "Distance (Cl. Center)"
+  } else {
+    idx_center_or_boundary <- 5
+    yttl <- "Distance (Cl. Boundary)"
+  }
   tbl_move_avg <- reduce(map(
     ids_cat,
-    ~ l_results_plots[[.x]][[2]][[4]]$tbl_cr_agg %>% 
+    ~ l_results_plots[[.x]][[2]][[idx_center_or_boundary]]$tbl_cr_agg %>% 
       mutate(cat_type = tbl_info[.x, ]$cat_type)), rbind
   ) %>%
     left_join(
@@ -537,7 +541,7 @@ averaged_movements_center <- function(tbl_model_weights, ids_cat, ids_seq) {
     scale_color_viridis_d() +
     scale_fill_viridis_d() +
     labs(x = "Time Point",
-         y = "Dist. to Closest Center") +
+         y = yttl) +
     theme(plot.title = element_text(size = 14, face = "bold"))
   
 }
@@ -555,11 +559,32 @@ tbl_model_weights <- tbl_model_weights_square
 pl_center_ell <- averaged_movements_center(tbl_model_weights_ellipses, ids_ellipses_cat, ids_ellipses_seq)
 pl_center_sq <- averaged_movements_center(tbl_model_weights_square, ids_square_cat, ids_square_seq)
 
+pl_boundary_ell <- averaged_movements_center(tbl_model_weights_ellipses, ids_ellipses_cat, ids_ellipses_seq, "boundary")
+pl_boundary_sq <- averaged_movements_center(tbl_model_weights_square, ids_square_cat, ids_square_seq, "boundary")
+
 pl_task_imprinting <- arrangeGrob(
-  pl_stimuli_ell, pl_center_ell,
-  pl_stimuli_sq, pl_center_sq,
-  nrow = 2, ncol = 2
+  pl_stimuli_ell, pl_stimuli_sq, 
+  pl_center_ell, pl_center_sq,
+  pl_boundary_ell, pl_boundary_sq,
+  nrow = 3, ncol = 2
 )
 
-save_my_pdf_and_tiff(pl_task_imprinting, "figures-ms/model-predictions-both-designs", 11.25, 7.5)
+save_my_pdf_and_tiff(pl_task_imprinting, "figures/figures-ms/model-predictions-both-designs", 11.25, 11.25)
+
+
+
+tbl_boundary <- reduce(map(
+  ids, ~ 
+    l_results_plots[[.x]][[1]]$tbl_posterior %>% mutate(cat_type = tbl_info[.x, ]$cat_type)
+), rbind) %>% left_join(
+  tbl_model_weights, by = c("cat_type")
+) %>% mutate(
+  d_boundary = d_boundary * prop
+) %>% group_by(stim_id, category, timepoint) %>% summarize(
+  d_boundary = sum(d_boundary)
+) %>% grouped_agg(c(category, timepoint), d_boundary)
+
+ggplot(tbl_boundary, aes(timepoint, mean_d_boundary)) +
+  geom_point(aes(group = category))
+
 
