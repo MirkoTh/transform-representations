@@ -79,59 +79,15 @@ l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2022-07-category-learning-II/data/continuous-reproduction.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2022-07-category-learning-II/data/secondary-task.csv")
 
+l_info <- list(
+  use_exptl_stimuli = TRUE, 
+  informed_by_data = TRUE, 
+  representation = "psychological-representation"
+)
 
-is_psychological <- TRUE
-if (is_psychological) {
-  tbl_psych <- readRDS("data/psych-representations.rds")
-  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
-    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
-    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
-  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
-    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
-    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
-  
-  
-  l_tbl_data[[1]]$x1_response_psych <-  signal::interp1(
-    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
-    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
-    xi = l_tbl_data[[1]]$x1_response, method=c('linear'), extrap=T
-  )
-  l_tbl_data[[1]]$x2_response_psych <-  signal::interp1(
-    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
-    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
-    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
-  )
-  l_tbl_data[[1]]$x1_start_psych <-  signal::interp1(
-    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
-    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
-    xi = l_tbl_data[[1]]$x1_start, method=c('linear'), extrap=T
-  )
-  l_tbl_data[[1]]$x2_start_psych <-  signal::interp1(
-    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
-    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
-    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
-  )
-  
-  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
-    -c(x1_true, x2_true, x1_response, x2_response, x1_start, x2_start)) %>%
-    rename(
-      x1_true = x1_true_psych,
-      x2_true = x2_true_psych,
-      x1_response = x1_response_psych,
-      x2_response = x2_response_psych,
-      x1_start = x1_start_psych,
-      x2_start = x2_start_psych
-    )
-  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
-    -c(x1_true, x2_true)) %>%
-    rename(
-      x1_true = x1_true_psych,
-      x2_true = x2_true_psych
-    )
-  l_info <- list(use_exptl_stimuli = TRUE, informed_by_data = TRUE, representation = "psychological-representation")
-  
-} else {
-  l_info <- list(use_exptl_stimuli = FALSE, informed_by_data = FALSE, representation = "object-properties")
+# tf to psych space?
+if (l_info$representation == "psychological-representation") {
+  l_tbl_data <- tf_to_psychological_e2(l_tbl_data)
 }
 
 # add several distance measures: response to stimulus, response to true
@@ -195,7 +151,7 @@ l_tbl_data <-
 l_deviations_incl <- add_deviations(
   l_tbl_data, sim_center = sim_center, l_info = l_info, 
   subset_ids = unique(tbl_cat_sim$participant_id)
-  )
+)
 
 tbl_cr_incomplete <- l_cases$l_incomplete$drop[["tbl_cr"]]
 tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))

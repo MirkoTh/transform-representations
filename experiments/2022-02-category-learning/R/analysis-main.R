@@ -65,45 +65,15 @@ l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2022-02-category-learning/data/continuous-reproduction.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2022-02-category-learning/data/secondary-task.csv")
 
-is_psychological <- TRUE
-if (is_psychological) {
-  tbl_psych <- readRDS("data/psych-representations.rds")
-  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
-    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
-    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
-  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
-    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
-    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
-  
-  l_tbl_data[[1]]$x1_response_psych <-  signal::interp1(
-    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
-    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
-    xi = l_tbl_data[[1]]$x1_response, method=c('linear'), extrap=T
-  )
-  l_tbl_data[[1]]$x2_response_psych <-  signal::interp1(
-    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
-    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
-    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
-  )
-  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
-    -c(x1_true, x2_true, x1_response, x2_response)) %>%
-      rename(
-        x1_true = x1_true_psych,
-        x2_true = x2_true_psych,
-        x1_response = x1_response_psych,
-        x2_response = x2_response_psych
-      )
-  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
-    -c(x1_true, x2_true)) %>%
-    rename(
-      x1_true = x1_true_psych,
-      x2_true = x2_true_psych
-    )
-  
-  l_info <- list(use_exptl_stimuli = TRUE, informed_by_data = TRUE, representation = "psychological-representation")
+l_info <- list(
+  use_exptl_stimuli = TRUE, 
+  informed_by_data = TRUE, 
+  representation = "psychological-representation"
+)
 
-} else {
-  l_info <- list(use_exptl_stimuli = FALSE, informed_by_data = FALSE, representation = "object-properties")
+# transform everything to psychological space?
+if (l_info$representation == "psychological-representation") {
+  l_tbl_data <- tf_to_psychological_e1(l_tbl_data)
 }
 
 # add deviation from response to stimulus
@@ -395,7 +365,7 @@ l_pl_sim[[3]] <- l_pl_sim[[3]] + scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, .1)) +
   scale_color_manual(values = c("#FDE725FF"), name = "") +
   theme(text = element_text(size = 22))
-  
+
 
 pl_sim_psychonomics <- ggplot() +
   geom_line(
@@ -658,7 +628,7 @@ save_my_pdf_and_tiff(
   pl, 
   "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview", 
   15, 5
-  )
+)
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e1", 

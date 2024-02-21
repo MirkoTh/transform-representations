@@ -2607,3 +2607,93 @@ plot_simult_comp_preds <- function(p_id, l_results, tbl_simult) {
   return(l_out)
   
 }
+
+
+tf_to_psychological_e1 <- function(l_tbl_data) {
+  
+  tbl_psych <- readRDS("data/psych-representations.rds")
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  
+  l_tbl_data[[1]]$x1_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
+    xi = l_tbl_data[[1]]$x1_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x2_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
+    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
+    -c(x1_true, x2_true, x1_response, x2_response)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych,
+      x1_response = x1_response_psych,
+      x2_response = x2_response_psych
+    )
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
+    -c(x1_true, x2_true)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych
+    )
+  return(l_tbl_data)
+}
+
+tf_to_psychological_e2 <- function(l_tbl_data) {
+  
+  tbl_psych <- readRDS("data/psych-representations.rds")
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  
+  
+  l_tbl_data[[1]]$x1_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
+    xi = l_tbl_data[[1]]$x1_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x2_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
+    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x1_start_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
+    xi = l_tbl_data[[1]]$x1_start, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x2_start_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
+    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
+  )
+  
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
+    -c(x1_true, x2_true, x1_response, x2_response, x1_start, x2_start)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych,
+      x1_response = x1_response_psych,
+      x2_response = x2_response_psych,
+      x1_start = x1_start_psych,
+      x2_start = x2_start_psych
+    )
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
+    -c(x1_true, x2_true)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych
+    )
+  
+  return(l_tbl_data)
+}
