@@ -1005,7 +1005,8 @@ add_deviations <- function(
   # todo
   # variable indicating whether distance in similarity condition is calculated with regards to 2 or 4 category group
   tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers, is_simulation = FALSE, sim_center = sim_center)
-  tbl_cr <- add_distance_to_nearest_boundary(tbl_cr, l_centers, allocate_sim = sim_center)
+  tbl_cr$d_boundary <- add_distance_to_boundary(tbl_cr, l_centers, sim_center, l_info)
+  #tbl_cr <- add_distance_to_nearest_boundary(tbl_cr, l_centers, allocate_sim = sim_center)
   
   # average deviation in binned x1-x2 grid
   l_checkerboard <- checkerboard_deviation(tbl_cr, 4)
@@ -2186,8 +2187,10 @@ after_vs_before <- function(tbl_cr, nr_cats = 4) {
       d_closest_sqrt = sqrt(d_closest),
       d_closest_before_abs = lag(d_closest),
       d_closest_before_sqrt = lag(d_closest_sqrt),
+      d_boundary_before = lag(d_boundary),
       d_move_sqrt = d_closest_before_sqrt - d_closest_sqrt,
-      d_move_abs = d_closest_before_abs - d_closest
+      d_move_abs = d_closest_before_abs - d_closest,
+      d_move_boundary = d_boundary_before - d_boundary
     ) %>%
     ungroup() %>%
     mutate(
@@ -2196,7 +2199,8 @@ after_vs_before <- function(tbl_cr, nr_cats = 4) {
     dplyr::filter(!is.na(d_closest_before_abs)) %>%
     group_by(participant_id) %>%
     mutate(
-      d_move_mn = mean(d_move_abs)
+      d_move_mn = mean(d_move_abs),
+      d_move_boundary_mn = mean(d_move_boundary)
     ) %>% ungroup()
 }
 

@@ -777,3 +777,101 @@ loo::loo_model_weights(
   method = "stacking"
 )
 
+
+
+
+# Boundary Aversion -------------------------------------------------------
+
+plot_groupmeans_against_session(
+  tbl_cr %>% 
+    mutate(
+      n_categories = factor(
+        n_categories, labels = c("Similarity J.", "Category L.")
+        ),
+      d_closest_sqrt = d_boundary),
+  yttl = "Distance to Border"
+) + theme(legend.position = "bottom")
+
+
+# same models as for centers, just plug-in different DV
+
+aversion_model_rs <- stan_cr_rs()
+mod_aversion_rs <- cmdstan_model(aversion_model_rs)
+
+aversion_model_ri <- stan_cr_ri()
+mod_aversion_ri <- cmdstan_model(aversion_model_ri)
+
+mm_cr <- model.matrix(
+  d_boundary ~ session + n_categories, data = tbl_cr
+) %>% as_tibble()
+colnames(mm_cr) <- c("ic", "session", "ncat")
+mm_cr$session <- mm_cr$session - .5
+mm_cr$ncat <- mm_cr$ncat - .5
+mm_cr$ia <- mm_cr$session * mm_cr$ncat
+
+l_data <- list(
+  n_data = nrow(tbl_cr),
+  n_subj = length(unique(tbl_cr$participant_id)),
+  # d_boundary goes under d_closest because same model as above
+  d_closest = scale(sqrt(tbl_cr$d_boundary), scale = FALSE)[, 1],
+  subj = as.numeric(factor(
+    tbl_cr$participant_id, 
+    labels = 1:length(unique(tbl_cr$participant_id))
+  )),
+  x = as.matrix(mm_cr)
+)
+
+# random slopes
+fit_aversion_rs <- mod_aversion_rs$sample(
+  data = l_data, iter_sampling = 200, iter_warmup = 100, # 2000, 1000
+  chains = 3, parallel_chains = 3,
+  save_warmup = FALSE
+)
+file_loc_rs <- str_c("experiments/2022-07-category-learning-II/data/aversion-rs-model.RDS")
+fit_aversion_rs$save_object(file = file_loc_rs, compress = "gzip")
+
+# fit_aversion_rs <- readRDS(file_loc_rs)
+file_loc_loo_rs <- str_c("experiments/2022-07-category-learning-II/data/aversion-rs-loo.RDS")
+loo_rs_aversion <- fit_aversion_rs$loo(variables = "log_lik_pred")
+saveRDS(loo_rs_aversion, file = file_loc_loo_rs)
+# loo_rs_aversion <- readRDS(file_loc_loo_rs)
+
+# only random intercept
+fit_aversion_ri <- mod_aversion_ri$sample(
+  data = l_data, iter_sampling = 200, iter_warmup = 100, # 2000, 1000
+  chains = 3, parallel_chains = 3
+)
+file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/aversion-ri-model.RDS")
+fit_aversion_ri$save_object(file = file_loc_ri)
+
+# fit_cr_ri <- readRDS(file_loc_ri)
+file_loc_loo_ri <- str_c("experiments/2022-07-category-learning-II/data/aversion-ri-loo.RDS")
+loo_ri_aversion <- fit_aversion_ri$loo(variables = "log_lik_pred")
+saveRDS(loo_ri_aversion, file = file_loc_loo_ri)
+# loo_ri_aversion <- readRDS(file_loc_loo_ri)
+
+loo::loo_model_weights(list(loo_ri_aversion, loo_rs_aversion), method = "stacking")
+
+
+pars_interest <- c("b", "mu")
+tbl_draws <- fit_aversion_rs$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_aversion_rs$summary(variables = pars_interest)
+
+params_bf <- c("Intercept", "Timepoint", "Group", "Timepoint x Group")
+
+tbl_posterior <- tbl_draws %>% 
+  dplyr::select(starts_with(c("mu")), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter, labels = params_bf))
+
+l <- sd_bfs(tbl_posterior, params_bf, .5)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
+
+
+

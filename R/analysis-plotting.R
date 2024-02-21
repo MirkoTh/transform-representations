@@ -19,8 +19,7 @@ plot_2d_binned_heatmaps <- function(tbl_checker, tbl_avg) {
     scale_fill_gradient2(
       name = "Avg. Deviation",
       low = "#009966",
-      high = "#FF6666",
-      midpoint = 25.5
+      high = "#FF6666"
     ) + geom_label(size = 3,
                    data = tbl_avg, aes(
                      2.5,
@@ -101,8 +100,8 @@ plot_marginals_one_session <-
     col <- c("#3399FF", "#990099")[idx_color]
     tbl_plot <- tbl %>% filter(session == idx_session)
     
-    
     plot_2d_points_marginal <- function(tbl, participant) {
+      tbl_all <- tbl
       tbl <- tbl %>% filter(participant_id == participant)
       grp <- tbl$n_categories[1]
       pl <- ggplot(tbl, aes(x1_deviation, x2_deviation)) +
@@ -115,8 +114,8 @@ plot_marginals_one_session <-
         scale_color_brewer(palette = "Set1") +
         # somehow ggMarginal does not like coord_cartesian...
         # the following excludes some of the responses, though
-        scale_x_continuous(limits = c(-84, 84)) +
-        scale_y_continuous(limits = c(-84, 84)) +
+        scale_x_continuous(limits = c(min(tbl_all$x1_deviation), max(tbl_all$x1_deviation))) +
+        scale_y_continuous(limits = c(min(tbl_all$x2_deviation), max(tbl_all$x2_deviation))) +
         labs(x = "Head Spikiness",
              y = "Belly Size",
              title = str_c(substr(participant, 1, 6), ", ", grp))# + coord_cartesian(xlim = c(-50, 50), ylim = c(-50, 50))
@@ -488,7 +487,7 @@ movement_towards_category_center <-
     hist_movements <- ggplot(tbl_movement, aes(movement, group = fct_rev(n_categories), drop = TRUE)) +
       geom_histogram(aes(
         fill = fct_rev(n_categories), y=(..count..)/tapply(..count..,..PANEL..,sum)[..PANEL..]
-      ), color = "white", binwidth = 1) +
+      ), color = "white", binwidth = sd(tbl_movement$movement)/2) +
       geom_vline(xintercept = 0, linetype = "dotdash", color = "grey", size = 1) +
       scale_fill_viridis_d(name = "Group") +
       facet_grid(fct_rev(n_categories) ~ category) +
@@ -972,7 +971,7 @@ plot_distances_to_centers <- function(tbl_cr) {
 }
 
 
-plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square") {
+plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square", yttl = "Distance to Closest Center") {
   pd <- position_dodge(width = .9)
   if(sim_center == "square") {
     vars <- c("n_categories")
@@ -987,16 +986,21 @@ plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square") {
     ggplot(aes(session, d_closest_sqrt, group = n_categories)) +
     geom_col(aes(fill = n_categories), position = pd, show.legend = FALSE) +
     geom_errorbar(aes(
-        ymin = d_closest_sqrt - ci,
-        ymax = d_closest_sqrt + ci,
-      ), color = "black", width = .2, position = pd
+      ymin = d_closest_sqrt - ci,
+      ymax = d_closest_sqrt + ci,
+    ), color = "black", width = .2, position = pd
     ) + geom_point(size = 3, color = "white", position = pd) +
     geom_point(aes(color = n_categories), position = pd) +
-    scale_color_viridis_d(name = "Nr. Categories") +
+    scale_color_viridis_d(name = "Group") +
     scale_fill_viridis_d() +
     theme_bw() +
-    labs(x = "Timepoint",
-         y = "Distance to Closest Center")
+    labs(x = "",
+         y = yttl) +
+    scale_x_discrete(expand = c(0.01, 0)) +
+    scale_y_continuous(expand = c(0.01, 0)) +
+    theme(
+      strip.background = element_rect(fill = "white"), text = element_text(size = 22)
+    )
   if(sim_center == "ellipses"){
     pl_default <- pl_default + facet_wrap(~ category)
   }
@@ -1091,7 +1095,7 @@ plot_movement_outliers <-
       pl <- ggplot(
         tbl_outliers %>% 
           filter(name == "Not Transformed"),
-                   aes(value)) +
+        aes(value)) +
         geom_histogram(bins = 30,
                        color = "white", fill = "#440154") #,fill = "#66CCFF"
     } else if (as_outlier) {
@@ -1344,7 +1348,7 @@ plot_2d_distributions <- function(tbl_combined, save) {
     summarize(m_x1 = mean(x1_deviation), m_x2 = mean(x2_deviation),
               sd_x1 = sd(x1_deviation), sd_x2 = sd(x2_deviation), 
               cov_x1x2 = cor(x1_deviation, x2_deviation),
-              ) %>%
+    ) %>%
     ungroup()
   
   knitr::kable(tbl_sds_agg)
@@ -1386,7 +1390,7 @@ plot_2d_distributions <- function(tbl_combined, save) {
       "figures/marginal-densities",
       6, 7.5
     )
-
+    
   }
   
   

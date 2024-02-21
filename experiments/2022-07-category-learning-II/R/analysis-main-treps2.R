@@ -66,7 +66,7 @@ sim_center <- "square"
 # walk(path_data, hash_ids_e1_e2, participants_returned = returned_timeout, expt = 2)
 
 # l_tbls_data <- map(path_data, load_data_e1)
-saveRDS(l_tbls_data, file = "experiments/2022-07-category-learning-II/data/l_tbls_data.rds")
+#saveRDS(l_tbls_data, file = "experiments/2022-07-category-learning-II/data/l_tbls_data.rds")
 l_tbls_data <- readRDS("experiments/2022-07-category-learning-II/data/l_tbls_data.rds")
 # l_tbl_data <-
 #   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
@@ -79,11 +79,66 @@ l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2022-07-category-learning-II/data/continuous-reproduction.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2022-07-category-learning-II/data/secondary-task.csv")
 
+
+is_psychological <- TRUE
+if (is_psychological) {
+  tbl_psych <- readRDS("data/psych-representations.rds")
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  
+  
+  l_tbl_data[[1]]$x1_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
+    xi = l_tbl_data[[1]]$x1_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x2_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
+    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x1_start_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
+    xi = l_tbl_data[[1]]$x1_start, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x2_start_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
+    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
+  )
+  
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
+    -c(x1_true, x2_true, x1_response, x2_response, x1_start, x2_start)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych,
+      x1_response = x1_response_psych,
+      x2_response = x2_response_psych,
+      x1_start = x1_start_psych,
+      x2_start = x2_start_psych
+    )
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
+    -c(x1_true, x2_true)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych
+    )
+  l_info <- list(use_exptl_stimuli = TRUE, informed_by_data = TRUE, representation = "psychological-representation")
+  
+} else {
+  l_info <- list(use_exptl_stimuli = FALSE, informed_by_data = FALSE, representation = "object-properties")
+}
+
 # add several distance measures: response to stimulus, response to true
 # category center, & response to closest true decision boundary
 
 l_deviations_all <- add_deviations(
-  l_tbl_data, sim_center = sim_center, slider_start_postition = "random"
+  l_tbl_data, sim_center = sim_center, l_info = l_info, slider_start_postition = "random"
 )
 l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 
@@ -137,7 +192,10 @@ tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>%
 
 l_tbl_data <-
   list(reduce(map(l_tbls_data, 1), rbind), reduce(map(l_tbls_data, 2), rbind))
-l_deviations_incl <- add_deviations(l_tbl_data, sim_center = sim_center, subset_ids = unique(tbl_cat_sim$participant_id))
+l_deviations_incl <- add_deviations(
+  l_tbl_data, sim_center = sim_center, l_info = l_info, 
+  subset_ids = unique(tbl_cat_sim$participant_id)
+  )
 
 tbl_cr_incomplete <- l_cases$l_incomplete$drop[["tbl_cr"]]
 tbl_cr_incomplete %>% group_by(participant_id) %>% count() %>% arrange(desc(n))
@@ -404,7 +462,7 @@ save_my_tiff(
   5, 4
 )
 
-plot_distance_from_decision_boundary(tbl_cr, 10)
+plot_distance_from_decision_boundary(tbl_cr, 10, sim_center)
 
 
 tbl_cr_stim <- grouped_agg(

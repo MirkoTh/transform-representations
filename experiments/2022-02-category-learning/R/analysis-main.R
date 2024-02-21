@@ -18,6 +18,8 @@ library(catlearn)
 library(cmdstanr)
 library(modelr)
 library(ids)
+library(naivebayes)
+library(mvtnorm)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -63,8 +65,49 @@ l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2022-02-category-learning/data/continuous-reproduction.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2022-02-category-learning/data/secondary-task.csv")
 
+is_psychological <- TRUE
+if (is_psychological) {
+  tbl_psych <- readRDS("data/psych-representations.rds")
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  
+  l_tbl_data[[1]]$x1_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x1_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x1_true_psych)), 
+    xi = l_tbl_data[[1]]$x1_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]]$x2_response_psych <-  signal::interp1(
+    x = sort(unique(l_tbl_data[[1]]$x2_true)), 
+    y = sort(unique(l_tbl_data[[1]]$x2_true_psych)), 
+    xi = l_tbl_data[[1]]$x2_response, method=c('linear'), extrap=T
+  )
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
+    -c(x1_true, x2_true, x1_response, x2_response)) %>%
+      rename(
+        x1_true = x1_true_psych,
+        x2_true = x2_true_psych,
+        x1_response = x1_response_psych,
+        x2_response = x2_response_psych
+      )
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
+    -c(x1_true, x2_true)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych
+    )
+  
+  l_info <- list(use_exptl_stimuli = TRUE, informed_by_data = TRUE, representation = "psychological-representation")
+
+} else {
+  l_info <- list(use_exptl_stimuli = FALSE, informed_by_data = FALSE, representation = "object-properties")
+}
+
 # add deviation from response to stimulus
-l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center)
+l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center, l_info = l_info)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
 l_cases <- preprocess_data(l_tbl_data, 192, 600, n_sds = 3)
@@ -449,7 +492,7 @@ pl_d_by_category <- l_empirical$pl + facet_wrap(~ factor(category, labels = c("B
   scale_x_discrete(expand = c(0, 0)) + 
   scale_y_continuous(expand = expansion(add = c(0, .1)))
 
-plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse")
+plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse") + facet_wrap(~ session)
 
 
 # for psychonomics only plot category 2 stimuli to reduce complexity 

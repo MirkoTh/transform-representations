@@ -394,3 +394,59 @@ map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
 
+# Boundary Aversion -------------------------------------------------------
+
+
+mm <- model.matrix(d_move_boundary ~ category + n_categories, data = tbl_cr_moves)
+mm[, 2] <- mm[, 2] - 1.5
+mm[, 3] <- mm[, 3] - .5
+mm <- cbind(mm, mm[, 2] * mm[, 3])
+
+
+l_data_moves_boundary <- list(
+  n_data = nrow(tbl_cr_moves),
+  n_subj = length(unique(tbl_cr_moves$participant_id)),
+  d_moved = tbl_cr_moves$d_move_boundary,
+  subj = fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric(),
+  x = mm
+)
+
+move_model <- stan_move_e1()
+move_model <- cmdstan_model(move_model)
+
+fit_move_boundary <- move_model$sample(
+  data = l_data_moves_boundary, iter_sampling = 2000, iter_warmup = 500, #5000, 1000
+  chains = 3, parallel_chains = 3,
+  save_warmup = FALSE
+)
+
+file_loc_move <- str_c(
+  "experiments/2022-02-category-learning/data/cr-move-model.RDS"
+)
+
+
+fit_or_read <- "write"
+if (fit_or_read == "write") {
+  fit_move_boundary$save_object(file = file_loc_move, compress = "gzip")
+} else if (fit_or_read == "read") {
+  fit_move_boundary <- readRDS(file_loc_move)
+}
+
+pars_interest <- c("mu_tf") # 
+tbl_draws <- fit_move_boundary$draws(variables = pars_interest, format = "df")
+tbl_summary <- fit_move_boundary$summary(variables = pars_interest)
+
+params_bf <- c("Intercept", "Ellipse Category", "Group", "Ellipse Category x Group")
+tbl_posterior <- tbl_draws %>% 
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  mutate(parameter = factor(parameter, labels = params_bf))
+l <- sd_bfs(tbl_posterior, params_bf, .5)
+bfs <- l[[1]]
+tbl_thx <- l[[2]]
+
+# plot the posteriors and the bfs
+l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
+
+
