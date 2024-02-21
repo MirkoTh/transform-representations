@@ -56,10 +56,6 @@ sim_center <- "square"
 # Load Data ---------------------------------------------------------------
 
 
-
-
-
-
 # hash prolific ids and load data
 # only hashed ids are uploaded on osf
 # returned_timeout <- timeout_and_returns_e2()
@@ -253,19 +249,17 @@ tbl_cr <- tbl_cr %>%
   left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
 
 
-gt_or_reps <- "gt"
-if (gt_or_reps == "gt") {
-  l_movement <- movement_towards_category_center(
-    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
-  )
-  tbl_movement_gt <- l_movement[[1]]
-} else if (gt_or_reps == "reps") {
-  l_movement <- movement_towards_category_center(
-    tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
-  )
-}
 
-tbl_movement <- l_movement[[1]]
+l_movement <- movement_towards_category_center(
+  tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
+)
+tbl_movement_gt <- l_movement[[1]]
+l_movement_rep <- movement_towards_category_center(
+  tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[2], sim_center
+)
+tbl_movement_representation <- l_movement_rep[[1]]
+
+tbl_movement <- tbl_movement_gt
 mean_against_delta_cat_accuracy(tbl_movement)
 
 marrangeGrob(list(
@@ -305,6 +299,17 @@ save_my_pdf_and_tiff(
   13, 5.75
 )
 
+# same for boundaries
+l_movement_boundary <- movement_towards_category_center(
+  tbl_cat_sim, tbl_cr, "d_boundary", sim_center
+)
+pls_moves_boundary_catlearn <- arrangeGrob(
+  l_movement_boundary[[2]]$hist_movements + labs(x = "Movement Towards Boundary"),
+  l_movement_boundary[[2]]$pl_delta + labs(y = "Movement Towards Boundary"),
+  l_movement_boundary[[2]]$pl_last  + labs(y = "Movement Towards Boundary"),
+  nrow = 1
+)
+grid.draw(pls_moves_boundary_catlearn)
 
 
 tbl_precision <- combine_precision_and_movements(l_nb, participant_ids_4_cat)
@@ -398,25 +403,30 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 tbl_cr$n_categories <- fct_inseq(factor(tbl_cr$n_categories))
 levels(tbl_cr$n_categories) <- c("Similarity", "4 Categories")
 tbl_cr$n_categories <- fct_relevel(tbl_cr$n_categories, "Similarity", after = 1)
-l_empirical <- plot_distance_to_category_center(tbl_cr, sim_center = sim_center)
+l_empirical <- plot_distance_to_category_center(
+  tbl_cr, sim_center = sim_center, center_or_boundary = "center",
+  yttl = "Distance (Cl. Center)"
+  )
+l_empirical_boundary <- plot_distance_to_category_center(
+  tbl_cr, sim_center = sim_center, center_or_boundary = "boundary",
+  yttl = "Distance (Cl. Boundary)"
+)
+
 
 pl_psychonomics_means <- l_empirical$pl +
-  # theme(axis.title.x=element_blank(),
-  #       axis.text.x=element_blank(),
-  #       axis.ticks.x=element_blank()) +
   labs(title = str_c("Distance in Similarity Condition = ", sim_center)) +
-  theme(legend.position = "bottom", text = element_text(size = 22)) +
-  scale_fill_viridis_d(name = "Session") +
-  scale_color_viridis_d() +
-  scale_x_discrete(expand = c(0, 0)) +
-  scale_y_continuous(expand = expansion(add = c(0, .2))) +
-  guides(fill = guide_legend(nrow=2,byrow=TRUE))
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 
 save_my_tiff(
   pl_psychonomics_means, 
   "experiments/2022-07-category-learning-II/data/figures/movements-means-psychonomics.tiff",
   5, 4
 )
+
+pl_boundary_means <- l_empirical_boundary$pl +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 
 plot_distance_from_decision_boundary(tbl_cr, 10, sim_center)
 
@@ -517,7 +527,7 @@ l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
 #f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
-f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
+f_name <- "data/2024-02-18-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +
@@ -563,15 +573,16 @@ tbl_rsa_delta_prediction_lower %>% dplyr::select(l, r, d_euclidean_delta) %>%
 pl <- arrangeGrob(
   pl_cat_learn_pretty, l_pl_sim[[3]], 
   pl_psychonomics_means + theme(plot.title = element_blank()),
-  ncol = 3
+  pl_boundary_means + theme(plot.title = element_blank()),
+  ncol = 2
 )
 save_my_pdf_and_tiff(
   pl, 
   "experiments/2022-07-category-learning-II/data/figures/three-tasks-agg-overview", 
-  15.5, 5
+  11, 10
 )
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e2", 
-  15.5, 5
+  11, 10
 )

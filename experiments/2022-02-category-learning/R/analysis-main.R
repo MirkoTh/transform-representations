@@ -141,9 +141,8 @@ saveRDS(tbl_cat_sim, "experiments/2022-02-category-learning/data/tbl_cat_sim.rds
 
 # Categorization ----------------------------------------------------------
 
-tbl_cat <-
-  tbl_cat_sim %>% filter(n_categories %in% c(2, 3), as.numeric(as.character(trial_id_binned)) <= 15)
-
+tbl_cat <- tbl_cat_sim %>% 
+  filter(n_categories %in% c(2, 3), as.numeric(as.character(trial_id_binned)) <= 15)
 
 tbl_cat_overview <- tbl_cat %>%
   grouped_agg(c(n_categories, participant_id), c(accuracy, rt)) %>%
@@ -173,7 +172,7 @@ tbl_cat_agg <-
     trial_id_binned = trial_id_binned - mean(trial_id_binned)
   )
 by_participant_coefs(tbl_cat_agg, "trial_id_binned", "accuracy", "LM Cat. Accuracy") +
-  coord_cartesian(ylim = c(-.2, .2))
+  coord_cartesian(ylim = c(-.02, .02))
 
 # stat analysis
 
@@ -224,7 +223,7 @@ names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
 tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
 
-gt_or_reps <- "gt" # ground-truth center or representational center?
+gt_or_reps <- "gt" # ground-truth center or representational center? ooth using object-properties...
 if (gt_or_reps == "gt") {
   l_movement <- movement_towards_category_center(
     tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
@@ -259,6 +258,19 @@ save_my_pdf_and_tiff(
 )
 write_csv(tbl_movement, str_c("experiments/2022-02-category-learning/data/movements-catacc-", gt_or_reps, ".csv"))
 
+# same for boundaries
+l_movement_boundary <- movement_towards_category_center(
+  tbl_cat_sim, tbl_cr, "d_boundary", sim_center
+)
+pls_moves_boundary_catlearn <- arrangeGrob(
+  l_movement_boundary[[2]]$hist_movements,
+  l_movement_boundary[[2]]$pl_delta,
+  l_movement_boundary[[2]]$pl_last,
+  nrow = 1
+)
+grid.draw(pls_moves_boundary_catlearn)
+
+
 ggplot(tbl_movement,
        aes(mean_delta_accuracy, mean_accuracy, group = n_categories)) +
   geom_point() +
@@ -286,7 +298,7 @@ plot_categorization_heatmaps(
   aes(x1, x2, z = density, alpha = density),
   color = "black"
 ) + geom_point(
-  data = tibble(x = 50, y = 50), aes(x, y), color = "#FF3333", size = 3.5)
+  data = tibble(x = 3.5, y = 4.5), aes(x, y), color = "#FF3333", size = 3.5)
 
 
 
@@ -449,20 +461,32 @@ pl_1d_marginals <- plot_1d_marginals(tbl_cr)
 
 
 tbl_cr$n_categories <- factor(tbl_cr$n_categories, labels = c("Similarity", "2 Categories"))
-l_empirical <- plot_distance_to_category_center(tbl_cr %>% mutate(n_categories = fct_rev(n_categories)), sim_center = sim_center)
-pl_d_by_category <- l_empirical$pl + facet_wrap(~ factor(category, labels = c("Bukil", "Venak"))) +
+l_empirical <- plot_distance_to_category_center(
+  tbl_cr %>%
+    mutate(n_categories = fct_rev(n_categories)), 
+  sim_center = sim_center,
+  yttl = "Distance (Cl. Center)"
+)
+pl_d_by_category <- l_empirical$pl + 
+  facet_wrap(~ factor(category, labels = c("Bukil", "Venak"))) +
   theme(
-    strip.background =element_rect(fill="white"), 
-    strip.text = element_text(colour = 'black'), 
-    legend.position = "bottom",
-    text = element_text(size = 22)
-  )  +
-  scale_fill_viridis_d(name = "Group") +
-  scale_color_viridis_d() +
-  scale_x_discrete(expand = c(0, 0)) + 
-  scale_y_continuous(expand = expansion(add = c(0, .1)))
+    legend.position = "bottom"
+  )
 
-plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipse") + facet_wrap(~ session)
+l_empirical_boundary <- plot_distance_to_category_center(
+  tbl_cr %>% 
+    mutate(n_categories = fct_rev(n_categories)),
+  sim_center = sim_center, 
+  l_info, "boundary", "Distance (Cl. Boundary)"
+)
+pl_d_boundary_by_category <- l_empirical_boundary$pl + 
+  facet_wrap(~ factor(category, labels = c("Bukil", "Venak"))) +
+  theme(
+    legend.position = "bottom"
+  )
+
+plot_distance_from_decision_boundary(tbl_cr, 10, sim_center = "ellipses") + 
+  facet_wrap(~ session)
 
 
 # for psychonomics only plot category 2 stimuli to reduce complexity 
@@ -486,10 +510,9 @@ save_my_tiff(
 #              nrow = 1,
 #              ncol = 2)
 # 
-tbl_cr_agg <-
-  grouped_agg(tbl_cr,
-              c(participant_id, session, n_categories),
-              eucl_deviation)
+tbl_cr_agg <- grouped_agg(
+  tbl_cr, c(participant_id, session, n_categories), eucl_deviation
+)
 
 ggplot(
   tbl_cr_agg %>% mutate(session = factor(
@@ -583,7 +606,7 @@ summary(m_rs_cr_control)
 l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
-f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
+f_name <- "data/2024-02-18-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +
@@ -623,14 +646,16 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
 # save some plots ---------------------------------------------------------
 
 
-pl <- arrangeGrob(pl_cat_learn_psychonomics, l_pl_sim[[3]], pl_d_by_category, ncol = 3)
+pl <- arrangeGrob(
+  pl_cat_learn_psychonomics, l_pl_sim[[3]],
+  pl_d_by_category, pl_d_boundary_by_category, ncol = 2)
 save_my_pdf_and_tiff(
   pl, 
   "experiments/2022-02-category-learning/data/figures/three-tasks-agg-overview", 
-  15, 5
+  11, 10
 )
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e1", 
-  15, 5
+  11, 10
 )

@@ -415,7 +415,7 @@ move_model <- stan_move_e1()
 move_model <- cmdstan_model(move_model)
 
 fit_move_boundary <- move_model$sample(
-  data = l_data_moves_boundary, iter_sampling = 2000, iter_warmup = 500, #5000, 1000
+  data = l_data_moves_boundary, iter_sampling = 5000, iter_warmup = 1000, #5000, 1000
   chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )

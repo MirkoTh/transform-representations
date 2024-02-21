@@ -823,7 +823,7 @@ l_data <- list(
 
 # random slopes
 fit_aversion_rs <- mod_aversion_rs$sample(
-  data = l_data, iter_sampling = 200, iter_warmup = 100, # 2000, 1000
+  data = l_data, iter_sampling = 2000, iter_warmup = 1000, # 2000, 1000
   chains = 3, parallel_chains = 3,
   save_warmup = FALSE
 )
@@ -838,7 +838,7 @@ saveRDS(loo_rs_aversion, file = file_loc_loo_rs)
 
 # only random intercept
 fit_aversion_ri <- mod_aversion_ri$sample(
-  data = l_data, iter_sampling = 200, iter_warmup = 100, # 2000, 1000
+  data = l_data, iter_sampling = 2000, iter_warmup = 1000, # 2000, 1000
   chains = 3, parallel_chains = 3
 )
 file_loc_ri <- str_c("experiments/2022-07-category-learning-II/data/aversion-ri-model.RDS")
