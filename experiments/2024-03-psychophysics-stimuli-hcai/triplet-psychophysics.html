@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>WM updating task</title>
+    <title>Cartoon Similarity Task</title>
     <script src="jspsych-dist/dist/jspsych.js"></script>
     <script src="jspsych-dist/dist/plugin-html-button-response.js"></script>
     <script src="jspsych-dist/dist/plugin-html-keyboard-response.js"></script>
@@ -40,50 +40,131 @@
 
     var instructions1 = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;"><b>INSTRUCTIONS</b><br><br><br>This is the updating task. It has two parts: <br><br>(1) Memorization of the initially presented digits <br><br>(2) Individually updating selected digits <br><br><br><br>This task is going to be in full-screen mode.<br><br><b> Please do not leave the full-screen mode. <br><br>Otherwise, the presented numbers may be illegible.<br><br></div>',
+        stimulus: '<div style="font-size:30px;"><b>INSTRUCTIONS</b><br><br><br>In the following, you are presented with three cartoon objects varying in the spikiness of their head and the fill of their belly: An object to be rated located below two comparison objects.<br><br><br>Your task is to decide whether the object in the bottom is more similar to the upper left or to the upper right obect.</div>',
+        choices: ["Next"]
+    };
+
+    var instructions2 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;">There are going to be two halves.<br><br><br>In each half, only one of the two properties (i.e., head or belly) is changed, the other one stays the same for all trials.</div>',
+        choices: ["Next"]
+    };
+
+    var instructions3 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;">If the object below is more similar to the upper left object, press the "f" button.<br><br>If the object below is more similar to the upper right object, press the "j" button.<br><br>This task is going to be in full-screen mode.<br><br><b> Please do not leave the full-screen mode for your best experience.<br><br></div>',
+        choices: ["Next"]
+    };
+
+    var instructions4 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;">In the following, you can try out five trials of the task, before the actual study starts.<br><br>After that, we are testing your understanding of the instructions in a small comprehension check.</div>',
         choices: ["Next"]
     };
 
     var instructions_test = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">These were the two practice trials.<br><br>The main part of the updating task is going to start now.<br>Good luck. </div>',
+        stimulus: '<div style="font-size:30px;">These were the practice trials.<br><br>The main part is going to start now.</div>',
         choices: ["Start Main Part"]
     };
 
-    var data_cumulative = [];
+    var instructions_halftime = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;">Well done. You are over with the first half of the study now.<br><br>Your task in the second part is the same as before, but the other property is going to be changed.<br><br>You can again get used to the task with a few practice trials.</div>',
+        choices: ["Start Practice Trials"]
+    };
 
+    
+    var halftime_go = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;">The practice trials are now over. The main part of the second half is starting now.</div>',
+        choices: ["Start Second Half"]
+    };
+
+    var data_cumulative = [];
+    var my_stimulus_container = [
+        {
+            obj_type: 'image',
+            scale: .55,
+            file: jsPsych.timelineVariable('upleftImage'),
+            show_start_time: 250, // ms after the start of the trial
+            startX: screen.width / 2 - 150,
+            startY: screen.height / 2 - 300
+        },
+        {
+            obj_type: 'image',
+            scale: .55,
+            file: jsPsych.timelineVariable('uprightImage'),
+            show_start_time: 250, // ms after the start of the trial
+            startX: screen.width / 2 + 150,
+            startY: screen.height / 2 - 300
+        },
+        {
+            obj_type: 'image',
+            scale: .55,
+            file: jsPsych.timelineVariable('lomidImage'),
+            show_start_time: 250, // ms after the start of the trial
+            startX: screen.width / 2,
+            startY: screen.height / 2 - 50
+        }
+    ];
+
+    function save_my_judgements (data) {
+            var response_recoded;
+            if (data.response == "f") response_recoded = 0;
+            if (data.response == "j") response_recoded = 1;
+
+            data_similarity = {
+                participant_id: participant_id,
+                is_practice: jsPsych.timelineVariable("is_practice"),
+                stimulus_ids: jsPsych.timelineVariable('stimulus_ids'),
+                trial_id: jsPsych.timelineVariable('trial_id'),
+                id_left: jsPsych.timelineVariable("id_left_probe"),
+                id_right: jsPsych.timelineVariable("id_right_probe"),
+                id_target: jsPsych.timelineVariable("id_target"),
+                response: response_recoded,
+                rt: data.rt
+            };
+            data_cumulative.push(data_similarity);
+            console.log("data_similarity = ", data_similarity);
+
+            // save data twice
+            saveData(JSON.stringify(data_similarity), "similarity_" + participant_id + ".json", flag_save = false);
+            let dataSaved = false;
+            saveSeveralDataOverwrite(data_cumulative, "similarity_allinone_" + participant_id + ".json");
+            checkDataSaving();
+
+        }
+
+    const head_trials_practice = {
+        timeline: [
+            {
+                type: jsPsychPsychophysics,
+                pixi: pixi_flag,
+                stimuli: my_stimulus_container,
+                canvas_height: 700,
+                prompt: 'Press "f" or "j" to respond.',
+                data: {
+                    'upleftImage': jsPsych.timelineVariable('upleftImage'),
+                    'uprightImage': jsPsych.timelineVariable('uprightImage'),
+                    'lomidImage': jsPsych.timelineVariable('lomidImage')
+                }
+            }
+        ],
+        timeline_variables: timeline_variables_head_practice,
+        randomize_order: false,
+        choices: ["f", "j"],
+        on_finish: function (data) {
+            save_my_judgements(data);
+        }
+    }
 
     const head_trials = {
         timeline: [
             {
                 type: jsPsychPsychophysics,
                 pixi: pixi_flag,
-                stimuli: [
-                    {
-                        obj_type: 'image',
-                        scale: .55,
-                        file: jsPsych.timelineVariable('upleftImage'),
-                        show_start_time: 250, // ms after the start of the trial
-                        startX: screen.width / 2 - 150,
-                        startY: screen.height / 2 - 300
-                    },
-                    {
-                        obj_type: 'image',
-                        scale: .55,
-                        file: jsPsych.timelineVariable('uprightImage'),
-                        show_start_time: 250, // ms after the start of the trial
-                        startX: screen.width / 2 + 150,
-                        startY: screen.height / 2 - 300
-                    },
-                    {
-                        obj_type: 'image',
-                        scale: .55,
-                        file: jsPsych.timelineVariable('lomidImage'),
-                        show_start_time: 250, // ms after the start of the trial
-                        startX: screen.width / 2,
-                        startY: screen.height / 2 - 50
-                    }
-                ],
+                stimuli: my_stimulus_container,
                 canvas_height: 700,
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
@@ -97,32 +178,106 @@
         randomize_order: false,
         choices: ["f", "j"],
         on_finish: function (data) {
-            var response_recoded;
-            if (data.response == "f") response_recoded = 0;
-            if (data.response == "j") response_recoded = 1;
-
-            data_similarity = {
-                participant_id: participant_id,
-                is_practice: is_practice,
-                stimulus_ids: jsPsych.timelineVariable('stimulus_ids'),
-                trial_id: jsPsych.timelineVariable('trial_id'),
-                id_left: jsPsych.timelineVariable("id_left_probe"),
-                id_right: jsPsych.timelineVariable("id_right_probe"),
-                id_target: jsPsych.timelineVariable("id_target"),
-                response: response_recoded,
-                rt: data.rt
-            };
-            data_cumulative.push(data_similarity);
-            console.log("data_similarity = ", data_similarity);
-
+            save_my_judgements(data);
             // update progress bar
-            if (is_practice == 0) {
-                jsPsych.setProgressBar(jsPsych.timelineVariable('trial_id') / n_trials_per_dim);
-            }
+            jsPsych.setProgressBar(jsPsych.timelineVariable('trial_id') / 2*n_trials_per_dim);
         }
     }
 
-    jsPsych.run([preload, instruction, head_trials]);
+    const belly_trials_practice = {
+        timeline: [
+            {
+                type: jsPsychPsychophysics,
+                pixi: pixi_flag,
+                stimuli: my_stimulus_container,
+                canvas_height: 700,
+                prompt: 'Press "f" or "j" to respond.',
+                data: {
+                    'upleftImage': jsPsych.timelineVariable('upleftImage'),
+                    'uprightImage': jsPsych.timelineVariable('uprightImage'),
+                    'lomidImage': jsPsych.timelineVariable('lomidImage')
+                }
+            }
+        ],
+        timeline_variables: timeline_variables_belly_practice,
+        randomize_order: false,
+        choices: ["f", "j"],
+        on_finish: function (data) {
+            save_my_judgements(data);
+        }
+    }
+
+    const belly_trials = {
+        timeline: [
+            {
+                type: jsPsychPsychophysics,
+                pixi: pixi_flag,
+                stimuli: my_stimulus_container,
+                canvas_height: 700,
+                prompt: 'Press "f" or "j" to respond.',
+                data: {
+                    'upleftImage': jsPsych.timelineVariable('upleftImage'),
+                    'uprightImage': jsPsych.timelineVariable('uprightImage'),
+                    'lomidImage': jsPsych.timelineVariable('lomidImage')
+                }
+            }
+        ],
+        timeline_variables: timeline_variables_belly,
+        randomize_order: false,
+        choices: ["f", "j"],
+        on_finish: function (data) {
+            save_my_judgements(data);
+            // update progress bar
+            jsPsych.setProgressBar((jsPsych.timelineVariable('trial_id')+n_trials_per_dim) / 2*n_trials_per_dim);
+        }
+    }
+
+    var comp_check_loop = {
+        timeline: [comprehension_question_allinone, comp_feedback_verbose],
+        loop_function: function (data) {
+            len_data = data.values().length;
+
+            if (
+                data.values()[len_data - 2].correct == true
+            ) {
+                is_practice = 0;
+                data_comprehension = {
+                    participant_id: participant_id,
+                    n_attempts: n_comprehension_attempts,
+                    t_comprehension: Date.now() - t_start
+                };
+                let dataSaved = false;
+                saveData(JSON.stringify(data_comprehension), "comprehension_check_" + participant_id + ".json");
+                checkDataSaving();
+
+                return false;
+            } else {
+                n_comprehension_attempts += 1;
+                n = 0 // keeps track of number of trials gone by
+                n_update = 0;
+                n_immediate = 0;
+                return true;
+            }
+        }
+    };
+
+    var instructions_redirect = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;"><br>Well done!<br>The study is now over.<br>Please press the button below to be redirected to prolific.</div>',
+        choices: ["Back to Prolific"],
+        on_finish: function () {
+            window.location.href = "www.prolific.xxasfsadf";
+        }
+    };
+
+    tl = [];
+    tl.push(preload, instructions1, instructions2, instructions3, instructions4, head_trials_practice);
+    tl.push(comp_check_loop);
+    tl.push(instructions_test, head_trials);
+    tl.push(instructions_halftime, belly_trials_practice, halftime_go, belly_trials, instructions_redirect);
+
+    jsPsych.run(tl);
+
     file_name = null // file name for data file. if null, a default name consisting of the participant ID and a unique number is chosen.
     local = false // save the data file locally.
     var n_comprehension_attempts = 1;
@@ -143,7 +298,6 @@
     if (window.location.search.indexOf('STUDY_ID') > -1) {
         var studyID = getQueryVariable('STUDY_ID');
     }
-    progress_url = updateQueryStringParameter("../../task/main.html", "PROLIFIC_PID", participant_id);
 
 
 </script>
