@@ -29,6 +29,13 @@
             jsPsych.data.displayData();
         }
     })
+        
+    // Preloading files are needed to present the stimuli accurately.
+    const preload = {
+    type: jsPsychPreload,
+    images: [images_head, images_belly],
+    };
+
 
     const pixi_flag = jsPsych.data.getURLVariable('pixi_flag') === '1' ? true : false;
 

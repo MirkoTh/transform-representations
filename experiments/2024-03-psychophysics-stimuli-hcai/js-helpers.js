@@ -226,12 +226,6 @@ for (var i = 0; i < n_trials_per_dim; i++) {
   timeline_variables_belly.push(trial_details);
 }
 
-// Preloading files are needed to present the stimuli accurately.
-const preload = {
-  type: jsPsychPreload,
-  images: [images_head, images_belly],
-};
-
 function append_randomized_arrays(set, n) {
   var sets_randomized = [];
   for (let i = 0; i < n; i++) {
@@ -457,3 +451,16 @@ var comp_feedback_verbose = {
 };
 
 
+function direct_to_triplets() {
+  if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+      var participant_id = getQueryVariable('PROLIFIC_PID');
+  }
+
+  // If no ID is present, generate one using random numbers - this is useful for testing
+  else {
+      var participant_id = Math.floor(Math.random() * 1000);
+  }
+
+  progress_url = updateQueryStringParameter("triplet-psychophysics.html", "PROLIFIC_PID", participant_id);
+  window.location.href = progress_url_session;
+}
