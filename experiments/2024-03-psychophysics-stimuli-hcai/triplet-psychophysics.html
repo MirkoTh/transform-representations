@@ -20,6 +20,8 @@
 </head>
 
 
+// todos: add screenshot of setup; say, how long the study is going to last approximately; change canvas and stimulus positioning/size; debug progress bar;
+
 <body></body>
 <script>
     const jsPsych = initJsPsych({
@@ -53,7 +55,7 @@
 
     var instructions2 = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">There are going to be two halves.<br><br><br>In each half, only one of the two properties (i.e., head or belly) is changed, the other one stays the same for all trials.</div>',
+        stimulus: '<div style="font-size:30px;">The study is divided into two halves.<br><br><br>In each half, only one of the two properties (i.e., head or belly) is changed, the other one stays the same for all trials.</div>',
         choices: ["Next"]
     };
 
