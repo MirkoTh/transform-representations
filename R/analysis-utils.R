@@ -721,7 +721,7 @@ category_centers <- function(f_stretch, f_shift, l_info) {
   # read individual performance
   x1 <- seq(0, 9, by = 1)
   x2 <- seq(0, 9, by = 1)
-
+  
   tbl_tmp <- crossing(x1, x2)
   tbl_tmp <- tbl_tmp %>% mutate(stim_id = seq(1, 100, by = 1))
   l_ellipses <- map(c(2, 3), create_ellipse_categories, tbl = tbl_tmp)
@@ -1236,6 +1236,19 @@ preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat, n_sds = 3) {
   
   ## exclude practice trials in reproduction task
   l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% filter(session %in% c(1, 2))
+  
+  l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% 
+    group_by(participant_id, stim_id, session) %>%
+    mutate(rwn = row_number(session)) %>%
+    filter(rwn == 1) %>%
+    select(-rwn)
+  
+  l_guessing$keep$tbl_cat_sim <- l_guessing$keep$tbl_cat_sim %>% 
+    group_by(participant_id, trial_id) %>%
+    mutate(rwn = row_number(participant_id)) %>%
+    filter(rwn == 1) %>%
+    select(-rwn)
+  
   
   return(list(
     l_incomplete = l_incomplete,
@@ -2697,3 +2710,121 @@ tf_to_psychological_e2 <- function(l_tbl_data) {
   
   return(l_tbl_data)
 }
+
+
+# check for each participant which file has more data and select that one
+load_and_hash_triplets <- function(
+    path_data, 
+    participants_returned, 
+    add_gender = FALSE, 
+    time_period = NULL, 
+    random_hashes = TRUE,
+    session_id = 0
+) {
+  #' hash prolific ids and save data from wm tasks
+  #' 
+  #' @description loads data from json files and writes to csv with
+  #' prolific ids replaced by random ids; writes hash table to csv as well
+  #' @param path_data sub-folder with batch data
+  #' @param participants_returned list with returned and rejected prolific
+  #' @param add_gender should gender be added from the prolific data, defaults to FALSE and is currently not implemented
+  #' @param time_period the time period considered for loading the .json files
+  #' @param random_hashes should prolific ids be replaced by random ids or 
+  #' is a file with an already existing mapping from prolific id to another id available?
+  #' @return nothing, just writes
+  #' 
+  # read individual performance
+  
+  # check for each participant which file has more data and select that one
+  if (is.null(time_period)){time_period <- c(now() - years(100), now())}
+  
+  
+  # subset time range
+  files_dir <- dir(path_data)
+  mtime <- map(str_c(path_data, files_dir), ~ file.info(.x)$mtime)
+  in_range <- map_lgl(mtime, between, time_period[1], time_period[2])
+  files_dir <- files_dir[in_range]
+  
+  fld_similarity <- files_dir[str_detect(files_dir, "similarity")]
+  fld_cc <- files_dir[str_detect(files_dir, "comprehension")]
+  
+  extract_compound_and_individual <- function(fld) {
+    paths_individual <- str_c(path_data, "/", fld[!str_detect(fld, "allinone")])
+    paths_compound <- str_c(path_data, "/", fld[str_detect(fld, "allinone")])
+    return (list(indiv = paths_individual, compound = paths_compound))
+  }
+  
+  flds <- list(
+    fld_similarity
+  )
+  l_paths <- map(flds, extract_compound_and_individual)
+  
+  names(l_paths) <- c(
+    "similarity-js"
+  )
+  
+  inner_map <- safely(function(x) map(x, json_to_tibble))
+  l_tbl_similarity_indiv <- map(map(l_paths$`similarity-js`$indiv, inner_map), "result")
+  l_tbl_similarity_compound <- map(map(l_paths$`similarity-js`$compound, inner_map), "result")
+  
+  select_more_rows <- function(a, b) {
+    nrows_a <- nrow(a[[1]])
+    nrows_b <- nrow(b[[1]])
+    if (is_empty(nrows_a)) nrows_a <- 0
+    if(nrows_a > nrows_b) {
+      out <- a[[1]]
+    } else {out <- b[[1]]}
+    out$participant_id <- as.character(out$participant_id)
+    return(out)
+  }
+  
+  tbl_similarity <- map2_df(l_tbl_similarity_compound, l_tbl_similarity_indiv, select_more_rows)
+  
+  # add gender
+  if (add_gender == TRUE) {
+    fls_all <- list.files("experiments/2024-03-psychophysics-stimuli-hcai/data/")
+    fl_start <- "prolific_export"
+    pth <- str_c("experiments/2024-03-psychophysics-stimuli-hcai/data/", fls_all[startsWith(fls_all, fl_start)])
+    l <- map(pth, read_csv)
+    tbl_prolific <- reduce(l, rbind)
+    tbl_cr <- tbl_cr %>% 
+      left_join(tbl_prolific[, c("Participant id", "Sex")], by = c("participant_id" = "Participant id"))
+  }
+  
+  # create a lookup table mapping prolific ids to random ids
+  tbl_ids_lookup <- tibble(participant_id = unique(tbl_similarity$participant_id))
+  if (random_hashes) {
+    tbl_ids_lookup <- tbl_ids_lookup %>%
+      filter(!(participant_id %in% participants_returned)) %>% 
+      group_by(participant_id) %>%
+      mutate(participant_id_randomized = random_id(1)) %>% ungroup()
+  } else {
+    tmp <- tbl_similarity %>%
+      group_by(participant_id) %>% count() %>% 
+      mutate(participant_id_randomized = row_number(participant_id)) %>%
+      ungroup() %>% select(-n)
+    tbl_ids_lookup <- tbl_ids_lookup %>% 
+      left_join(tmp, by = c("participant_id"))
+  }
+  write_csv(tbl_ids_lookup, str_c(path_data, "participant-lookup.csv"))
+  
+  
+  # replace prolific ids with random ids
+  replace_prolific_id <- function(my_tbl) {
+    my_tbl %>% left_join(tbl_ids_lookup, by = "participant_id") %>%
+      select(-participant_id) %>% rename(participant_id = participant_id_randomized)
+  }
+  
+  # exclude returned and rejected participants
+  tbl_similarity <- tbl_similarity %>% filter(!(participant_id %in% participants_returned))
+  tbl_similarity <- replace_prolific_id(tbl_similarity)
+
+  # save
+  write_csv(tbl_similarity, str_c(path_data, "tbl_similarity.csv"))
+  saveRDS(tbl_similarity, str_c(path_data, "tbl_OS_recall.rds"))
+
+}
+
+
+
+
