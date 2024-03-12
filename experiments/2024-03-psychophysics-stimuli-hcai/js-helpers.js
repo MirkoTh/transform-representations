@@ -14,6 +14,7 @@ console.log("stimulus_set_practice: ", stimulus_set_practice);
 
 
 const n_trials_per_dim = stimulus_set_1.length;
+console.log("n_trials_per_dim = ", n_trials_per_dim);
 const n_trials_practice = sample_ids.length;
 const session = 1;
 
@@ -513,3 +514,10 @@ function clickStart(hide, show) {
   document.getElementById(show).style.display = 'block';
   window.scrollTo(0, 0);
 }
+
+
+//https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+

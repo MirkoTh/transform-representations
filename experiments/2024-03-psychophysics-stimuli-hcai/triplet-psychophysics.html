@@ -10,6 +10,7 @@
     <script src="jspsych-dist/dist/plugin-survey-text.js"></script>
     <script src="jspsych-dist/dist/plugin-survey-multi-choice.js"></script>
     <script src="jspsych-dist/dist/plugin-fullscreen.js"></script>
+    <script src="jspsych-dist/dist/plugin-call-function.js"></script>
     <script src="https://pixijs.download/release/pixi.js"></script>
     <script src="jquery.min.js"></script>
     <script src="js-helpers.js"></script>
@@ -18,9 +19,6 @@
     </link>
     <script srf="jspsych-psychophysics.js"></script>
 </head>
-
-
-// todos: add screenshot of setup; say, how long the study is going to last approximately; change canvas and stimulus positioning/size; debug progress bar;
 
 <body></body>
 <script>
@@ -94,27 +92,27 @@
     var my_stimulus_container = [
         {
             obj_type: 'image',
-            scale: .55,
+            scale: .45,
             file: jsPsych.timelineVariable('upleftImage'),
             show_start_time: 250, // ms after the start of the trial
             startX: screen.width / 2 - 150,
-            startY: screen.height / 2 - 300
+            startY: screen.height / 2 - 390
         },
         {
             obj_type: 'image',
-            scale: .55,
+            scale: .45,
             file: jsPsych.timelineVariable('uprightImage'),
             show_start_time: 250, // ms after the start of the trial
             startX: screen.width / 2 + 150,
-            startY: screen.height / 2 - 300
+            startY: screen.height / 2 - 390
         },
         {
             obj_type: 'image',
-            scale: .55,
+            scale: .45,
             file: jsPsych.timelineVariable('lomidImage'),
             show_start_time: 250, // ms after the start of the trial
             startX: screen.width / 2,
-            startY: screen.height / 2 - 50
+            startY: screen.height / 2 - 140
         }
     ];
 
@@ -125,6 +123,7 @@
 
             data_similarity = {
                 participant_id: participant_id,
+                dimension: jsPsych.timelineVariable("dimension"),
                 is_practice: jsPsych.timelineVariable("is_practice"),
                 stimulus_ids: jsPsych.timelineVariable('stimulus_ids'),
                 trial_id: jsPsych.timelineVariable('trial_id'),
@@ -135,16 +134,21 @@
                 rt: data.rt
             };
             data_cumulative.push(data_similarity);
-            console.log("data_similarity = ", data_similarity);
-
-            // save data twice
-            saveData(JSON.stringify(data_similarity), "similarity_" + participant_id + ".json", flag_save = false);
-            let dataSaved = false;
-            saveSeveralDataOverwrite(data_cumulative, "similarity_allinone_" + participant_id + ".json");
-            checkDataSaving();
-
         }
 
+    var save_data = {
+        type: jsPsychCallFunction,
+        async: true,
+        func: function(done){
+            console.log("data_cumulative = ", data_cumulative);
+            saveSeveralDataOverwrite(data_cumulative, "similarity_" + participant_id + ".json");
+            jsPsych.pluginAPI.setTimeout(function() {
+                done("3000ms");
+            }, 3000)
+        }
+    }
+
+    var n = 0;
     const head_trials_practice = {
         timeline: [
             {
@@ -152,6 +156,7 @@
                 pixi: pixi_flag,
                 stimuli: my_stimulus_container,
                 canvas_height: 700,
+                background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
@@ -175,6 +180,7 @@
                 pixi: pixi_flag,
                 stimuli: my_stimulus_container,
                 canvas_height: 700,
+                background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
@@ -188,8 +194,9 @@
         choices: ["f", "j"],
         on_finish: function (data) {
             save_my_judgements(data);
+            n += 1;
             // update progress bar
-            jsPsych.setProgressBar(jsPsych.timelineVariable('trial_id') / 2*n_trials_per_dim);
+            jsPsych.setProgressBar(n / (2*n_trials_per_dim));
         }
     }
 
@@ -200,6 +207,7 @@
                 pixi: pixi_flag,
                 stimuli: my_stimulus_container,
                 canvas_height: 700,
+                background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
@@ -223,6 +231,7 @@
                 pixi: pixi_flag,
                 stimuli: my_stimulus_container,
                 canvas_height: 700,
+                background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
@@ -236,8 +245,9 @@
         choices: ["f", "j"],
         on_finish: function (data) {
             save_my_judgements(data);
+            n += 1;
             // update progress bar
-            jsPsych.setProgressBar((jsPsych.timelineVariable('trial_id')+n_trials_per_dim) / 2*n_trials_per_dim);
+            jsPsych.setProgressBar(n / (2*n_trials_per_dim));
         }
     }
 
@@ -280,10 +290,15 @@
     };
 
     tl = [];
-    tl.push(preload, instructions1, instructions2, instructions3, instructions4, head_trials_practice);
+    // go fullscreen
+    tl.push({
+        type: jsPsychFullscreen,
+        fullscreen_mode: true
+    });
+    tl.push(preload, head_trials, instructions1, instructions2, instructions3, instructions4, head_trials_practice, save_data);
     tl.push(comp_check_loop);
-    tl.push(instructions_test, head_trials);
-    tl.push(instructions_halftime, belly_trials_practice, halftime_go, belly_trials, instructions_redirect);
+    tl.push(instructions_test, head_trials, save_data);
+    tl.push(instructions_halftime, belly_trials_practice, save_data, halftime_go, belly_trials, save_data, instructions_redirect);
 
     jsPsych.run(tl);
 
