@@ -2718,9 +2718,8 @@ load_and_hash_triplets <- function(
     participants_returned, 
     add_gender = FALSE, 
     time_period = NULL, 
-    random_hashes = TRUE,
-    session_id = 0
-) {
+    random_hashes = TRUE
+    ) {
   #' hash prolific ids and save data from wm tasks
   #' 
   #' @description loads data from json files and writes to csv with
@@ -2746,6 +2745,7 @@ load_and_hash_triplets <- function(
   files_dir <- files_dir[in_range]
   
   fld_similarity <- files_dir[str_detect(files_dir, "similarity")]
+  fld_similarity <- fld_similarity[!startsWith(fld_similarity, "tbl_")]
   fld_cc <- files_dir[str_detect(files_dir, "comprehension")]
   
   extract_compound_and_individual <- function(fld) {
@@ -2765,20 +2765,8 @@ load_and_hash_triplets <- function(
   
   inner_map <- safely(function(x) map(x, json_to_tibble))
   l_tbl_similarity_indiv <- map(map(l_paths$`similarity-js`$indiv, inner_map), "result")
-  l_tbl_similarity_compound <- map(map(l_paths$`similarity-js`$compound, inner_map), "result")
   
-  select_more_rows <- function(a, b) {
-    nrows_a <- nrow(a[[1]])
-    nrows_b <- nrow(b[[1]])
-    if (is_empty(nrows_a)) nrows_a <- 0
-    if(nrows_a > nrows_b) {
-      out <- a[[1]]
-    } else {out <- b[[1]]}
-    out$participant_id <- as.character(out$participant_id)
-    return(out)
-  }
-  
-  tbl_similarity <- map2_df(l_tbl_similarity_compound, l_tbl_similarity_indiv, select_more_rows)
+  tbl_similarity <- reduce(reduce(l_tbl_similarity_indiv, rbind), rbind)
   
   # add gender
   if (add_gender == TRUE) {
@@ -2801,8 +2789,9 @@ load_and_hash_triplets <- function(
   } else {
     tmp <- tbl_similarity %>%
       group_by(participant_id) %>% count() %>% 
+      ungroup() %>%
       mutate(participant_id_randomized = row_number(participant_id)) %>%
-      ungroup() %>% select(-n)
+      select(-n)
     tbl_ids_lookup <- tbl_ids_lookup %>% 
       left_join(tmp, by = c("participant_id"))
   }
@@ -2821,7 +2810,7 @@ load_and_hash_triplets <- function(
 
   # save
   write_csv(tbl_similarity, str_c(path_data, "tbl_similarity.csv"))
-  saveRDS(tbl_similarity, str_c(path_data, "tbl_OS_recall.rds"))
+  saveRDS(tbl_similarity, str_c(path_data, "tbl_similarity.rds"))
 
 }
 
