@@ -159,24 +159,30 @@ tbl_perceptual %>%
 
 tbl_perceptual_avg <- tbl_mlds %>% 
   left_join(tbl_perceptual, by = "participant_id") %>%
-  filter(!exclude) %>%
-  group_by(dimension, stimulus) %>%
-  summarize(v_perceptual = mean(v_perceptual)) %>%
-  ungroup()
+  filter(!exclude)
 
+tbl_perceptual_avg <- summary_se_within(
+  tbl_perceptual_avg, 
+  "v_perceptual", 
+  withinvars = c("dimension", "stimulus")
+)
+
+pd <- position_dodge(width = .4)
 ggplot(tbl_perceptual_avg, aes(stimulus, v_perceptual, group = dimension)) +
-  geom_line(aes(color = dimension)) +
-  geom_point(color = "white", size = 3) +
-  geom_point(aes(color = dimension)) +
+  geom_line(aes(color = dimension), position = pd) +
+  geom_errorbar(aes(ymin = v_perceptual - ci, ymax = v_perceptual + ci, color = dimension), width = .4, position = pd) +
+  geom_point(color = "white", size = 3, position = pd) +
+  geom_point(aes(color = dimension), position = pd) +
   theme_bw() +
-  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_x_discrete(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
   labs(x = "Stimulus", y = "Perceptual Value") + 
   theme(
     strip.background = element_rect(fill = "white"), 
-    text = element_text(size = 22)
+    text = element_text(size = 22),
+    legend.position = "bottom"
   ) + 
-  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "Dimension")
 
 
 
