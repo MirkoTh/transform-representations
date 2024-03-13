@@ -359,7 +359,7 @@ var comprehension_question_allinone = {
           prompt: '<div align=center><b>How long does the study take approximately?</b></div>',
           options: [
               'It is a short one, approx. 5 mins.',
-              'About 15-20 mins.',
+              'About 20-25 mins.',
               'It is relatively long, approx. 2 hours',
               'I cannot remember.'
           ],
@@ -394,7 +394,7 @@ var comprehension_question_allinone = {
       if (
           answer_Q1 == 'Say which of the two objects presented above is most similar to the one below.' &&
           answer_Q2 == 'f: bottom object more similar to top left object. j: bottom object more similar to top right object.' &&
-          answer_Q3 == 'About 15-20 mins.' &&
+          answer_Q3 == 'About 20-25 mins.' &&
           answer_Q4 == 'I should use them to get used to the task procedure.'
 
       ) {
@@ -437,7 +437,7 @@ var comp_feedback_verbose = {
       if (answer_Q2 == 'f: bottom object more similar to top left object. j: bottom object more similar to top right object.') {
           var t2 = '<p style="color:green;align=center"">' + "<b>CORRECT! </b>" + qna2
       } else { var t2 = '<p style="color:red;align=center"">' + "<b>INCORRECT! </b>" + qna2 + explain2 }
-      if (answer_Q3 == 'About 15-20 mins.') {
+      if (answer_Q3 == 'About 20-25 mins.') {
           var t3 = '<p style="color:green;align=center"">' + "<b>CORRECT! </b>" + qna3
       } else { var t3 = '<p style="color:red;align=center"">' + "<b>INCORRECT! </b>" + qna3 + explain3 }
       if (answer_Q4 == 'I should use them to get used to the task procedure.') {

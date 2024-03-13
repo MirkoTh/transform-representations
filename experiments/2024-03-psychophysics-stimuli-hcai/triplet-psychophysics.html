@@ -25,6 +25,8 @@
     const jsPsych = initJsPsych({
         show_progress_bar: true,
         auto_update_progress_bar: false,
+        default_iti: 500,
+        minimum_valid_rt: 180,
         on_finish: function () {
             jsPsych.data.displayData();
         }
@@ -45,46 +47,51 @@
         choices: ["Next"]
     };
 
-    var instructions1 = {
+    var instructions0 = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;"><b>INSTRUCTIONS</b><br><br><br>In the following, you are presented with three cartoon objects varying in the spikiness of their head and the fill of their belly: An object to be rated located below two comparison objects.<br><br><br>Your task is to decide whether the object in the bottom is more similar to the upper left or to the upper right obect.</div>',
+        stimulus: '<div style="font-size:30px;">This task is going to be in full-screen mode.<br><br><b> Please do not leave the full-screen mode for your best experience.<b><br><br></div>',
         choices: ["Next"]
     };
 
-    var instructions2 = {
+    var instructions1 = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">The study is divided into two halves.<br><br><br>In each half, only one of the two properties (i.e., head or belly) is changed, the other one stays the same for all trials.</div>',
+        stimulus: '<div style="font-size:30px;"><b>INSTRUCTIONS</b><br><br><br>In the following, you are presented with three cartoon objects varying in the spikiness of their head and the fill of their belly: An object to be rated located below two comparison objects.<br><br><br>Your task is to decide whether the object in the bottom is more similar to the upper left or to the upper right obect.<br><br></div>',
         choices: ["Next"]
     };
 
     var instructions3 = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">If the object below is more similar to the upper left object, press the "f" button.<br><br>If the object below is more similar to the upper right object, press the "j" button.<br><br>This task is going to be in full-screen mode.<br><br><b> Please do not leave the full-screen mode for your best experience.<br><br></div>',
+        stimulus: '<div style="font-size:30px;">The study is divided into two halves.<br><br><br>In each half, only one of the two properties (i.e., head or belly) is changed, the other one stays the same for all trials.<br><br></div>',
+        choices: ["Next"]
+    };
+
+    var instructions2 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="font-size:30px;">If the object below is more similar to the upper left object, press the "f" button.<br><br>If the object below is more similar to the upper right object, press the "j" button.<br><br></div>',
         choices: ["Next"]
     };
 
     var instructions4 = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">In the following, you can try out five trials of the task, before the actual study starts.<br><br>After that, we are testing your understanding of the instructions in a small comprehension check.</div>',
+        stimulus: '<div style="font-size:30px;">In the following, you can try out five trials of the task, before the actual study starts.<br><br>The practice trials do not contribute to your payment. You can use them to find out how the study works.<br><br>After that, we are testing your understanding of the instructions in a small comprehension check.<br><br></div>',
         choices: ["Next"]
     };
 
     var instructions_test = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">These were the practice trials.<br><br>The main part is going to start now.</div>',
+        stimulus: '<div style="font-size:30px;">These were the practice trials.<br><br>The main part is going to start now.<br><br></div>',
         choices: ["Start Main Part"]
     };
 
     var instructions_halftime = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">Well done. You are over with the first half of the study now.<br><br>Your task in the second part is the same as before, but the other property is going to be changed.<br><br>You can again get used to the task with a few practice trials.</div>',
+        stimulus: '<div style="font-size:30px;">Well done. You are over with the first half of the study now.<br><br>Your task in the second part is the same as before, but the other property is going to be changed.<br><br>You can again get used to the task with a few practice trials.<br><br></div>',
         choices: ["Start Practice Trials"]
     };
 
-    
     var halftime_go = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">The practice trials are now over. The main part of the second half is starting now.</div>',
+        stimulus: '<div style="font-size:30px;">The practice trials are now over. The main part of the second half is starting now.<br><br></div>',
         choices: ["Start Second Half"]
     };
 
@@ -282,12 +289,33 @@
 
     var instructions_redirect = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;"><br>Well done!<br>The study is now over.<br>Please press the button below to be redirected to prolific.</div>',
+        stimulus: '<div style="font-size:30px;"><br>Well done!<br>The study is now over.<br>Please press the button below to be redirected to prolific.<br><br></div>',
         choices: ["Back to Prolific"],
         on_finish: function () {
-            window.location.href = "www.prolific.xxasfsadf";
+            window.location.href = "https://app.prolific.com/submissions/complete?cc=CZDM4CXR";
         }
     };
+
+    
+    var instructions_belief = {
+        type: jsPsychSurveyMultiChoice,
+        questions: [
+            {
+                prompt: `<div style="font-size:30px;"><b>IMPORTANT</b><br><br><br>
+            Your data are used for scientific purposes.<br>
+            We have invested a lot of time to develop this study.<br>
+            <u>Please do carry out the task to the best of your knowledge and belief; otherwise, we cannot use your data at all!</u><br>`,
+                options: [
+                    'I commit to solving the task conscientiously'
+                ],
+
+                required: true,
+                name: "question1"
+            }
+        ],
+        preamble: "<div style='font-size:40px;color:red'><u>YOUR DATA ARE USED FOR SCIENTIFIC PURPOSES!</u><br><br></div>",
+    };
+
 
     tl = [];
     // go fullscreen
@@ -295,9 +323,10 @@
         type: jsPsychFullscreen,
         fullscreen_mode: true
     });
-    tl.push(preload, head_trials, instructions1, instructions2, instructions3, instructions4, head_trials_practice, save_data);
+    tl.push(preload, instructions0, instructions1, instructions2, instructions3, instructions4, head_trials_practice, save_data);
     tl.push(comp_check_loop);
-    tl.push(instructions_test, head_trials, save_data);
+    //tl.push(belly_trials_practice, save_data, instructions_redirect);
+    tl.push(instructions_belief, instructions_test, head_trials, save_data);
     tl.push(instructions_halftime, belly_trials_practice, save_data, halftime_go, belly_trials, save_data, instructions_redirect);
 
     jsPsych.run(tl);
