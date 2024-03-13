@@ -22,6 +22,19 @@
 
 <body></body>
 <script>
+
+    if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
+        var participant_id = getQueryVariable('PROLIFIC_PID');
+    }
+    // If no ID is present, generate one using random numbers - this is useful for testing
+    else {
+        var participant_id = Math.floor(Math.random() * 1000);
+    }
+    // STUDY ID
+    if (window.location.search.indexOf('STUDY_ID') > -1) {
+        var studyID = getQueryVariable('STUDY_ID');
+    }
+
     const jsPsych = initJsPsych({
         show_progress_bar: true,
         auto_update_progress_bar: false,
@@ -85,7 +98,7 @@
 
     var instructions_halftime = {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div style="font-size:30px;">Well done. You are over with the first half of the study now.<br><br>Your task in the second part is the same as before, but the other property is going to be changed.<br><br>You can again get used to the task with a few practice trials.<br><br></div>',
+        stimulus: '<div style="font-size:30px;">Well done. You are over with the first half of the study now.<br><br>Your task in the second part is the same as before, but the <b>other property</b> of the monster is going to be changed.<br><br>Therefore, please pay now attention to the previously unchanged property.<br><br>You can again get used to the task with a few practice trials.<br><br></div>',
         choices: ["Start Practice Trials"]
     };
 
@@ -127,6 +140,7 @@
             var response_recoded;
             if (data.response == "f") response_recoded = 0;
             if (data.response == "j") response_recoded = 1;
+            data.response_recoded = response_recoded;
 
             data_similarity = {
                 participant_id: participant_id,
@@ -147,11 +161,14 @@
         type: jsPsychCallFunction,
         async: true,
         func: function(done){
-            console.log("data_cumulative = ", data_cumulative);
             saveSeveralDataOverwrite(data_cumulative, "similarity_" + participant_id + ".json");
+            var trials = jsPsych.data.get().filter({trial_type: 'psychophysics'});
+            var cols_save = ["participant_id", "dimension", "is_practice", "stimulus_ids", "trial_id", "id_left", "id_right", "id_target", "response", "response_recoded", "rt"];
+            var trials_req = trials.filterColumns(cols_save);
+            saveSeveralDataOverwrite(trials_req["trials"], "similarity_backup_" + participant_id + ".json");
             jsPsych.pluginAPI.setTimeout(function() {
-                done("3000ms");
-            }, 3000)
+                done("4000ms");
+            }, 4000)
         }
     }
 
@@ -166,6 +183,14 @@
                 background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
+                    "participant_id": participant_id,
+                    "dimension": jsPsych.timelineVariable("dimension"),
+                    "is_practice": jsPsych.timelineVariable("is_practice"),
+                    "stimulus_ids": jsPsych.timelineVariable('stimulus_ids'),
+                    "trial_id": jsPsych.timelineVariable('trial_id'),
+                    "id_left": jsPsych.timelineVariable("id_left_probe"),
+                    "id_right": jsPsych.timelineVariable("id_right_probe"),
+                    "id_target": jsPsych.timelineVariable("id_target"),
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
                     'uprightImage': jsPsych.timelineVariable('uprightImage'),
                     'lomidImage': jsPsych.timelineVariable('lomidImage')
@@ -190,6 +215,14 @@
                 background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
+                    "participant_id": participant_id,
+                    "dimension": jsPsych.timelineVariable("dimension"),
+                    "is_practice": jsPsych.timelineVariable("is_practice"),
+                    "stimulus_ids": jsPsych.timelineVariable('stimulus_ids'),
+                    "trial_id": jsPsych.timelineVariable('trial_id'),
+                    "id_left": jsPsych.timelineVariable("id_left_probe"),
+                    "id_right": jsPsych.timelineVariable("id_right_probe"),
+                    "id_target": jsPsych.timelineVariable("id_target"),
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
                     'uprightImage': jsPsych.timelineVariable('uprightImage'),
                     'lomidImage': jsPsych.timelineVariable('lomidImage')
@@ -217,6 +250,14 @@
                 background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
+                    "participant_id": participant_id,
+                    "dimension": jsPsych.timelineVariable("dimension"),
+                    "is_practice": jsPsych.timelineVariable("is_practice"),
+                    "stimulus_ids": jsPsych.timelineVariable('stimulus_ids'),
+                    "trial_id": jsPsych.timelineVariable('trial_id'),
+                    "id_left": jsPsych.timelineVariable("id_left_probe"),
+                    "id_right": jsPsych.timelineVariable("id_right_probe"),
+                    "id_target": jsPsych.timelineVariable("id_target"),
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
                     'uprightImage': jsPsych.timelineVariable('uprightImage'),
                     'lomidImage': jsPsych.timelineVariable('lomidImage')
@@ -241,6 +282,14 @@
                 background_color: "black",
                 prompt: 'Press "f" or "j" to respond.',
                 data: {
+                    "participant_id": participant_id,
+                    "dimension": jsPsych.timelineVariable("dimension"),
+                    "is_practice": jsPsych.timelineVariable("is_practice"),
+                    "stimulus_ids": jsPsych.timelineVariable('stimulus_ids'),
+                    "trial_id": jsPsych.timelineVariable('trial_id'),
+                    "id_left": jsPsych.timelineVariable("id_left_probe"),
+                    "id_right": jsPsych.timelineVariable("id_right_probe"),
+                    "id_target": jsPsych.timelineVariable("id_target"),
                     'upleftImage': jsPsych.timelineVariable('upleftImage'),
                     'uprightImage': jsPsych.timelineVariable('uprightImage'),
                     'lomidImage': jsPsych.timelineVariable('lomidImage')
@@ -340,17 +389,7 @@
     //----------------------------------------------------------------------
 
 
-    if (window.location.search.indexOf('PROLIFIC_PID') > -1) {
-        var participant_id = getQueryVariable('PROLIFIC_PID');
-    }
-    // If no ID is present, generate one using random numbers - this is useful for testing
-    else {
-        var participant_id = Math.floor(Math.random() * 1000);
-    }
-    // STUDY ID
-    if (window.location.search.indexOf('STUDY_ID') > -1) {
-        var studyID = getQueryVariable('STUDY_ID');
-    }
+
 
 
 </script>

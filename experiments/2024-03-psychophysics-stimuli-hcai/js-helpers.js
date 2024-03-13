@@ -10,11 +10,9 @@ var stimulus_set_2 = [
 // same for both dimemsions
 var sample_ids = [88, 32, 9, 1, 179];
 var stimulus_set_practice = sample_ids.map(x=>stimulus_set_1[x]);
-console.log("stimulus_set_practice: ", stimulus_set_practice);  
 
 
 const n_trials_per_dim = stimulus_set_1.length;
-console.log("n_trials_per_dim = ", n_trials_per_dim);
 const n_trials_practice = sample_ids.length;
 const session = 1;
 
@@ -384,10 +382,6 @@ var comprehension_question_allinone = {
       //var data = jsPsych.data.getLastTrialData().values()[0]; 
       var answer_Q1 = data.response.Q0;
       var answer_Q2 = data.response.Q1;
-      console.log("data.response.Q0 = ", data.response.Q0);
-      console.log("data.response.Q1 = ", data.response.Q1);
-      console.log("data.response.Q2 = ", data.response.Q2);
-      console.log("data.response.Q3 = ", data.response.Q3);
       var answer_Q3 = data.response.Q2;
       var answer_Q4 = data.response.Q3;
 
