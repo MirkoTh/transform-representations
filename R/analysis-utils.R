@@ -2749,9 +2749,9 @@ load_and_hash_triplets <- function(
   fld_cc <- files_dir[str_detect(files_dir, "comprehension")]
   
   extract_compound_and_individual <- function(fld) {
-    paths_individual <- str_c(path_data, "/", fld[!str_detect(fld, "allinone")])
-    paths_compound <- str_c(path_data, "/", fld[str_detect(fld, "allinone")])
-    return (list(indiv = paths_individual, compound = paths_compound))
+    paths_individual <- str_c(path_data, "/", fld[!str_detect(fld, "backup")])
+    paths_compound <- str_c(path_data, "/", fld[str_detect(fld, "backup")])
+    return (list(indiv = paths_individual, backup = paths_compound))
   }
   
   flds <- list(
@@ -2765,8 +2765,37 @@ load_and_hash_triplets <- function(
   
   inner_map <- safely(function(x) map(x, json_to_tibble))
   l_tbl_similarity_indiv <- map(map(l_paths$`similarity-js`$indiv, inner_map), "result")
+  l_tbl_similarity_backup <- map(map(l_paths$`similarity-js`$backup, inner_map), "result")
   
-  tbl_similarity <- reduce(reduce(l_tbl_similarity_indiv, rbind), rbind)
+  select_more_rows <- function(a, b) {
+    nrows_a <- nrow(a[[1]])
+    nrows_b <- nrow(b[[1]])
+    if (is_empty(nrows_a)) nrows_a <- 0
+    if(nrows_a > nrows_b) {
+      out <- a[[1]]
+    } else {out <- b[[1]]}
+    out$participant_id <- as.character(out$participant_id)
+    return(out)
+  }
+  
+  tbl_indiv <- reduce(map(l_tbl_similarity_indiv, 1), rbind) %>% mutate(name = "indiv")
+  tbl_backup <- reduce(map(l_tbl_similarity_backup, 1), rbind) %>% mutate(name = "backup") %>%
+    select(-response) %>% rename(response = response_recoded)
+  tbl_ids <- tibble(
+    participant_id = union(unique(tbl_indiv$participant_id), unique(tbl_backup$participant_id))
+  )
+  tbl_n_indiv <- tbl_indiv %>% group_by(participant_id) %>% count(name = "n_indiv")
+  tbl_n_backup <- tbl_backup %>% group_by(participant_id) %>% count(name = "n_backup")
+  tbl_use <- tbl_ids %>%
+    left_join(tbl_n_indiv, by = "participant_id") %>% 
+    left_join(tbl_n_backup, by = "participant_id") %>%
+    replace_na(list(n_indiv = 0, n_backup = 0)) %>%
+    mutate(name = c("indiv", "backup")[as.numeric(n_backup >= n_indiv) + 1])
+  tbl_similarity <- tbl_use %>% left_join(
+    rbind(
+      tbl_indiv, tbl_backup
+    ), by = c("participant_id", "name")
+  )
   
   # add gender
   if (add_gender == TRUE) {

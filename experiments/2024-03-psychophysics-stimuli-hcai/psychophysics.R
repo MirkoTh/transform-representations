@@ -13,10 +13,11 @@ path_data <- c("experiments/2024-03-psychophysics-stimuli-hcai/data/")
 # select the time range for the data to be loaded
 time_period <- c(
   make_datetime(2024, 3, 13, 8, tz = "CET"), 
-  make_datetime(2024, 3, 13, 13, tz = "CET")
+  make_datetime(2024, 3, 13, 19, tz = "CET")
 )
 add_gender <- FALSE
-participants_returned <- c()
+participants_returned <- c("613867f34e206e4f573bc6ef", "5fb14a073d81805bc65f6a4f", "64f3ad25c93a6f6d60e6acd8", "615f2d67574095fe86bfe619")
+returned_but_finished <- c("584823aed2be990001174e56")
 random_hashes <- FALSE
 load_and_hash_triplets(
   path_data,
