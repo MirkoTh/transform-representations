@@ -200,3 +200,50 @@ ggplot(tbl_mlds, aes(stimulus, v_perceptual, group = dimension)) +
 
 
 
+# map object space to subject space ---------------------------------------
+
+
+tbl_presented <- read_csv(
+  file = "data/values-objective-stimuli-presented.csv"
+) %>% rename(x1 = x1_true, x2 = x2_true)
+x1_unique <- sort(unique(tbl_presented$x1))
+x2_unique <- sort(unique(tbl_presented$x2))
+
+steps_pilot <- seq(11, 89, by = 6)
+tbl_perceptual_avg <- tbl_perceptual_avg %>% arrange(stimulus)
+x1_pilot <- tbl_perceptual_avg$v_perceptual[tbl_perceptual_avg$dimension == "Head"]
+x2_pilot <- tbl_perceptual_avg$v_perceptual[tbl_perceptual_avg$dimension == "Belly"]
+
+# linearly interpolate values used in E1 - E4
+x1_psych_e1234 <- signal::interp1(
+  x = steps_pilot, y = x1_pilot, 
+  xi = x1_unique, method=c('linear'), extrap=T
+)
+
+x2_psych_e1234 <- signal::interp1(
+  x = steps_pilot, y = x2_pilot, 
+  xi = x2_unique, method=c('linear'), extrap=T
+)
+x1_critical <- signal::interp1(
+  x = steps_pilot, y = x1_pilot,
+  xi = c(0, 50, 100), method = "linear", extrap = TRUE
+)
+x2_critical <- signal::interp1(
+  x = steps_pilot, y = x2_pilot,
+  xi = c(0, 50, 100), method = "linear", extrap = TRUE
+)
+
+# here, x1 refers the head spikiness
+# and x2 refers to the belly fill
+
+tbl_psych <- crossing(
+  x1_psych = x1_psych_e1234,
+  x2_psych = x2_psych_e1234
+)
+tbl_psych <- tbl_psych %>%
+  mutate(
+    x1_obj = rep(x1_unique, each = length(x1_psych_e1234)),
+    x2_obj = rep(x2_unique, length(x2_psych_e1234))
+  )
+saveRDS(tbl_psych, file = "data/psych-representations.rds")
+
