@@ -13,10 +13,15 @@ path_data <- c("experiments/2024-03-psychophysics-stimuli-hcai/data/")
 # select the time range for the data to be loaded
 time_period <- c(
   make_datetime(2024, 3, 13, 8, tz = "CET"), 
-  make_datetime(2024, 3, 13, 19, tz = "CET")
+  make_datetime(2024, 3, 14, 20, tz = "CET")
 )
 add_gender <- FALSE
-participants_returned <- c("613867f34e206e4f573bc6ef", "5fb14a073d81805bc65f6a4f", "64f3ad25c93a6f6d60e6acd8", "615f2d67574095fe86bfe619")
+participants_returned <- c(
+  "613867f34e206e4f573bc6ef", "5fb14a073d81805bc65f6a4f", 
+  "64f3ad25c93a6f6d60e6acd8", "615f2d67574095fe86bfe619",
+  "5df1a3387caa1e0c69dca179"
+  )
+# do not exclude the following id
 returned_but_finished <- c("584823aed2be990001174e56")
 random_hashes <- FALSE
 load_and_hash_triplets(
@@ -24,9 +29,10 @@ load_and_hash_triplets(
   participants_returned,
   add_gender,
   time_period,
-  random_hashes = FALSE
+  random_hashes = random_hashes
 )
-tbl_triplets <- readRDS("experiments/2024-03-psychophysics-stimuli-hcai/data/tbl_similarity.rds")
+tbl_triplets <- readRDS("experiments/2024-03-psychophysics-stimuli-hcai/data/tbl_similarity.rds") %>%
+  mutate(participant_id = as.numeric(as.character(participant_id)))
 tbl_lookup <- read_csv("experiments/2024-03-psychophysics-stimuli-hcai/data/participant-lookup.csv")
 
 tbl_triplets <- tbl_triplets %>% group_by(is_practice, trial_id) %>%
@@ -41,16 +47,17 @@ tbl_triplets <- tbl_triplets %>%
   )
 
 tbl_triplets$dimension <- factor(tbl_triplets$dimension, labels = c("Belly", "Head"))
-tbl_triplets$participant_id <- as.factor(tbl_triplets$participant_id)
 
 tbl_exclude <- tbl_triplets %>%
-  group_by(participant_id) %>%
+  left_join(tbl_lookup, by = c("participant_id" = "participant_id_randomized"), suffix = c("_hashed", "_prolific")) %>%
+  group_by(participant_id, participant_id_prolific, name) %>%
   summarize(
     mean_response = mean(response),
     n = n()
   ) %>% arrange(mean_response) %>%
   ungroup() %>%
-  mutate(exclude = n < 365)
+  mutate(exclude = n < .8*374) %>% #round()) %>%
+  filter(n > 5)
 
 tbl_triplets %>% 
   left_join(
@@ -72,7 +79,7 @@ tbl_triplets %>%
     strip.background = element_rect(fill = "white"),
     text = element_text(size = 22)
   ) + 
-  scale_color_viridis_d(name = "Participant ID")
+  scale_color_viridis_c(name = "Participant ID")
 
 tbl_triplets_include <- tbl_triplets %>% 
   left_join(tbl_exclude, by = "participant_id") %>% filter(!exclude) %>%
@@ -81,7 +88,7 @@ tbl_triplets_include <- tbl_triplets %>%
 l_tbl_triplets <- split(tbl_triplets_include, tbl_triplets_include$participant_id)
 
 l_glms <- map(l_tbl_triplets, ~ glm(response ~ diff_diff, data = .x %>% filter(dimension == "Head")))
-map_dbl(map(l_glms, "coefficients"), 2)
+coefs_head_sorted <- sort(map_dbl(map(l_glms, "coefficients"), 2))
 
 mlds_two_dims <- function(my_tbl, p_id) {
   perceptual_head <- mlds(
@@ -111,23 +118,9 @@ mlds_two_dims <- function(my_tbl, p_id) {
 
 l_mlds <- map2(l_tbl_triplets, names(l_tbl_triplets), mlds_two_dims)
 
-tbl_mlds <- reduce(l_mlds, rbind)
+tbl_mlds <- reduce(l_mlds, rbind) %>%
+  mutate(participant_id = factor(participant_id, levels = names(coefs_head_sorted)))
 
-
-ggplot(tbl_mlds, aes(stimulus, v_perceptual, group = dimension)) +
-  geom_abline() +
-  geom_point(aes(color= dimension)) +
-  geom_smooth(method = "lm", aes(color = dimension)) +
-  theme_bw() +
-  scale_x_continuous(expand = c(0.01, 0)) +
-  scale_y_continuous(expand = c(0.01, 0)) +
-  labs(x = "Stimulus Value", y = "Perceptual Value") + 
-  theme(
-    strip.background = element_rect(fill = "white"), 
-    text = element_text(size = 22)
-  ) + 
-  scale_color_manual(values = c("skyblue2", "tomato4"), name = "") +
-  facet_wrap(~ participant_id)
 
 
 l_lms_head <- map(l_mlds, ~ summary(lm(v_perceptual ~ stimulus, data = .x %>% filter(dimension == "Head"))))
@@ -168,6 +161,8 @@ tbl_perceptual_avg <- summary_se_within(
   withinvars = c("dimension", "stimulus")
 )
 
+
+# average representation
 pd <- position_dodge(width = .4)
 ggplot(tbl_perceptual_avg, aes(stimulus, v_perceptual, group = dimension)) +
   geom_line(aes(color = dimension), position = pd) +
@@ -185,7 +180,22 @@ ggplot(tbl_perceptual_avg, aes(stimulus, v_perceptual, group = dimension)) +
   ) + 
   scale_color_manual(values = c("skyblue2", "tomato4"), name = "Dimension")
 
-
+# by-participant representation
+ggplot(tbl_mlds, aes(stimulus, v_perceptual, group = dimension)) +
+  geom_abline(color = "forestgreen", linetype = "dotdash", linewidth = 1) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dotdash", linewidth = 1) +
+  geom_point(aes(color= dimension)) +
+  geom_smooth(method = "lm", aes(color = dimension)) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Stimulus Value", y = "Perceptual Value") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22)
+  ) + 
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "") +
+  facet_wrap(~ participant_id)
 
 
 
