@@ -1,8 +1,7 @@
 # Load Packages and Data --------------------------------------------------
-
-
-
 rm(list = ls())
+
+
 
 library(tidyverse)
 library(grid)
@@ -17,7 +16,7 @@ walk(home_grown, source)
 
 
 tbl_secondary <- readRDS(
-  file = "experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"
+  file = "experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri-physical-properties.rds"
 ) %>% rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
   arrange(participant_id, trial_id)
 
@@ -34,7 +33,7 @@ is_psychological <- TRUE#FALSE#
 suffix <- c("", "-psych")[is_psychological + 1]
 
 
-n_it <- 3
+n_it <- 2
 
 tbl_1p <- tbl_start %>% filter(participant_id == "02ac2073803c199426b7637306d28880")
 tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x2_pt = mean(x2))
@@ -71,28 +70,28 @@ if (is_fit_init_end) {
 }
 
 
-tbl_params_start <- post_process_gcm_fits(l_start_results) %>% as_tibble() %>% mutate(t = "Start")
-rownames(tbl_params_start) <- NULL
-tbl_params_end <- post_process_gcm_fits(l_end_results) %>% as_tibble() %>% mutate(t = "End")
-rownames(tbl_params_end) <- NULL
-
-tbl_params_both <- rbind(tbl_params_start, tbl_params_end)
-
-pl_dist_w <- ggplot(tbl_params_both, aes(w, group = t)) +
-  geom_freqpoly(aes(color = t), binwidth = .1)+ 
-  theme_bw() +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  labs(x = "w(Head Spikiness)", y = "Nr. Participants") +
-  theme(
-    strip.background = element_rect(fill = "white"),
-    text = element_text(size = 16)
-  ) +
-  scale_color_viridis_d(name = "Time Point")
-save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
-
-
-
+if (is_fit_init_end) {
+  tbl_params_start <- post_process_gcm_fits(l_start_results) %>% as_tibble() %>% mutate(t = "Start")
+  rownames(tbl_params_start) <- NULL
+  tbl_params_end <- post_process_gcm_fits(l_end_results) %>% as_tibble() %>% mutate(t = "End")
+  rownames(tbl_params_end) <- NULL
+  
+  tbl_params_both <- rbind(tbl_params_start, tbl_params_end)
+  
+  pl_dist_w <- ggplot(tbl_params_both, aes(w, group = t)) +
+    geom_freqpoly(aes(color = t), binwidth = .1)+ 
+    theme_bw() +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(x = "w(Head Spikiness)", y = "Nr. Participants") +
+    theme(
+      strip.background = element_rect(fill = "white"),
+      text = element_text(size = 16)
+    ) +
+    scale_color_viridis_d(name = "Time Point")
+  save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
+  
+}
 
 
 # All Data E2 - E4 --------------------------------------------------------
@@ -194,16 +193,22 @@ extract_best_fit <- function(l_in) {
     as.data.frame()
   colnames(tbl_ll_it) <- 1:ncol(tbl_ll_it)
   tbl_ll_it <- as_tibble(tbl_ll_it)
-  lowest_ll_gcm_ids <- apply(tbl_ll_it, 1, which.min)
+  tbl_ll_it$minimum <- pmap_dbl(tbl_ll_it[, 1:n_it], min)
+  tbl_ll_it$maximum <- pmap_dbl(tbl_ll_it[, 1:n_it], max)
+  tbl_ll_it$max_diff <- tbl_ll_it$maximum - tbl_ll_it$minimum
+  lowest_ll_gcm_ids <- apply(tbl_ll_it[, 1:n_it], 1, which.min)
   id_names <- names(l_in[[1]])
   
-  map2(lowest_ll_gcm_ids, id_names, ~ l_in[[..1]][[..2]])
+  return(list(
+    lowest = map2(lowest_ll_gcm_ids, id_names, ~ l_in[[..1]][[..2]]),
+    tbl_ll = tbl_ll_it
+  ))
 }
 
 
-l_results_gcm_e2 <- extract_best_fit(l_results_gcm_e2)
-l_results_gcm_e3 <- extract_best_fit(l_results_gcm_e3)
-l_results_gcm_e4 <- extract_best_fit(l_results_gcm_e4)
+l_results_gcm_e2 <- extract_best_fit(l_results_gcm_e2)[[1]]
+l_results_gcm_e3 <- extract_best_fit(l_results_gcm_e3)[[1]]
+l_results_gcm_e4 <- extract_best_fit(l_results_gcm_e4)[[1]]
 
 
 ## Multiplicative Prototype Model -----------------------------------------
@@ -251,9 +256,9 @@ for (it in 1:n_it) {
 
 # post-process pt
 # take best fits across iterations
-l_results_pt_e2 <- extract_best_fit(l_results_pt_e2)
-l_results_pt_e3 <- extract_best_fit(l_results_pt_e3)
-l_results_pt_e4 <- extract_best_fit(l_results_pt_e4)
+l_results_pt_e2 <- extract_best_fit(l_results_pt_e2)[[1]]
+l_results_pt_e3 <- extract_best_fit(l_results_pt_e3)[[1]]
+l_results_pt_e4 <- extract_best_fit(l_results_pt_e4)[[1]]
 
 
 ## rule-based model -------------------------------------------------------
@@ -262,8 +267,8 @@ if (is_psychological) {
   # psych
   tbl_rules <- tibble(
     category = 1:4,
-    lo = list(c(-100, -100), c(-100, 4.362346), c(3.62161825, -100), c(3.62161825, 4.362346)),
-    hi = list(c(3.62161825, 4.362346), c(3.62161825, 200), c(200, 4.362346), c(200, 200))
+    lo = list(c(-100, -100), c(-100, 3.6487456), c(3.9377975, -100), c(3.9377975, 3.6487456)),
+    hi = list(c(3.9377975, 3.6487456), c(3.9377975, 200), c(200, 3.6487456), c(200, 200))
   )
 } else {
   # obj
@@ -320,9 +325,9 @@ for (it in 1:n_it) {
 # post-process rb
 # take best fits across iterations
 
-l_results_rb_e2 <- extract_best_fit(l_results_rb_e2)
-l_results_rb_e3 <- extract_best_fit(l_results_rb_e3)
-l_results_rb_e4 <- extract_best_fit(l_results_rb_e4)
+l_results_rb_e2 <- extract_best_fit(l_results_rb_e2)[[1]]
+l_results_rb_e3 <- extract_best_fit(l_results_rb_e3)[[1]]
+l_results_rb_e4 <- extract_best_fit(l_results_rb_e4)[[1]]
 
 
 ## Compare Models ----------------------------------------------------------
@@ -335,7 +340,7 @@ l_comp_e4 <- compare_models(l_results_gcm_e4, l_results_pt_e4, l_results_rb_e4, 
 table_ic <- l_comp_e2$tbl_ll %>% select(starts_with("winner")) %>% table() +
   l_comp_e3$tbl_ll %>% select(starts_with("winner")) %>% table() +
   l_comp_e4$tbl_ll %>% select(starts_with("winner")) %>% table() %>% cbind(c(0, 0, 0))
- 
+
 props_agreed <- table_ic / sum(diag(table_ic))
 
 ## Save Fitted Parameters --------------------------------------------------
@@ -509,7 +514,7 @@ tbl_rule_swaps_agg %>%
 
 # All Data E1 -------------------------------------------------------------
 
-tbl_secondary_e1 <- readRDS("experiments/2022-02-category-learning/data/tbl_cat_sim.rds") %>%
+tbl_secondary_e1 <- readRDS("experiments/2022-02-category-learning/data/tbl_cat_sim-physical-properties.rds") %>%
   rename(x1 = x1_true, x2 = x2_true, category = cat_true) %>%
   arrange(participant_id, trial_id)
 
@@ -558,7 +563,7 @@ for (it in 1:n_it) {
   }
 }
 
-l_results_gcm_e1 <- extract_best_fit(l_results_gcm_e1)
+l_results_gcm_e1 <- extract_best_fit(l_results_gcm_e1)[[1]]
 n2ll_gcm_e1 <- map_dbl(map(l_results_gcm_e1, "result"), "neg2ll")
 tbl_gcm_e1_params <- map(map(l_results_gcm_e1, "result"), "params") %>%
   reduce(rbind) %>% as.data.frame() %>% as_tibble()
@@ -682,7 +687,7 @@ path_m_comp <- str_c("figures/plot-model-comparison-e1-e4", suffix, ".rds")
 save_my_pdf_and_tiff(
   plot_m_comp, 
   path_m_comp,
-  7, 11
+  7.5, 11
 )
 
 # average fit
@@ -701,3 +706,9 @@ m_nb <- naive_bayes(
     )
 )
 saveRDS(m_nb, file = str_c("data/e1-nb-pt-avg-fit", suffix, ".rds"))
+
+
+
+# Compare psychological representations to physical properties ------------
+
+
