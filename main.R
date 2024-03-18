@@ -139,8 +139,8 @@ if (read_write == "write") {
   saveRDS(l_results_plots, str_c("data/", td, "-category-learning-result-plots.RDS"))
   saveRDS(l_results_plots_seq, str_c("data/", td, "-sequential-comparison-result-plots.RDS"))
 } else if (read_write == "read") {
-  l_results_plots <- readRDS(str_c("data/2024-02-18-category-learning-result-plots.RDS"))
-  l_results_plots_seq <- readRDS(str_c("data/2024-02-18-sequential-comparison-result-plots.RDS"))
+  l_results_plots <- readRDS(str_c("data/2024-03-18-category-learning-result-plots.RDS"))
+  l_results_plots_seq <- readRDS(str_c("data/2024-03-18-sequential-comparison-result-plots.RDS"))
 }
 
 dg <- position_dodge(width = .9)
@@ -165,10 +165,10 @@ pl_pred_delta_ellipse_center <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mu
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
-pl_pred_ellipse <- l_results_plots[[18]][[2]][[1]] +
+pl_pred_ellipse <- l_results_plots[[1]][[2]][[1]] +
   scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
 
-save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
+save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse_center, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
 
 
 # square category example prediction
@@ -211,7 +211,7 @@ save_my_pdf_and_tiff(arrangeGrob(
 ), "figures/model-predictions-squares", 12, 3.5)
 
 save_my_pdf_and_tiff(arrangeGrob(
-  pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse,
+  pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse_center,
   pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square,
   nrow = 2
 ), "figures/model-predictions-both-designs", 11.25, 7.5)
@@ -290,8 +290,7 @@ pl_preds_ds <- ggplot(
   labs(x = "Comparison", y = "Prop. Change of Pairwise Distances") +
   guides(fill = guide_legend(nrow=2,byrow=TRUE))
 
-save_my_tiff(pl_preds_ds, "figures/model-predictions-distances.tiff", 5.5, 6)
-save_my_pdf(pl_preds_ds, "figures/model-predictions-distances.pdf", 5.5, 6)
+save_my_pdf_and_tiff(pl_preds_ds, "figures/model-predictions-distances", 5.5, 6)
 
 
 # Plot Prior Means & Posterior Means --------------------------------------
@@ -313,41 +312,6 @@ l_tbl_stimuli_split <- map(l_tbl_stimuli, split_my_vars)
 l_plt_stimulus_movements <- map(l_tbl_stimuli_split, plot_stimulus_movements)
 
 l_plt_stimulus_movements[[1]][[1]]
-
-
-
-l_tmp <- make_stimuli(l_info[[1]])
-tbl_all_cats <- l_tmp[[1]]
-tbl_ellipses <- l_tmp[[2]]$tbl_ellipses
-ggplot() + geom_point(data = tbl_all_cats, aes(x1, x2, color = category), size = 2) + 
-  geom_point(data = tbl_ellipses, aes(x_rotated, y_rotated, group = category), color = "grey", size = .5) +
-  scale_color_brewer(palette = "Set1", name = "Category") +
-  coord_cartesian(xlim = c(0, 12), ylim = c(0, 12)) +
-  theme_bw() +
-  # theme(plot.background = element_rect(fill = "black"),
-  #       panel.background = element_rect(fill = "black")) +
-  labs(
-    x = expression(X["1"]),
-    y = expression(X["2"])
-  )
-
-
-## evaluate results from one simulation condition
-l_category_results <- readRDS(file = "data/2021-11-05-grid-search.rds")
-add_shape <- function(x) {x$l_info[["category_shape"]] <- "squares"; return(x)}
-l_category_results <- map(l_category_results, add_shape)
-
-# look at simulation conditions
-map(l_category_results, function(x) c(x$l_info$sampling, x$l_info$cat_type, x$l_info$prior_sd))
-
-tbl_test <- l_category_results[[35]]$tbl_new %>% arrange(stim_id)
-
-ggplot(tbl_test, aes(x1, x2, group = stim_id)) +
-  geom_point(aes(color = stim_id)) +
-  scale_color_continuous()
-
-
-
 
 
 # Simulations for Strategy Mix --------------------------------------------
@@ -386,12 +350,12 @@ ids_square_seq <- tbl_info %>% filter(
 
 tbl_model_weights_ellipses <- tibble(
   cat_type = c("exemplar", "prototype"),
-  prop = c(.613, .387)
+  prop = c(.824, .176)
 )
 
 tbl_model_weights_square <- tibble(
   cat_type = c("exemplar", "prototype", "rule"),
-  prop = c(0.496, .479, .025)
+  prop = c(0.706, 0.235, 0.059)
 )
 
 averaged_movements_stimuli <- function(tbl_model_weights, ids) {
@@ -570,21 +534,5 @@ pl_task_imprinting <- arrangeGrob(
 )
 
 save_my_pdf_and_tiff(pl_task_imprinting, "figures/figures-ms/model-predictions-both-designs", 11.25, 11.25)
-
-
-
-tbl_boundary <- reduce(map(
-  ids, ~ 
-    l_results_plots[[.x]][[1]]$tbl_posterior %>% mutate(cat_type = tbl_info[.x, ]$cat_type)
-), rbind) %>% left_join(
-  tbl_model_weights, by = c("cat_type")
-) %>% mutate(
-  d_boundary = d_boundary * prop
-) %>% group_by(stim_id, category, timepoint) %>% summarize(
-  d_boundary = sum(d_boundary)
-) %>% grouped_agg(c(category, timepoint), d_boundary)
-
-ggplot(tbl_boundary, aes(timepoint, mean_d_boundary)) +
-  geom_point(aes(group = category))
 
 

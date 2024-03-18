@@ -701,9 +701,9 @@ plot_distance_from_decision_boundary <- function(tbl_cr_d, nbins, sim_center) {
   #' @return the scatter plot
   #'
   tbl_cr_d$d2boundary_stim_cut <-
-    cut(tbl_cr_d$d2boundary_stim, nbins, labels = FALSE)
+    cut(tbl_cr_d$d_boundary, nbins, labels = FALSE)
   if (sim_center == "square") {
-    tbl_cr_d$d2boundary_stim_cut <- tbl_cr_d$d2boundary_stim
+    tbl_cr_d$d2boundary_stim_cut <- tbl_cr_d$d_boundary
     tbl_cr_d$category[tbl_cr_d$n_categories != 2] <- 2
   } else if (sim_center == "ellipses") {
     tbl_cr_d <- tbl_cr_d %>% 

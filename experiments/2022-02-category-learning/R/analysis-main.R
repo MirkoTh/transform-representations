@@ -68,7 +68,7 @@ l_tbl_data[[2]] <- read_csv("experiments/2022-02-category-learning/data/secondar
 l_info <- list(
   use_exptl_stimuli = TRUE, 
   informed_by_data = TRUE, 
-  representation = "psychological-representation"
+  representation = c("psychological-representation", "physical-properties")[1]
 )
 
 # transform everything to psychological space?
@@ -135,8 +135,8 @@ cat(str_c("N excluded: ", length(excl_incomplete) + length(excl_outlier) + lengt
 tbl_cr %>% group_by(participant_id, n_categories) %>% count() %>% 
   group_by(n_categories) %>% count()
 
-saveRDS(tbl_cr, "experiments/2022-02-category-learning/data/tbl_cr.rds")
-saveRDS(tbl_cat_sim, "experiments/2022-02-category-learning/data/tbl_cat_sim.rds")
+saveRDS(tbl_cr, str_c("experiments/2022-02-category-learning/data/tbl_cr-", l_info$representation, ".rds"))
+saveRDS(tbl_cat_sim, str_c("experiments/2022-02-category-learning/data/tbl_cat_sim-", l_info$representation, ".rds"))
 
 
 # Categorization ----------------------------------------------------------
@@ -223,7 +223,7 @@ names(l_m_nb_pds) <- levels(tbl_preds_nb$participant_id)
 
 tbl_cr <- add_distance_to_representation_center(tbl_cr, l_m_nb_pds)
 
-gt_or_reps <- "gt" # ground-truth center or representational center? ooth using object-properties...
+gt_or_reps <- "gt" # ground-truth center or representational center? both using object-properties...
 if (gt_or_reps == "gt") {
   l_movement <- movement_towards_category_center(
     tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
@@ -248,13 +248,13 @@ grid.draw(pls_moves_catlearn)
 
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
-  "experiments/2022-02-category-learning/data/figures/moves-compilation",
-  13, 5.75
+  str_c("experiments/2022-02-category-learning/data/figures/moves-compilation-", l_info$representation),
+  12.5, 4
 )
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
-  "figures/moves-compilation-e1",
-  13, 5.75
+  str_c("figures/moves-compilation-e1-", l_info$representation),
+  12.5, 4
 )
 write_csv(tbl_movement, str_c("experiments/2022-02-category-learning/data/movements-catacc-", gt_or_reps, ".csv"))
 
@@ -302,34 +302,6 @@ plot_categorization_heatmaps(
 
 
 
-## exemplar model
-
-tbl_gcm <- tbl_tmp[, c("x1_true", "x2_true", "response")] %>%
-  mutate(cat1 = 0, cat2 = 0) %>%
-  rename(category = response) %>%
-  mutate(category = fct_inorder(as.factor(category)))
-
-tbl_gcm$cat1[tbl_gcm$category == 1] <- 1
-tbl_gcm$cat2[tbl_gcm$category == 2] <- 1
-
-l_info <- list(
-  feature_names = c("x1_true", "x2_true"),
-  categories = levels(tbl_gcm$category),
-  n_categories = 2,
-  sens = 1,
-  wgh = .5
-)
-
-fit_gcm <- optim(
-  f = ll_gcm,
-  c(8, .52),
-  lower = c(0, 0),
-  upper = c(10, 1),
-  l_info = l_info,
-  tbl_stim = tbl_gcm,
-  method = "L-BFGS-B"
-)
-
 # Similarity Judgments ----------------------------------------------------
 
 tbl_sim <- tbl_cat_sim %>%
@@ -347,8 +319,7 @@ tbl_sim$distance_binned <-
   cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
 tbl_sim$distance_binned %>% unique() %>% sort()
 
-saveRDS(tbl_sim, "experiments/2022-02-category-learning/data/tbl_sim.rds")
-
+saveRDS(tbl_sim, str_c("experiments/2022-02-category-learning/data/tbl_sim-", l_info$representation, ".rds"))
 
 tbl_sim_agg <- tbl_sim %>%
   rutils::grouped_agg(c(distance_binned), c(response, rt))
@@ -429,11 +400,17 @@ summary(m_rs_sim)
 anova(m_rs_sim)
 tbl_sim_agg_subj$preds <- predict(m_rs_sim, tbl_sim_agg_subj)
 
-by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
+by_participant_coefs(tbl_sim_agg_subj %>% mutate(n_categories = as.factor(n_categories)), "distance_binned", "mean_response", "LM Sim. Ratings")
 
 
 
 # Continuous Reproduction ----------------------------------------------------------
+
+
+tbl_cr <- readRDS(str_c(
+  "experiments/2022-02-category-learning/data/tbl_cr-",
+  l_info$representation, ".rds"
+  )) %>% ungroup()
 
 doubles <- tbl_cr %>% count(participant_id) %>% filter(n > 200)
 missings <- tbl_cr %>% count(participant_id) %>% filter(n < 200)
@@ -577,26 +554,6 @@ tbl_cr_agg %>%
   labs(x = "Euclidean Deviation Reproduction",
        y = "(Delta) Categorization Accuracy")
 
-# lmes
-## movement to center
-m_rs_cr <-
-  lme(
-    d_closest ~ session * category,
-    random = ~ 1 + session + category + session:category |
-      participant_id,
-    data = tbl_cr %>% filter(n_categories == "2 Categories")
-  )
-summary(m_rs_cr)
-anova(m_rs_cr)
-tbl_cr$preds <- predict(m_rs_sim, m_rs_cr)
-
-m_rs_cr_control <-
-  lme(
-    d_closest ~ session,
-    random = ~ 1 + session | participant_id,
-    data = tbl_cr %>% filter(n_categories == "Similarity")
-  )
-summary(m_rs_cr_control)
 
 
 # Behavioral Representational Similarity Analysis -------------------------
@@ -606,7 +563,7 @@ summary(m_rs_cr_control)
 l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
-f_name <- "data/2024-02-18-grid-search-vary-constrain-space.rds"
+f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +

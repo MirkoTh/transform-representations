@@ -20,7 +20,7 @@ participants_returned <- c(
   "613867f34e206e4f573bc6ef", "5fb14a073d81805bc65f6a4f", 
   "64f3ad25c93a6f6d60e6acd8", "615f2d67574095fe86bfe619",
   "5df1a3387caa1e0c69dca179"
-  )
+)
 # do not exclude the following id
 returned_but_finished <- c("584823aed2be990001174e56")
 random_hashes <- FALSE
@@ -150,16 +150,52 @@ tbl_perceptual %>%
   filter(!exclude) %>%
   summarize(B_head = mean(b_head), B_belly = mean(b_belly))
 
-
-tbl_perceptual_avg <- tbl_mlds %>% 
+tbl_perceptual_indiv <- tbl_mlds %>% 
   left_join(tbl_perceptual, by = "participant_id") %>%
   filter(!exclude)
+tbl_perceptual_indiv$participant_id <- factor(
+  tbl_perceptual_indiv$participant_id,
+  labels = c(
+    1:length(unique(tbl_perceptual_indiv$participant_id))
+  ))
+tbl_perceptual_indiv$participant_id <- as.character(tbl_perceptual_indiv$participant_id)
 
 tbl_perceptual_avg <- summary_se_within(
-  tbl_perceptual_avg, 
+  tbl_perceptual_indiv, 
   "v_perceptual", 
   withinvars = c("dimension", "stimulus")
-)
+) %>% mutate(participant_id = "Mean")
+
+pl_perceptual_indiv <- ggplot(
+  tbl_perceptual_indiv %>% 
+    select(stimulus, v_perceptual, participant_id, dimension) %>%
+    rbind(
+      tbl_perceptual_avg %>%
+        select(stimulus, v_perceptual, participant_id, dimension)
+    ), 
+  aes(as.numeric(stimulus), v_perceptual, group = dimension)) +
+  geom_line(aes(color = dimension)) +
+  geom_point(color = "white", size = 2) +
+  geom_point(aes(color = dimension), shape = 1, size = 1) +
+  facet_wrap(~ participant_id, ncol = 6) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Stimulus", y = "Perceptual Value") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    legend.position = "bottom"
+  ) + 
+  scale_color_manual(
+    values = c("skyblue2", "tomato4"), name = "Dimension"
+  )
+
+save_my_pdf_and_tiff(
+  pl_perceptual_indiv, 
+  "experiments/2024-03-psychophysics-stimuli-hcai/figures/stimulus-vs-perception",
+  12, 17
+  )
 
 
 # average representation

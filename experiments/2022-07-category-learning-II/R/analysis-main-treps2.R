@@ -19,6 +19,8 @@ library(catlearn)
 library(cmdstanr)
 library(modelr)
 library(plotly)
+library(naivebayes)
+library(mvtnorm)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -75,10 +77,17 @@ l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2022-07-category-learning-II/data/continuous-reproduction.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2022-07-category-learning-II/data/secondary-task.csv")
 
+tbl_x_obj <- tibble(
+  x1_true = sort(unique(l_tbl_data[[2]]$x1_true)),
+  x2_true = sort(unique(l_tbl_data[[2]]$x2_true))
+)
+# unique presented values (responses could be more fine-grained)
+write_csv(tbl_x_obj, file = "data/values-objective-stimuli-presented.csv")
+
 l_info <- list(
   use_exptl_stimuli = TRUE, 
-  informed_by_data = TRUE, 
-  representation = "psychological-representation"
+  informed_by_data = FALSE, 
+  representation = c("psychological-representation", "physical-properties")[1]
 )
 
 # tf to psych space?
@@ -158,9 +167,9 @@ tbl_cat_sim <- l_cat_sim[["tbl_cat_sim"]]
 tbl_cat <- l_cat_sim[["tbl_cat"]]
 tbl_sim <- l_cat_sim[["tbl_sim"]]
 
-saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds"))
-saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri.rds"))
-saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri.rds"))
+saveRDS(tbl_cr, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri-", l_info$representation, ".rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2022-07-category-learning-II/data/tbl_cat-treps-long-ri-", l_info$representation, ".rds"))
+saveRDS(tbl_sim, file = str_c("experiments/2022-07-category-learning-II/data/tbl_sim-treps-long-ri-", l_info$representation, ".rds"))
 
 
 # Categorization ----------------------------------------------------------
@@ -249,7 +258,6 @@ tbl_cr <- tbl_cr %>%
   left_join(tbl_d2_rep_center, by = c("participant_id", "session", "trial_id"))
 
 
-
 l_movement <- movement_towards_category_center(
   tbl_cat_sim, tbl_cr, c("d_closest", "d_rep_center")[1], sim_center
 )
@@ -267,7 +275,7 @@ marrangeGrob(list(
   l_movement[[2]][[2]]
 ), nrow = 1, ncol = 2)
 
-write_csv(tbl_movement, str_c("experiments/2022-07-category-learning-II/data/movements-catacc-", gt_or_reps, ".csv"))
+write_csv(tbl_movement, str_c("experiments/2022-07-category-learning-II/data/movements-catacc-gt.csv"))
 
 # plot movement towards category center against task2 accuracy
 marrangeGrob(list(
@@ -289,14 +297,14 @@ pls_moves_catlearn <- arrangeGrob(
 
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
-  "experiments/2022-07-category-learning-II/data/figures/moves-compilation",
-  13, 5.75
+  str_c("experiments/2022-07-category-learning-II/data/figures/moves-compilation-", l_info$representation),
+  12.5, 6
 )
 
 save_my_pdf_and_tiff(
   pls_moves_catlearn,
-  "figures/moves-compilation-e2",
-  13, 5.75
+  str_c("figures/moves-compilation-e2-", l_info$representation),
+  12.5, 6
 )
 
 # same for boundaries
@@ -314,7 +322,7 @@ grid.draw(pls_moves_boundary_catlearn)
 
 tbl_precision <- combine_precision_and_movements(l_nb, participant_ids_4_cat)
 plot_movement_against_precision(tbl_precision)
-plot_heatmaps_with_representations(l_nb, sample_ids)
+plot_heatmaps_with_representations(l_nb, sample_ids, tbl_cat_grid)
 
 
 
@@ -344,24 +352,6 @@ save_my_pdf_and_tiff(
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 
 grid.arrange(pl_cat_agg, l_pl_sim[[2]], nrow = 1)
-
-
-tbl_sim_agg_subj <- tbl_sim %>%
-  mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
-  rutils::grouped_agg(c(participant_id, distance_binned), c(response, rt))
-
-m_rs_sim <-
-  nlme::lme(
-    mean_response ~ distance_binned,
-    random = ~ 1 + distance_binned |
-      participant_id,
-    data = tbl_sim_agg_subj
-  )
-summary(m_rs_sim)
-anova(m_rs_sim)
-tbl_sim_agg_subj$preds <- predict(m_rs_sim, tbl_sim_agg_subj)
-
-by_participant_coefs(tbl_sim_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
 
 
 
@@ -428,27 +418,13 @@ pl_boundary_means <- l_empirical_boundary$pl +
   theme(legend.position = "bottom") +
   guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 
+tbl_cr <- tbl_cr %>% ungroup()
 plot_distance_from_decision_boundary(tbl_cr, 10, sim_center)
 
 
 tbl_cr_stim <- grouped_agg(
-  tbl_cr, c(session, n_categories, x1_true, x2_true), c(x1_response, x2_response)
+  tbl_cr, c(session, n_categories, x1_true, x2_true, category), c(x1_response, x2_response)
 ) %>% ungroup()
-ggplot(data = tbl_cr_stim) +
-  geom_point(aes(mean_x1_response, mean_x2_response), color = "lightblue") +
-  geom_point(aes(x1_true, x2_true), color = "black") +
-  geom_segment(aes(
-    x = x1_true, xend = mean_x1_response, y = x2_true, yend = mean_x2_response
-  ),
-  arrow = grid::arrow(length = unit(0.02, "npc")), color = "grey80") +
-  facet_grid(n_categories ~ session) + 
-  theme_bw() +
-  scale_x_continuous(expand = c(0.02, 0.02)) +
-  scale_y_continuous(expand = c(0.02, 0.02)) +
-  labs(x = expression(x[1]), y = expression(x[2])) + 
-  theme(strip.background = element_rect(fill = "white")) + 
-  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
-
 
 tbl_cr_move <- tbl_cr_stim %>% filter(session == 1) %>%
   left_join(
@@ -460,15 +436,19 @@ tbl_cr_move <- tbl_cr_stim %>% filter(session == 1) %>%
     x1_move = mean_x1_response_aft - mean_x1_response_bef,
     x2_move = mean_x2_response_aft - mean_x2_response_bef
   )
+tbl_cr_move$category <- factor(tbl_cr_move$category, labels = c("Bukil", "Monus", "Venak", "Ladiv"))
 
 
 pl_2d_moves <- ggplot(data = tbl_cr_move) +
   geom_point(aes(x1_true, x2_true), color = "black") +
   geom_segment(aes(
     x = mean_x1_response_bef, xend = mean_x1_response_bef + x1_move, 
-    y = mean_x2_response_bef, yend = mean_x2_response_bef + x2_move
+    y = mean_x2_response_bef, yend = mean_x2_response_bef + x2_move,
+    color = category
   ),
-  arrow = grid::arrow(length = unit(0.02, "npc")), color = "grey60") +
+  arrow = grid::arrow(length = unit(0.02, "npc")),
+  linewidth = 1
+  ) +
   geom_segment(aes(
     x = x1_true, xend = mean_x1_response_bef, 
     y = x2_true, yend = mean_x2_response_bef
@@ -478,12 +458,17 @@ pl_2d_moves <- ggplot(data = tbl_cr_move) +
   scale_x_continuous(expand = c(0.02, 0.02)) +
   scale_y_continuous(expand = c(0.02, 0.02)) +
   labs(x = expression(x[1]), y = expression(x[2])) + 
-  theme(strip.background = element_rect(fill = "white")) + 
-  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22)
+    ) + 
+  scale_color_viridis_d(name = "Category")
+
+
 save_my_pdf_and_tiff(
   pl_2d_moves,
   "figures/2d-moves-e2",
-  8, 4.25
+  11, 5.5
 )
 
 # 
@@ -499,25 +484,6 @@ l_pl_euclidean <- plot_deviations_from_stimulus(tbl_cr_agg)
 grid.arrange(l_pl_euclidean$pl_density, l_pl_euclidean$pl_agg, nrow = 1, ncol = 2)
 
 
-# lmes
-## movement to center
-m_rs_cr <-
-  nlme::lme(
-    scale(sqrt(d_closest), scale = FALSE) ~ session * n_categories,
-    random = ~ 1 + session | participant_id,
-    data = tbl_cr
-  )
-summary(m_rs_cr)
-anova(m_rs_cr)
-tbl_cr$preds <- predict(m_rs_sim, m_rs_cr)
-
-m_rs_cr_control <-
-  nlme::lme(
-    sqrt(d_closest) ~ session,
-    random = ~ 1 + session | participant_id,
-    data = tbl_cr %>% filter(n_categories == "Control Group")
-  )
-summary(m_rs_cr_control)
 
 # Behavioral Representational Similarity Analysis -------------------------
 
