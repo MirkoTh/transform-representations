@@ -173,7 +173,7 @@ plot_categorization_heatmaps <-
     ggplot() +
       geom_raster(data = tbl, aes(x1_true, x2_true, group = value, fill = value)) +
       geom_label(data = tbl,
-                 aes(10, 8, label = str_c(round(mean_accuracy, 2)), group = value),
+                 aes(5, 1.5, label = str_c(round(mean_accuracy, 2)), group = value),
                  size = 3) +
       facet_wrap( ~ participant_id, ncol = 4) +
       scale_fill_viridis_c(name = "Category\nResponse") +
@@ -381,7 +381,7 @@ movement_towards_category_center <-
     tbl_cr_sq$category <- 2
     tbl_cr_plot <- rbind(tbl_cr_no_sq, tbl_cr_sq)
     
-    tbl_lookup_category <- tbl_cr_plot %>% filter(n_categories != 1) %>% count(stim_id, category) %>% select(-n)
+    tbl_lookup_category <- tbl_cr_plot %>% filter(n_categories != 1) %>% ungroup() %>% count(stim_id, category) %>% select(-n)
     tbl_cr_plot <- tbl_cr_plot %>% select(-category) %>% left_join(tbl_lookup_category, by = "stim_id")
     
     tbl_movement <- grouped_agg(tbl_cr_plot,
@@ -410,6 +410,9 @@ movement_towards_category_center <-
       filter(!is.na(mean_distance_before))
     if (sim_center == "ellipses") {
       tbl_movement$category <- factor(tbl_movement$category, labels = c("Bukil", "Venak"))
+      if (length(unique(tbl_movement$n_categories)) == 1){
+        levels(tbl_movement$n_categories <- "Category Learning")
+      }
       levels(tbl_movement$n_categories) <- c("Sequential Comparison", "Category Learning")
       
     } else if (sim_center == "square") {
@@ -625,8 +628,10 @@ plot_distance_to_category_center <-
         show.legend = FALSE
       ) +
       theme_bw() +
-      scale_fill_brewer(name = "Group", palette = "Set1") +
-      scale_color_brewer(palette = "Set1") +
+      scale_fill_viridis_d(name = "Group") +
+      scale_color_viridis_d() +
+      # scale_fill_brewer(name = "Group", palette = "Set1") +
+      # scale_color_brewer(palette = "Set1") +
       scale_x_discrete(expand = c(0.01, 0)) +
       scale_y_continuous(expand = c(0.01, 0)) +
       labs(x = "Time Point", y = yttl) + 
@@ -634,13 +639,13 @@ plot_distance_to_category_center <-
         strip.background = element_rect(fill = "white"), 
         text = element_text(size = 22)
       )
-      
-      if (!is.null(l_info)) {
-        pl <- pl  +
-          theme(legend.position = c(.7, .7))
-        labs(title = str_c(l_info$cat_type, ", ", l_info$sampling)) +
-          theme(plot.title = element_text(size = 14, face = "bold"))
-      }
+    
+    if (!is.null(l_info)) {
+      pl <- pl  +
+        theme(legend.position = c(.7, .7))
+      labs(title = str_c(l_info$cat_type, ", ", l_info$sampling)) +
+        theme(plot.title = element_text(size = 14, face = "bold"))
+    }
     
     return(list(pl = pl, tbl_cr_agg = tbl_cr_agg))
   }
@@ -1127,8 +1132,8 @@ plot_movement_outliers <-
         linetype = "dashed"
       ) +
       geom_label(data = tbl_labels, label.padding = unit(0.1, "lines"), aes(
-        x = 60,
-        y = 17,
+        x = 2,
+        y = 18,
         label = str_c("Avg. Move = ", round(avg_move, 1), "\nMAP Gamma = ", round(mean, 2))
       ), size = 5) +
       facet_wrap( ~ participant_id, ncol = nrcols) +

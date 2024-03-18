@@ -241,8 +241,8 @@ make_stimuli <- function(l_info) {
         left_join(tbl_psych, by = c("x1" = "x1_obj", "x2" = "x2_obj")) %>%
         select(-c(x1, x2)) %>% rename(x1 = x1_psych, x2 = x2_psych) %>%
         relocate(c(x1, x2), .after = stim_id)
+      l_info$space_edges <- list(x1 = c(-0.5758281, 7.1811028), x2 = c(-0.7996195, 7.9763013))
     }
-    l_info$space_edges <- list(x1 = c(-0.06579467, 6.75626343), x2 = c(-0.151021, 7.410835))
   }
   
   l_info$feature_names <- c("x1", "x2")
@@ -493,8 +493,8 @@ get_fitted_params <- function(l_info, tbl_cat) {
     if (l_info$informed_by_data) {
       tbl_rules <- tibble(
         category = 1:4,
-        lo = list(c(-Inf, -Inf), c(3.62161825, -Inf), c(-Inf, 4.362346), c(3.62161825, 4.362346)),
-        hi = list(c(3.62161825, 4.362346), c(Inf, 4.362346), c(3.62161825, Inf), c(Inf, Inf))
+        lo = list(c(-Inf, -Inf), c(3.9377975, -Inf), c(-Inf, 3.6487456), c(3.9377975, 3.6487456)),
+        hi = list(c(3.9377975, 3.6487456), c(Inf, 3.6487456), c(3.9377975, Inf), c(Inf, Inf))
       )
     }
     
@@ -1356,12 +1356,12 @@ add_distance_to_boundary <- function(tbl, l_centers, sim_center, l_info) {
       )
     } else if (l_info$representation == "psychological-representation") {
       boundaries_grid <- tibble(
-        x = rep(3.62161825, 1000),
+        x = rep(3.9377975, 1000),
         y = seq(0, 7, length.out = 1000)
       ) %>% rbind(
         tibble(
           x = seq(0, 7, length.out = 1000),
-          y = rep(4.362346, 1000)
+          y = rep(3.6487456, 1000)
         )
       )
     }

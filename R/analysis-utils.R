@@ -768,7 +768,7 @@ category_centers <- function(f_stretch, f_shift, l_info) {
 
 
 
-category_centers_squares <- function(n_cats, tbl_df) {
+category_centers_squares <- function(n_cats, tbl_df, l_info = NULL) {
   #' helper function to define square category centers
   #' 
   #' @description returns x1 and x2 means of the square categories
@@ -780,31 +780,58 @@ category_centers_squares <- function(n_cats, tbl_df) {
   category_centers_one_condition <- function(n_cats) {
     
     tbl_relevant <- tbl_df %>% filter(session %in% c(1, "Before Training"))
-    tbl_agg <- tbl_relevant %>% summarize(min_x = min(x1_true), max_x = max(x1_true))
-    tbl_borders <- tibble(max_x = tbl_agg$max_x, min_x = tbl_agg$min_x)
     
+    if (is.null(l_info)) {
+      tbl_agg <- tbl_relevant %>% ungroup() %>%
+      summarize(
+        min_x = min(x1_true), max_x = max(x1_true),
+        min_y = min(x2_true), max_y = max(x2_true)
+        )
+    tbl_borders <- tibble(
+      max_x = tbl_agg$max_x, min_x = tbl_agg$min_x,
+      max_y = tbl_agg$max_y, min_y = tbl_agg$min_y
+      )
     
     n_segments <- sqrt(n_cats)
     x_widths <- rep((tbl_borders$max_x - tbl_borders$min_x) / n_segments, n_segments - 1)
+    y_widths <- rep((tbl_borders$max_y - tbl_borders$min_y) / n_segments, n_segments - 1)
     x_boundaries <- c(
       tbl_borders$min_x,
       tbl_borders$min_x + cumsum(x_widths),
       tbl_borders$max_x
     )
+    y_boundaries <- c(
+      tbl_borders$min_y,
+      tbl_borders$min_y + cumsum(y_widths),
+      tbl_borders$max_y
+    )
+    
     # save fine grid of values along decision boundaries
     x_boundaries_no_edges <- x_boundaries[2:(length(x_boundaries) - 1)]
+    y_boundaries_no_edges <- y_boundaries[2:(length(y_boundaries) - 1)]
+    
     x_draws <- seq(x_boundaries[1], x_boundaries[length(x_boundaries)], by = .01)
-    x_boundaries_draws <- rbind(
+    y_draws <- seq(y_boundaries[1], y_boundaries[length(y_boundaries)], by = .01)
+    xy_boundaries_draws <- rbind(
       crossing(x = x_boundaries_no_edges, y = x_draws),
-      crossing(x = x_draws, y = x_boundaries_no_edges)
+      crossing(x = y_draws, y = y_boundaries_no_edges)
     )
+    } else if (l_info$representation == "psychological-representation" & n_cats == 4) {
+      x_draws <- seq(-0.5758281, 7.1811028, by = .01)
+      y_draws <- seq(-0.7996195, 7.9763013, by = .01)
+      xy_boundaries_draws <- rbind(
+        crossing(x = 3.9377975, y = x_draws),
+        crossing(x = y_draws, y = 3.6487456)
+      )
+    }
+    
     # calculate means of categories
     cat_means <- tbl_relevant %>% 
       group_by(category) %>%
       summarize(x_mn = mean(x1_true), y_mn = mean(x2_true)) %>% 
       ungroup()
     
-    return(list(cat_means = cat_means, x_boundaries_draws = x_boundaries_draws))    
+    return(list(cat_means = cat_means, x_boundaries_draws = xy_boundaries_draws))   
   }
   
   l_centers_bds_conditions <- map(n_cats, category_centers_one_condition)
@@ -828,7 +855,7 @@ add_distance_to_representation_center <- function(tbl_cr, l_m_nb_pds) {
   distance_to_individual_center <- function(p_id) {
     l_mn <- list(x_mn = l_m_nb_pds[[p_id]][["x1_true"]][1, 2],
                  y_mn = l_m_nb_pds[[p_id]][["x2_true"]][1, 2])
-    tbl_tmp <- tbl_cr %>% filter(substr(p_id, 1, 6) == p_id)
+    tbl_tmp <- tbl_cr %>% filter(substr(participant_id, 1, 6) == p_id)
     tbl_tmp$d_rep_center <- euclidian_distance_to_center(
       l_mn[["x_mn"]], l_mn[["y_mn"]], tbl_tmp, is_response = TRUE
     )
@@ -1001,7 +1028,7 @@ add_deviations <- function(
     group_by(category, x1_true, x2_true) %>%
     count() %>% select(-n) %>%
     mutate(session = 1)
-  l_centers[[3]] <- category_centers_squares(n_cats = c(4), tbl_cat)
+  l_centers[[3]] <- category_centers_squares(n_cats = c(4), tbl_cat, l_info)
   # todo
   # variable indicating whether distance in similarity condition is calculated with regards to 2 or 4 category group
   tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers, is_simulation = FALSE, sim_center = sim_center)

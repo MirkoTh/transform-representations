@@ -22,7 +22,7 @@ walk(files, source)
 # Simulation Parameters ---------------------------------------------------
 
 n_stimuli <- 100L
-nruns <- 5000
+nruns <- 5000#50#
 
 # constant
 l_info_prep <- list(
@@ -119,7 +119,7 @@ l_seq_results <- future_map(
 
 plan("sequential")
 
-read_write <- "read"
+read_write <- "write"
 
 td <- lubridate::today()
 
@@ -165,7 +165,7 @@ pl_pred_delta_ellipse_center <- l_results_plots[[1]][[2]][[4]]$tbl_cr_agg %>% mu
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = "Time Point", y = "Distance To Closest Center") + facet_wrap(~ category)
 
-pl_pred_ellipse <- l_results_plots[[17]][[2]][[1]] +
+pl_pred_ellipse <- l_results_plots[[18]][[2]][[1]] +
   scale_color_gradient(guide = "none", low = "lightskyblue2", high = "tomato3")
 
 save_my_pdf_and_tiff(arrangeGrob(pl_pred_ellipse + theme(plot.title = element_blank()), pl_pred_delta_ellipse, nrow = 1), "figures/model-predictions-ellipses", 12, 3.5)
