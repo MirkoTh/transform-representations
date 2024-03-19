@@ -27,10 +27,7 @@ files <- c(
   "R/utils.R",
   "R/plotting.R",
   "R/analysis-utils.R",
-  "R/analysis-plotting.R",
-  "R/summarySEwithin.R",
-  "R/summarySE.R",
-  "R/normDataWithin.R"
+  "R/analysis-plotting.R"
 )
 walk(files, source)
 
@@ -69,6 +66,17 @@ sim_center <- "square"
 l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2022-09-category-learning-similarity/data/simult-comparison.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2022-09-category-learning-similarity/data/secondary-task.csv")
+
+l_info <- list(
+  use_exptl_stimuli = TRUE, 
+  informed_by_data = FALSE, 
+  representation = c("psychological-representation", "physical-properties")[1]
+)
+
+# tf to psych space?
+if (l_info$representation == "psychological-representation") {
+  l_tbl_data <- tf_to_psychological_e34(l_tbl_data)
+}
 
 
 # Set Exclusion Criteria Appropriately ------------------------------------
@@ -350,7 +358,7 @@ plot_categorization_heatmaps(tbl_cat_grid %>% filter(participant_id %in% sample_
 participant_ids_4_cat <-
   unique(tbl_cat$participant_id[tbl_cat$n_categories == 4]) %>% as.character()
 l_nb <- by_participant_nb(tbl_cat %>% filter(trial_id >= n_start_exclude), participant_ids_4_cat)
-plot_heatmaps_with_representations(l_nb, sample_ids)
+plot_heatmaps_with_representations(l_nb, sample_ids, tbl_cat_grid)
 
 
 # Similarity Judgments ----------------------------------------------------
@@ -382,19 +390,6 @@ tbl_seq_agg_subj <- tbl_seq %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
   rutils::grouped_agg(c(participant_id, distance_binned, n_categories), c(response, rt))
 
-m_rs_sim <-
-  nlme::lme(
-    mean_response ~ distance_binned,
-    random = ~ 1 + distance_binned |
-      participant_id,
-    data = tbl_seq_agg_subj
-  )
-summary(m_rs_sim)
-anova(m_rs_sim)
-tbl_seq_agg_subj$preds <- predict(m_rs_sim, tbl_seq_agg_subj)
-
-by_participant_coefs(tbl_seq_agg_subj, "distance_binned", "mean_response", "LM Sim. Ratings")
-
 
 # Behavioral Representational Similarity Analysis -------------------------
 
@@ -422,8 +417,9 @@ pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories =
 pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
 
 #f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
-f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
+f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
 
+# the following takes quite a bit of time (15 mins, approx)
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 

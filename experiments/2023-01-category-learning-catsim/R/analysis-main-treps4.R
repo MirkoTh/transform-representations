@@ -24,6 +24,8 @@ library(cmdstanr)
 library(modelr)
 library(plotly)
 library(ids)
+library(naivebayes)
+library(mvtnorm)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -72,6 +74,18 @@ sim_center <- "square"
 l_tbl_data <- list()
 l_tbl_data[[1]] <- read_csv("experiments/2023-01-category-learning-catsim/data/simult-comparison.csv")
 l_tbl_data[[2]] <- read_csv("experiments/2023-01-category-learning-catsim/data/secondary-task.csv")
+
+
+l_info <- list(
+  use_exptl_stimuli = TRUE, 
+  informed_by_data = FALSE, 
+  representation = c("psychological-representation", "physical-properties")[1]
+)
+
+# tf to psych space?
+if (l_info$representation == "psychological-representation") {
+  l_tbl_data <- tf_to_psychological_e34(l_tbl_data)
+}
 
 # Set Exclusion Criteria Appropriately ------------------------------------
 n_resp_simult <- 200
@@ -482,7 +496,7 @@ tbl_seq_ci$distance_binned <-
 # some sample participants to plot similarity ratings
 sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
-l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
+l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6.25))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 pl_sequential_agg <- l_pl_sim[[3]] + theme(legend.position = "bottom", text = element_text(size = 16)) +
   scale_x_continuous(expand = c(0, 0)) +
@@ -499,21 +513,6 @@ tbl_seq_agg_subj <- tbl_seq %>%
   mutate(distance_binned = distance_binned - mean(distance_binned)) %>%
   rutils::grouped_agg(c(participant_id, distance_binned, n_categories), c(response, rt))
 
-m_rs_sim <-
-  nlme::lme(
-    mean_response ~ distance_binned,
-    random = ~ 1 + distance_binned |
-      participant_id,
-    data = tbl_seq_agg_subj
-  )
-summary(m_rs_sim)
-anova(m_rs_sim)
-tbl_seq_agg_subj$preds <- predict(m_rs_sim, tbl_seq_agg_subj)
-
-by_participant_coefs(
-  tbl_seq_agg_subj %>% mutate(n_categories = as.factor(n_categories)), 
-  "distance_binned", "mean_response", "LM Sim. Ratings"
-  )
 
 
 # Behavioral Representational Similarity Analysis -------------------------
@@ -543,7 +542,7 @@ tbl_simult_move_agg$n_categories <- factor(tbl_simult_move_agg$n_categories, lab
 pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
 pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
 
-f_name <- "data/2023-02-08-grid-search-vary-constrain-space.rds"
+f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 

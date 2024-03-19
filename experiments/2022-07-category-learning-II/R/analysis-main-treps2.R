@@ -493,7 +493,7 @@ l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
 #f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
-f_name <- "data/2024-02-18-grid-search-vary-constrain-space.rds"
+f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +

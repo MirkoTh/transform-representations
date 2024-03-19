@@ -1743,8 +1743,8 @@ load_predictions <- function(f_name, sim_center, is_simulation){
       select(stim_id, x1_response, x2_response)
   }
   
-  tbl_before <- tbl_design %>% left_join(tmp_before, on = "stim_id") %>% mutate(session = "before")
-  tbl_after <- tbl_design %>% left_join(tmp_after, on = "stim_id") %>% mutate(session = "after")
+  tbl_before <- tbl_design %>% left_join(tmp_before, by = "stim_id") %>% mutate(session = "before")
+  tbl_after <- tbl_design %>% left_join(tmp_after, by = "stim_id") %>% mutate(session = "after")
   tbl_both <- rbind(tbl_before, tbl_after)  %>% 
     mutate(
       participant_id = "prediction", 
@@ -2340,7 +2340,7 @@ fix_data_types_simult <- function(tbl_simult) {
   tbl_simult$comparison_pool_binary <- factor(
     tbl_simult$comparison_pool == "same", labels = c("Different", "Same")
   )
-  tbl_simult$comparison_pool_binary <- fct_relevel(tbl_simult$comparison_pool_binary, "Same", before = "Different")
+  tbl_simult$comparison_pool_binary <- fct_relevel(tbl_simult$comparison_pool_binary, "Same", after = 0)
   levels(tbl_simult$session) <- c("Before Training", "After Training")
   levels(tbl_simult$n_categories) <- c("Similarity", "4 Categories")
   tbl_simult$stim_id_lo <- pmap_dbl(tbl_simult[, c("stim_id_l", "stim_id_r")], ~ min(.x, .y))
@@ -2728,6 +2728,45 @@ tf_to_psychological_e2 <- function(l_tbl_data) {
       x1_start = x1_start_psych,
       x2_start = x2_start_psych
     )
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
+    -c(x1_true, x2_true)) %>%
+    rename(
+      x1_true = x1_true_psych,
+      x2_true = x2_true_psych
+    )
+  
+  return(l_tbl_data)
+}
+
+tf_to_psychological_e34 <- function(l_tbl_data) {
+  
+  tbl_psych <- readRDS("data/psych-representations.rds")
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% 
+    left_join(tbl_psych, by = c("x1_true_l" = "x1_obj", "x2_true_l" = "x2_obj")) %>%
+    left_join(tbl_psych, by = c("x1_true_r" = "x1_obj", "x2_true_r" = "x2_obj"), suffix = c("_l", "_r")) %>%
+    rename(
+      x1_true_psych_l = x1_psych_l, x2_true_psych_l = x2_psych_l,
+      x1_true_psych_r = x1_psych_r, x2_true_psych_r = x2_psych_r
+      ) %>%
+    mutate(
+      d_euclidean = sqrt((x1_true_psych_l - x1_true_psych_r)^2 + (x2_true_psych_l - x2_true_psych_r)^2)
+    )
+  
+  
+  l_tbl_data[[2]] <- l_tbl_data[[2]] %>% 
+    left_join(tbl_psych, by = c("x1_true" = "x1_obj", "x2_true" = "x2_obj")) %>%
+    rename(x1_true_psych = x1_psych, x2_true_psych = x2_psych)
+  
+  l_tbl_data[[1]] <- l_tbl_data[[1]] %>% select(
+    -c(x1_true_l, x2_true_l, x1_true_r, x2_true_r)) %>%
+    rename(
+      x1_true_l = x1_true_psych_l,
+      x2_true_l = x2_true_psych_l,
+      x1_true_r = x1_true_psych_r,
+      x2_true_r = x2_true_psych_r
+    )
+  
+  
   l_tbl_data[[2]] <- l_tbl_data[[2]] %>% select(
     -c(x1_true, x2_true)) %>%
     rename(

@@ -597,7 +597,7 @@ tbl_rsa_delta_prediction_lower %>% select(l, r, d_euclidean_delta) %>%
   summarise(
     corr = cor(d_euclidean_delta_pred, d_euclidean_delta_empirical),
     p_corr = cor.test(d_euclidean_delta_pred, d_euclidean_delta_empirical)$p.value
-  )
+  ) %>% ungroup()
 
 
 # save some plots ---------------------------------------------------------

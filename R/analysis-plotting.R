@@ -238,9 +238,9 @@ plot_categorization_accuracy_against_blocks <-
     tbl_cat_agg <-
       tbl_cat %>% group_by(participant_id, n_categories, cat_true, trial_id_binned) %>%
       summarize(
-        accuracy_mn_participant = mean(accuracy),
-        n_categories = factor(n_categories)
-      ) %>%  ungroup()
+        accuracy_mn_participant = mean(accuracy)
+      ) %>%  ungroup() %>%
+      mutate(n_categories = factor(n_categories))
     levels(tbl_cat_agg$n_categories) <-
       str_c(levels(tbl_cat_agg$n_categories), " Categories")
     
@@ -316,6 +316,7 @@ plot_categorization_accuracy_against_blocks <-
       )
     }
     
+    tbl_cat_agg$participant_id <- factor(tbl_cat_agg$participant_id, labels = 1:length(unique(tbl_cat_agg$participant_id)))
     pl_indiv <- ggplot(tbl_cat_agg,
                        aes(
                          trial_id_binned,
@@ -813,10 +814,11 @@ plot_similarity_against_distance <-
       tbl_sample <-
         tbl_sample %>% filter(participant_id %in% sample_ids_sim)
     }
+    tbl_sample$participant_id <- factor(tbl_sample$participant_id, labels = 1:length(unique(tbl_sample$participant_id)))
     
     # scatter plot and line plot of sample
     pl_sample <- tbl_sample %>%
-      summarize(response_mn = mean(response), n = n()) %>%
+      summarize(response_mn = mean(response), n = n()) %>% 
       ggplot(aes(distance_binned, response_mn, group = as.numeric(participant_id))) +
       geom_line(aes(color = as.numeric(participant_id))) +
       geom_point(aes(color = as.numeric(participant_id), size = n)) +
