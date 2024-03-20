@@ -593,6 +593,7 @@ mirror_responses <- function(tbl_simult, tbl_cor_simult) {
   #' @return tbl_df with responses mirrored
   #' 
   participants_mirror <- tbl_cor_simult %>% filter(cor > 0) %>% select(participant_id) %>% as_vector() %>% unname()
+  cat(str_c("recoded the responses of ", length(participants_mirror), " participants\n"))
   tbl_mirror <- tbl_simult %>% filter(participant_id %in% participants_mirror)
   tbl_lookup <- tibble(response = seq(1, 8, by = 1), response_mirror = seq(8, 1, by = -1))
   tbl_mirror <- tbl_mirror %>% left_join(tbl_lookup, by = "response")
@@ -1236,7 +1237,7 @@ exclude_guessing_participants <- function(l_tbl, n_trials_cat) {
   ))
 }
 
-preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat, n_sds = 3) {
+preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat, n_sds = 3, extract_first_response = TRUE) {
   #' data preprocessing pipeline
   #' 
   #' @description excludes incomplete data sets, outliers in 
@@ -1264,19 +1265,20 @@ preprocess_data <- function(l_tbl_data, n_resp_cr, n_resp_cat, n_sds = 3) {
   ## exclude practice trials in reproduction task
   l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% filter(session %in% c(1, 2))
   
-  l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% 
+  if (extract_first_response) {
+    l_guessing$keep$tbl_cr <- l_guessing$keep$tbl_cr %>% 
     group_by(participant_id, stim_id, session) %>%
     mutate(rwn = row_number(session)) %>%
     filter(rwn == 1) %>%
-    select(-rwn)
+    select(-rwn) %>% ungroup()
   
   l_guessing$keep$tbl_cat_sim <- l_guessing$keep$tbl_cat_sim %>% 
     group_by(participant_id, trial_id) %>%
     mutate(rwn = row_number(participant_id)) %>%
     filter(rwn == 1) %>%
-    select(-rwn)
-  
-  
+    select(-rwn) %>% ungroup()
+  }
+
   return(list(
     l_incomplete = l_incomplete,
     l_outliers = l_outliers,
