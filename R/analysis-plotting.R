@@ -1414,3 +1414,80 @@ plot_2d_distributions <- function(tbl_combined, save) {
   
   return(list(pl_precision, pl_marginals))
 }
+
+
+my_ellipse_f <- function(my_l) {
+  pl <- ggplot() +
+    geom_point(data = my_l[[1]], aes(x1, x2, color = category), size = 4) +
+    theme_bw() +
+    scale_color_viridis_d(name = "Category") +
+    labs(
+      x = "Spikiness of Head",
+      y = "Fill of Belly",
+    ) + 
+    theme(legend.position = "bottom", text = element_text(size = 16)) +
+    guides(color = guide_legend(nrow = 2, byrow = TRUE))
+  pl_tmp <- pl + geom_ellipse(aes(x0=50, y0=50, a=13*(.3*9), b=13*(.15*9), angle=pi/4))
+  build <- ggplot_build(pl_tmp)$data
+  ell <- build[[2]]
+  if (my_l[[2]]$representation == "psychological-representation") {
+    
+    tbl_psych <- readRDS("data/psych-representations.rds")
+    x1_obj <- signal::interp1(
+      x = sort(unique(tbl_psych$x1_obj)), 
+      y = sort(unique(tbl_psych$x1_psych)), 
+      xi = ell$x, method = "linear", extrap = TRUE
+    )
+    x2_obj <- signal::interp1(
+      x = sort(unique(tbl_psych$x2_obj)), 
+      y = sort(unique(tbl_psych$x2_psych)), 
+      xi = ell$y, method = "linear", extrap = TRUE
+    )
+    tbl_ell <- tibble(x = x1_obj, y = x2_obj)
+    pl + geom_point(data = tbl_ell, aes(x, y), shape = 20) +
+      scale_x_continuous(breaks = seq(0, 8, 2), expand = expansion(add = c(.15, .15))) +
+      scale_y_continuous(breaks = seq(0, 8, 2), expand = expansion(add = c(.15, .15)))
+    
+  } else {
+    tbl_ell <- tibble(x = ell$x, y = ell$y)
+    pl + geom_point(data = tbl_ell, aes(x, y), shape = 20) +
+      scale_x_continuous(breaks = seq(0, 90, 20), expand = expansion(add = c(1.5, 1.5))) +
+      scale_y_continuous(breaks = seq(0, 90, 20), expand = expansion(add = c(1.5, 1.5)))
+  }
+}
+
+my_square_f <- function(my_l) {
+  pl <- ggplot(my_l[[1]]) +
+    geom_point(data = my_l[[1]], aes(x1, x2, color = category), size = 4) +
+    theme_bw() +
+    scale_color_viridis_d(name = "Category") +
+    labs(
+      x = "Spikiness of Head",
+      y = "Fill of Belly",
+    ) + theme(legend.position = "bottom", text = element_text(size = 16)) +
+    guides(color = guide_legend(nrow=2,byrow=TRUE))
+  if (my_l[[2]]$representation == "psychological-representation") {
+    tbl_psych <- readRDS("data/psych-representations.rds")
+    x_ic <- signal::interp1(
+      x = sort(unique(tbl_psych$x1_obj)), 
+      y = sort(unique(tbl_psych$x1_psych)), 
+      xi = 50, method = "linear", extrap = TRUE
+    )
+    y_ic <- signal::interp1(
+      x = sort(unique(tbl_psych$x2_obj)), 
+      y = sort(unique(tbl_psych$x2_psych)), 
+      xi = 50, method = "linear", extrap = TRUE
+    )
+    
+    pl <- pl + geom_vline(xintercept = x_ic) +
+      geom_hline(yintercept = y_ic) +
+      scale_x_continuous(breaks = seq(0, 8, 2), expand = expansion(add = c(.25, .25))) +
+      scale_y_continuous(breaks = seq(0, 8, 2), expand = expansion(add = c(.25, .25)))
+  } else {
+    pl <- pl + geom_hline(yintercept = 50) +
+      geom_vline(xintercept = 50) +
+      scale_x_continuous(breaks = seq(0, 90, 20), expand = expansion(add = c(1.5, 1.5))) +
+      scale_y_continuous(breaks = seq(0, 90, 20), expand = expansion(add = c(1.5, 1.5)))
+  }
+  return(pl)
+}

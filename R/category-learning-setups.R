@@ -25,10 +25,14 @@ l_info_prep <- list(
 
 # variable
 tbl_vary <- tibble(
-  n_categories = c(2L, 4L), cat_type = rep("prototype", 2), # "rule", 
-  prior_sd = rep(.75, 2), sampling = rep("improvement", 2),
-  constrain_space = rep(TRUE, 2), category_shape = c("ellipses", "square"),
-  is_reward = rep(FALSE, 2)
+  n_categories = c(2L, 2L, 4L, 4L), 
+  cat_type = rep("prototype", 4),
+  prior_sd = rep(.75, 4), sampling = rep("improvement", 4),
+  constrain_space = rep(TRUE, 4), 
+  category_shape = rep(c("ellipses", "square"), each = 2),
+  is_reward = rep(FALSE, 4),
+  use_exptl_stimuli = rep(c(TRUE, TRUE), 2),
+  representation = rep(c("object-properties", "psychological-representation"), 2)
 )
 l_info <- pmap(
   tbl_vary, ~ append(
@@ -36,7 +40,9 @@ l_info <- pmap(
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5,
-      category_shape = ..6, is_reward = ..7
+      category_shape = ..6, is_reward = ..7,
+      use_exptl_stimuli = ..8,
+      representation = ..9
     )
   )
 )
@@ -50,58 +56,20 @@ l_stimuli <- map(l_info, make_stimuli)
 category_names <- c("Bukil", "Venak", "Monus", "Ladiv")
 for (i in 1:length(l_stimuli)) {
   l_stimuli[[i]][[1]]$category <- factor(
-  l_stimuli[[i]][[1]]$category, labels = category_names[1:l_info[[i]]$n_categories]
+    l_stimuli[[i]][[1]]$category, labels = category_names[1:l_info[[i]]$n_categories]
   )
 }
 
-tbl_star <- tibble(
-  x1 = c(4.55, 5.45),
-  x2 = c(7.1, 6.9)
-)
+plt_ellipse_obj <- my_ellipse_f(l_stimuli[[1]])
+plt_ellipse_psych <- my_ellipse_f(l_stimuli[[2]])
 
-plt_categories_ellipse <- ggplot() +
-  geom_point(data = l_stimuli[[1]][[1]], aes(x1, x2, color = category), size = 4) +
-  geom_ellipse(aes(x0=4.5, y0=4.5, a=13*(.3), b=13*(.15), angle=pi/4)) +
-  #geom_point(data = l_stimuli[[2]]$tbl_ellipses, aes(x_rotated, y_rotated), alpha = .2) +
-  #geom_star(data = tbl_star, aes(x1, x2), color = "red", fill = "red", size = 4) +
-  theme_bw() +
-  scale_color_viridis_d(name = "Category") +
-  scale_x_continuous(breaks = seq(0, 9, 2), expand = expansion(add = c(.25, .25))) +
-  scale_y_continuous(breaks = seq(0, 9, 2), expand = expansion(add = c(.25, .25))) +
-  labs(
-    x = "Spikiness of Head",
-    y = "Fill of Belly",
-    #title = "Category Structure"
-  ) + theme(legend.position = "bottom", text = element_text(size = 16)) +
-  guides(color = guide_legend(nrow=2,byrow=TRUE))
+plt_square_obj <- my_square_f(l_stimuli[[3]])
+plt_square_psych <- my_square_f(l_stimuli[[4]])
 
-plt_categories_square <- ggplot() +
-  geom_point(data = l_stimuli[[2]][[1]], aes(x1, x2, color = category), size = 4) +
-  #geom_point(data = l_stimuli[[2]]$tbl_ellipses, aes(x_rotated, y_rotated), alpha = .2) +
-  geom_hline(yintercept = 4.5) +
-  geom_vline(xintercept = 4.5) +
-  #geom_star(data = tbl_star, aes(x1, x2), color = "red", fill = "red", size = 4) +
-  theme_bw() +
-  scale_color_viridis_d(name = "Category") +
-  scale_x_continuous(breaks = seq(0, 9, 2), expand = expansion(add = c(.25, .25))) +
-  scale_y_continuous(breaks = seq(0, 9, 2), expand = expansion(add = c(.25, .25))) +
-  labs(
-    x = "Spikiness of Head",
-    y = "Fill of Belly",
-    #title = "Category Structure"
-  ) + theme(legend.position = "bottom", text = element_text(size = 16)) +
-  guides(color = guide_legend(nrow=2,byrow=TRUE))
-  
+plt_setups <- arrangeGrob(plt_ellipse_obj, plt_square_obj, plt_ellipse_psych, plt_square_psych, nrow = 2)
 
-save_my_tiff(
-    grid.draw(arrangeGrob(plt_categories_ellipse, plt_categories_square, nrow = 1)),
-  "figures/category-learning-setup.tiff", 8.5, 5
-)
-
-save_my_pdf(
-  grid.draw(arrangeGrob(plt_categories_ellipse, plt_categories_square, nrow = 1)),
-  "figures/category-learning-setup.pdf", 8.5, 5
-)
+save_my_pdf_and_tiff(plt_setups, "figures/category-learning-setup", 8.5*.9, 10*.9)
+save_my_pdf_and_tiff(plt_setups, "figures/figures-ms/category-learning-setup", 8.5*.9, 10*.9)
 
 # Category Structure ------------------------------------------------------
 
