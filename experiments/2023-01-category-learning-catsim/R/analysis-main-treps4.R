@@ -374,7 +374,7 @@ tbl_simult_agg$n_categories <- fct_relevel(tbl_simult_agg$n_categories, "4 Categ
 dg <- position_dodge(width = .2)
 pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_response, group = n_categories)) +
   geom_hline(yintercept = 0, color = "grey", size = 1, linetype = "dotdash") +
-  geom_errorbar(aes(ymin = move_response - ci, ymax = move_response + ci, color = n_categories), width = .2, position = dg) +
+  geom_errorbar(aes(ymin = move_response - ci, ymax = move_response + ci, group = n_categories), color = "grey30", width = .2, position = dg) +
   geom_line(aes(color = n_categories), position = dg) +
   geom_point(color = "white", size = 4, position = dg) +
   geom_point(aes(color = n_categories), position = dg) +
@@ -610,5 +610,10 @@ save_my_pdf_and_tiff(
 save_my_pdf_and_tiff(
   pl, 
   str_c("figures/three-tasks-agg-overview-e4", pl_suffix),  
+  13, 3.75
+)
+save_my_pdf_and_tiff(
+  pl, 
+  str_c("figures/figures-ms/three-tasks-agg-overview-e4", pl_suffix),  
   13, 3.75
 )

@@ -263,7 +263,21 @@ plot_categorization_accuracy_against_blocks <-
     tbl_chance$block <- as.numeric(as.character(tbl_chance$block))
     
     levels(tbl_cat_agg_ci$cat_true) <- c("Bukil", "Venak", "Monus", "Ladiv")
-    pl_agg <- ggplot() +
+    pl_agg <- ggplot()
+    if (show_errorbars) {
+      pl_agg <- pl_agg + geom_errorbar(
+        data = tbl_cat_agg_ci,
+        aes(
+          trial_id_binned,
+          ymin = accuracy_mn_participant - ci,
+          ymax = accuracy_mn_participant + ci,
+          group = cat_true
+        ), color = "grey30",
+        width = .25,
+        position = dg
+      )
+    }
+    pl_agg <- pl_agg + 
       geom_line(
         data = tbl_cat_agg_ci,
         aes(
@@ -302,19 +316,7 @@ plot_categorization_accuracy_against_blocks <-
            #caption = "Note. x-axes differ between panels"
       ) + theme_bw()
     
-    if (show_errorbars) {
-      pl_agg <- pl_agg + geom_errorbar(
-        data = tbl_cat_agg_ci,
-        aes(
-          trial_id_binned,
-          ymin = accuracy_mn_participant - ci,
-          ymax = accuracy_mn_participant + ci,
-          color = cat_true
-        ),
-        width = .25,
-        position = dg
-      )
-    }
+
     
     tbl_cat_agg$participant_id <- factor(tbl_cat_agg$participant_id, labels = 1:length(unique(tbl_cat_agg$participant_id)))
     pl_indiv <- ggplot(tbl_cat_agg,
@@ -610,22 +612,23 @@ plot_distance_to_category_center <-
         position = dg,
         alpha = .5
       ) +
-      geom_point(
-        data = tbl_cr_agg,
-        aes(session, d_closest_sqrt, color = n_categories),
-        position = dg,
-        show.legend = FALSE
-      ) +
       geom_errorbar(
         data = tbl_cr_agg,
         aes(
           session,
           ymin = d_closest_sqrt - ci,
           ymax = d_closest_sqrt + ci,
-          color = n_categories
+          group = n_categories
         ),
+        color = "grey30",
         position = dg,
         width = .25,
+        show.legend = FALSE
+      ) +
+      geom_point(
+        data = tbl_cr_agg,
+        aes(session, d_closest_sqrt, color = n_categories),
+        position = dg,
         show.legend = FALSE
       ) +
       theme_bw() +
@@ -856,20 +859,19 @@ plot_similarity_against_distance <-
     tbl_tmp <- tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13)))
     tbl_tmp$n_categories <- factor(tbl_tmp$n_categories)
     levels(tbl_tmp$n_categories) <- "Similarity"
-    pl_agg_lines <- ggplot() +
-      geom_line(
-        data = tbl_tmp,
-        aes(distance_binned, response, color = n_categories)
-      ) + geom_errorbar(
+    pl_agg_lines <- ggplot()  + geom_errorbar(
         data = tbl_tmp,
         aes(
           distance_binned,
           ymin = response - ci,
           ymax = response + ci,
-          width = .2,
-          color = n_categories
-        )
-      ) + geom_point(data = tbl_tmp,
+          width = .2
+        ), color = "grey30"
+      ) +
+      geom_line(
+        data = tbl_tmp,
+        aes(distance_binned, response, color = n_categories)
+      )+ geom_point(data = tbl_tmp,
                      aes(distance_binned, response), size = 2, color = "white") +
       geom_point(data = tbl_tmp,
                  aes(distance_binned, response, color = n_categories)) +

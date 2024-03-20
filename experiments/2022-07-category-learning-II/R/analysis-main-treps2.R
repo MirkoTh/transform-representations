@@ -107,7 +107,7 @@ l_tbl_data[[1]] <- l_deviations_all$tbl_cr
 # Set Exclusion Criteria Appropriately ------------------------------------
 
 
-l_cases <- preprocess_data(l_tbl_data, 200, 400)
+l_cases <- preprocess_data(l_tbl_data, 200, 400, 3, extract_first_response = FALSE)
 tbl_cr <- l_cases$l_guessing$keep$tbl_cr
 tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
 
@@ -550,5 +550,10 @@ save_my_pdf_and_tiff(
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e2", 
+  11, 10
+)
+save_my_pdf_and_tiff(
+  pl, 
+  "figures/figures-ms/three-tasks-agg-overview-e2", 
   11, 10
 )

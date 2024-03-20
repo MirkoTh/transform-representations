@@ -80,9 +80,9 @@ if (l_info$representation == "psychological-representation") {
 l_deviations <- add_deviations(l_tbl_data, sim_center = sim_center, l_info = l_info)
 l_tbl_data[[1]] <- l_deviations$tbl_cr
 
-l_cases <- preprocess_data(l_tbl_data, 192, 600, n_sds = 3)
-tbl_cr <- l_cases$l_guessing$keep$tbl_cr
-tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim
+l_cases <- preprocess_data(l_tbl_data, 192, 600, n_sds = 3, extract_first_response = FALSE)
+tbl_cr <- l_cases$l_guessing$keep$tbl_cr %>% ungroup()
+tbl_cat_sim <- l_cases$l_guessing$keep$tbl_cat_sim %>% ungroup()
 
 l_deviations <- map(l_deviations, ~ filter(.x, substr(participant_id, 1, 6) %in% substr(unique(tbl_cat_sim$participant_id), 1, 6)))
 
@@ -116,8 +116,8 @@ tbl_cat_sim <- add_binned_trial_id(tbl_cat_sim, 20, 40)
 rbind(
   l_cases$l_outliers$drop$tbl_cr, l_cases$l_guessing$drop$tbl_cr, l_cases$l_incomplete$drop$tbl_cr
 ) %>% rbind(tbl_cr) %>% group_by(participant_id) %>% count(Sex) %>% ungroup() %>% count(Sex)
-cat(str_c("dropouts: ", length(unique(l_cases$l_incomplete$drop$tbl_cr$participant_id))))
-cat(str_c("outliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_cr$participant_id))))
+cat(str_c("\ndropouts: ", length(unique(l_cases$l_incomplete$drop$tbl_cr$participant_id))))
+cat(str_c("\noutliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_cr$participant_id))))
 
 repeats <- tbl_cr %>% count(participant_id) %>% arrange(desc(n)) %>% filter(n >= 235)
 tbl_cr <- tbl_cr %>% filter(!(participant_id %in% repeats$participant_id))
@@ -158,7 +158,7 @@ l_pl <- plot_categorization_accuracy_against_blocks(tbl_cat)
 pl_cat_learn_psychonomics <- l_pl[[1]] + scale_color_manual(values = c("skyblue2", "tomato3"), name = "Category") +
   theme(legend.position = "bottom", text = element_text(size = 22)) + scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), breaks = seq(.5, .8, by = .1)) +
-  coord_cartesian(ylim = c(.5, .85))
+  coord_cartesian(ylim = c(.5, .875))
 # by-participant trajectories
 #l_pl[[2]]
 
@@ -614,5 +614,10 @@ save_my_pdf_and_tiff(
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e1", 
+  11, 10
+)
+save_my_pdf_and_tiff(
+  pl, 
+  "figures/figures-ms/three-tasks-agg-overview-e1", 
   11, 10
 )

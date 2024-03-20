@@ -19,7 +19,8 @@ library(cmdstanr)
 library(modelr)
 library(plotly)
 library(ids)
-
+library(naivebayes)
+library(mvtnorm)
 
 # Import Home-Grown Modules -----------------------------------------------
 
@@ -84,18 +85,13 @@ n_resp_simult <- 200
 n_resp_cat <- 400
 l_cases <- preprocess_data_e3(l_tbl_data, n_resp_simult, n_resp_cat)
 
-# todos
-# have a look at simultaneous comparison outliers
-# some seem to have used a reversed mapping from responses to similarity!
-# look at outliers in sequential comparison task --> possibly build calculation of mean +/- 3*sd into preprocess_data_e3 pipeline
-
 tbl_simult <- l_cases$l_outliers$keep$tbl_simult
 tbl_cat_sim <- l_cases$l_outliers$keep$tbl_cat
 
 drops <- map(l_cases, participants_ntrials, stage = "drop")
-drops$l_incomplete %>% print(n = 47)
+drops$l_incomplete %>% print(n = 52)
 drops$l_guessing %>% print(n = 0)
-drops$l_outliers %>% print(n = 4)
+drops$l_outliers %>% print(n = 2)
 
 keeps <- map(l_cases, participants_ntrials, stage = "keep")$l_outliers
 keeps %>% arrange(desc(n_seq))
@@ -121,6 +117,7 @@ tbl_simult %>% group_by(participant_id, n_categories) %>% count() %>%
 # some participants seem to  have restarted the experiment
 # exclude them from the data sets by hand
 repeats <- keeps %>% filter(n_seq > n_resp_cat | n_simult > n_resp_simult) %>% select(participant_id) %>% as_vector() %>% unname()
+cat("excluded ", length(repeats), " participants due to restarting the experiment\n")
 #repeats <- c("5e8783b0fde5153fbd9dca43", "611cf79541223a8ee170a30f", "6134d182408816f4c1284496")
 tbl_simult <- tbl_simult %>% filter(!(participant_id %in% repeats))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats))
@@ -276,7 +273,7 @@ tbl_simult_agg$n_categories <- fct_relevel(tbl_simult_agg$n_categories, "4 Categ
 dg <- position_dodge(width = .2)
 pl_groupmeans <- ggplot(tbl_simult_agg, aes(comparison_pool_binary, move_response, group = n_categories)) +
   geom_hline(yintercept = 0, color = "grey", size = 1, linetype = "dotdash") +
-  geom_errorbar(aes(ymin = move_response - ci, ymax = move_response + ci, color = n_categories), width = .2, position = dg) +
+  geom_errorbar(aes(ymin = move_response - ci, ymax = move_response + ci, group = n_categories), color = "grey30", width = .2, position = dg) +
   geom_line(aes(color = n_categories), position = dg) +
   geom_point(color = "white", size = 4, position = dg) +
   geom_point(aes(color = n_categories), position = dg) +
@@ -481,5 +478,10 @@ save_my_pdf_and_tiff(
 save_my_pdf_and_tiff(
   pl, 
   "figures/three-tasks-agg-overview-e3", 
+  13, 3.75
+)
+save_my_pdf_and_tiff(
+  pl, 
+  "figures/figures-ms/three-tasks-agg-overview-e3", 
   13, 3.75
 )
