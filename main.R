@@ -119,7 +119,7 @@ l_seq_results <- future_map(
 
 plan("sequential")
 
-read_write <- "write"
+read_write <- "read"
 
 td <- lubridate::today()
 
@@ -127,8 +127,8 @@ if (read_write == "write") {
   saveRDS(l_category_results, file = str_c("data/", td, "-grid-search-vary-constrain-space.rds"))
   saveRDS(l_seq_results, file = str_c("data/", td, "-grid-search-sequential-comparison.rds"))
 } else if (read_write == "read") {
-  l_category_results <- readRDS(file = "data/2024-02-18-grid-search-vary-constrain-space.rds")
-  l_seq_results <- readRDS(file = "data/2024-02-18-grid-search-sequential-comparison.rds")
+  l_category_results <- readRDS(file = "data/2024-03-18-grid-search-vary-constrain-space.rds")
+  l_seq_results <- readRDS(file = "data/2024-03-18-grid-search-sequential-comparison.rds")
 }
 
 
@@ -215,19 +215,12 @@ save_my_pdf_and_tiff(arrangeGrob(
   pl_pred_square + theme(plot.title = element_blank()), pl_pred_delta_square,
   nrow = 2
 ), "figures/model-predictions-both-designs", 11.25, 7.5)
+
 # extract sum of distances between prior and posterior
+
 # in category learning
 l_posteriors_cat <- map(map(l_results_plots, 1), "tbl_posterior")
 l_sum_of_distances_cat <- map2(l_posteriors_cat, tbl_vary$category_shape, sum_of_pairwise_distances)
-
-# in sequential comparison
-l_posteriors_seq <- map(
-  l_seq_results, ~ .x$tbl_new %>%
-    group_by(stim_id, cat_type, category, timepoint) %>%
-    summarize(x1_true = mean(x1), x2_true = mean(x2)) %>% ungroup()
-)
-l_sum_of_distances_seq <- map2(l_posteriors_seq, tbl_vary_seq$category_shape, sum_of_pairwise_distances)
-
 
 l_conds <- split(tbl_info[, c("cat_type", "prior_sd", "sampling", "constrain_space", "category_shape")], tbl_info$condition_id)
 l_conds_rep <- map2(l_conds, l_sum_of_distances_cat, ~ slice(.x, rep(1:n(), each = nrow(.y))))
@@ -237,7 +230,16 @@ l_sum_of_distances_cat <- map2(
   l_conds_rep,
   ~ cbind(tibble(.x), tibble(.y))
 )
+tbl_sum_of_distances <- reduce(l_sum_of_distances_cat, rbind) %>% as_tibble()
+tbl_sum_of_distances$task <- "Category Learning"
 
+# in sequential comparison
+l_posteriors_seq <- map(
+  l_seq_results, ~ .x$tbl_new %>%
+    group_by(stim_id, cat_type, category, timepoint) %>%
+    summarize(x1_true = mean(x1), x2_true = mean(x2)) %>% ungroup()
+)
+l_sum_of_distances_seq <- map2(l_posteriors_seq, tbl_vary_seq$category_shape, sum_of_pairwise_distances)
 
 l_conds <- split(tbl_info_seq[, c("cat_type", "prior_sd", "sampling", "constrain_space", "category_shape")], tbl_info_seq$condition_id)
 l_conds_rep <- map2(l_conds, l_sum_of_distances_seq, ~ slice(.x, rep(1:n(), each = nrow(.y))))
@@ -248,8 +250,7 @@ l_sum_of_distances_seq <- map2(
   ~ cbind(tibble(.x), tibble(.y))
 )
 
-tbl_sum_of_distances <- reduce(l_sum_of_distances_cat, rbind) %>% as_tibble()
-tbl_sum_of_distances$task <- "Category Learning"
+
 
 tmp <- reduce(l_sum_of_distances_seq, rbind) %>% as_tibble()
 tmp$task <- "Sequential Comparison"
@@ -259,38 +260,92 @@ tbl_ds_agg <- tbl_sum_of_distances %>%
   filter(tp == "After Training") %>%
   group_by(task, cat_type, comparison, sampling, constrain_space, category_shape, n_comparisons) %>%
   summarize(avg_ds_abs = mean(ds_abs), avg_ds_prop = mean(ds_prop)) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(
+    move = avg_ds_prop - 1
+  )
 tbl_ds_agg$cat_type <- factor(tbl_ds_agg$cat_type, labels = c("Exemplar", "None", "Prototype", "Rule"))
 tbl_ds_agg$cat_type <- fct_inorder(tbl_ds_agg$cat_type)
 tbl_ds_agg$sampling <- factor(tbl_ds_agg$sampling, labels = c("Improvement", "Metropolis-Hastings"))
 tbl_ds_agg$constrain_space <- factor(tbl_ds_agg$constrain_space, labels = c("No Space Constraints", "Space Constrained"))
 
+# strategy proportions given agreement between aic and bic in category learning modeling
+tbl_model_weights_ellipses <- tibble(
+  cat_type = c("Exemplar", "Prototype"),
+  category_shape = "ellipses",
+  prop = c(.824, .176)
+)
+
+tbl_model_weights_square <- tibble(
+  cat_type = c("Exemplar", "Prototype", "Rule"),
+  category_shape = "square",
+  prop = c(0.706, 0.235, 0.059)
+)
+
+tbl_model_weights <- rbind(tbl_model_weights_ellipses, tbl_model_weights_square)
+
+tbl_ds_agg <- tbl_ds_agg %>% 
+  left_join(tbl_model_weights, by = c("cat_type", "category_shape")) %>%
+  mutate(
+    move_avg = move * prop
+  )
+tbl_ds_agg_pl <- tbl_ds_agg %>% 
+  filter(category_shape == "square" & constrain_space == "No Space Constraints" & sampling == "Improvement") %>%
+  mutate(move_avg = ifelse(is.na(move_avg), move, move_avg)) %>%
+  group_by(task, comparison) %>%
+  summarize(move = sum(move_avg)) %>%
+  ungroup()
+
+pl_preds_ds1 <- ggplot(tbl_ds_agg_pl, aes(comparison, -move, group = fct_rev(task))) +
+  geom_hline(yintercept = 0, color = "grey", size = 1, linetype = "dotdash") +
+  geom_line(aes(color = fct_rev(task))) +
+  geom_point(size = 3, color = "white") +
+  geom_point(aes(color = fct_rev(task))) +
+  theme_bw() +
+  scale_x_discrete(expand = c(0.1, 0)) +
+  scale_y_continuous(expand = c(0.02, 0)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Category Comparison", y = "-(Distance After - Before)") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22),
+    legend.position = "bottom"
+  ) +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+
 
 # predictions for pairwise comparisons only have to be made for the squared category structure
 
 dg <- position_dodge(width = .9)
-pl_preds_ds <- ggplot(
+pl_preds_ds2 <- ggplot(
   tbl_ds_agg %>% 
     filter(category_shape == "square" & constrain_space == "No Space Constraints" & sampling == "Improvement")
   , aes(comparison, avg_ds_prop, group = cat_type)) +
   geom_col(aes(fill = cat_type), position = dg, color = "black") +
-  geom_hline(yintercept = 1, size = 1, color = "grey", linetype = "dotdash") +
-  facet_grid(task ~ interaction(constrain_space, sampling, sep = " & \n")) +
+  geom_hline(yintercept = 1, linewidth = 1, color = "grey", linetype = "dotdash") +
+  facet_wrap(~ task) +
   #facet_wrap(~ task) +
   theme_bw() +
+  scale_x_discrete(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
   theme(
-    strip.background = element_rect(fill="white"), 
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
     strip.text = element_text(colour = 'black'), 
     legend.position = "bottom",
-    text = element_text(size = 16)
-  ) +
-  scale_x_discrete(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
+  ) + 
   scale_fill_viridis_d(name = "Category Learning Model") +
   labs(x = "Comparison", y = "Prop. Change of Pairwise Distances") +
-  guides(fill = guide_legend(nrow=2,byrow=TRUE))
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 
-save_my_pdf_and_tiff(pl_preds_ds, "figures/model-predictions-distances", 5.5, 6)
+
+
+
+pl_arr <- arrangeGrob(pl_preds_ds1, pl_preds_ds2, nrow = 1, widths = c(1, 1.3))
+
+save_my_pdf_and_tiff(pl_arr, "figures/model-predictions-distances", 13, 6.25)
+save_my_pdf_and_tiff(pl_arr, "figures/figures-ms/model-predictions-distances", 13, 6.25)
+
 
 
 # Plot Prior Means & Posterior Means --------------------------------------
@@ -348,6 +403,7 @@ ids_square_seq <- tbl_info %>% filter(
 ) %>% as_vector() %>% rep(length(ids_square_cat))
 
 
+# strategy proportions given agreement between aic and bic in category learning modeling
 tbl_model_weights_ellipses <- tibble(
   cat_type = c("exemplar", "prototype"),
   prop = c(.824, .176)
@@ -477,22 +533,22 @@ averaged_movements_center <- function(
       position = dg,
       alpha = .5
     ) +
-    geom_point(
-      data = tbl_move_avg,
-      aes(session, d_closest_sqrt, color = condition),
-      position = dg,
-      show.legend = FALSE
-    ) +
     geom_errorbar(
       data = tbl_move_avg,
       aes(
         session,
         ymin = d_closest_sqrt - ci,
         ymax = d_closest_sqrt + ci,
-        color = condition
-      ),
+        group = condition
+      ), color = "grey30",
       position = dg,
       width = .25,
+      show.legend = FALSE
+    ) +
+    geom_point(
+      data = tbl_move_avg,
+      aes(session, d_closest_sqrt, color = condition),
+      position = dg,
       show.legend = FALSE
     )  + facet_wrap(~ category) +
     theme_bw() +
@@ -534,5 +590,6 @@ pl_task_imprinting <- arrangeGrob(
 )
 
 save_my_pdf_and_tiff(pl_task_imprinting, "figures/figures-ms/model-predictions-both-designs", 11.25, 11.25)
+save_my_pdf_and_tiff(pl_task_imprinting, "figures/model-predictions-both-designs", 11.25, 11.25)
 
 

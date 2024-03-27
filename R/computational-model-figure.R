@@ -33,7 +33,9 @@ tbl_vary <- crossing(
   n_categories = c(4L), cat_type = c("prototype"), # "rule", 
   prior_sd = c(.75), sampling = c("improvement"),
   constrain_space = c(TRUE), category_shape = c("square"),
-  is_reward = FALSE
+  is_reward = FALSE,
+  use_expt_stimuli = FALSE,
+  representation = "physical-properties"
 )
 
 l_info <- pmap(
@@ -42,7 +44,9 @@ l_info <- pmap(
     list(
       n_categories = ..1, cat_type = ..2, prior_sd = ..3,
       sampling = ..4, constrain_space = ..5,
-      category_shape = ..6, is_reward = ..7
+      category_shape = ..6, is_reward = ..7,
+      use_exptl_stimuli = ..8,
+      representation = ..9
     )
   )
 )
@@ -122,9 +126,9 @@ tbl_acceptance <- tibble(
   x1 = c(5, 4.55, 5.45), 
   x2 = c(7, 7.1, 6.9), 
   stim_sample = fct_inorder(factor(c("Baseline", 1, 2))),
-  "Posterior Probability" = c(0.767, .529, .904),
+  "Improvement Sampling" = c(0.767, .529, .904),
   "Metropolis-Hastings" = pmin(1, c(.767/.767, .529/.767, .904/.767))
-  ) %>% pivot_longer(cols = c("Posterior Probability", "Metropolis-Hastings"))
+  ) %>% pivot_longer(cols = c("Improvement Sampling", "Metropolis-Hastings"))
 tbl_acceptance$name <- fct_inorder(factor(tbl_acceptance$name))
 
 plt_acceptance <- ggplot(tbl_acceptance, aes(stim_sample, value, group = stim_sample)) +
@@ -138,4 +142,5 @@ plt_acceptance <- ggplot(tbl_acceptance, aes(stim_sample, value, group = stim_sa
   theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16))
   
 pl_arrangement <- arrangeGrob(plt_prior_stim, plt_categories, plt_acceptance, nrow = 1)
-save_my_pdf_and_tiff(pl_arrangement, "figures/model-stages", 13, 4.5)
+save_my_pdf_and_tiff(pl_arrangement, "figures/model-stages", 14, 4.5)
+save_my_pdf_and_tiff(pl_arrangement, "figures/figures-ms/model-stages", 14, 4.5)
