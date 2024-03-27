@@ -681,7 +681,7 @@ checkerboard_deviation <- function(tbl, n_agg_x) {
   #' @return the aggregated tbl
   #' 
   lims <- tbl %>% 
-    summarise(min_x = min(x1_true), max_x = max(x2_true)) %>%
+    summarize(min_x = min(x1_true), max_x = max(x2_true)) %>%
     mutate(min_x = min_x - 1, max_x = max_x + 1) %>%
     as_vector()
   cutpoints <- seq(lims[1], lims[2], length.out = n_agg_x + 1)
@@ -2204,7 +2204,7 @@ separate_cat_and_sim <- function(tbl_cat_sim) {
     ) %>% filter(trial_id != 0) %>% replace_na(list(distance_euclidian = 0))
   n_bins_distance <- 9
   bins_distance <-
-    c(seq(-1, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
+    c(seq(-.001, max(tbl_sim$distance_euclidian), length.out = n_bins_distance), Inf)
   tbl_sim$distance_binned <-
     cut(tbl_sim$distance_euclidian, bins_distance, labels = FALSE)
   

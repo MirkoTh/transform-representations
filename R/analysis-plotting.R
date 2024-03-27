@@ -835,12 +835,12 @@ plot_similarity_against_distance <-
     # aggregate scatter plot and line plot
     pl_agg <- ggplot() +
       geom_smooth(
-        data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+        data = tbl_sim_ci %>% filter(!(distance_binned %in% c(13))),
         aes(distance_binned, response),
         color = "#440154",
         method = "lm"
       ) + geom_errorbar(
-        data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+        data = tbl_sim_ci %>% filter(!(distance_binned %in% c(13))),
         aes(
           distance_binned,
           ymin = response - ci,
@@ -848,15 +848,15 @@ plot_similarity_against_distance <-
           width = .2
         )
       ) +  geom_point(size = 3, color = "white") +
-      geom_point(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13))),
+      geom_point(data = tbl_sim_ci %>% filter(!(distance_binned %in% c(13))),
                  aes(distance_binned, response)) +
       theme_bw() +
-      scale_x_continuous(breaks = seq(2, 10, by = 2)) +
+      scale_x_continuous(breaks = seq(1, 10, by = 2)) +
       coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
            y = "Average Similarity") # ,title = "Mean Effect"
     
-    tbl_tmp <- tbl_sim_ci %>% filter(!(distance_binned %in% c(1, 13)))
+    tbl_tmp <- tbl_sim_ci %>% filter(!(distance_binned %in% c(13)))
     tbl_tmp$n_categories <- factor(tbl_tmp$n_categories)
     levels(tbl_tmp$n_categories) <- "Similarity"
     pl_agg_lines <- ggplot()  + geom_errorbar(
@@ -877,7 +877,7 @@ plot_similarity_against_distance <-
                  aes(distance_binned, response, color = n_categories)) +
       theme_bw() +
       theme(legend.position = "bottom") +
-      scale_x_continuous(breaks = seq(2, 10, by = 2)) +
+      scale_x_continuous(breaks = seq(1, 10, by = 2)) +
       scale_color_viridis_d(name = "Group") +
       coord_cartesian(ylim = c(sim_edges[1], sim_edges[2])) +
       labs(x = "Euclidean Distance (Binned)",
