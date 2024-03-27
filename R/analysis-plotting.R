@@ -1334,8 +1334,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
     # somehow ggMarginal does not like coord_cartesian...
     # the following excludes some of the responses, though
-    scale_x_continuous(limits = c(-40, 40), expand = c(0, 0)) +
-    scale_y_continuous(limits = c(-40, 40), expand = c(0, 0)) +
+    scale_x_continuous(limits = c(-10, 10), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(-10, 10), expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(
@@ -1348,8 +1348,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     #geom_density2d(data = d1, color = "#440154", aes(x1_deviation, x2_deviation)) +
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
-    scale_x_continuous(limits = c(-40, 40), expand = c(0, 0)) +
-    scale_y_continuous(limits = c(-40, 40), expand = c(0, 0)) +
+    scale_x_continuous(limits = c(-10, 10), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(-10, 10), expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(
@@ -1374,10 +1374,10 @@ plot_2d_distributions <- function(tbl_combined, save) {
   knitr::kable(tbl_sds_agg)
   
   pl_marginal_x1 <- ggplot(tbl_combined, aes(x1_deviation, group = session)) +
-    geom_density(aes(color = session), size = 1) +
-    geom_label(data = tbl_sds_agg, aes(20, .03 + (3 - as.numeric(session)) * .0055, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session), size = 5) +
+    geom_density(aes(color = session), size = .75) +
+    geom_label(data = tbl_sds_agg, aes(3, .2 + (3 - as.numeric(session)) * .1, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session), size = 5) +
     facet_wrap(~ n_categories) +
-    coord_cartesian(xlim = c(-38, 38), ylim = c(0, .047)) + 
+    coord_cartesian(xlim = c(-6, 6), ylim = c(0, .55)) + 
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
@@ -1386,10 +1386,10 @@ plot_2d_distributions <- function(tbl_combined, save) {
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
   
   pl_marginal_x2 <- ggplot(tbl_combined, aes(x2_deviation, group = session)) +
-    geom_density(aes(color = session), size = 1) +
-    geom_label(data = tbl_sds_agg, aes(20, .03 + (3 - as.numeric(session)) * .0055, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session), size = 5) +
+    geom_density(aes(color = session), size = .75) +
+    geom_label(data = tbl_sds_agg, aes(3, .2 + (3 - as.numeric(session)) * .1, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session), size = 5) +
     facet_wrap(~ n_categories) +
-    coord_cartesian(xlim = c(-38, 38), ylim = c(0, .047)) +
+    coord_cartesian(xlim = c(-6, 6), ylim = c(0, .55)) +
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
@@ -1408,6 +1408,11 @@ plot_2d_distributions <- function(tbl_combined, save) {
     save_my_pdf_and_tiff(
       pl_marginals,
       "figures/marginal-densities",
+      6, 7.5
+    )
+    save_my_pdf_and_tiff(
+      pl_marginals,
+      "figures/figures-ms/marginal-densities",
       6, 7.5
     )
     

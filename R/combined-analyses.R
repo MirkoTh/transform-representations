@@ -27,9 +27,9 @@ walk(files, source)
 # Load and Visualize Data -------------------------------------------------
 
 # load tbls from two expts and combine
-tbl_cr1 <- read_rds("experiments/2022-02-category-learning/data/tbl_cr.rds")
-tbl_cr2 <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri.rds")
-cols_required <- c("participant_id", "n_categories", "session", "x1_deviation", "x2_deviation")
+tbl_cr1 <- read_rds("experiments/2022-02-category-learning/data/tbl_cr-psychological-representation.rds") %>% mutate(experiment = "E1: Ellipse")
+tbl_cr2 <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri-psychological-representation.rds") %>% mutate(experiment = "E2: Squares")
+cols_required <- c("experiment", "participant_id", "n_categories", "session", "x1_deviation", "x2_deviation", "d_boundary_stim")
 tbl_combined <- tbl_cr1[, cols_required] %>% mutate(n_categories = as.numeric(n_categories)) %>% 
   rbind(tbl_cr2[, cols_required]) %>% mutate(n_categories = as.numeric(n_categories))
 tbl_combined$n_categories <- as.numeric(as.character(tbl_combined$n_categories))
@@ -39,12 +39,81 @@ tbl_combined$session <- factor(tbl_combined$session)
 # plot 2d distributions before and after training (collapsed across groups)
 # hardcoded x and y limits, which leads to the exclusion of some data points in the plot
 
-
 levels(tbl_combined$session) <- c("Before", "After")
 levels(tbl_combined$n_categories) <- c("Sequential Comparison", "Category Learning")
+
+
 l_precision <- plot_2d_distributions(tbl_combined, save = TRUE)
 grid.draw(l_precision[[1]])
 grid.draw(l_precision[[2]])
+
+
+
+# EDA on Marginal given Distance from Boundary ----------------------------
+
+tbl_combined_agg <- tbl_combined %>%
+  mutate(d_boundary_stim_cut = cut(d_boundary_stim, c(0, .5, 2, 5))) %>%
+  group_by(experiment, participant_id, n_categories, d_boundary_stim_cut, session) %>%
+  summarize(
+    mn_x1 = mean(x1_deviation),
+    mn_x2 = mean(x2_deviation),
+    sd_x1 = sd(x1_deviation),
+    sd_x2 = sd(x2_deviation),
+    n = n()
+  ) %>% ungroup() %>%
+  pivot_wider(
+    id_cols = c(experiment, participant_id, n_categories, d_boundary_stim_cut), 
+    names_from = session,
+    values_from = c(sd_x1, sd_x2)
+  ) %>% mutate(
+    sd_x1_change = sd_x1_After - sd_x1_Before,
+    sd_x2_change = sd_x2_After - sd_x2_Before
+  )
+
+
+
+tbl_plt <- tbl_combined_agg %>% 
+  pivot_longer(ends_with("_change"), names_to = "sd", values_to = "sd_val")
+  
+tbl_plt_agg <- summary_se_within(
+  tbl_plt %>% filter(sd == "sd_x1_change"),
+  measurevar = "sd_val", 
+  betweenvars = c("experiment", "n_categories"), 
+  withinvars = c("d_boundary_stim_cut")
+  ) %>% mutate(var = "Head Spikiness") %>%
+  rbind(
+    summary_se_within(
+      tbl_plt %>% filter(sd == "sd_x2_change"),
+      measurevar = "sd_val", 
+      betweenvars = c("experiment", "n_categories"), 
+      withinvars = c("d_boundary_stim_cut")
+    ) %>% mutate(var = "Belly Fill")
+  )
+
+dg <- position_dodge(width = .2)
+ggplot(tbl_plt_agg, aes(d_boundary_stim_cut, sd_val, group = n_categories)) +
+  geom_hline(yintercept = 0, color = "grey", linetype = "dotdash", linewidth = 1) +
+  geom_errorbar(aes(ymin = sd_val - ci, ymax = sd_val + ci, color = n_categories), position = dg, width = .2) +
+  geom_line(aes(color = n_categories), position = dg) +
+  geom_point(color = "white", size = 3, position = dg) +
+  geom_point(aes(color = n_categories), position = dg) +
+  facet_grid(experiment ~ var) +
+  theme_bw() +
+  scale_x_discrete(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Distance To Closest Boundary", y = "SD (After) - SD (Before)") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    axis.text.x = element_text(angle = 45, vjust = .5),
+    legend.position = "bottom"
+  ) + 
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
+
+
+
+
+# Combined Model ----------------------------------------------------------
 
 
 
