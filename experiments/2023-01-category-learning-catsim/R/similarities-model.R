@@ -2,6 +2,7 @@ rm(list = ls())
 
 with_outliers <- FALSE
 pl_suffix <- ifelse(with_outliers, "-outliers", "no-outliers")
+is_fit <- TRUE
 
 # Load Packages -----------------------------------------------------------
 
@@ -157,7 +158,8 @@ sim_model_city <- stan_sim_city()
 mod_sim_city <- cmdstan_model(sim_model_city)
 
 mm <- model.matrix(
-  rt ~ n_categories + comparison_pool_binary + session, data = tbl_simult
+  rt ~ as.factor(n_categories) + as.factor(comparison_pool_binary) + as.factor(session),
+  data = tbl_simult
 ) %>% as_tibble()
 mm[, 2:4] <- mm[, 2:4] - .5
 mm[, 5] <- mm[, 2] * mm[, 3] * mm[, 4]
@@ -175,17 +177,25 @@ l_data <- list(
   x = mm[, 1:5]
 )
 
-fit_sim_city <- mod_sim_city$sample(
-  data = l_data, iter_sampling = 2500, iter_warmup = 1000, chains = 3, parallel_chains = 3#, init = init_fun
-)
-
-# analyze posterior samples
 pars_interest <- c("mu", "w_group", "sigma")
-tbl_draws <- fit_sim_city$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_sim_city$summary(variables = pars_interest)
-saveRDS(tbl_draws, "experiments/2023-01-category-learning-catsim/data/similarity-model-stan.RDS")
+file_loc_sim <- "experiments/2023-01-category-learning-catsim/data/similarity-model-stan-posterior.RDS"
 
-tbl_draws <- readRDS("experiments/2023-01-category-learning-catsim/data/similarity-model-stan.RDS")
+if (is_fit) {
+  fit_sim_city <- mod_sim_city$sample(
+    data = l_data, iter_sampling = 10000, iter_warmup = 1000, chains = 3, parallel_chains = 3
+  )
+  
+  # analyze posterior samples
+  tbl_draws <- fit_sim_city$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws, file_loc_sim)
+  tbl_summary <- fit_sim_city$summary(variables = pars_interest)
+  tbl_summary %>% arrange(desc(rhat))
+  
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc_sim)
+  
+}
+
 
 
 lbls <- c("Intercept", "Group", "Category Comparison", "Time Point", "3-way IA", "w_group", "sigma")

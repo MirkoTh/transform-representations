@@ -160,15 +160,23 @@ l_data <- list(
 
 init_fun <- function() list(mu = 3, w_group = .5)
 
-fit_sim_city <- mod_sim_city$sample(
-  data = l_data, iter_sampling = 2500, iter_warmup = 1000, chains = 3, parallel_chains = 3#, init = init_fun
-)
-
-# analyze posterior samples
 pars_interest <- c("mu", "w_group", "sigma")
-tbl_draws <- fit_sim_city$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_sim_city$summary(variables = pars_interest)
-saveRDS(tbl_draws, "experiments/2022-09-category-learning-similarity/data/similarity-model-stan.RDS")
+file_loc_sim <- "experiments/2022-09-category-learning-similarity/data/similarity-model-stan-posterior.RDS"
+
+if (is_fit) {
+  fit_sim_city <- mod_sim_city$sample(
+    data = l_data, iter_sampling = 10000, iter_warmup = 1000, chains = 3, parallel_chains = 3#, init = init_fun
+  )
+  
+  # analyze posterior samples
+  tbl_draws <- fit_sim_city$draws(variables = pars_interest, format = "df")
+  tbl_summary <- fit_sim_city$summary(variables = pars_interest)
+  tbl_summary %>% arrange(desc(rhat))
+  saveRDS(tbl_draws, file_loc_sim)
+  
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc_sim)
+}
 
 #tbl_draws <- readRDS("experiments/2022-09-category-learning-similarity/data/similarity-model-stan.RDS")
 lbls <- c("Intercept", "Group", "Category Comparison", "Time Point", "3-way IA", "w_group", "sigma")
@@ -195,6 +203,6 @@ tbl_thx <- tbl_thx %>% filter(parameter %in% params_bf)
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 #grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
 
-grid.arrange(
+gridExtra::grid.arrange(
   l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], l_pl[[5]], l_pl[[6]], l_pl[[7]], nrow = 2, ncol = 4
 )
