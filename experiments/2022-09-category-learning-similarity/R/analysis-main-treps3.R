@@ -169,10 +169,11 @@ tbl_simult$session <- factor(tbl_simult$session, labels = c("Before Training", "
 tbl_simult_move <- delta_simultaneous(tbl_simult)
 
 # save data sets for statistical analyses
-saveRDS(tbl_simult, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps.rds"))
-saveRDS(tbl_simult_move, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult_move-treps.rds"))
-saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps.rds"))
-saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps.rds"))
+suff <- l_info$representation
+saveRDS(tbl_simult, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps-", suff, ".rds"))
+saveRDS(tbl_simult_move, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_simult_move-treps-", suff, ".rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps-", suff, ".rds"))
+saveRDS(tbl_seq, file = str_c("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-", suff, ".rds"))
 
 tbl_simult$n_categories <- factor(tbl_simult$n_categories, labels = c("Similarity", "4 Categories"))
 tbl_simult_move$n_categories <- factor(tbl_simult_move$n_categories, labels = c("Similarity", "4 Categories"))
@@ -371,7 +372,7 @@ tbl_seq_ci$distance_binned <-
 # some sample participants to plot similarity ratings
 sample_ids_seq <-
   unique(tbl_seq$participant_id)[seq(1, length(unique(tbl_seq$participant_id)), length.out = 4)]
-l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6))
+l_pl_sim <- plot_similarity_against_distance(tbl_seq, tbl_seq_ci, sample_ids_seq, sim_edges = c(1.5, 6.5))
 grid.arrange(l_pl_sim[[1]], l_pl_sim[[2]], nrow = 1, ncol = 2)
 pl_sim <- l_pl_sim[[3]] + scale_color_manual(values = "#FDE725FF", name = "Group") +
   scale_x_continuous(expand = c(0, 0)) +

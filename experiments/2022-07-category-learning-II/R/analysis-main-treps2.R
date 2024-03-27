@@ -18,9 +18,20 @@ library(rutils)
 library(catlearn)
 library(cmdstanr)
 library(modelr)
-library(plotly)
+#library(plotly)
 library(naivebayes)
 library(mvtnorm)
+
+conflicted::conflict_prefer("select", "dplyr", "MASS")
+conflicted::conflict_prefer("filter", "dplyr", "stats")
+conflicted::conflict_prefer("lag", "dplyr", "stats")
+conflicted::conflict_prefer("count", "dplyr", "plyr")
+conflicted::conflict_prefer("arrange", "dplyr", "plyr")
+conflicted::conflict_prefer("summarize", "dplyr", "plyr")
+conflicted::conflict_prefer("summarise", "dplyr", "plyr")
+conflicted::conflict_prefer("mutate", "dplyr", c("plyr"))
+conflicted::conflict_prefer("desc", "dplyr", "plyr")
+conflicted::conflict_prefer("rename", "dplyr", c("plyr"))
 
 
 # Import Home-Grown Modules -----------------------------------------------

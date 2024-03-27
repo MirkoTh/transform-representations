@@ -237,11 +237,12 @@ tbl_simult <- tbl_simult %>% filter(trial_id < n_consider | session == "Before T
 # create data set with movements
 tbl_simult_move <- delta_simultaneous(tbl_simult)
 
+suff2 <- l_info$representation
 # save data sets for statistical analyses
-saveRDS(tbl_simult, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps", pl_suffix, ".rds"))
-saveRDS(tbl_simult_move, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps", pl_suffix, ".rds"))
-saveRDS(tbl_cat, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps", pl_suffix, ".rds"))
-saveRDS(tbl_seq, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps", pl_suffix, ".rds"))
+saveRDS(tbl_simult, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps-", pl_suffix, "-", suff2, ".rds"))
+saveRDS(tbl_simult_move, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps-", pl_suffix, "-", suff2, ".rds"))
+saveRDS(tbl_cat, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps-", pl_suffix, "-", suff2, ".rds"))
+saveRDS(tbl_seq, file = str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps-", pl_suffix, "-", suff2, ".rds"))
 
 
 # folder for plots
