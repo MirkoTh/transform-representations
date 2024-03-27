@@ -638,7 +638,7 @@ priors <- function(l_info, tbl) {
       params_rb_tf = l_rb$params_rb_tf,
       lo = l_rb$lo, hi = l_rb$hi,
       tbl_rules = l_rb$tbl_rules
-      )
+    )
     
   } else if (l_info$cat_type == "prototype") {
     
@@ -1328,21 +1328,33 @@ distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation
   return(list(tbl = tbl, l_centers = l_centers))
 }
 
-add_distance_to_boundary <- function(tbl, l_centers, sim_center, l_info) {
+add_distance_to_boundary <- function(tbl, l_centers, sim_center, l_info, is_stimulus = FALSE) {
   #' @description compute distance to closest category boundary
   #' @param tbl tibble with x1/x and x2/y values
   #' @param l_centers list with category boundary for ellipse structure
   #' @param sim_center ellipse or square cat structure
   #' @param l_info simulation information/parameters
+  #' @param is_stimulus should the distance to the stimulus or to the response be calculated? defaults to the response (i.e., FALSE)
   #' 
   if (sim_center == "ellipses") {
-    pmap_dbl(
-      tbl[, c("x1_response", "x2_response")], 
-      ~ min(sqrt(
-        (.x - l_centers[[2]][[1]][[2]]$x_rotated) ^ 2 +
-          (.y - l_centers[[2]][[1]][[2]]$y_rotated) ^ 2
-      )
-      ))
+    if (!is_stimulus){
+      pmap_dbl(
+        tbl[, c("x1_response", "x2_response")], 
+        ~ min(sqrt(
+          (.x - l_centers[[2]][[1]][[2]]$x_rotated) ^ 2 +
+            (.y - l_centers[[2]][[1]][[2]]$y_rotated) ^ 2
+        )
+        ))
+    } else if (is_stimulus) {
+      pmap_dbl(
+        tbl[, c("x1_true", "x2_true")], 
+        ~ min(sqrt(
+          (.x - l_centers[[2]][[1]][[2]]$x_rotated) ^ 2 +
+            (.y - l_centers[[2]][[1]][[2]]$y_rotated) ^ 2
+        )
+        ))
+    }
+    
   } else if (sim_center == "square") {
     if (l_info$representation == "physical-properties"){
       boundaries_grid <- tibble(
@@ -1365,13 +1377,23 @@ add_distance_to_boundary <- function(tbl, l_centers, sim_center, l_info) {
         )
       )
     }
-    pmap_dbl(
-      tbl[, c("x1_response", "x2_response")], 
-      ~ min(sqrt(
-        (.x - boundaries_grid$x) ^ 2 +
-          (.y - boundaries_grid$y) ^ 2
-      )
-      ))
+    if (!is_stimulus){
+      pmap_dbl(
+        tbl[, c("x1_response", "x2_response")], 
+        ~ min(sqrt(
+          (.x - boundaries_grid$x) ^ 2 +
+            (.y - boundaries_grid$y) ^ 2
+        )
+        ))
+    } else if (is_stimulus) {
+      pmap_dbl(
+        tbl[, c("x1_true", "x2_true")], 
+        ~ min(sqrt(
+          (.x - boundaries_grid$x) ^ 2 +
+            (.y - boundaries_grid$y) ^ 2
+        )
+        ))
+    }
   }
 }
 

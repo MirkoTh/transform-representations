@@ -1034,6 +1034,7 @@ add_deviations <- function(
   # variable indicating whether distance in similarity condition is calculated with regards to 2 or 4 category group
   tbl_cr <- add_distance_to_nearest_center(tbl_cr, l_centers, is_simulation = FALSE, sim_center = sim_center)
   tbl_cr$d_boundary <- add_distance_to_boundary(tbl_cr, l_centers, sim_center, l_info)
+  tbl_cr$d_boundary_stim <- add_distance_to_boundary(tbl_cr, l_centers, sim_center, l_info, is_stimulus = TRUE)
   #tbl_cr <- add_distance_to_nearest_boundary(tbl_cr, l_centers, allocate_sim = sim_center)
   
   # average deviation in binned x1-x2 grid
