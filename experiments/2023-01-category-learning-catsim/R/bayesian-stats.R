@@ -1,3 +1,4 @@
+rm(list = ls())
 with_outliers <- FALSE
 pl_suffix <- ifelse(with_outliers, "-outliers", "no-outliers")
 
@@ -29,10 +30,10 @@ walk(files, source)
 
 # Load Data ---------------------------------------------------------------
 
-tbl_simult <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps", pl_suffix, ".rds"))
-tbl_simult_move <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps", pl_suffix, ".rds"))
-tbl_cat <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps", pl_suffix, ".rds"))
-tbl_seq <- read_rds(str_c("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps", pl_suffix, ".rds"))
+tbl_simult <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_simult-treps-no-outliers-psychological-representation.rds")
+tbl_simult_move <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_simult_move-treps-no-outliers-psychological-representation.rds")
+tbl_cat <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_cat-treps-no-outliers-psychological-representation.rds")
+tbl_seq <- read_rds("experiments/2023-01-category-learning-catsim/data/tbl_seq-treps-no-outliers-psychological-representation.rds")
 
 
 # Category Learning -------------------------------------------------------
@@ -77,15 +78,23 @@ l_data <- list(
   x = as.matrix(mm_cat)
 )
 
-fit_cat <- mod_cat$sample(
-  data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 1
-)
-
-file_loc <- str_c("experiments/2023-01-category-learning-catsim/data/cat-model", pl_suffix, ".rds")
-fit_cat$save_object(file = file_loc)
+file_loc <- str_c("experiments/2023-01-category-learning-catsim/data/cat-model-psychological-representation-", pl_suffix, "-posterior.rds")
 pars_interest <- c("mu_tf")
-tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_cat$summary()#variables = pars_interest)
+
+if (is_fit) {
+  fit_cat <- mod_cat$sample(
+    data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3, parallel_chains = 3
+  )
+  
+  tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
+  tbl_summary <- fit_cat$summary()#variables = pars_interest)
+  tbl_summary %>% arrange(desc(rhat))
+  tbl_summary %>% arrange(rhat)
+  
+  saveRDS(tbl_draws, file = file_loc)
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc)
+}
 
 tbl_posterior <- tbl_draws %>% 
   dplyr::select(starts_with(c("mu")), .chain) %>%
@@ -103,7 +112,7 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 save_my_pdf(
   plot_posterior(params_bf[2], tbl_posterior, tbl_thx, bfs),
-  str_c("experiments/2023-01-category-learning-catsim/data/figures/posterior-catlearn-trial-", pl_suffix),
+  str_c("experiments/2023-01-category-learning-catsim/data/figures/plot-posterior-catlearn-trial-", pl_suffix),
   4, 3.5
 )
 
@@ -143,16 +152,20 @@ l_data <- list(
   x = as.matrix(mm_sim)
 )
 
-fit_sim <- mod_sim$sample(
-  data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 1
-)
+file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model-", pl_suffix, "-posterior.RDS")
+pars_interest <- c("mu_tf", "mu[1]", "mu[2]", "sigma_subject[1]", "sigma_subject[2]")
 
-file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model", pl_suffix, ".RDS")
-fit_sim$save_object(file = file_loc)
-pars_interest <- c("mu_tf")
-tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_sim$summary(variables = pars_interest)
-
+if (is_fit) {
+  fit_sim <- mod_sim$sample(
+    data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3, parallel_chains = 3
+  )
+  tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
+  tbl_summary <- fit_sim$summary(variables = pars_interest)
+  tbl_summary %>% arrange(desc(rhat))
+  saveRDS(tbl_draws, file_loc)
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc)
+}
 
 params_bf <- c("Intercept", "Euclidean Distance")
 
@@ -220,7 +233,7 @@ mod_simult_move_ri <- cmdstan_model(simult_move_model_ri)
 
 
 mm_simult_move <- model.matrix(
-  move_response ~ comparison_pool_binary + n_categories, data = tbl_simult_move
+  move_response ~ as.factor(comparison_pool_binary) + as.factor(n_categories), data = tbl_simult_move
 ) %>% as_tibble()
 colnames(mm_simult_move) <- c("ic", "comp_pool", "ncat")
 mm_simult_move$comp_pool <- mm_simult_move$comp_pool - .5
@@ -238,49 +251,56 @@ l_data <- list(
   x = as.matrix(mm_simult_move)
 )
 
-# random slopes
-fit_simult_move_rs <- mod_simult_move_rs$sample(
-  data = l_data, iter_sampling = 3000, iter_warmup = 1000,
-  chains = 3, parallel_chains = 3,
-  save_warmup = FALSE
-)
-file_loc_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-model", pl_suffix, ".RDS")
-fit_simult_move_rs$save_object(file = file_loc_rs, compress = "gzip")
 
-# fit_simult_move_rs <- readRDS(file_loc_rs)
-file_loc_loo_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-loo", pl_suffix, ".RDS")
-loo_rs <- fit_simult_move_rs$loo(variables = "log_lik_pred")
-saveRDS(loo_rs, file = file_loc_loo_rs)
-# loo_rs <- readRDS(file_loc_loo_rs)
+file_loc_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-model-", pl_suffix, "-posterior.RDS")
+file_loc_loo_rs <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-rs-loo-", pl_suffix, ".RDS")
+file_loc_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-model-", pl_suffix, "-posterior.RDS")
+file_loc_loo_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-loo-", pl_suffix, ".RDS")
+pars_interest <- c("mu_tf", "mu", "sigma_subject")
 
-# only random intercept
-fit_simult_move_ri <- mod_simult_move_ri$sample(
-  data = l_data, iter_sampling = 3000, iter_warmup = 1000,
-  chains = 3, parallel_chains = 3
-)
-pars_interest <- c("b", "mu")
-tbl_summary_ri <- fit_simult_move_ri$summary(variables = pars_interest)
+if (is_fit) {
+  # random slopes
+  fit_simult_move_rs <- mod_simult_move_rs$sample(
+    data = l_data, iter_sampling = 10000, iter_warmup = 1000,
+    chains = 3, parallel_chains = 3,
+    save_warmup = FALSE
+  )
+  tbl_draws_rs <- fit_simult_move_rs$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws_rs, file_loc_rs)
+  tbl_summary <- fit_simult_move_rs$summary(variables = pars_interest)
+  tbl_summary %>% arrange(desc(rhat))
 
-file_loc_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-model", pl_suffix, ".RDS")
-fit_simult_move_ri$save_object(file = file_loc_ri)
+  loo_rs <- fit_simult_move_rs$loo(variables = "log_lik_pred")
+  saveRDS(loo_rs, file = file_loc_loo_rs)
+  
+  # only random intercept
+  fit_simult_move_ri <- mod_simult_move_ri$sample(
+    data = l_data, iter_sampling = 10000, iter_warmup = 1000,
+    chains = 3, parallel_chains = 3
+  )
+  tbl_draws_ri <- fit_simult_move_ri$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws_ri, file_loc_ri)
+  tbl_summary_ri <- fit_simult_move_ri$summary(variables = pars_interest)
+  loo_ri <- fit_simult_move_ri$loo(variables = "log_lik_pred")
+  saveRDS(loo_ri, file = file_loc_loo_ri)
+} else if (!is_fit) {
+  tbl_draws_ri <- readRDS(file_loc_ri)
+  loo_ri <- readRDS(file_loc_loo_ri)
+  tbl_draws_rs <- readRDS(file_loc_rs)
+  loo_rs <- readRDS(file_loc_loo_rs)
+}
 
-# fit_simult_move_ri <- readRDS(file_loc_ri)
-file_loc_loo_ri <- str_c("experiments/2023-01-category-learning-catsim/data/simult-move-ri-loo", pl_suffix, ".RDS")
-loo_ri <- fit_simult_move_ri$loo(variables = "log_lik_pred")
-saveRDS(loo_ri, file = file_loc_loo_ri)
-# loo_ri <- readRDS(file_loc_loo_ri)
+
 
 loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 
 
 
-tbl_draws <- fit_simult_move_rs$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_simult_move_rs$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Category Comparison", "Group", "Category Comparison x Group")
 
-tbl_posterior <- tbl_draws %>% 
-  dplyr::select(starts_with(c("mu")), .chain) %>%
+tbl_posterior <- tbl_draws_rs %>% 
+  dplyr::select(starts_with(c("mu_tf")), .chain) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))

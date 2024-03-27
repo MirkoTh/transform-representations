@@ -26,14 +26,15 @@ walk(files, source)
 
 # Load Data ---------------------------------------------------------------
 
-tbl_cr <- read_rds("experiments/2022-02-category-learning/data/tbl_cr.rds")
-tbl_cat_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_cat_sim.rds")
+tbl_cr <- read_rds("experiments/2022-02-category-learning/data/tbl_cr-psychological-representation.rds")
+tbl_cat_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_cat_sim-psychological-representation.rds")
 tbl_cat <- tbl_cat_sim %>% filter(n_categories == 2)
-tbl_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_sim.rds")
-tbl_moves_agg <- read_csv("experiments/2022-02-category-learning/data/movements-catacc.csv")
+tbl_sim <- read_rds("experiments/2022-02-category-learning/data/tbl_sim-psychological-representation.rds")
+tbl_moves_agg <- read_csv("experiments/2022-02-category-learning/data/movements-catacc-gt.csv")
 
 
-
+# should models be run or posteriors be loaded?
+is_fit <- TRUE
 
 
 # Category Learning -------------------------------------------------------
@@ -87,15 +88,24 @@ l_data <- list(
   x = as.matrix(mm_cat)
 )
 
-fit_cat <- mod_cat$sample(
-  data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 3, parallel_chains = 3
-)
-
-file_loc <- str_c("experiments/2022-02-category-learning/data/cat-model.RDS")
-fit_cat$save_object(file = file_loc)
+file_loc <- str_c("experiments/2022-02-category-learning/data/cat-model-posterior.RDS")
 pars_interest <- c("mu_tf")
-tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_cat$summary()#variables = pars_interest)
+
+
+if (is_fit) {
+  fit_cat <- mod_cat$sample(
+    data = l_data, iter_sampling = 10000, iter_warmup = 1000, chains = 3, parallel_chains = 3
+  )
+  tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws, file_loc)
+  
+} else if (!is_fit) {
+  tbl_draws <- read_rds(file_loc)
+}
+
+
+tbl_summary <- fit_cat$summary(variables = pars_interest)
+tbl_summary %>% arrange(desc(rhat))
 
 lbls <- c("Intercept", "Trial (Binned)", "Category", "Trial x Category")
 tbl_posterior <- tbl_draws %>% 
@@ -110,7 +120,7 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 l_pl <- map(as.list(lbls), plot_posterior, tbl_posterior, tbl_thx, bfs)
-grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 1, ncol = 4)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2)
 
 
 # Similarity Ratings ------------------------------------------------------
@@ -118,11 +128,11 @@ grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 1, ncol = 4)
 ggplot(
   tbl_sim %>% 
     group_by(distance_binned) %>% 
-    summarize(response_mn = mean(response)),
+    summarize(response_mn = mean(response), n = n()),
   aes(distance_binned, response_mn, group = 1)) +
   geom_line() +
   geom_point(size = 4, color = "white") +
-  geom_point(shape = 1) +
+  geom_point(aes(size = n)) +
   theme_bw() +
   labs(
     x = "Euclidean Distance (Binned)",
@@ -149,16 +159,22 @@ l_data <- list(
   x = as.matrix(mm_sim)
 )
 
-fit_sim <- mod_sim$sample(
-  data = l_data, iter_sampling = 1000, iter_warmup = 1000, chains = 1
-)
+file_loc_sim <- str_c("experiments/2022-02-category-learning/data/sim-model-posteriors.rds")
 
-file_loc <- str_c("experiments/2022-02-category-learning/data/sim-model.RDS")
-fit_sim$save_object(file = file_loc)
-pars_interest <- c("mu_tf")
-tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
+if (is_fit) {
+  fit_sim <- mod_sim$sample(
+    data = l_data, iter_sampling = 10000, iter_warmup = 1000, chains = 3, parallel_chains = 3
+  )
+  
+  pars_interest <- c("mu_tf")
+  tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws, file = file_loc_sim)
+  
+} else if (!is_fit) {
+  tbl_draws <- read_rds(file_loc_sim)
+}
+
 tbl_summary <- fit_sim$summary(variables = pars_interest)
-
 
 params_bf <- c("Intercept", "Euclidean Distance")
 
@@ -183,6 +199,7 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 # sqrt tf on d_closest
 tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
 # equal categories across groups
+# the following assigns "category labels" to stimuli also in the sequential comparison group (even though there aren't)
 tbl_category_lookup <- tbl_cr %>% filter(n_categories == 2) %>%
   count(stim_id, category) %>% select(-n)
 
@@ -199,8 +216,8 @@ plot_groupmeans_against_session(
       n_categories = factor(n_categories, labels = c("Similarity Judgment", "Category Learning")),
       n_categories = fct_rev(n_categories), 
       category = factor(category, labels = c("Bukil", "Venak"))
-      ), sim_center = "ellipses"
-  ) + theme(legend.position = "bottom") +
+    ), sim_center = "ellipses"
+) + theme(legend.position = "bottom") +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(add = c(.02, .02)))
 
@@ -238,25 +255,25 @@ l_data_moves <- list(
 move_model <- stan_move_e1()
 move_model <- cmdstan_model(move_model)
 
-fit_move <- move_model$sample(
-  data = l_data_moves, iter_sampling = 5000, iter_warmup = 1000,
-  chains = 3, parallel_chains = 3,
-  save_warmup = FALSE
-)
 
 file_loc_move <- str_c(
-  "experiments/2022-02-category-learning/data/cr-move-model.RDS"
+  "experiments/2022-02-category-learning/data/cr-move-model-posterior.RDS"
 )
-
-fit_or_read <- "write"
-if (fit_or_read == "write") {
-  fit_move$save_object(file = file_loc_move, compress = "gzip")
-} else if (fit_or_read == "read") {
-  fit_move <- readRDS(file_loc_move)
+pars_interest <- c("mu_tf") # 
+if (is_fit) {
+  fit_move <- move_model$sample(
+    data = l_data_moves, iter_sampling = 5000, iter_warmup = 1000,
+    chains = 3, parallel_chains = 3,
+    save_warmup = FALSE
+  )
+  tbl_draws <- fit_move$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws, file_loc_move)
+  
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc_sim)
 }
 
-pars_interest <- c("mu_tf") # 
-tbl_draws <- fit_move$draws(variables = pars_interest, format = "df")
+
 tbl_summary <- fit_move$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Ellipse Category", "Group", "Ellipse Category x Group")
@@ -311,7 +328,7 @@ l_data <- list(
 )
 
 fit_move_finalacc <- mod_move$sample(
-  data = l_data, iter_sampling = 10000, iter_warmup = 5000, chains = 3, parallel_chains = 3
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3, parallel_chains = 3
 )
 
 file_loc <- str_c("experiments/2022-02-category-learning/data/move-model-finalacc.RDS")
@@ -321,7 +338,10 @@ tbl_draws <- fit_move_finalacc$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_move_finalacc$summary(variables = pars_interest)
 
 
-params_bf <- c("Intercept", "Category", "Final Accuracy", "Category x Final Accuracy")
+params_bf <- c(
+  "Intercept", "Category", 
+  "Final Accuracy", "Category x Final Accuracy"
+)
 
 tbl_posterior <- tbl_draws %>% 
   dplyr::select(starts_with(c("mu")), .chain) %>%
@@ -329,19 +349,13 @@ tbl_posterior <- tbl_draws %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
-l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1)
+l <- sd_bfs(tbl_posterior, params_bf[c(2, 3, 4)], 1)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
-map(as.list(params_bf[c(2, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
-
-l <- sd_bfs(tbl_posterior, params_bf[c(3)], 1)
-bfs <- l[[1]]
-tbl_thx <- l[[2]]
-
-# plot the posteriors and the bfs
-map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+l_pl <- map(as.list(params_bf[c(2, 3, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 2, ncol = 2)
 
 
 
@@ -360,12 +374,12 @@ l_data <- list(
 )
 
 fit_move_deltaacc <- mod_move$sample(
-  data = l_data, iter_sampling = 10000, iter_warmup = 5000, chains = 3
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3
 )
 
 file_loc <- str_c("experiments/2022-02-category-learning/data/move-model-deltaacc.RDS")
 fit_move_deltaacc$save_object(file = file_loc)
-pars_interest <- c("mu_tf")
+pars_interest <- c("mu")
 tbl_draws <- fit_move_deltaacc$draws(variables = pars_interest, format = "df")
 tbl_summary <- fit_move_deltaacc$summary(variables = pars_interest)
 
@@ -378,20 +392,14 @@ tbl_posterior <- tbl_draws %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
-l <- sd_bfs(tbl_posterior, params_bf[c(2, 4)], 1)
+
+l <- sd_bfs(tbl_posterior, params_bf[c(2, 3, 4)], 1)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
-map(as.list(params_bf[c(2, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
-
-l <- sd_bfs(tbl_posterior, params_bf[c(3)], 1)
-bfs <- l[[1]]
-tbl_thx <- l[[2]]
-
-# plot the posteriors and the bfs
-map(as.list(params_bf[c(3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
-
+l_pl <- map(as.list(params_bf[c(2, 3, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 2, ncol = 2)
 
 
 # Boundary Aversion -------------------------------------------------------
@@ -414,27 +422,24 @@ l_data_moves_boundary <- list(
 move_model <- stan_move_e1()
 move_model <- cmdstan_model(move_model)
 
-fit_move_boundary <- move_model$sample(
-  data = l_data_moves_boundary, iter_sampling = 5000, iter_warmup = 1000, #5000, 1000
-  chains = 3, parallel_chains = 3,
-  save_warmup = FALSE
+file_loc_aversion <- str_c(
+  "experiments/2022-02-category-learning/data/cr-boundary-aversion-posterior.RDS"
 )
+pars_interest <- c("mu_tf") # 
 
-file_loc_move <- str_c(
-  "experiments/2022-02-category-learning/data/cr-move-model.RDS"
-)
-
-
-fit_or_read <- "write"
-if (fit_or_read == "write") {
-  fit_move_boundary$save_object(file = file_loc_move, compress = "gzip")
-} else if (fit_or_read == "read") {
-  fit_move_boundary <- readRDS(file_loc_move)
+if (is_fit) {
+  fit_move_boundary <- move_model$sample(
+    data = l_data_moves_boundary, iter_sampling = 5000, iter_warmup = 1000, #5000, 1000
+    chains = 3, parallel_chains = 3,
+    save_warmup = FALSE
+  )
+  tbl_draws <- fit_move_boundary$draws(variables = pars_interest, format = "df")
+  saveRDS(tbl_draws, file_loc_aversion)
+  tbl_summary <- fit_move_boundary$summary(variables = pars_interest)
+} else if (!is_fit) {
+  tbl_draws <- read_rds(file_loc_aversion)
 }
 
-pars_interest <- c("mu_tf") # 
-tbl_draws <- fit_move_boundary$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_move_boundary$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Ellipse Category", "Group", "Ellipse Category x Group")
 tbl_posterior <- tbl_draws %>% 

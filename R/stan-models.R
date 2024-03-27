@@ -485,8 +485,8 @@ model {
   }
 
   for (s in 1:n_subj) {
-      // if sigma_subject is drawn from normal prior with too large mean i.e., 20 or too large sd i.e., 5, model does not converge
-      sigma_subject[s] ~ normal(0, 1);
+      // if sigma_subject is drawn from normal prior with too high mean i.e., 20 or too large sd i.e., 5, model does not converge
+      sigma_subject[s] ~ normal(1, .05);
       tau_subject[s] ~ normal(mu_tau[group[s]], sigma_tau);
       //tau_subject[s] ~ normal(mu_tau, sigma_tau);
   }

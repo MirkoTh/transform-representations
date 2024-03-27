@@ -1,3 +1,4 @@
+rm(list = ls())
 # Import Packages ---------------------------------------------------------
 
 library(tidyverse)
@@ -25,11 +26,13 @@ walk(files, source)
 
 # Load Data ---------------------------------------------------------------
 
-tbl_simult <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps.rds")
-tbl_simult_move <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_simult_move-treps.rds")
-tbl_cat <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps.rds")
-tbl_seq <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps.rds")
+tbl_simult <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_simult-treps-psychological-representation.rds")
+tbl_simult_move <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_simult_move-treps-psychological-representation.rds")
+tbl_cat <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_cat-treps-psychological-representation.rds")
+tbl_seq <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-psychological-representation.rds")
 
+
+is_fit <- TRUE
 
 # Category Learning -------------------------------------------------------
 
@@ -73,15 +76,26 @@ l_data <- list(
   x = as.matrix(mm_cat)
 )
 
-fit_cat <- mod_cat$sample(
-  data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 1
-)
 
-file_loc <- str_c("experiments/2022-09-category-learning-similarity/data/cat-model.RDS")
-fit_cat$save_object(file = file_loc)
+file_loc <- str_c("experiments/2022-09-category-learning-similarity/data/cat-model-posterior.RDS")
 pars_interest <- c("mu_tf")
-tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_cat$summary()#variables = pars_interest)
+
+
+if (is_fit) {
+  fit_cat <- mod_cat$sample(
+    data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3, parallel_chains = 3
+  )
+  
+  tbl_draws <- fit_cat$draws(variables = pars_interest, format = "df")
+  tbl_summary <- fit_cat$summary()#variables = pars_interest)
+  tbl_summary %>% arrange(desc(rhat))
+  tbl_summary %>% arrange(rhat)
+  
+  saveRDS(tbl_draws, file_loc)
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc)
+}
+
 
 tbl_posterior <- tbl_draws %>% 
   dplyr::select(starts_with(c("mu")), .chain) %>%
@@ -103,11 +117,11 @@ map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 ggplot(
   tbl_seq %>% 
     group_by(distance_binned) %>% 
-    summarize(response_mn = mean(response)),
+    summarize(response_mn = mean(response), n = n()),
   aes(distance_binned, response_mn, group = 1)) +
   geom_line() +
   geom_point(size = 4, color = "white") +
-  geom_point(shape = 1) +
+  geom_point(shape = 1, aes(size = n)) +
   theme_bw() +
   labs(
     x = "Euclidean Distance (Binned)",
@@ -134,16 +148,19 @@ l_data <- list(
   x = as.matrix(mm_sim)
 )
 
-fit_sim <- mod_sim$sample(
-  data = l_data, iter_sampling = 4000, iter_warmup = 2000, chains = 1
-)
-
-file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model.RDS")
-fit_sim$save_object(file = file_loc)
+file_loc <- str_c("experiments/2022-07-category-learning-II/data/sim-model-posterior.RDS")
 pars_interest <- c("mu_tf")
-tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_sim$summary(variables = pars_interest)
 
+if (is_fit) {
+  fit_sim <- mod_sim$sample(
+    data = l_data, iter_sampling = 5000, iter_warmup = 2000, chains = 3, parallel_chains = 3
+  )
+  tbl_draws <- fit_sim$draws(variables = pars_interest, format = "df")
+  tbl_summary <- fit_sim$summary(variables = pars_interest)
+  saveRDS(tbl_draws, file_loc)
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc)
+}
 
 params_bf <- c("Intercept", "Euclidean Distance")
 
@@ -201,7 +218,7 @@ mod_simult_move_ri <- cmdstan_model(simult_move_model_ri)
 
 
 mm_simult_move <- model.matrix(
-  move_response ~ comparison_pool_binary + n_categories, data = tbl_simult_move
+  move_response ~ as.factor(comparison_pool_binary) + as.factor(n_categories), data = tbl_simult_move
 ) %>% as_tibble()
 colnames(mm_simult_move) <- c("ic", "comp_pool", "ncat")
 mm_simult_move$comp_pool <- mm_simult_move$comp_pool - .5
@@ -219,45 +236,49 @@ l_data <- list(
   x = as.matrix(mm_simult_move)
 )
 
-# random slopes
-fit_simult_move_rs <- mod_simult_move_rs$sample(
-  data = l_data, iter_sampling = 3000, iter_warmup = 1000,
-  chains = 3, parallel_chains = 3,
-  save_warmup = FALSE
-)
-file_loc_rs <- str_c("experiments/2022-09-category-learning-similarity/data/simult-move-rs-model.RDS")
-fit_simult_move_rs$save_object(file = file_loc_rs, compress = "gzip")
-
-# fit_simult_move_rs <- readRDS(file_loc_rs)
+file_loc_rs <- str_c("experiments/2022-09-category-learning-similarity/data/simult-move-rs-model-posterior.RDS")
 file_loc_loo_rs <- str_c("experiments/2022-09-category-learning-similarity/data/simult-move-rs-loo.RDS")
-loo_rs <- fit_simult_move_rs$loo(variables = "log_lik_pred")
-saveRDS(loo_rs, file = file_loc_loo_rs)
-# loo_rs <- readRDS(file_loc_loo_rs)
-
-# only random intercept
-fit_simult_move_ri <- mod_simult_move_ri$sample(
-  data = l_data, iter_sampling = 3000, iter_warmup = 1000,
-  chains = 3, parallel_chains = 3
-)
-pars_interest <- c("b", "mu")
-tbl_summary_ri <- fit_simult_move_ri$summary(variables = pars_interest)
-
-file_loc_ri <- str_c("experiments/2022-09-category-learning-similarity/data/simult-move-ri-model.RDS")
-fit_simult_move_ri$save_object(file = file_loc_ri)
-
-# fit_simult_move_ri <- readRDS(file_loc_ri)
+file_loc_ri <- str_c("experiments/2022-09-category-learning-similarity/data/simult-move-ri-model-posterior.RDS")
 file_loc_loo_ri <- str_c("experiments/2022-09-category-learning-similarity/data/simult-move-ri-loo.RDS")
-loo_ri <- fit_simult_move_ri$loo(variables = "log_lik_pred")
-saveRDS(loo_ri, file = file_loc_loo_ri)
-# loo_ri <- readRDS(file_loc_loo_ri)
+pars_interest <- c("b", "mu")
+
+if (is_fit) {
+  # random slopes
+  fit_simult_move_rs <- mod_simult_move_rs$sample(
+    data = l_data, iter_sampling = 5000, iter_warmup = 1000,
+    chains = 3, parallel_chains = 3,
+    save_warmup = FALSE
+  )
+  tbl_draws_rs <- fit_simult_move_rs$draws(variables = pars_interest, format = "df")
+  tbl_summary_rs <- fit_simult_move_rs$summary(variables = pars_interest)
+  saveRDS(tbl_draws_rs, file_loc_rs)
+  
+  # fit_simult_move_rs <- readRDS(file_loc_rs)
+  loo_rs <- fit_simult_move_rs$loo(variables = "log_lik_pred")
+  saveRDS(loo_rs, file = file_loc_loo_rs)
+  
+  # only random intercept
+  fit_simult_move_ri <- mod_simult_move_ri$sample(
+    data = l_data, iter_sampling = 5000, iter_warmup = 1000,
+    chains = 3, parallel_chains = 3
+  )
+  tbl_summary_ri <- fit_simult_move_ri$summary(variables = pars_interest)
+  tbl_draws_ri <- fit_simult_move_ri$draws(variables = pars_interest, format = "df")
+  
+  saveRDS(tbl_draws_ri, file_loc_ri)
+  loo_ri <- fit_simult_move_ri$loo(variables = "log_lik_pred")
+  saveRDS(loo_ri, file = file_loc_loo_ri)
+} else if (!is_fit) {
+  loo_rs <- readRDS(file_loc_loo_rs)
+  loo_ri <- readRDS(file_loc_loo_ri)
+  tbl_draws_rs <- readRDS(file_loc_rs)
+  tbl_draws_ri <- readRDS(file_loc_ri)
+}
+
 
 loo::loo_model_weights(list(loo_ri, loo_rs), method = "stacking")
 
-
-
-tbl_draws <- fit_simult_move_rs$draws(variables = pars_interest, format = "df")
-tbl_summary <- fit_simult_move_rs$summary(variables = pars_interest)
-
+tbl_draws <- tbl_draws_rs
 params_bf <- c("Intercept", "Category Comparison", "Group", "Category Comparison x Group")
 
 tbl_posterior <- tbl_draws %>% 
@@ -279,5 +300,5 @@ pl_arrangement2 <- grid.arrange(
   pl_preds_ds + ggtitle("Predictions"),
   pl_groupmeans + ggtitle("Mean Differences"),
   pl_move_mass + ggtitle("Distribution of Differences"), nrow = 1, ncol = 3
-  )
+)
 save_my_tiff(pl_arrangement2, "experiments/2022-09-category-learning-similarity/data/figures/arrangement-psychonomics-2022.tiff", 16.5, 3.35)
