@@ -52,6 +52,73 @@ model {
   return(stan_logistic)
 }
 
+stan_cat_difficulty <- function() {
+  
+  stan_logistic <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  array[n_data] int n_trials;
+  array[n_data] int n_correct;
+  array[n_data] int subj;
+  matrix[n_data, 5] x; // ic, trial, cat12, cat13, cat14
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = 1.0/2;
+}
+
+parameters {
+  matrix[n_subj, 5] b;
+  vector[5] mu;
+  vector <lower=0>[5] sigma_subject;
+}
+
+transformed parameters {
+  array[5] real mu_tf;
+  mu_tf[1] = mu[1];
+  mu_tf[2] = scale_cont * mu[2];
+  mu_tf[3] = scale_cat * mu[3];
+  mu_tf[4] = scale_cat * mu[4];
+  mu_tf[5] = scale_cat * mu[5];
+  
+  array[n_data] real <lower=0,upper=1> theta;
+  
+  for (n in 1:n_data) {
+    theta[n] = inv_logit(
+      b[subj[n], 1] * x[n, 1] + b[subj[n], 2] * x[n, 2] + 
+      b[subj[n], 3] * x[n, 3] + b[subj[n], 4] * x[n, 4] + b[subj[n], 5] * x[n, 5]
+    );
+  }
+}
+
+model {
+  for (n in 1:n_data) {
+    n_correct[n] ~ binomial(n_trials[n], theta[n]);
+  }
+
+  for (s in 1:n_subj) {
+    b[s, 1] ~ normal(mu_tf[1], sigma_subject[1]);
+    b[s, 2] ~ normal(mu_tf[2], sigma_subject[2]);
+    b[s, 3] ~ normal(mu_tf[3], sigma_subject[3]);
+    b[s, 4] ~ normal(mu_tf[4], sigma_subject[4]);
+    b[s, 5] ~ normal(mu_tf[5], sigma_subject[5]);
+  }
+
+  sigma_subject[1] ~ uniform(0.001, 10);
+  sigma_subject[2] ~ uniform(0.001, 10);
+  mu[1] ~ normal(0, 1);
+  mu[2] ~ student_t(1, 0, 1);
+  mu[3] ~ student_t(1, 0, 1);
+  mu[4] ~ student_t(1, 0, 1);
+  mu[5] ~ student_t(1, 0, 1);
+}
+
+")
+  return(stan_logistic)
+}
+
 
 stan_cat_by_category <- function() {
   
@@ -752,6 +819,78 @@ model {
   muGroup ~ normal(0, 1);
   muTime ~ normal(0, 1);
   muIA ~ normal(0, 1);
+  
+  for (n in 1:n_data) {
+    target += multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std[n], L[subj[n]]));
+  }
+}
+
+generated quantities {
+  array[n_subj] corr_matrix[2] Sigma;
+  array[n_data] real log_lik_pred;
+
+  for (s in 1:n_subj) {
+    Sigma[s] = multiply_lower_tri_self_transpose(L[s]);
+  }
+
+  for (n in 1:n_data) {
+    log_lik_pred[n] = multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std[n], L[subj[n]]));
+  }
+}
+
+")
+  return(stan_mv)
+}
+
+stan_cr_2d_nested_db <- function() {
+  
+  stan_mv <- write_stan_file("
+data {
+  int n_data;
+  int n_subj;
+  matrix[n_data, 2] y;
+  array[n_data] int subj;
+  matrix[n_data, 3] x; // group, timepoint, d_boundary_stim_z
+}
+
+transformed data {
+  real scale_cont = sqrt(2) / 4;
+  real scale_cat = .5;
+  vector[2] v_mn = [0, 0]';
+}
+
+parameters {
+  array[n_subj] cholesky_factor_corr[2] L;
+  vector<lower=0>[2] mu0;
+  array[n_subj] vector<lower=0>[2] b0;
+  vector<lower=0>[2] sdsubj;
+  vector[2] muGroup; //<lower=0>
+  vector[2] muTime; // <lower=0>
+  vector[2] muIA; // <lower=0>
+  vector[2] muBoundary;
+}
+
+transformed parameters {
+  array[n_data] vector<lower=0>[2] L_std;
+
+  for (n in 1:n_data) {
+    L_std[n] = b0[subj[n]] + muGroup * x[n, 1] + muTime * x[n, 2] + muIA * x[n, 1] * x[n, 2] + muBoundary * x[n, 3];
+  }
+}
+
+model {
+
+  for (s in 1:n_subj) {
+    L[s] ~ lkj_corr_cholesky(1);
+    b0[s] ~ normal(mu0, sdsubj);
+  }
+  
+  sdsubj ~ gamma(.05, .1);
+  mu0 ~ normal(10, 3);
+  muGroup ~ normal(0, 1);
+  muTime ~ normal(0, 1);
+  muIA ~ normal(0, 1);
+  muBoundary ~ normal(0, 1);
   
   for (n in 1:n_data) {
     target += multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std[n], L[subj[n]]));
