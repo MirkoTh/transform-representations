@@ -1339,8 +1339,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(
-      x = "Head Spikiness",
-      y = "Belly Size",
+      x = "Spikiness of Head",
+      y = "Fill of Belly",
       caption = "Session 1"
     )
   
@@ -1353,8 +1353,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(
-      x = "Head Spikiness",
-      y = "Belly Size",
+      x = "Spikiness of Head",
+      y = "Fill of Belly",
       caption = "Session 2"
     )
   pl_precision <- arrangeGrob(
@@ -1381,7 +1381,7 @@ plot_2d_distributions <- function(tbl_combined, save) {
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    labs(x = "", y = "Probability Density", title = "Head Spikiness") + 
+    labs(x = "", y = "Probability Density", title = "Spikiness of Head") + 
     theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) + 
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
   
@@ -1393,7 +1393,7 @@ plot_2d_distributions <- function(tbl_combined, save) {
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    labs(x = "", y = "Probability Density", title = "Belly Size") + 
+    labs(x = "", y = "Probability Density", title = "Fill of Belly") + 
     theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) + 
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
   
@@ -1408,11 +1408,6 @@ plot_2d_distributions <- function(tbl_combined, save) {
     save_my_pdf_and_tiff(
       pl_marginals,
       "figures/marginal-densities",
-      6, 7.5
-    )
-    save_my_pdf_and_tiff(
-      pl_marginals,
-      "figures/figures-ms/marginal-densities",
       6, 7.5
     )
     

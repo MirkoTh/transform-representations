@@ -7,6 +7,7 @@ library(gridExtra)
 library(docstring)
 library(rutils)
 library(cmdstanr)
+library(ggExtra)
 
 
 # Import Home-Grown Modules -----------------------------------------------
@@ -52,7 +53,7 @@ grid.draw(l_precision[[2]])
 # EDA on Marginal given Distance from Boundary ----------------------------
 
 tbl_combined_agg <- tbl_combined %>%
-  mutate(d_boundary_stim_cut = cut(d_boundary_stim, c(0, .5, 2, 5))) %>%
+  mutate(d_boundary_stim_cut = cut(d_boundary_stim, c(0, .5, 2, 5), labels = FALSE)) %>%
   group_by(experiment, participant_id, n_categories, d_boundary_stim_cut, session) %>%
   summarize(
     mn_x1 = mean(x1_deviation),
@@ -80,18 +81,18 @@ tbl_plt_agg <- summary_se_within(
   measurevar = "sd_val", 
   betweenvars = c("experiment", "n_categories"), 
   withinvars = c("d_boundary_stim_cut")
-  ) %>% mutate(var = "Head Spikiness") %>%
+  ) %>% mutate(var = "Spikiness of Head") %>%
   rbind(
     summary_se_within(
       tbl_plt %>% filter(sd == "sd_x2_change"),
       measurevar = "sd_val", 
       betweenvars = c("experiment", "n_categories"), 
       withinvars = c("d_boundary_stim_cut")
-    ) %>% mutate(var = "Belly Fill")
+    ) %>% mutate(var = "Fill of Belly")
   )
 
 dg <- position_dodge(width = .2)
-ggplot(tbl_plt_agg, aes(d_boundary_stim_cut, sd_val, group = n_categories)) +
+pl_d_bd <- ggplot(tbl_plt_agg, aes(d_boundary_stim_cut, sd_val, group = n_categories)) +
   geom_hline(yintercept = 0, color = "grey", linetype = "dotdash", linewidth = 1) +
   geom_errorbar(aes(ymin = sd_val - ci, ymax = sd_val + ci, color = n_categories), position = dg, width = .2) +
   geom_line(aes(color = n_categories), position = dg) +
@@ -101,7 +102,7 @@ ggplot(tbl_plt_agg, aes(d_boundary_stim_cut, sd_val, group = n_categories)) +
   theme_bw() +
   scale_x_discrete(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
-  labs(x = "Distance To Closest Boundary", y = "SD (After) - SD (Before)") + 
+  labs(x = "Dist. To Closest Boundary (Binned)", y = "SD (After) - SD (Before)") + 
   theme(
     strip.background = element_rect(fill = "white"),
     text = element_text(size = 22),
@@ -110,7 +111,17 @@ ggplot(tbl_plt_agg, aes(d_boundary_stim_cut, sd_val, group = n_categories)) +
   ) + 
   scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
 
+save_my_pdf_and_tiff(
+  arrangeGrob(l_precision[[2]], pl_d_bd, nrow = 1),
+  "figures/figures-ms/precision-reconstruction",
+  13.5, 6
+)
 
+save_my_pdf_and_tiff(
+  arrangeGrob(l_precision[[2]], pl_d_bd, nrow = 1),
+  "figures/precision-reconstruction",
+  13.5, 6
+)
 
 
 # Combined Model ----------------------------------------------------------
@@ -157,7 +168,7 @@ init_fun <- function() list(
   sdsubj = c(.1, .1)
 )
 fit_2d <- mod_2d$sample(
-  data = l_data, iter_sampling = 50, iter_warmup = 20, chains = 3, parallel_chains = 3, init = init_fun
+  data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3, parallel_chains = 3, init = init_fun
 )
 
 # file_loc <- str_c("data/cr-e1-e2-combined-2d-regression-on-prec.RDS")
