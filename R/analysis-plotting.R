@@ -316,7 +316,7 @@ plot_categorization_accuracy_against_blocks <-
            #caption = "Note. x-axes differ between panels"
       ) + theme_bw()
     
-
+    
     
     tbl_cat_agg$participant_id <- factor(tbl_cat_agg$participant_id, labels = 1:length(unique(tbl_cat_agg$participant_id)))
     pl_indiv <- ggplot(tbl_cat_agg,
@@ -860,19 +860,19 @@ plot_similarity_against_distance <-
     tbl_tmp$n_categories <- factor(tbl_tmp$n_categories)
     levels(tbl_tmp$n_categories) <- "Similarity"
     pl_agg_lines <- ggplot()  + geom_errorbar(
-        data = tbl_tmp,
-        aes(
-          distance_binned,
-          ymin = response - ci,
-          ymax = response + ci,
-          width = .2
-        ), color = "grey30"
-      ) +
+      data = tbl_tmp,
+      aes(
+        distance_binned,
+        ymin = response - ci,
+        ymax = response + ci,
+        width = .2
+      ), color = "grey30"
+    ) +
       geom_line(
         data = tbl_tmp,
         aes(distance_binned, response, color = n_categories)
       )+ geom_point(data = tbl_tmp,
-                     aes(distance_binned, response), size = 2, color = "white") +
+                    aes(distance_binned, response), size = 2, color = "white") +
       geom_point(data = tbl_tmp,
                  aes(distance_binned, response, color = n_categories)) +
       theme_bw() +
@@ -1030,7 +1030,8 @@ plot_groupmeans_against_session <- function(tbl_cr, sim_center = "square", yttl 
 
 
 plot_mean_deltas <- function(tbl_cr) {
-  tbl_cr %>% group_by(participant_id, session, n_categories) %>%
+  tbl_agg <- tbl_cr %>% 
+    group_by(participant_id, session, n_categories) %>%
     summarize(
       d_closest_mn_sqrt = mean(d_closest_sqrt),
       d_closest_mn_abs = mean(d_closest)
@@ -1046,7 +1047,8 @@ plot_mean_deltas <- function(tbl_cr) {
     mutate(n_categories = factor(n_categories, labels = c("Similarity Judgment", "4 Categories"))) %>%
     dplyr::filter(!is.na(d_closest_before_abs)) %>%
     pivot_longer(c(d_move_sqrt, d_move_abs)) %>%
-    mutate(name = factor(name, labels = c("Not Transformed", "Square Root"))) %>%
+    mutate(name = factor(name, labels = c("Not Transformed", "Square Root")))
+  pl <- tbl_agg %>% 
     ggplot(aes(value)) +
     geom_histogram(bins = 60,
                    fill = "#66CCFF",
@@ -1060,6 +1062,7 @@ plot_mean_deltas <- function(tbl_cr) {
     facet_wrap(name ~ n_categories, scales = "free_x") +
     theme_bw() +
     labs(x = "Movement Towards Center", y = "Nr. Participants")
+  return(list(tbl_df = tbl_agg, pl = pl))
 }
 
 plot_mean_deltas_ellipse <- function(tbl_cr, nbins = 60) {
@@ -1325,17 +1328,34 @@ ribbon_plot <- function(tbl_simult_move) {
 }
 
 
-plot_2d_distributions <- function(tbl_combined, save) {
+plot_2d_distributions <- function(tbl_combined, represent, save) {
   d1 <- tbl_combined %>% filter(session == "Before")
   d2 <- tbl_combined %>% filter(session == "After")
+  
+  if (represent == "psychological-representation") {
+    lim_2d <- c(-10, 10)
+    lim_1d <- c(-6, 6)
+    ymax_1d <- .55
+    y_label_ic <- .2
+    y_label_sl <- .1
+    x_loc <- 3
+  } else if (represent == "object-properties") {
+    lim_2d <- c(-60, 60)
+    lim_1d <- c(-40, 40)
+    ymax_1d <- .0475
+    y_label_ic <- .02
+    y_label_sl <- .0075
+    x_loc <- 23
+  }
+  
   
   pl1 <- ggplot(data = d1, aes(x1_deviation, x2_deviation)) +
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
     # somehow ggMarginal does not like coord_cartesian...
     # the following excludes some of the responses, though
-    scale_x_continuous(limits = c(-10, 10), expand = c(0, 0)) +
-    scale_y_continuous(limits = c(-10, 10), expand = c(0, 0)) +
+    scale_x_continuous(limits = lim_2d, expand = c(0, 0)) +
+    scale_y_continuous(limits = lim_2d, expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(
@@ -1348,8 +1368,8 @@ plot_2d_distributions <- function(tbl_combined, save) {
     geom_point(shape = 1, size = 0, color = "white", fill = "white") +
     #geom_density2d(data = d1, color = "#440154", aes(x1_deviation, x2_deviation)) +
     geom_bin2d(bins = 40) + scale_fill_viridis_c(name = "Nr. Responses", limits = c(0, 160)) +
-    scale_x_continuous(limits = c(-10, 10), expand = c(0, 0)) +
-    scale_y_continuous(limits = c(-10, 10), expand = c(0, 0)) +
+    scale_x_continuous(limits = lim_2d, expand = c(0, 0)) +
+    scale_y_continuous(limits = lim_2d, expand = c(0, 0)) +
     theme_bw() +
     theme(legend.position = "bottom") +
     labs(
@@ -1373,41 +1393,57 @@ plot_2d_distributions <- function(tbl_combined, save) {
   
   knitr::kable(tbl_sds_agg)
   
+  
+  width <- (lim_1d[2] - lim_1d[1]) / 4
+  jumpsize <- width * .9
+  startval <- -2*jumpsize
+  bks <- seq(startval, -startval, by = jumpsize)
+  
   pl_marginal_x1 <- ggplot(tbl_combined, aes(x1_deviation, group = session)) +
     geom_density(aes(color = session), size = .75) +
-    geom_label(data = tbl_sds_agg, aes(3, .2 + (3 - as.numeric(session)) * .1, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session), size = 5) +
+    geom_label(data = tbl_sds_agg, aes(x_loc, y_label_ic + (3 - as.numeric(session)) * y_label_sl, label = str_c("sd = ", round(sd_x1, 1)), group = session, color = session), size = 5) +
     facet_wrap(~ n_categories) +
-    coord_cartesian(xlim = c(-6, 6), ylim = c(0, .55)) + 
+    coord_cartesian(xlim = lim_1d, ylim = c(0, ymax_1d)) + 
     theme_bw() +
-    scale_x_continuous(expand = c(0, 0)) +
+    scale_x_continuous(expand = c(0, 0), breaks = bks) +
     scale_y_continuous(expand = c(0, 0)) +
-    labs(x = "", y = "Probability Density", title = "Spikiness of Head") + 
-    theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) + 
+    labs(x = "", y = "Probability Density", title = "Precision: Spikiness of Head") + 
+    theme(
+      strip.background = element_rect(fill = "white"), 
+      text = element_text(size = 22),
+      legend.position = "none",
+      axis.title.x = element_blank()
+    ) + 
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
+  
   
   pl_marginal_x2 <- ggplot(tbl_combined, aes(x2_deviation, group = session)) +
     geom_density(aes(color = session), size = .75) +
-    geom_label(data = tbl_sds_agg, aes(3, .2 + (3 - as.numeric(session)) * .1, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session), size = 5) +
+    geom_label(data = tbl_sds_agg, aes(x_loc, y_label_ic + (3 - as.numeric(session)) * y_label_sl, label = str_c("sd = ", round(sd_x2, 1)), group = session, color = session), size = 5) +
     facet_wrap(~ n_categories) +
-    coord_cartesian(xlim = c(-6, 6), ylim = c(0, .55)) +
+    coord_cartesian(xlim = lim_1d, ylim = c(0, ymax_1d)) +
     theme_bw() +
-    scale_x_continuous(expand = c(0, 0)) +
+    scale_x_continuous(expand = c(0, 0), breaks = bks) +
     scale_y_continuous(expand = c(0, 0)) +
-    labs(x = "", y = "Probability Density", title = "Fill of Belly") + 
-    theme(strip.background = element_rect(fill = "white"), text = element_text(size = 16)) + 
+    labs(x = "Reproduction Error", y = "Probability Density", title = "Precision: Fill of Belly") + 
+    theme(
+      strip.background = element_rect(fill = "white"), 
+      text = element_text(size = 22),
+      legend.position = "bottom"
+    ) + 
     scale_color_manual(values = c("skyblue2", "tomato4"), name = "Session")
   
-  pl_marginals <- arrangeGrob(pl_marginal_x1, pl_marginal_x2, nrow = 2)
+  pl_marginals <- arrangeGrob(pl_marginal_x1, pl_marginal_x2, nrow = 2, heights = c(1, 1.3))
   
   if (save) {
     save_my_pdf_and_tiff(
       pl_precision,
-      "figures/precision-e1-e2-combined",
+      str_c("figures/precision-e1-e2-combined-", represent),
       9, 5
     )
     save_my_pdf_and_tiff(
       pl_marginals,
-      "figures/marginal-densities",
+      str_c("figures/marginal-densities-", represent),
       6, 7.5
     )
     

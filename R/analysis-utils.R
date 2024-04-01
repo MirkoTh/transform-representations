@@ -782,7 +782,7 @@ category_centers_squares <- function(n_cats, tbl_df, l_info = NULL) {
     
     tbl_relevant <- tbl_df %>% filter(session %in% c(1, "Before Training"))
     
-    if (is.null(l_info)) {
+    if (l_info$representation == "object-properties") {
       tbl_agg <- tbl_relevant %>% ungroup() %>%
       summarize(
         min_x = min(x1_true), max_x = max(x1_true),

@@ -98,7 +98,7 @@ write_csv(tbl_x_obj, file = "data/values-objective-stimuli-presented.csv")
 l_info <- list(
   use_exptl_stimuli = TRUE, 
   informed_by_data = FALSE, 
-  representation = c("psychological-representation", "physical-properties")[1]
+  representation = c("psychological-representation", "object-properties")[2]
 )
 
 # tf to psych space?

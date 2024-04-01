@@ -1356,7 +1356,7 @@ add_distance_to_boundary <- function(tbl, l_centers, sim_center, l_info, is_stim
     }
     
   } else if (sim_center == "square") {
-    if (l_info$representation == "physical-properties"){
+    if (l_info$representation == "object-properties"){
       boundaries_grid <- tibble(
         x = rep(50, 1000),
         y = seq(0, 100, length.out = 1000)

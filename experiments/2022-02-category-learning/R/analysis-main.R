@@ -68,7 +68,7 @@ l_tbl_data[[2]] <- read_csv("experiments/2022-02-category-learning/data/secondar
 l_info <- list(
   use_exptl_stimuli = TRUE, 
   informed_by_data = TRUE, 
-  representation = c("psychological-representation", "physical-properties")[1]
+  representation = c("psychological-representation", "object-properties")[2]
 )
 
 # transform everything to psychological space?
