@@ -34,7 +34,7 @@ tbl_moves_agg <- read_csv("experiments/2022-02-category-learning/data/movements-
 
 
 # should models be run or posteriors be loaded?
-is_fit <- TRUE
+is_fit <- FALSE
 
 
 # Category Learning -------------------------------------------------------
@@ -68,11 +68,11 @@ ggplot(
 cat_model <- stan_cat_by_category()
 mod_cat <- cmdstan_model(cat_model)
 
+tbl_cat_binned$trial_id_binned_z <- scale(as.numeric(as.character(tbl_cat_binned$trial_id_binned)))[, 1]
 mm_cat <- model.matrix(
-  n_correct ~ as.numeric(trial_id_binned) + category, data = tbl_cat_binned
+  n_correct ~ trial_id_binned_z + as.factor(category), data = tbl_cat_binned
 ) %>% as_tibble()
 colnames(mm_cat) <- c("ic", "trial_id_binned", "category")
-mm_cat$trial_id_binned <- scale(mm_cat$trial_id_binned)[, 1]
 mm_cat$category <- mm_cat$category - .5
 mm_cat$ia <- mm_cat$trial_id_binned * mm_cat$category
 

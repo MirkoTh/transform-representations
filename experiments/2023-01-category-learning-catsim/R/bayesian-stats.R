@@ -170,9 +170,9 @@ if (is_fit) {
 params_bf <- c("Intercept", "Euclidean Distance")
 
 tbl_posterior <- tbl_draws %>% 
-  dplyr::select(starts_with(c("mu")), .chain) %>%
+  dplyr::select(starts_with(c("mu_tf")), .chain) %>%
   rename(chain = .chain) %>%
-  pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
+  pivot_longer(starts_with(c("mu_tf")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
 
 l <- sd_bfs(tbl_posterior, params_bf, sqrt(2)/4)

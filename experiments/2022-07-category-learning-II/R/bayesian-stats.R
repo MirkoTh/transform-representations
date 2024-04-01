@@ -48,6 +48,10 @@ tbl_cr$d_closest_sqrt <- sqrt(tbl_cr$d_closest)
 tbl_cr_moves <- after_vs_before(tbl_cr)
 tbl_cr_moves$participant_id_num <- as.numeric(fct_inorder(factor(tbl_cr_moves$participant_id)))
 
+tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, participant_id_num, n_categories) %>%
+  count() %>% ungroup() %>% select(-n)
+
+
 is_fit <- FALSE
 
 
@@ -328,8 +332,9 @@ anova(m_rs)
 # what should be analyzed is whether the proportion of categorical respones
 # differs between groups
 
-
-plot_mean_deltas(tbl_cr)
+l_out <- plot_mean_deltas(tbl_cr)
+l_out[[2]]
+tbl_cr_move_agg <- l_out[[1]]
 l_outliers <- extract_movement_outliers(tbl_cr_moves, 2, "Not Transformed")
 tbl_outliers <- l_outliers$tbl_outliers
 tbl_labels <- l_outliers$tbl_labels
@@ -352,10 +357,6 @@ assertthat::assert_that(
       fct_inorder(factor(tbl_cr_moves$participant_id)) %>% as.numeric()
   ) == nrow(tbl_cr_d1)
 )
-
-
-tbl_participants_lookup <- tbl_cr_moves %>% group_by(participant_id, participant_id_num, n_categories) %>%
-  count() %>% ungroup() %>% select(-n)
 
 
 # story line
@@ -657,19 +658,14 @@ l_data_exgaussian <- list(
 move_model_exgaussian <- stan_move_exgaussian()
 move_model_exgaussian <- cmdstan_model(move_model_exgaussian)
 
-init_fun <- function() list(
-  mu_tau = rnorm(2, .2, .01),
-  sigma_tau = rnorm(1, .4, .05),
-  sigma_subject = rnorm(l_data_exgaussian$n_subj, 0, .25),
-  tau_subject = rnorm(l_data_exgaussian$n_subj, .1, .02)
-)
+
 file_loc_exgaussian <- str_c(
   "experiments/2022-07-category-learning-II/data/exgaussian-posterior.RDS"
 )
 file_loc_loo_exgaussian <- str_c(
   "experiments/2022-07-category-learning-II/data/exgaussian-loo.RDS"
 )
-pars_interest <- c("mu_tau", "sigma_tau", "sigma_subject")
+pars_interest <- c("mu_tau", "sigma_tau", "sigma_subject", "tau_subject")
 
 if (is_fit) {
   fit_move_exgaussian <- move_model_exgaussian$sample(
@@ -686,15 +682,20 @@ if (is_fit) {
   
   loo_exgaussian <- fit_move_exgaussian$loo(variables = "log_lik_pred")
   saveRDS(loo_exgaussian, file_loc_loo_exgaussian)
+} else if (!is_fit) {
+  tbl_draws <- readRDS(file_loc_exgaussian)
 }
 
 
-
-params_bf <- c("mu_tau_diff", "mu_tau[1]", "mu_tau[2]", "sigma_tau") #, "sigma_subject")
+params_bf <- c("mu_tau_diff", "mu_tau[1]", "mu_tau[2]") #, "sigma_subject")
 
 tbl_posterior <- tbl_draws %>% 
   # select(c("sigma", "tau", ".chain")) %>%
-  mutate(mu_tau_diff = `mu_tau[1]` - `mu_tau[2]`) %>%
+  mutate(
+    `mu_tau[1]` = 1/`mu_tau[1]`,
+    `mu_tau[2]` = 1/`mu_tau[2]`,
+    mu_tau_diff = `mu_tau[1]` - `mu_tau[2]`
+  ) %>%
   dplyr::select(starts_with(params_bf), .chain) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(params_bf), names_to = "parameter", values_to = "value") %>%
@@ -709,7 +710,7 @@ bfs <- kdes %>% map_dbl(~(dnorm(0, 0, 1))/dkde1d(0, .))
 tbl_thx <- par_lims
 
 # plot the posteriors and the bfs
-map(as.list(params_bf[c(1, 2, 3, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
+map(as.list(params_bf[c(1, 2, 3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
 
@@ -721,8 +722,58 @@ loo::loo_model_weights(
   method = "stacking"
 )
 
+tbl_posterior_tau <- tbl_draws %>% 
+  dplyr::select(starts_with("tau_subject"), .chain) %>%
+  rename(chain = .chain) %>%
+  pivot_longer(starts_with("tau_subject"), names_to = "parameter", values_to = "value") %>%
+  mutate(
+    parameter = factor(parameter),
+    participant_id_num = as.numeric(str_extract(parameter, "[0-9]+"))
+  ) %>% left_join(
+    tbl_participants_lookup %>% select(-participant_id), by = "participant_id_num"
+  ) %>% group_by(participant_id_num, n_categories) %>%
+  summarize(mn_shift = median(value)) %>% ungroup()
 
+tbl_empirical_posterior <- tbl_cr_move_agg %>% 
+  filter(name == "Not Transformed") %>%
+  left_join(tbl_participants_lookup %>% select(-n_categories), by = "participant_id") %>%
+  left_join(tbl_posterior_tau %>% select(-n_categories), by = "participant_id_num")
 
+pl_bivar_1 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "Similarity Judgment"), aes(value, 1/mn_shift)) +
+  theme_bw() +
+  geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
+  geom_hline(yintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
+  geom_point(shape = 1) +
+  #facet_wrap(~ n_categories) +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Mean Move (Empirical)", y = "MAP Tau (Posterior)", title = "Sequential Comparison") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22)
+  )
+
+pl_bivar_2 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "4 Categories"), aes(value, 1/mn_shift)) +
+  theme_bw() +
+  geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
+  geom_hline(yintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
+  geom_point(shape = 1) +
+  #facet_wrap(~ n_categories) +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Mean Move (Empirical)", y = "MAP Tau (Posterior)", title = "Category Learning") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22)
+  )
+
+ggM1 <- ggExtra::ggMarginal(pl_bivar_1, type = "histogram", bins = 20, fill = "#3399FF")
+ggM2 <- ggExtra::ggMarginal(pl_bivar_2, type = "histogram", bins = 20, fill = "#3399FF")
+
+pl_gg_both <- arrangeGrob(ggM1, ggM2, ncol = 1)
+save_my_pdf_and_tiff(
+  pl_gg_both, "figures/figures-ms/exGaussian-bivariates", 6, 11
+)
 
 # individual differences in movements -------------------------------------
 
