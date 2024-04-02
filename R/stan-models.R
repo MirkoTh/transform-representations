@@ -989,7 +989,7 @@ data {
   int n_subj;
   matrix[n_data, 2] y;
   array[n_data] int subj;
-  matrix[n_data, 5] x; // group, timepoint, d_boundary_stim_z, Experiment, Experiment x Boundary
+  matrix[n_data, 4] x; // group, timepoint, d_boundary_stim_z, Experiment
 }
 
 transformed data {
@@ -1003,21 +1003,30 @@ parameters {
   vector<lower=0>[2] mu0;
   array[n_subj] vector<lower=0>[2] b0;
   vector<lower=0>[2] sdsubj;
-  vector[2] muGroup; //<lower=0>
+  vector[2] muGr; //<lower=0>
   vector[2] muTime; // <lower=0>
-  vector[2] muIA; // <lower=0>
-  vector[2] muBoundary;
-  vector[2] muExperiment;
-  vector[2] muExBD;
+  vector[2] muExp;
+  vector[2] muBd;
+  vector[2] muGrTime; // <lower=0>
+  vector[2] muGrBd; // <lower=0>
+  vector[2] muTimeBd; // <lower=0>
+  vector[2] muGrBdTime;
 }
 
 transformed parameters {
   array[n_data] vector<lower=0>[2] L_std;
 
   for (n in 1:n_data) {
-    L_std[n] = b0[subj[n]] + muExperiment * x[n, 3] + muExBD * x[n, 5] +
-               muGroup * x[n, 1] + muTime * x[n, 2] + muIA * x[n, 1] * x[n, 2] + 
-               muBoundary * x[n, 4];
+    L_std[n] = b0[subj[n]] + 
+               muGr * x[n, 1] + 
+               muTime * x[n, 2] + 
+               muExp * x[n, 3] + 
+               muBd * x[n, 4] + 
+               muGrTime * x[n, 1] * x[n, 2] +
+               muGrBd * x[n, 1] * x[n, 4] +
+               muTimeBd * x[n, 2] * x[n, 4] +
+               muGrBdTime * x[n, 1] * x[n, 2] * x[n, 4]
+               ;
   }
 }
 
@@ -1030,12 +1039,14 @@ model {
   
   sdsubj ~ gamma(.05, .1);
   mu0 ~ normal(10, 3);
-  muGroup ~ normal(0, 1);
+  muGr ~ normal(0, 1);
   muTime ~ normal(0, 1);
-  muIA ~ normal(0, 1);
-  muBoundary ~ normal(0, 1);
-  muExperiment ~ normal(0, 1);
-  muExBD ~ normal(0, 1);
+  muExp ~ normal(0, 1);
+  muBd ~ normal(0, 1);
+  muGrTime ~ normal(0, 1);
+  muGrBd ~ normal(0, 1);
+  muTimeBd ~ normal(0, 1);
+  muGrBdTime ~ normal(0, 1);
   
   for (n in 1:n_data) {
     target += multi_normal_cholesky_lpdf(y[n] | v_mn, diag_pre_multiply(L_std[n], L[subj[n]]));

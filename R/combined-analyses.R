@@ -118,7 +118,7 @@ pl_d_bd <- ggplot(tbl_plt_agg, aes(d_boundary_stim_cut, sd_val, group = n_catego
     x = "Dist. To Closest Boundary (Binned)", 
     y = "SD (After) - SD (Before)",
     title = "Changes in Precision"
-    ) + 
+  ) + 
   theme(
     strip.background = element_rect(fill = "white"),
     text = element_text(size = 22),
@@ -145,7 +145,7 @@ save_my_pdf_and_tiff(
 
 if (suffix == "object-properties") {
   combined_model <- stan_cr_2d_nested_db_obj()
-
+  
 } else if (suffix == "psychological-representation") {
   combined_model <- stan_cr_2d_nested_db_psych()
 }
@@ -164,7 +164,6 @@ mm <- model.matrix(
 )
 mm[, 2:4] <- mm[, 2:4] - .5
 mm <- as_tibble(mm)
-mm$ExBD <- mm[, 4] * mm[, 5]
 
 l_data <- list(
   n_data = nrow(tbl_combined),
@@ -174,7 +173,7 @@ l_data <- list(
     tbl_combined$participant_id, 
     labels = 1:length(unique(tbl_combined$participant_id))
   )),
-  x = as.matrix(mm[, 2:6])
+  x = as.matrix(mm[, 2:5])
 )
 
 # to consider: initial precision per subject should not be < 0
@@ -182,25 +181,29 @@ l_data <- list(
 
 if (suffix == "psychological-representation") {
   init_fun <- function() list(
-  muGroup = rnorm(2, .2, .01), 
-  muTime = rnorm(2, .2, .01), 
-  muIA = rnorm(2, .2, .01), 
-  mu0 = rnorm(2, .2, .01), 
-  muBoundary = rnorm(2, 0, .01),
-  muExperiment = rnorm(2, 0, .01),
-  muExBD = rnorm(2, 0, .01),
-  b0 = matrix(rnorm(2*180, 3, .01), nrow = 180), 
-  sdsubj = c(.1, .1)
-)
+    muGr = rnorm(2, .2, .01), 
+    muTime = rnorm(2, .2, .01), 
+    muGrTime = rnorm(2, .2, .01), 
+    mu0 = rnorm(2, .2, .01), 
+    muBd = rnorm(2, 0, .01),
+    muExp = rnorm(2, 0, .01),
+    muGrBd = rnorm(2, 0, .01),
+    muTimeBd = rnorm(2, 0, .01),
+    muGrBdTime = rnorm(2, 0, .01),
+    b0 = matrix(rnorm(2*180, 3, .01), nrow = 180), 
+    sdsubj = c(.1, .1)
+  )
 } else if (suffix == "object-properties") {
   init_fun <- function() list(
+    mu0 = rnorm(2, 100, .01), 
     muGroup = rnorm(2, -5, .01), 
     muTime = rnorm(2, -5, .01), 
-    muIA = rnorm(2, -5, .01), 
-    mu0 = rnorm(2, 100, .01), 
-    muBoundary = rnorm(2, -.5, .01),
-    muExperiment = rnorm(2, -.5, .01),
-    muExBD = rnorm(2, -.5, .01),
+    muBd = rnorm(2, 0, .01),
+    muExp = rnorm(2, 0, .01),
+    muGrTime = rnorm(2, -5, .01),
+    muGrBd = rnorm(2, 0, .01),
+    muTimeBd = rnorm(2, 0, .01),
+    muGrBdTime = rnorm(2, 0, .01),
     b0 = matrix(rnorm(2*180, 100, .01), nrow = 180), 
     sdsubj = c(.1, .1)
   )
@@ -208,7 +211,7 @@ if (suffix == "psychological-representation") {
 
 
 file_loc <- str_c("data/combined-analysis-boundary-posterior-", suffix, ".rds")
-pars_interest <- c("mu0", "muGroup", "muTime", "muIA", "muBoundary", "muExperiment", "muExBD")
+pars_interest <- c("mu0", "muGr", "muBd", "muExp", "muTime", "muGrBd", "muGrTime", "muTimeBd", "muGrBdTime")
 
 if (is_fit) {
   fit_2d <- mod_2d$sample(
@@ -224,7 +227,11 @@ if (is_fit) {
 }
 
 
-lbls <- c("Intercept (Head)", "Intercept (Belly)", "Group (Head)", "Group (Belly)", "Time (Head)", "Time (Belly)", "IA (Head)", "IA (Belly)", "Boundary (Head)", "Boundary (Belly)")
+lbls <- c(
+  "Intercept (Head)", "Intercept (Belly)", "Group (Head)", "Group (Belly)", 
+  "Time (Head)", "Time (Belly)", "Group x Time (Head)", "Group x Time (Belly)", 
+  "Boundary (Head)", "Boundary (Belly)", "Exp. (Head)", "Exp. (Belly)",
+  "Exp. x Boundary (Head)", "Exp. x Boundary (Belly)")
 # lbls <- c("SD (Head)", "SD (Belly)")
 
 tbl_posterior <- tbl_draws %>% 
@@ -239,8 +246,7 @@ levels(tbl_posterior$parameter) <- lbls
 
 # params_bf <- c("SD (Head)", "SD (Belly)", "Corr(1)")
 params_bf <- unique(tbl_posterior$parameter)
-params_bf <- params_bf %>% filter(r)
-l <- sd_bfs(tbl_posterior, params_bf, .5)
+l <- sd_bfs(tbl_posterior, params_bf, .5, limits = c(.025, .975))
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 bfs <- bfs[names(bfs) %in% params_bf]
@@ -253,9 +259,26 @@ l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(
   l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]],
   l_pl[[5]], l_pl[[6]], l_pl[[7]], l_pl[[8]],
-  l_pl[[9]], l_pl[[10]],
-  nrow = 4, ncol = 3)
+  l_pl[[9]], l_pl[[10]], l_pl[[11]], l_pl[[12]],
+  l_pl[[13]], l_pl[[14]],
+  nrow = 4, ncol = 4)
 
+tbl_thx %>% 
+  filter(!str_detect(parameter, "Intercept")) %>%
+  pivot_wider(id_cols = c(parameter), names_from = variable, values_from = value) %>%
+  mutate(mn = (thxlo_x + thxhi_x) / 2) %>%
+  ggplot() +
+  geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = 1) +
+  geom_segment(aes(x = thxlo_x, xend = thxhi_x, y = parameter, yend = parameter), linewidth = 1.25, lineend = "round") +
+  geom_point(aes(mn, parameter), size = 3, color = "skyblue2") +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0)) +
+  scale_y_discrete(expand = c(0.01, 0)) +
+  labs(x = "Posterior Value", y = "Parameter", title = "95% HDIs") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22)
+  )
 
 
 
