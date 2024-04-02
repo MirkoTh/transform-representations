@@ -263,23 +263,30 @@ grid.arrange(
   l_pl[[13]], l_pl[[14]],
   nrow = 4, ncol = 4)
 
-tbl_thx %>% 
+tbl_segments <- tbl_thx %>% 
   filter(!str_detect(parameter, "Intercept")) %>%
   pivot_wider(id_cols = c(parameter), names_from = variable, values_from = value) %>%
-  mutate(mn = (thxlo_x + thxhi_x) / 2) %>%
-  ggplot() +
+  mutate(mn = (thxlo_x + thxhi_x) / 2)
+
+tbl_bf <- tibble(parameter = names(bfs), bf = bfs) %>% filter(!str_detect(parameter, "Intercept"))
+tbl_bf$bf <- format(round(tbl_bf$bf, 2), big.mark = "'", big.interval = 3L)
+tbl_bf$bf[str_detect(tbl_bf$bf, "Inf")] <- "Decisive"
+tbl_bf <- tbl_bf %>% left_join(tbl_segments, by = "parameter")
+tbl_bf$bf <- str_trim(tbl_bf$bf, "left")
+
+ggplot(tbl_segments) +
   geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = 1) +
   geom_segment(aes(x = thxlo_x, xend = thxhi_x, y = parameter, yend = parameter), linewidth = 1.25, lineend = "round") +
   geom_point(aes(mn, parameter), size = 3, color = "skyblue2") +
+  geom_text(data = tbl_bf, aes(mn, parameter, label = str_c("BF = ", bf)), vjust = -1) +
   theme_bw() +
   scale_x_continuous(expand = c(0.01, 0)) +
-  scale_y_discrete(expand = c(0.01, 0)) +
+  scale_y_discrete(expand = c(0.05, 0)) +
   labs(x = "Posterior Value", y = "Parameter", title = "95% HDIs") + 
   theme(
     strip.background = element_rect(fill = "white"), 
     text = element_text(size = 22)
   )
-
 
 
 
