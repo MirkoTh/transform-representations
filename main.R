@@ -593,3 +593,50 @@ save_my_pdf_and_tiff(pl_task_imprinting, "figures/figures-ms/model-predictions-b
 save_my_pdf_and_tiff(pl_task_imprinting, "figures/model-predictions-both-designs", 11.25, 11.25)
 
 
+
+# precision given distance from boundary ----------------------------------
+
+tbl_info
+
+tbl_perc <- make_stimuli(l_category_results[[2]]$l_info)[[1]]
+tbl_perc$d_boundary <- add_distance_to_boundary(
+  tbl_perc %>% mutate(x1_true = x1, x2_true = x2), c(NA), "square", l_category_results[[2]]$l_info, TRUE
+)
+
+my_agg <- function(l){
+  l$tbl_new %>%
+    left_join(tbl_perc %>% select(stim_id, d_boundary), by = "stim_id") %>%
+    mutate(d_boundary_cut = cut(d_boundary, 10)) %>%
+    group_by(stim_id, d_boundary_cut) %>%
+    summarize(
+      sd_x1 = sd(x1),
+      sd_x2 = sd(x2)
+    ) %>% group_by(d_boundary_cut) %>%
+    summarize(
+      sd_x1 = mean(sd_x1, na.rm = TRUE),
+      sd_x2 = mean(sd_x2, na.rm = TRUE)
+    )
+}
+pl_rep_precision <- reduce(map(l_category_results, ~ my_agg(.x)), rbind) %>%
+  group_by(d_boundary_cut) %>%
+  summarize(Head = mean(sd_x1), Belly = mean(sd_x2)) %>%
+  ungroup() %>%
+  pivot_longer(c(Head, Belly)) %>%
+  ggplot(aes(d_boundary_cut, value, group = name)) +
+  geom_point(aes(color = name)) +
+  geom_smooth(method = "lm", aes(color = name)) +
+  theme_bw() +
+  scale_x_discrete(expand = c(0.01, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Dist. (Closest Boundary)", y = "SD (Rep.)") + 
+  theme(
+    strip.background = element_rect(fill = "white"),
+    text = element_text(size = 22),
+    axis.text.x = element_blank()
+  ) + 
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "")
+
+
+save_my_pdf_and_tiff(pl_rep_precision, "figures/figures-ms/representational-precision", 5, 4)
+
+
