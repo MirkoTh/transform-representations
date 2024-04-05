@@ -122,6 +122,12 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(lbls), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2)
 
+pl_hdi_cat <- plot_map_hdi_bf(tbl_thx, bfs, "Category Learning")
+
+
+
+
+
 
 # Similarity Ratings ------------------------------------------------------
 
@@ -190,6 +196,8 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+pl_hdi_seq <- plot_map_hdi_bf(tbl_thx, bfs, "Seq. Comparison")
 
 
 # Movements Towards Centers -----------------------------------------------
@@ -270,7 +278,7 @@ if (is_fit) {
   saveRDS(tbl_draws, file_loc_move)
   
 } else if (!is_fit) {
-  tbl_draws <- readRDS(file_loc_sim)
+  tbl_draws <- readRDS(file_loc_move)
 }
 
 
@@ -278,6 +286,7 @@ tbl_summary <- fit_move$summary(variables = pars_interest)
 
 params_bf <- c("Intercept", "Ellipse Category", "Group", "Ellipse Category x Group")
 tbl_posterior <- tbl_draws %>% 
+  dplyr::select(starts_with(c("mu")), .chain) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
@@ -288,6 +297,10 @@ tbl_thx <- l[[2]]
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
+
+
+pl_hdi_move <- plot_map_hdi_bf(tbl_thx, bfs, "Move: Cat. Center")
+
 
 
 # individual differences in movements -------------------------------------
@@ -357,6 +370,7 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf[c(2, 3, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 2, ncol = 2)
 
+pl_hdi_finacc <- plot_map_hdi_bf(tbl_thx, bfs, "ID: Final Accuracy")
 
 
 # use delta in categorization accuracy
@@ -401,6 +415,8 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf[c(2, 3, 4)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 2, ncol = 2)
 
+pl_hdi_deltaacc <- plot_map_hdi_bf(tbl_thx, bfs, "ID: Delta Accuracy")
+
 
 # Boundary Aversion -------------------------------------------------------
 
@@ -443,6 +459,7 @@ if (is_fit) {
 
 params_bf <- c("Intercept", "Ellipse Category", "Group", "Ellipse Category x Group")
 tbl_posterior <- tbl_draws %>% 
+  select(starts_with("mu"), .chain) %>%
   rename(chain = .chain) %>%
   pivot_longer(starts_with(c("mu")), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = factor(parameter, labels = params_bf))
@@ -453,5 +470,16 @@ tbl_thx <- l[[2]]
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
+
+pl_hdi_aversion <- plot_map_hdi_bf(tbl_thx, bfs, "Move: Boundary Aversion")
+
+
+pl_hdi_all <- arrangeGrob(
+  pl_hdi_cat, pl_hdi_seq,
+  pl_hdi_move, pl_hdi_aversion,
+  pl_hdi_finacc, pl_hdi_deltaacc,
+  ncol = 2
+)
+save_my_pdf_and_tiff(pl_hdi_all, "figures/figures-ms/all-hdi-e1", 15, 12)
 
 

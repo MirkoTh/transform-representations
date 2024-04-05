@@ -129,6 +129,13 @@ tbl_thx <- l[[2]]
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
+pl_hdi_cat <- plot_map_hdi_bf(tbl_thx, bfs, "Category Learning")
+
+
+
+
+
+
 # Similarity Ratings ------------------------------------------------------
 
 ggplot(
@@ -194,6 +201,9 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
+pl_hdi_seq <- plot_map_hdi_bf(tbl_thx, bfs, "Seq. Comparison")
 
 
 # Movements Towards Centers -----------------------------------------------
@@ -304,6 +314,10 @@ tbl_thx <- l[[2]]
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
+
+
+pl_hdi_move <- plot_map_hdi_bf(tbl_thx, bfs, "Move: Cat. Center")
+
 
 # frequentist framework with random intercept and random slopes on session
 library(nlme)
@@ -712,6 +726,7 @@ tbl_thx <- par_lims
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(1, 2, 3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
+pl_hdi_exg <- plot_map_hdi_bf(tbl_thx, bfs, "ExGaussian")
 
 
 
@@ -839,6 +854,9 @@ tbl_thx <- par_lims
 map(as.list(params_bf[c(1, 2)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
+pl_hdi_finacc <- plot_map_hdi_bf(tbl_thx, bfs, "ID: Final Accuracy")
+
+
 # use delta in categorization accuracy
 mm_move_deltaacc <- model.matrix(
   movement ~ mean_delta_accuracy, data = tbl_moves_agg
@@ -878,6 +896,7 @@ tbl_thx <- par_lims
 map(as.list(params_bf[c(1, 2)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
+pl_hdi_deltaacc <- plot_map_hdi_bf(tbl_thx, bfs, "ID: Delta Accuracy")
 
 
 
@@ -986,5 +1005,15 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
 
+pl_hdi_aversion <- plot_map_hdi_bf(tbl_thx, bfs, "Move: Boundary Aversion")
 
 
+
+pl_hdi_all <- arrangeGrob(
+  pl_hdi_cat, pl_hdi_seq,
+  pl_hdi_move, pl_hdi_aversion,
+  pl_hdi_exg,
+  pl_hdi_finacc, pl_hdi_deltaacc,
+  ncol = 2
+)
+save_my_pdf_and_tiff(pl_hdi_all, "figures/figures-ms/all-hdi-e2", 15, 16)

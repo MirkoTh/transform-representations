@@ -32,7 +32,7 @@ tbl_cat <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_c
 tbl_seq <- read_rds("experiments/2022-09-category-learning-similarity/data/tbl_seq-treps-psychological-representation.rds")
 
 
-is_fit <- TRUE
+is_fit <- FALSE
 
 # Category Learning -------------------------------------------------------
 
@@ -112,6 +112,10 @@ tbl_thx <- l[[2]]
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 
+pl_hdi_cat <- plot_map_hdi_bf(tbl_thx, bfs, "Category Learning")
+
+
+
 # Sequential Similarity Ratings ------------------------------------------------------
 
 ggplot(
@@ -176,6 +180,9 @@ tbl_thx <- l[[2]]
 
 # plot the posteriors and the bfs
 map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
+
+
+pl_hdi_seq <- plot_map_hdi_bf(tbl_thx, bfs, "Seq. Comparison")
 
 
 # Attraction vs. Repulsion -----------------------------------------------
@@ -291,6 +298,9 @@ l <- sd_bfs(tbl_posterior, params_bf, .5)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
 
+pl_hdi_move <- plot_map_hdi_bf(tbl_thx, bfs, "Move: Cat. Center")
+
+
 # plot the posteriors and the bfs
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 pl_arrangement <- grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]], nrow = 2, ncol = 2)
@@ -302,3 +312,16 @@ pl_arrangement2 <- grid.arrange(
   pl_move_mass + ggtitle("Distribution of Differences"), nrow = 1, ncol = 3
 )
 save_my_tiff(pl_arrangement2, "experiments/2022-09-category-learning-similarity/data/figures/arrangement-psychonomics-2022.tiff", 16.5, 3.35)
+
+
+
+
+
+
+
+pl_hdi_all <- arrangeGrob(
+  pl_hdi_cat, pl_hdi_seq,
+  pl_hdi_move,
+  ncol = 1
+)
+save_my_pdf_and_tiff(pl_hdi_all, "figures/figures-ms/all-hdi-e3", 7, 12)
