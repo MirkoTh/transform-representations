@@ -524,10 +524,12 @@ pls_rsa <- arrangeGrob(
   pl_pred + theme(text = element_text(size = 16)), 
   pl_exp + theme(text = element_text(size = 16)), 
   pl_control + theme(text = element_text(size = 16)), 
-  nrow = 1)
-save_my_pdf_and_tiff(pls_rsa, "experiments/2022-07-category-learning-II/data/figures/rsa-avg-plots", 12, 4)
+  nrow = 1, widths = c(1, 1, 1.35))
 
-save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e2", 12, 4)
+save_my_pdf_and_tiff(pls_rsa, "experiments/2022-07-category-learning-II/data/figures/rsa-avg-plots", 14, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e2", 14, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/figures-ms/rsa-avg-plots-e2", 14, 4)
+
 
 # correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 

@@ -525,23 +525,27 @@ tbl_simult_move_agg <- tbl_simult_move %>%
   summarize(move_response = mean(move_response)) %>%
   ungroup()
 
-plot_symmetric_moves <- function(tbl_df, ttl) {
-  ggplot(tbl_df) +
+plot_symmetric_moves <- function(tbl_df, ttl, leg = FALSE) {
+  pl <- ggplot(tbl_df) +
     geom_tile(aes(stim_id_lo, stim_id_hi, fill = move_response)) +
     geom_tile(aes(stim_id_hi, stim_id_lo, fill = move_response)) +
     theme_bw() +
-    scale_fill_viridis_c(name = "Euclidean Distance Delta") + #, limits = c(0, 75)) +
+    scale_fill_viridis_c(name = "Delta\n(Eucl. Dist.)") + #, limits = c(0, 75)) +
     scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
     scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
     labs(x = "Stimulus ID 1", y = "Stimulus ID 2") +
-    theme(legend.position = "omit") +
     labs(title = ttl)
+  if (leg == FALSE) {
+    pl + theme(legend.position = "omit")
+  } else if (leg) {
+    pl + theme(legend.position = "right")
+  }
 }
 
 tbl_simult_move_agg$n_categories <- factor(tbl_simult_move_agg$n_categories, labels = c("Similarity", "4 Categories"))
 
-pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
-pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
+pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison", TRUE)
+pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning", FALSE)
 
 f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
 tbl_both <- load_predictions(f_name, sim_center = "square", is_simulation = TRUE)
@@ -581,16 +585,23 @@ pls_rsa <- arrangeGrob(
   pl_pred + theme(text = element_text(size = 16)), 
   pl_experimental + theme(text = element_text(size = 16)), 
   pl_control + theme(text = element_text(size = 16)), 
-  nrow = 1)
+  nrow = 1, widths = c(1, 1, 1.35))
+
+
 save_my_pdf_and_tiff(
   pls_rsa,
   str_c("experiments/2023-01-category-learning-catsim/data/figures/rsa-avg-plots-e4", pl_suffix),  
-  12, 4
+  14, 4
 )
 save_my_pdf_and_tiff(
   pls_rsa,
   str_c("figures/rsa-avg-plots-e4"),  
-  12, 4
+  14, 4
+)
+save_my_pdf_and_tiff(
+  pls_rsa,
+  str_c("figures/figures-ms/rsa-avg-plots-e4"),  
+  14, 4
 )
 
 

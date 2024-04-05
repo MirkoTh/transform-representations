@@ -22,6 +22,18 @@ library(ids)
 library(naivebayes)
 library(mvtnorm)
 
+conflicted::conflict_prefer("select", "dplyr", "MASS")
+conflicted::conflict_prefer("filter", "dplyr", c("plotly", "stats"))
+
+conflicted::conflict_prefer("lag", "dplyr", "stats")
+conflicted::conflict_prefer("count", "dplyr", "plyr")
+conflicted::conflict_prefer("arrange", "dplyr", "plyr")
+conflicted::conflict_prefer("summarize", "dplyr", "plyr")
+conflicted::conflict_prefer("summarise", "dplyr", "plyr")
+conflicted::conflict_prefer("mutate", "dplyr", c("plyr"))
+conflicted::conflict_prefer("desc", "dplyr", "plyr")
+conflicted::conflict_prefer("rename", "dplyr", c("plyr"))
+
 # Import Home-Grown Modules -----------------------------------------------
 
 files <- c(
@@ -398,23 +410,26 @@ tbl_simult_move_agg <- tbl_simult_move %>%
   summarize(move_response = mean(move_response)) %>%
   ungroup()
 
-plot_symmetric_moves <- function(tbl_df, ttl) {
-  ggplot(tbl_df) +
+plot_symmetric_moves <- function(tbl_df, ttl, leg = FALSE) {
+  pl <- ggplot(tbl_df) +
     geom_tile(aes(stim_id_lo, stim_id_hi, fill = move_response)) +
     geom_tile(aes(stim_id_hi, stim_id_lo, fill = move_response)) +
     theme_bw() +
-    scale_fill_viridis_c(name = "Euclidean Distance Delta") + #, limits = c(0, 75)) +
+    scale_fill_viridis_c(name = "Delta\n(Eucl. Dist.)") + #, limits = c(0, 75)) +
     scale_x_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
     scale_y_continuous(breaks = seq(0, 100, by = 10), expand = c(0, 0)) +
     labs(x = "Stimulus ID 1", y = "Stimulus ID 2") +
-    theme(legend.position = "omit") +
     labs(title = ttl)
+  if (leg == FALSE) {
+    pl + theme(legend.position = "omit")
+  } else if (leg) {
+    pl + theme(legend.position = "right")
+  }
 }
 
-pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison")
-pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning")
+pl_control <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "Similarity"), "Sequential Comparison", TRUE)
+pl_experimental <- plot_symmetric_moves(tbl_simult_move_agg %>% filter(n_categories == "4 Categories"), "Category Learning", FALSE)
 
-#f_name <- "data/2023-01-27-grid-search-vary-constrain-space.rds"
 f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
 
 # the following takes quite a bit of time (15 mins, approx)
@@ -455,10 +470,11 @@ pls_rsa <- arrangeGrob(
   pl_pred + theme(text = element_text(size = 16)), 
   pl_experimental + theme(text = element_text(size = 16)), 
   pl_control + theme(text = element_text(size = 16)), 
-  nrow = 1)
+  nrow = 1, widths = c(1, 1, 1.35))
 
-save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/data/figures/rsa-avg-plots-e3", 12, 4)
-save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e3", 12, 4)
+save_my_pdf_and_tiff(pls_rsa, "experiments/2022-09-category-learning-similarity/data/figures/rsa-avg-plots-e3", 14, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e3", 14, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/figures-ms/rsa-avg-plots-e3", 14, 4)
 
 
 

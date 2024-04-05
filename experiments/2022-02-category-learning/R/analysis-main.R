@@ -119,11 +119,15 @@ rbind(
 cat(str_c("\ndropouts: ", length(unique(l_cases$l_incomplete$drop$tbl_cr$participant_id))))
 cat(str_c("\noutliers in cr: ", length(unique(l_cases$l_outliers$drop$tbl_cr$participant_id))))
 
+tbl_cr %>% count(participant_id) %>% arrange(desc(n))
 repeats <- tbl_cr %>% count(participant_id) %>% arrange(desc(n)) %>% filter(n >= 235)
 tbl_cr <- tbl_cr %>% filter(!(participant_id %in% repeats$participant_id))
 tbl_cat_sim <- tbl_cat_sim %>% filter(!(participant_id %in% repeats$participant_id))
-
-
+tbl_cr <- tbl_cr %>% group_by(participant_id, session, trial_id) %>%
+  mutate(rwn = row_number(participant_id)) %>%
+  ungroup() %>% filter(rwn <= 1)
+  
+  
 # inclusions
 cat(str_c("final N analyzed: ", length(unique(tbl_cr$participant_id)), "\n"))
 
@@ -564,7 +568,7 @@ l_rsa_all <- pairwise_distances(tbl_cr)
 plot_true_ds_vs_response_ds(l_rsa_all[["tbl_rsa"]])
 
 f_name <- "data/2024-03-18-grid-search-vary-constrain-space.rds"
-tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE)
+tbl_both <- load_predictions(f_name, sim_center = sim_center, is_simulation = TRUE, l_info)
 tbl_rsa_delta_prediction <- delta_representational_distance("prediction", tbl_both)
 pl_pred <- plot_distance_matrix(tbl_rsa_delta_prediction) +
   labs(x = "Stimulus ID 1", y = "Stimulus ID 2", title = "Model Matrix") +
@@ -582,9 +586,10 @@ pls_rsa <- arrangeGrob(
   pl_pred + theme(text = element_text(size = 16)), 
   pl_exp + theme(text = element_text(size = 16)), 
   pl_control + theme(text = element_text(size = 16)), 
-  nrow = 1)
-save_my_pdf_and_tiff(pls_rsa, "experiments/2022-02-category-learning/data/figures/rsa-avg-plots", 12, 4)
-save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e1", 12, 4)
+  nrow = 1, widths = c(1, 1, 1.35))
+save_my_pdf_and_tiff(pls_rsa, "experiments/2022-02-category-learning/data/figures/rsa-avg-plots", 14, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/rsa-avg-plots-e1", 14, 4)
+save_my_pdf_and_tiff(pls_rsa, "figures/figures-ms/rsa-avg-plots-e1", 14, 4)
 
 # correlation between model matrix and delta in responses
 tbl_rsa_delta_prediction_lower <- tbl_rsa_delta_prediction %>% 
