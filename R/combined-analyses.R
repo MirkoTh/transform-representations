@@ -227,11 +227,6 @@ if (is_fit) {
 }
 
 
-lbls <- c(
-  "Intercept (Head)", "Intercept (Belly)", "Group (Head)", "Group (Belly)", 
-  "Time (Head)", "Time (Belly)", "Group x Time (Head)", "Group x Time (Belly)", 
-  "Boundary (Head)", "Boundary (Belly)", "Exp. (Head)", "Exp. (Belly)",
-  "Exp. x Boundary (Head)", "Exp. x Boundary (Belly)")
 # lbls <- c("SD (Head)", "SD (Belly)")
 
 tbl_posterior <- tbl_draws %>% 
@@ -242,6 +237,15 @@ tbl_posterior <- tbl_draws %>%
     parameter = factor(parameter),
     parameter = fct_inorder(parameter)
   )
+
+lbls <- c(
+  "Intercept (Head)", "Intercept (Belly)", "Group (Head)", "Group (Belly)", "Group x Boundary (Head)", "Group x Boundary (Belly)", 
+  "Group x Time (Head)", "Group x Time (Belly)", "Group x Boundary x Time (Head)", "Group x Boundary x Time (Belly)",
+  "Boundary (Head)", "Boundary (Belly)", "Exp. (Head)", "Exp. (Belly)",
+  "Time (Head)", "Time (Belly)", 
+  "Time x Boundary (Head)", "Time x Boundary (Belly)"
+)
+
 levels(tbl_posterior$parameter) <- lbls
 
 # params_bf <- c("SD (Head)", "SD (Belly)", "Corr(1)")
@@ -260,13 +264,17 @@ grid.arrange(
   l_pl[[1]], l_pl[[2]], l_pl[[3]], l_pl[[4]],
   l_pl[[5]], l_pl[[6]], l_pl[[7]], l_pl[[8]],
   l_pl[[9]], l_pl[[10]], l_pl[[11]], l_pl[[12]],
-  l_pl[[13]], l_pl[[14]],
-  nrow = 4, ncol = 4)
+  l_pl[[13]], l_pl[[14]], l_pl[[15]], l_pl[[16]],
+  l_pl[[17]], l_pl[[18]],
+  nrow = 6, ncol = 3)
 
 tbl_segments <- tbl_thx %>% 
   filter(!str_detect(parameter, "Intercept")) %>%
   pivot_wider(id_cols = c(parameter), names_from = variable, values_from = value) %>%
-  mutate(mn = (thxlo_x + thxhi_x) / 2)
+  mutate(
+    mn = (thxlo_x + thxhi_x) / 2,
+    parameter = factor(parameter)
+  )
 
 tbl_bf <- tibble(parameter = names(bfs), bf = bfs) %>% filter(!str_detect(parameter, "Intercept"))
 tbl_bf$bf <- format(round(tbl_bf$bf, 2), big.mark = "'", big.interval = 3L)
@@ -274,20 +282,34 @@ tbl_bf$bf[str_detect(tbl_bf$bf, "Inf")] <- "Decisive"
 tbl_bf <- tbl_bf %>% left_join(tbl_segments, by = "parameter")
 tbl_bf$bf <- str_trim(tbl_bf$bf, "left")
 
-ggplot(tbl_segments) +
+
+levels(tbl_segments$parameter)
+tbl_segments$parameter <- fct_relevel(tbl_segments$parameter, "Time (Head)", after = 0)
+tbl_segments$parameter <- fct_relevel(tbl_segments$parameter, "Time (Belly)", after = 0)
+tbl_segments$parameter <- fct_relevel(tbl_segments$parameter, "Group x Boundary x Time (Belly)", after = 15)
+tbl_segments$parameter <- fct_relevel(tbl_segments$parameter, "Group x Boundary x Time (Head)", after = 15)
+
+
+pl_post_combined <- ggplot(tbl_segments) +
   geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = 1) +
-  geom_segment(aes(x = thxlo_x, xend = thxhi_x, y = parameter, yend = parameter), linewidth = 1.25, lineend = "round") +
+  geom_segment(
+    aes(x = thxlo_x, xend = thxhi_x, y = fct_rev(parameter), yend = fct_rev(parameter)), 
+    linewidth = 1.25, lineend = "round"
+  ) +
   geom_point(aes(mn, parameter), size = 3, color = "skyblue2") +
-  geom_text(data = tbl_bf, aes(mn, parameter, label = str_c("BF = ", bf)), vjust = -1) +
+  geom_text(data = tbl_bf, aes(mn, parameter, label = str_c("BF = ", bf)), vjust = -.75) +
   theme_bw() +
-  scale_x_continuous(expand = c(0.01, 0)) +
-  scale_y_discrete(expand = c(0.05, 0)) +
-  labs(x = "Posterior Value", y = "Parameter", title = "95% HDIs") + 
+  scale_x_continuous(expand = c(0.03, 0)) +
+  scale_y_discrete(expand = c(0.1, 0)) +
+  labs(x = "Posterior Value", y = "Parameter", title = "MAP, 95% HDIs, & BFs") + 
   theme(
     strip.background = element_rect(fill = "white"), 
     text = element_text(size = 22)
   )
 
+save_my_pdf_and_tiff(
+  pl_post_combined, "figures/figures-ms/bf-hdi-combined", 9, 7
+)
 
 
 # Category Difficulty Analysis E2 - E4 ------------------------------------
@@ -401,3 +423,161 @@ l_post <- map(as.list(par_lbls), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 grid.draw(arrangeGrob(l_post[[1]], l_post[[2]], l_post[[3]], l_post[[4]], l_post[[5]], l_post[[6]], l_post[[7]], l_post[[8]], nrow = 2))
 
+
+
+
+# Attraction to the Global Average ----------------------------------------
+
+tbl_cr1_psych <- read_rds("experiments/2022-02-category-learning/data/tbl_cr-psychological-representation.rds") %>% mutate(experiment = "Exp. 1")
+tbl_cr2_psych <- read_rds("experiments/2022-07-category-learning-II/data/tbl_cr-treps-long-ri-psychological-representation.rds") %>% mutate(experiment = "Exp. 2")
+cols_req_psych <- c("participant_id", "experiment", "n_categories", "category", "session", "x1_true", "x2_true", "x1_response", "x2_response", "d_boundary", "d_closest")
+
+tbl_psych <- tbl_cr1_psych[, cols_req_psych] %>% rbind(tbl_cr2_psych[, cols_req_psych])
+
+# vals taken from psychophysics script
+tbl_psych$x1_avg <- 3.9377975
+tbl_psych$x2_avg <- 3.6487456
+
+tbl_psych <- tbl_psych %>%
+  mutate(
+    d_avg_stim = sqrt((x1_true - x1_avg)^2 + (x2_true - x2_avg)^2),
+    d_avg_resp = sqrt((x1_response - x1_avg)^2 + (x2_response - x2_avg)^2),
+    d_move_avg = d_avg_stim - d_avg_resp
+  )
+hist(tbl_psych$d_move_avg)
+summary(tbl_psych$d_move_avg)
+
+
+tbl_cr_stim <- grouped_agg(
+  tbl_psych, c(experiment, session, n_categories, x1_true, x2_true, category), c(x1_response, x2_response)
+) %>% ungroup()
+
+
+tbl_cr_stim$x1_avg <- 3.9377975
+tbl_cr_stim$x2_avg <- 3.6487456
+
+tbl_cr_stim <- tbl_cr_stim %>%
+  mutate(
+    d_avg_stim = sqrt((x1_true - x1_avg)^2 + (x2_true - x2_avg)^2),
+    d_avg_resp = sqrt((mean_x1_response - x1_avg)^2 + (mean_x2_response - x2_avg)^2),
+    d_move_avg = d_avg_stim - d_avg_resp
+  )
+tbl_cr_stim$n_categories <- factor(tbl_cr_stim$n_categories, labels = c("Seq. Comparison", "Cat. Learning", "Cat. Learning"))
+tbl_cr_stim$session <- factor(tbl_cr_stim$session, labels = c("Before", "After"))
+
+# tendencies towards global average
+pl_global <- grouped_agg(tbl_cr_stim, c(experiment, session, n_categories), d_move_avg) %>%
+  ggplot(aes(as.factor(session), mean_d_move_avg, group = as.factor(n_categories))) +
+  geom_hline(yintercept = 0, color = "grey", linetype = "dotdash", linewidth = 1) +
+  geom_line(aes(color = as.factor(n_categories))) +
+  geom_errorbar(
+    aes(ymin = mean_d_move_avg - se_d_move_avg, 
+        ymax = mean_d_move_avg + se_d_move_avg, 
+        color = as.factor(n_categories)),
+    width = .2
+  ) +
+  geom_point(size = 3, color = "white") +
+  geom_point(aes(color = n_categories)) +
+  facet_wrap(~ experiment) +
+  theme_bw() +
+  scale_x_discrete(expand = c(0.2, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Session", y = "Move To Global Average") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22),
+    legend.position = "bottom"
+  ) + 
+  scale_color_manual(values = c("skyblue2", "tomato4", "black"), name = "")
+
+
+# delta in tendencies towards global average
+tbl_move_avg <- tbl_cr_stim %>% filter(session == "Before") %>%
+  select(experiment, n_categories, x1_true, x2_true, d_move_avg) %>%
+  left_join(
+    tbl_cr_stim %>% filter(session == "After") %>% select(experiment, n_categories, x1_true, x2_true, d_move_avg),
+    by = c("experiment", "n_categories", "x1_true", "x2_true"), suffix = c("_before", "_after")
+  ) %>% mutate(
+    delta_d_move_avg = d_move_avg_after - d_move_avg_before
+  )
+pl_delta_global <- summary_se(tbl_move_avg, "delta_d_move_avg", c("experiment", "n_categories")) %>%
+  mutate(a = "Delta Move To Global Average") %>%
+  ggplot(aes(n_categories, delta_d_move_avg, group = experiment)) +
+  geom_hline(yintercept = 0, color = "grey", linetype = "dotdash", size = 1) +
+  geom_line(aes(color = experiment)) +
+  geom_errorbar(aes(ymin = delta_d_move_avg - ci, ymax = delta_d_move_avg + ci, color = experiment), width = .2) +
+  geom_point(size = 3, color = "white") +
+  geom_point(aes(color = experiment)) +
+  facet_wrap(~ a) +
+  theme_bw() +
+  scale_x_discrete(expand = c(0.5, 0)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Group", y = "Delta (After) - Delta (Before)") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22),
+    legend.position = "bottom"
+  ) + 
+  scale_color_manual(values = c("skyblue2", "tomato4"), name = "Experiment")
+
+pl_global2 <- arrangeGrob(pl_global, pl_delta_global, nrow = 1, widths = c(1.4, 1))
+save_my_pdf_and_tiff(pl_global2, "figures/figures-ms/movement-global-average", 12, 5)
+save_my_pdf_and_tiff(pl_global2, "figures/movement-global-average", 12, 5)
+
+library(BayesFactor)
+tbl_move_avg$stim_id <- interaction(tbl_move_avg$x1_true, tbl_move_avg$x2_true)
+tbl_move_avg$experiment <- as.factor(tbl_move_avg$experiment)
+r_anova <- anovaBF(delta_d_move_avg ~ experiment*n_categories, whichRandom = "stim_id", data = tbl_move_avg, whichModels = "top")
+# n_categories
+1/0.0007095356
+# experiment
+1/6.163355e-14
+# ia
+1/1.252886
+
+
+# aggregate over stimuli before calculating distances (center + boundary)
+tbl_cr_stim <- grouped_agg(
+  tbl_cr1_psych, 
+  c(session, n_categories, x1_true, x2_true, category), c(x1_response, x2_response)
+) %>%
+  group_by(n_categories, session) %>% 
+  arrange(n_categories, session, x1_true, x2_true) %>%
+  mutate(
+    stim_id = row_number(x1_true)
+  ) %>% ungroup() %>%
+  rename(x1_response = mean_x1_response, x2_response = mean_x2_response)
+
+tmp <- tbl_cr_stim %>% select(-category)
+tmp <-  add_distance_to_nearest_center(tmp, l_centers, FALSE, "ellipses")
+tbl_cr_stim$d_closest <- tmp$d_closest
+
+grouped_agg(tbl_cr_stim, c(session, n_categories), d_closest) %>%
+  ggplot(aes(session, mean_d_closest, group = as.factor(n_categories))) +
+  geom_line(aes(color = as.factor(n_categories))) +
+  geom_errorbar(aes(ymin = mean_d_closest - se_d_closest, ymax = mean_d_closest + se_d_closest, color = as.factor(n_categories)))
+
+
+tbl_cr_stim <- grouped_agg(
+  tbl_cr2_psych, c(session, n_categories, x1_true, x2_true, category), c(x1_response, x2_response)
+) %>% ungroup() %>%
+  rename(x1_response = mean_x1_response, x2_response = mean_x2_response)
+l_info = list(representation = "psychological-representation", use_exptl_stimuli = TRUE)
+l_centers <- category_centers(1, 0, l_info)
+tbl_cr_stim$d_boundary <- add_distance_to_boundary(tbl_cr_stim, l_centers, "square", l_info)
+
+grouped_agg(tbl_cr_stim, c(session, n_categories), d_boundary) %>%
+  ggplot(aes(session, mean_d_boundary, group = as.factor(n_categories))) +
+  geom_line(aes(color = as.factor(n_categories))) +
+  geom_errorbar(aes(ymin = mean_d_boundary - se_d_boundary, ymax = mean_d_boundary + se_d_boundary, color = as.factor(n_categories)))
+
+
+tbl_cr_stim <- grouped_agg(
+  tbl_psych, c(experiment, session, n_categories, x1_true, x2_true, category), d_closest
+) %>% ungroup()
+
+grouped_agg(tbl_cr_stim, c(experiment, session, n_categories), mean_d_closest) %>%
+  ggplot(aes(session, mean_mean_d_closest, group = as.factor(n_categories))) +
+  geom_line(aes(color = as.factor(n_categories))) +
+  geom_errorbar(aes(ymin = mean_mean_d_closest - se_mean_d_closest, ymax = mean_mean_d_closest + se_mean_d_closest, color = as.factor(n_categories))) +
+  facet_wrap(~ experiment)
