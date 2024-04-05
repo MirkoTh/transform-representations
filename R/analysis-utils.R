@@ -1594,24 +1594,30 @@ delta_representational_distance <- function(p_id, tbl_cr) {
 }
 
 
-plot_distance_matrix <- function(tbl_df) {
+plot_distance_matrix <- function(tbl_df, leg = FALSE) {
   #' plot symmetric euclidean distance matrix
   #' 
-  #' @description plot euclidean distances between all stimuli in in the
+  #' @description plot euclidean distances between all stimuli in the
   #' experiment; stimulus id is on both axes integrating x1 and x2 into one variable
   #' @param tbl_df tbl_df containing all pairs of the stimuli
   #' 
   #' @return a ggplot heatmap
   #'
   
-  ggplot(tbl_df, aes(l, r)) +
+  pl <- ggplot(tbl_df, aes(l, r)) +
     geom_raster(aes(fill = d_euclidean_delta)) +
     theme_bw() +
-    scale_fill_viridis_c(name = "Euclidean Distance Delta") + #, limits = c(0, 75)) +
+    scale_fill_viridis_c(name = "Delta \n(Eucl. Dist.)") + #, limits = c(0, 75)) +
     scale_x_continuous(breaks = seq(0, 100, by = 10)) +
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-    labs(x = "Stimulus ID 1", y = "Stimulus ID 2") +
-    theme(legend.position = "omit")
+    labs(x = "Stimulus ID 1", y = "Stimulus ID 2")
+  
+  if (leg == FALSE) {
+    pl + theme(legend.position = "omit")
+  } else if (leg) {
+    pl + theme(legend.position = "right")
+  }
+    
 }
 
 
@@ -1645,7 +1651,7 @@ pairwise_distances <- function(tbl_cr) {
   # plot distance matrices for average participant
   tbl_rs_mat_control <- reduce(l_rs_mat_control, rbind) %>%
     group_by(l, r) %>% summarize(d_euclidean_delta = mean(d_euclidean_delta))
-  pl_m_avg_control <- plot_distance_matrix(tbl_rs_mat_control) + 
+  pl_m_avg_control <- plot_distance_matrix(tbl_rs_mat_control, leg = TRUE) + 
     ggtitle("Sequential Comparison")
   tbl_rs_mat_experimental <- reduce(l_rs_mat_experimental, rbind) %>%
     group_by(l, r) %>% summarize(d_euclidean_delta = mean(d_euclidean_delta))
@@ -1710,7 +1716,7 @@ plot_true_ds_vs_response_ds <- function(tbl_rsa) {
 }
 
 
-load_predictions <- function(f_name, sim_center, is_simulation){
+load_predictions <- function(f_name, sim_center, is_simulation, l_info){
   #' load predictions from simulation study using some arbitrary 
   #' parameter combinations
   #' 
@@ -1729,7 +1735,7 @@ load_predictions <- function(f_name, sim_center, is_simulation){
   v_sim_center <- map_chr(map(l_category_results, "l_info"), "category_shape")
   
   if(sim_center == "ellipses") {
-    l_results_plots <- map2(l_category_results, v_sim_center, diagnostic_plots, is_simulation = is_simulation)
+    l_results_plots <- map2(l_category_results, v_sim_center, diagnostic_plots, is_simulation = is_simulation, l_info)
     tbl_design <- l_results_plots[[1]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
       select(stim_id, x1_true, x2_true)
     tmp_before <- l_results_plots[[1]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
@@ -1737,7 +1743,7 @@ load_predictions <- function(f_name, sim_center, is_simulation){
     tmp_after <- l_results_plots[[1]][[1]]$tbl_posterior %>% filter(timepoint == "After Training") %>%
       select(stim_id, x1_response, x2_response)
   } else if (sim_center == "square") {
-    l_results_plots <- map2(l_category_results, v_sim_center, diagnostic_plots, is_simulation = is_simulation)
+    l_results_plots <- map2(l_category_results, v_sim_center, diagnostic_plots, is_simulation = is_simulation, l_info)
     tbl_design <- l_results_plots[[2]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%
       select(stim_id, x1_true, x2_true)
     tmp_before <- l_results_plots[[2]][[1]]$tbl_posterior %>% filter(timepoint == "Before Training") %>%

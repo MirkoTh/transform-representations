@@ -1321,7 +1321,7 @@ distance_to_closest_center_simulation <- function(tbl, sim_center, is_simulation
   tbl$x2_response <- tbl$x2_true
   tbl$session <- tbl$timepoint
   l_centers <- category_centers(f_stretch = 1, f_shift = 0, l_info)
-  l_centers[[3]] <- category_centers_squares(c(4), tbl)
+  l_centers[[3]] <- category_centers_squares(c(4), tbl, l_info)
   tbl <- add_distance_to_nearest_center(tbl, l_centers, is_simulation = TRUE, sim_center = sim_center)
   tbl$participant_id <- 1
   tbl$session <- tbl$timepoint 

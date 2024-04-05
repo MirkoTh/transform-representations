@@ -28,7 +28,7 @@ l_end <- tbl_end %>% split(.$participant_id)
 l_all <- tbl_secondary %>% filter(trial_id >= 100) %>% split(.$participant_id)
 
 is_fit <- FALSE#TRUE#
-is_fit_init_end <- FALSE
+is_fit_init_end <- TRUE#FALSE#
 is_psychological <- TRUE#FALSE#
 suffix <- c("", "-psych")[is_psychological + 1]
 
@@ -47,7 +47,7 @@ tbl_pt <- tbl_secondary %>% group_by(category) %>% summarize(x1_pt = mean(x1), x
 
 
 if (is_fit_init_end) {
-  plan(multisession, workers = min(future::availableCores() - 2, length(l_start)))
+  plan(multisession, workers = 3)#min(future::availableCores() - 2, length(l_start)))
   
   # initial trials
   l_start_results <- future_map(
@@ -90,6 +90,21 @@ if (is_fit_init_end) {
     ) +
     scale_color_viridis_d(name = "Time Point")
   save_my_pdf_and_tiff(pl_dist_w, "figures/w-before-after-e2", 4.5, 3.5)
+  save_my_pdf_and_tiff(pl_dist_w, "figures/figures-ms/w-before-after-e2", 4.5, 3.5)
+  
+  pl_dist_c <- ggplot(tbl_params_both, aes(c, group = t)) +
+    geom_freqpoly(aes(color = t), binwidth = .025)+ 
+    theme_bw() +
+    scale_x_continuous(expand = c(0, 0), limits = c(0, .6)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(x = "c", y = "Nr. Participants") +
+    theme(
+      strip.background = element_rect(fill = "white"),
+      text = element_text(size = 16)
+    ) +
+    scale_color_viridis_d(name = "Time Point")
+  save_my_pdf_and_tiff(pl_dist_c, "figures/c-before-after-e2", 4.5, 3.5)
+  save_my_pdf_and_tiff(pl_dist_c, "figures/figures-ms/c-before-after-e2", 4.5, 3.5)
   
 }
 
