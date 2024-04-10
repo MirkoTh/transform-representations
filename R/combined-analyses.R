@@ -400,29 +400,33 @@ if (is_fit) {
   tbl_draws <- readRDS(file_loc)
 }
 
-par_lbls <- c("Intercept", "Trial (Binned)", "C1 vs. C2", "C1 vs. C3", "C1 vs. C4", "C2 vs. C3", "C2 vs. C4", "C3 vs. C4")
+par_lbls <- c("Intercept", "Trial (Binned)", "LR - LL", "UL - LL", "UR - LL", "LR - UL", "LR - UR", "UL - UR")
 
 tbl_posterior <- tbl_draws %>% 
   dplyr::select(starts_with(c("mu_tf")), .chain) %>%
   mutate(
-    `C2 vs. C3` = `mu_tf[3]` - `mu_tf[4]`,
-    `C2 vs. C4` = `mu_tf[3]` - `mu_tf[5]`,
-    `C3 vs. C4` = `mu_tf[4]` - `mu_tf[5]`,
+    `LR - UL` = `mu_tf[3]` - `mu_tf[4]`,
+    `LR - UR` = `mu_tf[3]` - `mu_tf[5]`,
+    `UL - UR` = `mu_tf[4]` - `mu_tf[5]`,
   ) %>%
   rename(chain = .chain) %>%
-  pivot_longer(starts_with("mu_tf") | matches("vs"), names_to = "parameter", values_to = "value") %>%
+  pivot_longer(starts_with("mu_tf") | matches(" - "), names_to = "parameter", values_to = "value") %>%
   mutate(parameter = fct_inorder(factor(parameter)))
 levels(tbl_posterior$parameter) <- par_lbls
+tbl_posterior$parameter <- factor(tbl_posterior$parameter, ordered = TRUE)
 
 l <- sd_bfs(tbl_posterior, par_lbls, sqrt(2)/4)
 bfs <- l[[1]]
 tbl_thx <- l[[2]]
+tbl_thx$parameter <- factor(tbl_thx$parameter)
+tbl_thx$parameter <- fct_inorder(tbl_thx$parameter)
 
 # plot the posteriors and the bfs
 l_post <- map(as.list(par_lbls), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
 grid.draw(arrangeGrob(l_post[[1]], l_post[[2]], l_post[[3]], l_post[[4]], l_post[[5]], l_post[[6]], l_post[[7]], l_post[[8]], nrow = 2))
 
+pl_hdi_difficulty <- plot_map_hdi_bf(tbl_thx, bfs, "Category Difficulty")
 
 
 
