@@ -612,7 +612,7 @@ model {
   }
 
   for (s in 1:n_subj) {
-      // if sigma_subject is drawn from normal prior with too high mean i.e., 20 or too large sd i.e., 5, model does not converge
+      // if sigma_subject is drawn from normal prior with too high mean or too large sd, model does not converge
       sigma_subject[s] ~ normal(1, .05);
       tau_subject[s] ~ normal(mu_tau[group[s]], sigma_tau);
       //tau_subject[s] ~ normal(mu_tau, sigma_tau);
@@ -1242,7 +1242,7 @@ data {
   vector[n_data] distance1;
   vector[n_data] distance2;
   vector[n_data] response;
-  matrix[n_data, 5] x; // ic, group, category comparison, time point, 3w-ia
+  matrix[n_data, 4] x; // ic, group, category comparison, time point
 }
 
 transformed data {
@@ -1251,7 +1251,7 @@ transformed data {
 }
 
 parameters {
-  vector [5] mu;
+  vector [8] mu;
   vector [n_subj] b0;
   //vector [n_subj] bcc;
   //vector [n_subj] btp;
@@ -1270,7 +1270,10 @@ transformed parameters {
   real reg;
 
   for (n in 1:n_data) {
-    reg = b0[subj[n]] * x[n, 1] + mu[2] * x[n, 2] + mu[3] * x[n, 3] + mu[4] * x[n, 4] + mu[5] * x[n, 5];
+    reg = b0[subj[n]] * x[n, 1] + //ic
+    mu[2] * x[n, 2] + mu[3] * x[n, 3] + mu[4] * x[n, 4] +  //main
+    mu[5] * x[n, 2] * x[n, 3] + mu[6] * x[n, 2] * x[n, 4] + mu[7] * x[n, 3] * x[n, 4] + //2w-ias
+    mu[8] * x[n, 2] * x[n, 3] * x[n, 4]; // 3w-ia
     mn[n] = exp(-(reg * (w_indiv[subj[n]] * distance1[n] + (1 - w_indiv[subj[n]]) * distance2[n])));
   }
 
@@ -1297,7 +1300,10 @@ model {
   mu[3] ~ normal(0, 1);
   mu[4] ~ normal(0, 1);
   mu[5] ~ normal(0, 1);
-  
+  mu[6] ~ normal(0, 1);
+  mu[7] ~ normal(0, 1);
+  mu[8] ~ normal(0, 1);
+
   w_group ~ beta(1, 1);
 
 }

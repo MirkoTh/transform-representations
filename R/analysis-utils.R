@@ -2481,7 +2481,7 @@ fit_one_subset <- function(p_id, tp, pool, tbl_data, metric) {
     c(.02, .5), 
     f, 
     tbl_data = tbl_fit, 
-    lower = c(.0, .01), upper = c(.1, .99),
+    lower = c(.0, .01), upper = c(.2, .99),
     method = "L-BFGS-B"
   )
   return(results)
@@ -2879,7 +2879,7 @@ load_and_hash_triplets <- function(
     pth <- str_c("experiments/2024-03-psychophysics-stimuli-hcai/data/", fls_all[startsWith(fls_all, fl_start)])
     l <- map(pth, read_csv)
     tbl_prolific <- reduce(l, rbind)
-    tbl_cr <- tbl_cr %>% 
+    tbl_similarity <- tbl_similarity %>% 
       left_join(tbl_prolific[, c("Participant id", "Sex")], by = c("participant_id" = "Participant id"))
   }
   
