@@ -581,6 +581,8 @@ tbl_thx <- l[[2]]
 l_pl <- map(as.list(params_bf), plot_posterior, tbl_posterior, tbl_thx, bfs)
 grid.arrange(l_pl[[1]], l_pl[[2]], l_pl[[3]], nrow = 1, ncol = 3)
 
+plot_map_hdi_bf(tbl_thx, bfs, "MAP, 95% HDIs, & BFs")
+
 tbl_cr_moves$n_categories <- fct_relevel(tbl_cr_moves$n_categories, "Similarity", after = 1)
 l_combined <- combine_data_with_posterior_outliers(tbl_mix, tbl_cr_moves, tbl_draws, 94)
 tbl_empirical <- l_combined$tbl_empirical
@@ -698,6 +700,7 @@ if (is_fit) {
   saveRDS(loo_exgaussian, file_loc_loo_exgaussian)
 } else if (!is_fit) {
   tbl_draws <- readRDS(file_loc_exgaussian)
+  loo_exgaussian <- readRDS(file_loc_loo_exgaussian)
 }
 
 
@@ -726,6 +729,9 @@ tbl_thx <- par_lims
 # plot the posteriors and the bfs
 map(as.list(params_bf[c(1, 2, 3)]), plot_posterior, tbl_posterior, tbl_thx, bfs)
 
+tbl_thx$parameter <- factor(tbl_thx$parameter, labels = c("mu(Sim.J.)", "mu(Cat.L.)", "mu Diff."))
+names(bfs) <- c("mu(Sim.J.)", "mu(Cat.L.)", "mu Diff.")
+
 pl_hdi_exg <- plot_map_hdi_bf(tbl_thx, bfs, "ExGaussian")
 
 
@@ -733,7 +739,7 @@ pl_hdi_exg <- plot_map_hdi_bf(tbl_thx, bfs, "ExGaussian")
 
 
 loo::loo_model_weights(
-  list(loo_mixture_group, loo_move_shift_normal, loo_exgaussian), 
+  list(loo_move_shift_normal, loo_exgaussian), #, loo_mixture_group
   method = "stacking"
 )
 
@@ -747,14 +753,14 @@ tbl_posterior_tau <- tbl_draws %>%
   ) %>% left_join(
     tbl_participants_lookup %>% select(-participant_id), by = "participant_id_num"
   ) %>% group_by(participant_id_num, n_categories) %>%
-  summarize(mn_shift = median(value)) %>% ungroup()
+  summarize(mn_shift = mean(1/value)) %>% ungroup()
 
 tbl_empirical_posterior <- tbl_cr_move_agg %>% 
   filter(name == "Not Transformed") %>%
   left_join(tbl_participants_lookup %>% select(-n_categories), by = "participant_id") %>%
   left_join(tbl_posterior_tau %>% select(-n_categories), by = "participant_id_num")
 
-pl_bivar_1 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "Similarity Judgment"), aes(value, 1/mn_shift)) +
+pl_bivar_1 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "Similarity Judgment"), aes(value, mn_shift)) +
   theme_bw() +
   geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
   geom_hline(yintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
@@ -762,13 +768,14 @@ pl_bivar_1 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "Similar
   #facet_wrap(~ n_categories) +
   scale_x_continuous(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
+  coord_cartesian(xlim = c(-.5, 1.75)) +
   labs(x = "Mean Move (Empirical)", y = "MAP Tau (Posterior)", title = "Sequential Comparison") + 
   theme(
     strip.background = element_rect(fill = "white"), 
     text = element_text(size = 22)
   )
 
-pl_bivar_2 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "4 Categories"), aes(value, 1/mn_shift)) +
+pl_bivar_2 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "4 Categories"), aes(value, mn_shift)) +
   theme_bw() +
   geom_vline(xintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
   geom_hline(yintercept = 0, color = "tomato3", linetype = "dotdash", linewidth = .75) +
@@ -776,6 +783,7 @@ pl_bivar_2 <- ggplot(tbl_empirical_posterior %>% filter(n_categories == "4 Categ
   #facet_wrap(~ n_categories) +
   scale_x_continuous(expand = c(0.01, 0)) +
   scale_y_continuous(expand = c(0.01, 0)) +
+  coord_cartesian(xlim = c(-.5, 1.75)) +
   labs(x = "Mean Move (Empirical)", y = "MAP Tau (Posterior)", title = "Category Learning") + 
   theme(
     strip.background = element_rect(fill = "white"), 
@@ -789,6 +797,7 @@ pl_gg_both <- arrangeGrob(ggM1, ggM2, ncol = 1)
 save_my_pdf_and_tiff(
   pl_gg_both, "figures/figures-ms/exGaussian-bivariates", 6, 11
 )
+save_my_pdf_and_tiff(pl_hdi_exg, "figures/figures-ms/exGaussian-bf-hdi", 5, 4)
 
 # individual differences in movements -------------------------------------
 
