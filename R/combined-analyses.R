@@ -8,7 +8,7 @@ library(docstring)
 library(rutils)
 library(cmdstanr)
 library(ggExtra)
-
+library(bayesplot)
 
 # Import Home-Grown Modules -----------------------------------------------
 
@@ -211,11 +211,13 @@ if (suffix == "psychological-representation") {
 
 
 file_loc <- str_c("data/combined-analysis-boundary-posterior-", suffix, ".rds")
-pars_interest <- c("mu0", "muGr", "muBd", "muExp", "muTime", "muGrBd", "muGrTime", "muTimeBd", "muGrBdTime")
+pars_interest <- c("b0", "mu0", "muGr", "muBd", "muExp", "muTime", "muGrBd", "muGrTime", "muTimeBd", "muGrBdTime")
 
 if (is_fit) {
   fit_2d <- mod_2d$sample(
-    data = l_data, iter_sampling = 5000, iter_warmup = 1000, chains = 3, parallel_chains = 3, init = init_fun
+    
+    #data = l_data, iter_sampling = 50, iter_warmup = 100, chains = 3, parallel_chains = 3, init = init_fun
+    data = l_data, iter_sampling = 1000, iter_warmup = 500, chains = 3, parallel_chains = 3, init = init_fun
   )
   tbl_draws <- fit_2d$draws(variables = pars_interest, format = "df")
   tbl_summary <- fit_2d$summary(variables = pars_interest)
@@ -227,6 +229,10 @@ if (is_fit) {
 }
 
 
+p <- mcmc_trace(tbl_draws,  pars = c("muExp[1]", "b0[122,1]"), n_warmup = 500,
+                facet_args = list(nrow = 2, labeller = label_parsed))
+
+p + facet_text(size = 15)
 # lbls <- c("SD (Head)", "SD (Belly)")
 
 tbl_posterior <- tbl_draws %>% 
@@ -311,6 +317,68 @@ save_my_pdf_and_tiff(
   pl_post_combined, "figures/figures-ms/bf-hdi-combined", 9, 7
 )
 
+
+
+# plot individual precision estimates
+tbl_prec_ind <- tbl_draws %>% 
+  as_tibble() %>%
+  rename(chain = .chain) %>%
+  select(c("chain", starts_with("b0"))) %>%
+  pivot_longer(-chain, names_to = "parameter", values_to = "value") %>%
+  mutate(
+    id = str_match(parameter, "\\[([0-9]*),")[,2],
+    dimension = str_match(parameter, "([1-2])\\]$")[,2],
+    parameter = factor(parameter),
+    parameter = fct_inorder(parameter)
+  ) %>%
+  group_by(id, dimension) %>%
+  summarize(prec_map = mean(value)) %>%
+  ungroup()
+tbl_prec_ind$dimension <- factor(tbl_prec_ind$dimension, labels = c("Spikiness of Head", "Fill of Belly"))
+
+tbl_prec_agg <- tbl_prec_ind %>% filter(dimension == "Spikiness of Head") %>% summarize(mn = mean(prec_map), sd = sd(prec_map))
+
+hist_ind_prec <- ggplot(tbl_prec_ind, aes(prec_map)) +
+  geom_histogram(aes(fill = dimension), color = "white") +
+  facet_wrap(~ dimension) +
+  theme_bw() +
+  scale_x_continuous(expand = c(0.01, 0), breaks = seq(0, 30, by = 5)) +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  labs(x = "Precision", y = "Nr. Participants") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22),
+    legend.position = "bottom"
+  ) + 
+  scale_fill_brewer(palette = "Set2", name = "Feature Dimension") +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+
+
+
+pl_ind_densities <- ggplot() +
+  geom_function(fun = dnorm, aes(color = "Mean"), linewidth = 1, args = list(mean = 50, sd = tbl_prec_agg$mn)) +
+  geom_function(fun = dnorm, aes(color = "Mean + 1 SD"), linewidth = 1, args = list(mean = 50, sd = tbl_prec_agg$mn + tbl_prec_agg$sd)) +
+  geom_function(fun = dnorm, aes(color = "Mean - 1 SD"), linewidth = 1, args = list(mean = 50, sd = tbl_prec_agg$mn - tbl_prec_agg$sd)) +
+  geom_function(fun = dnorm, aes(color = "Mean + 2 SD"), linewidth = 1, args = list(mean = 50, sd = tbl_prec_agg$mn + 2*tbl_prec_agg$sd)) +
+  geom_function(fun = dnorm, aes(color = "Mean - 2 SD"), linewidth = 1, args = list(mean = 50, sd = tbl_prec_agg$mn - 2*tbl_prec_agg$sd)) +
+  xlim(0, 125) +
+  theme_bw() +
+  labs(x = "Perceived Feature Value", y = "Probability Density") + 
+  theme(
+    strip.background = element_rect(fill = "white"), 
+    text = element_text(size = 22),
+    legend.position = "bottom"
+  ) +
+  scale_color_manual(
+    values = c("#93BA97", "#B3B08A", "#CFA67D", "#E69B6F", "#FC8D62"), 
+    name = "",
+    breaks = c("Mean - 2 SD", "Mean - 1 SD", "Mean", "Mean + 1 SD", "Mean + 2 SD")
+    ) +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+
+pl_ind_prec_combined <- arrangeGrob(hist_ind_prec, pl_ind_densities, nrow = 1)
+
+save_my_pdf(pl_ind_prec_combined, "~/science/post-doc/applications/2024-ambizione/analyses/individual-precision-rep-change.pdf", 12, 5)
 
 # Category Difficulty Analysis E2 - E4 ------------------------------------
 
